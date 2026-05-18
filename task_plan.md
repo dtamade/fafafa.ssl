@@ -98,15 +98,43 @@
   - 这条 lane 当前已完成：
     - broader suite 默认 lane 不再被 risky native probe 打崩
     - native probe 明确降格成 opt-in experimental evidence
-- [in_progress] Windows broader suite 的当前新 first hard blocker 已切到 integration-multi 外部 HTTP 状态断言：
+- [completed] Windows broader suite 的 `integration_multi` 外部 HTTP 状态断言误报已完成收口：
   - 新增计划：`docs/plans/2026-05-18-winssl-integration-multi-http-status-stability.md`
   - GitHub Windows live run `26043523820` 已证明：
     - `api.github.com` 的 TCP/TLS/send/receive/status-line 都 PASS
     - 只有“响应状态码正常 (2xx/3xx)”断言失败
-  - 当前最小正确修法已在本地落地：
+  - 当前最小正确修法已落地并得到新的 live rerun 证实：
     - 状态码改成 `可解析 + 非 5xx`
     - focused contract / Win64 compile / `git diff --check` 已通过
-  - 下一步是 push 后重新取 Windows artifact，确认 broader suite 不再因为这条 flaky external-status 断言而失败
+    - GitHub Actions live run `26044471873` 已确认：
+      - `windows-gate` PASS
+      - broader WinSSL runtime suite 不再因为 `integration_multi` 的 `2xx/3xx` 断言失败而红
+  - 这条 lane 当前已完成：
+    - Windows broader suite 已恢复 green
+    - 当前 repo-level cross-platform failure 已不在 WinSSL Windows 路线
+- [in_progress] macOS OpenSSL loader 的 `OPENSSL_ROOT` 优先级修复已成为新的 first hard blocker：
+  - 新增计划：`docs/plans/2026-05-18-macos-openssl-root-loader-priority.md`
+  - GitHub Actions live run `26044471873` 已确认当前 cross-platform truth：
+    - `windows-gate` PASS
+    - `linux-gate` PASS
+    - overall failure 只剩 `macos-gate`
+  - macOS artifact 当前失败面已经压清：
+    - `run_all_module_tests.sh --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT` 通过率仅 `47.1%`
+    - `Store/TS/CT` 继续 PASS
+    - `PEM/EVP/PKCS12/CMS/OCSP` 出现成片符号缺失/模块未加载
+  - 当前最高置信度根因已固定：
+    - macOS gate 的环境探测拿到了 Homebrew `OpenSSL 3.6.2`
+    - 但 loader 之前没有优先尝试 `OPENSSL_ROOT/lib/...` 绝对路径
+    - 现有测试输出里的 `3.x (libcrypto.3.dylib)` 只是请求名记录，不足以证明实际动态加载到的就是 Homebrew OpenSSL 3.x
+  - 当前最小修法已在本地落地并通过静态验证：
+    - `src/fafafa.ssl.openssl.loader.pas` 新增 `TryLoadLibraryFromOpenSSLRoot(...)`
+    - `libcrypto/libssl` 现在会先尝试 `OPENSSL_ROOT/lib/...` 绝对候选，再退回 generic fallback
+    - 新增 focused contract：`tests/scripts/test_openssl_loader_macos_openssl_root_priority_contract.sh`
+    - new contract 已完成 `RED -> GREEN`
+    - 现有 loader Pascal contract 编译与运行继续 PASS
+  - 下一步是 push 后重跑 GitHub macOS gate，确认：
+    - `PEM` / `EVP` 恢复加载
+    - `PKCS12/CMS/OCSP` 不再成片缺符号
 - [in_progress] 当前 repo-level 下一步应回到更高价值的 completeness 路线：
   - 继续审查各 backend implementation completeness / optional surface completeness
   - 若继续深挖 WinSSL，则优先扩展真实 resumed handshake / session tickets / certstore / OCSP / enterprise 等高风险 lane，而不是再重复治理 runtime capture、shared probe crash 或已修掉的 semantic false positive

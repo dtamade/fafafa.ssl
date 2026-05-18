@@ -161,6 +161,7 @@ type
 
     class procedure DetectVersion;
     class function TryLoadLibrary(const ANames: array of string): {$IFDEF WINDOWS}HMODULE{$ELSE}TLibHandle{$ENDIF};
+    class function TryLoadLibraryFromOpenSSLRoot(ALibType: TOpenSSLLibraryType): {$IFDEF WINDOWS}HMODULE{$ELSE}TLibHandle{$ENDIF};
   public
     // ========== 库加载 ==========
 
@@ -399,6 +400,48 @@ begin
   end;
 end;
 
+class function TOpenSSLLoader.TryLoadLibraryFromOpenSSLRoot(
+  ALibType: TOpenSSLLibraryType): {$IFDEF WINDOWS}HMODULE{$ELSE}TLibHandle{$ENDIF};
+{$IFDEF WINDOWS}
+begin
+  Result := 0;
+end;
+{$ELSE}
+var
+  LRoot: string;
+  LLibDir: string;
+begin
+  Result := 0;
+
+  LRoot := Trim(GetEnvironmentVariable('OPENSSL_ROOT'));
+  if LRoot = '' then
+    Exit;
+
+  LLibDir := IncludeTrailingPathDelimiter(LRoot) + 'lib' + PathDelim;
+
+  case ALibType of
+    osslLibCrypto:
+      Result := TryLoadLibrary([
+        LLibDir + 'libcrypto.3.dylib',
+        LLibDir + 'libcrypto.dylib',
+        LLibDir + 'libcrypto.1.1.dylib',
+        LLibDir + 'libcrypto.so.3',
+        LLibDir + 'libcrypto.so.1.1',
+        LLibDir + 'libcrypto.so'
+      ]);
+    osslLibSSL:
+      Result := TryLoadLibrary([
+        LLibDir + 'libssl.3.dylib',
+        LLibDir + 'libssl.dylib',
+        LLibDir + 'libssl.1.1.dylib',
+        LLibDir + 'libssl.so.3',
+        LLibDir + 'libssl.so.1.1',
+        LLibDir + 'libssl.so'
+      ]);
+  end;
+end;
+{$ENDIF}
+
 class function TOpenSSLLoader.GetLibraryHandle(ALibType: TOpenSSLLibraryType): {$IFDEF WINDOWS}HMODULE{$ELSE}TLibHandle{$ENDIF};
 begin
   Result := 0;
@@ -408,24 +451,27 @@ begin
     begin
       if FLibCrypto = 0 then
       begin
+        FLibCrypto := TryLoadLibraryFromOpenSSLRoot(osslLibCrypto);
+
         // 尝试加载 libcrypto，按优先级顺序
-        FLibCrypto := TryLoadLibrary([
-          {$IFDEF WINDOWS}
-          'libcrypto-3-x64.dll',      // OpenSSL 3.x (Windows 64-bit)
-          'libcrypto-3.dll',          // OpenSSL 3.x (Windows 32-bit)
-          'libcrypto-1_1-x64.dll',    // OpenSSL 1.1.x (Windows 64-bit)
-          'libcrypto-1_1.dll',        // OpenSSL 1.1.x (Windows 32-bit)
-          'libeay32.dll'              // OpenSSL 1.0.x (Windows)
-          {$ELSE}
-          'libcrypto.so.3',           // OpenSSL 3.x (Linux/Unix)
-          'libcrypto.so.1.1',         // OpenSSL 1.1.x
-          'libcrypto.so.1.0.0',       // OpenSSL 1.0.x
-          'libcrypto.so',             // 通用符号链接
-          'libcrypto.3.dylib',        // OpenSSL 3.x (macOS/Homebrew)
-          'libcrypto.1.1.dylib',      // OpenSSL 1.1.x (macOS/Homebrew)
-          'libcrypto.dylib'           // macOS
-          {$ENDIF}
-        ]);
+        if FLibCrypto = 0 then
+          FLibCrypto := TryLoadLibrary([
+            {$IFDEF WINDOWS}
+            'libcrypto-3-x64.dll',      // OpenSSL 3.x (Windows 64-bit)
+            'libcrypto-3.dll',          // OpenSSL 3.x (Windows 32-bit)
+            'libcrypto-1_1-x64.dll',    // OpenSSL 1.1.x (Windows 64-bit)
+            'libcrypto-1_1.dll',        // OpenSSL 1.1.x (Windows 32-bit)
+            'libeay32.dll'              // OpenSSL 1.0.x (Windows)
+            {$ELSE}
+            'libcrypto.so.3',           // OpenSSL 3.x (Linux/Unix)
+            'libcrypto.so.1.1',         // OpenSSL 1.1.x
+            'libcrypto.so.1.0.0',       // OpenSSL 1.0.x
+            'libcrypto.so',             // 通用符号链接
+            'libcrypto.3.dylib',        // OpenSSL 3.x (macOS/Homebrew)
+            'libcrypto.1.1.dylib',      // OpenSSL 1.1.x (macOS/Homebrew)
+            'libcrypto.dylib'           // macOS
+            {$ENDIF}
+          ]);
 
         if FLibCrypto <> 0 then
         begin
@@ -440,24 +486,27 @@ begin
     begin
       if FLibSSL = 0 then
       begin
+        FLibSSL := TryLoadLibraryFromOpenSSLRoot(osslLibSSL);
+
         // 尝试加载 libssl
-        FLibSSL := TryLoadLibrary([
-          {$IFDEF WINDOWS}
-          'libssl-3-x64.dll',
-          'libssl-3.dll',
-          'libssl-1_1-x64.dll',
-          'libssl-1_1.dll',
-          'ssleay32.dll'
-          {$ELSE}
-          'libssl.so.3',
-          'libssl.so.1.1',
-          'libssl.so.1.0.0',
-          'libssl.so',
-          'libssl.3.dylib',           // OpenSSL 3.x (macOS/Homebrew)
-          'libssl.1.1.dylib',         // OpenSSL 1.1.x (macOS/Homebrew)
-          'libssl.dylib'
-          {$ENDIF}
-        ]);
+        if FLibSSL = 0 then
+          FLibSSL := TryLoadLibrary([
+            {$IFDEF WINDOWS}
+            'libssl-3-x64.dll',
+            'libssl-3.dll',
+            'libssl-1_1-x64.dll',
+            'libssl-1_1.dll',
+            'ssleay32.dll'
+            {$ELSE}
+            'libssl.so.3',
+            'libssl.so.1.1',
+            'libssl.so.1.0.0',
+            'libssl.so',
+            'libssl.3.dylib',           // OpenSSL 3.x (macOS/Homebrew)
+            'libssl.1.1.dylib',         // OpenSSL 1.1.x (macOS/Homebrew)
+            'libssl.dylib'
+            {$ENDIF}
+          ]);
       end;
       Result := FLibSSL;
     end;

@@ -5913,3 +5913,89 @@
   - result: PASS
   - summary:
     - current `WinSSL integration-multi HTTP status stability` batch has no whitespace or patch-format issues
+
+- `gh run view 26044471873 --json status,conclusion,jobs,workflowName,url,createdAt,updatedAt,headSha`
+  - result: FAIL
+  - summary:
+    - `Wave B B2 Manual Gate (Template)` on commit `0c80a74` finished with:
+      - `windows-gate`: success
+      - `linux-gate`: success
+      - `macos-gate`: failure
+      - `summary`: success
+    - this confirmed the Windows `integration_multi` fix closed out, and the remaining repo-level failure moved to macOS only
+
+- `gh run view 26044471873 --job 76564810259 --log | tail -n 220`
+  - result: PASS
+  - summary:
+    - `macos-gate` failed in `Run macOS Wave B gate`
+    - compile phase stayed green
+    - failure narrowed to `scripts/run_all_module_tests.sh --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT`
+
+- `gh run download 26044471873 -D tmp/gh-run-26044471873`
+  - result: PASS
+  - summary:
+    - downloaded Linux/macOS/Windows/summary artifacts for the final evidence pass
+
+- `rg -n "FAIL|ERROR|failed|exit=1|OpenSSL Version|版本:|LoadOpenSSLCMS returned False|LoadOpenSSLOCSP returned False|PKCS12_new not loaded" tmp/gh-run-26044471873 -g '!*.zip'`
+  - result: PASS
+  - summary:
+    - macOS module artifact truth:
+      - overall module pass-rate `47.1%`
+      - `Store/TS/CT` remained green
+      - `PEM` / `EVP` helper loads failed
+      - `PKCS12/CMS/OCSP` showed broad symbol-missing failures
+
+- add `docs/plans/2026-05-18-macos-openssl-root-loader-priority.md`
+  - purpose:
+    - isolate the remaining macOS loader-selection risk as the new first hard blocker
+    - keep it separate from the already-closed Windows WinSSL lanes
+
+- add `tests/scripts/test_openssl_loader_macos_openssl_root_priority_contract.sh`
+  - purpose:
+    - lock the new macOS loader rule that `OPENSSL_ROOT/lib/...` absolute candidates must be tried before generic fallback
+
+- `bash -n tests/scripts/test_openssl_loader_macos_openssl_root_priority_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_openssl_loader_macos_openssl_root_priority_contract.sh`
+  - result: FAIL
+  - summary:
+    - initial RED proved `src/fafafa.ssl.openssl.loader.pas` still lacked `OPENSSL_ROOT` priority handling
+
+- update `src/fafafa.ssl.openssl.loader.pas`
+  - change:
+    - add `TryLoadLibraryFromOpenSSLRoot(...)`
+    - make both `libcrypto` and `libssl` try `OPENSSL_ROOT/lib/...` absolute candidates before generic fallback names
+
+- `bash -n tests/scripts/test_openssl_loader_macos_openssl_root_priority_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_openssl_loader_macos_openssl_root_priority_contract.sh`
+  - result: PASS
+  - summary:
+    - focused macOS loader-priority contract completed `RED -> GREEN`
+
+- `mkdir -p tmp/openssl_loader_ready_contract && fpc -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/openssl_loader_ready_contract -FEtmp/openssl_loader_ready_contract tests/test_openssl_loader_ready_contract.pas`
+  - result: PASS
+  - summary:
+    - the loader-priority follow-up compiles cleanly against the existing ready-contract surface
+
+- `mkdir -p tmp/openssl_loader_required_symbol_contract && fpc -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/openssl_loader_required_symbol_contract -FEtmp/openssl_loader_required_symbol_contract tests/test_openssl_loader_required_symbol_contract.pas`
+  - result: PASS
+  - summary:
+    - the stricter loader required-symbol contract also compiles cleanly after the loader change
+
+- `tmp/openssl_loader_ready_contract/test_openssl_loader_ready_contract`
+  - result: PASS
+  - summary:
+    - loader ready-contract runtime still passes after the `OPENSSL_ROOT` priority change
+
+- `tmp/openssl_loader_required_symbol_contract/test_openssl_loader_required_symbol_contract`
+  - result: PASS
+  - summary:
+    - fail-closed loader behavior still holds after the `OPENSSL_ROOT` priority change
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `macOS OPENSSL_ROOT loader priority` batch has no whitespace or patch-format issues

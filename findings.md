@@ -2625,3 +2625,31 @@
   - 外部 HTTP 集成测试应该验证“状态行可解析且不是 5xx”
   - 而不是把外部 API 的鉴权/限流/策略响应强行约束成 `2xx/3xx`
   - 当前这条修法已在本地落地，并补了 focused contract 防止回归
+
+- GitHub Actions live run `26044471873` 现已把当前 repo-level truth 压清：
+  - `windows-gate` 已恢复 PASS
+  - `linux-gate` 保持 PASS
+  - overall failure 只剩 `macos-gate`
+  - 因而 WinSSL native-probe / integration-multi 这两条 Windows lane 都不该再反复拉起
+
+- `macos-gate` 当前失败不再是泛泛的“OpenSSL path 问题”，而是更具体的一类 loader 选择风险：
+  - artifact probe 证明 runner 环境里存在 Homebrew `OpenSSL 3.6.2`
+  - 但模块测试实际只打印 `3.x (libcrypto.3.dylib)` 这种“请求名”级别信息
+  - `Store/TS/CT` 仍然 PASS，而 `PEM/EVP/PKCS12/CMS/OCSP` 成片缺符号
+  - 这与“generic fallback 误加载到错误库面”的症状更一致，而不是简单的 `OPENSSL_ROOT` 不可见
+
+- `GetOpenSSLVersionString` 不能作为“实际已加载 Homebrew OpenSSL 3.x”的硬证据：
+  - `src/fafafa.ssl.openssl.api.core.pas` 里的 `LoadedCryptoLibName` 来自 `TryLoadOpenSSLLibraries(...)` 的请求名记录
+  - 它不会回填 `TOpenSSLLoader.GetVersionInfo.VersionString`
+  - 所以日志里的 `3.x (libcrypto.3.dylib)` 只能说明“代码试图按 3.x 路径初始化”，不能单独证明最终加载的动态库就是 Homebrew OpenSSL 3.x
+
+- 当前最小而正确的修法已经明确并落地：
+  - 在 `src/fafafa.ssl.openssl.loader.pas` 中新增 `TryLoadLibraryFromOpenSSLRoot(...)`
+  - 当 `OPENSSL_ROOT` 存在时，先尝试 `OPENSSL_ROOT/lib/libcrypto*.dylib` / `libssl*.dylib` 的绝对路径
+  - 只有这条绝对路径失败后，才退回现有 generic `libcrypto.*` / `libssl.*` fallback
+  - 这样可以把 macOS runner 明确锚定到 workflow probe 已验证过的 Homebrew OpenSSL root
+
+- 这条 macOS loader 修法当前已完成本地静态闭环，但还缺 live runtime 复核：
+  - focused source contract 已完成 `RED -> GREEN`
+  - 现有 loader Pascal contract 编译与运行继续 PASS
+  - 真正的 done 条件仍然是新的 GitHub macOS rerun 把 `PEM/EVP/PKCS12/CMS/OCSP` 的成片缺失压掉

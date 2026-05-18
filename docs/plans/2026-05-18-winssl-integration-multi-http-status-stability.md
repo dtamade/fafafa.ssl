@@ -69,5 +69,9 @@ gh workflow run wave-b-b2-manual.yml --ref master -f run_id=<custom-id>
     - 改成 `响应状态码可解析` + `响应状态码不是 5xx`
     - 新 focused contract 已补齐
     - focused Win64 compile / `git diff --check` 通过
-- PENDING:
-  - 还需要新的 GitHub Windows rerun，把这条 flaky assertion 修正后的 broader suite 结果重新取证
+  - GitHub Actions live run `26044471873` 已完成新的 broader-suite 取证：
+    - `windows-gate` PASS
+    - `integration_multi` 不再因为 `2xx/3xx` 假设失败
+- FOLLOW-UP:
+  - 这次 workflow 的 overall failure 已切换到独立的 `macos-gate`
+  - 当前不应再把 `integration_multi` 作为活跃 blocker 反复拉起
