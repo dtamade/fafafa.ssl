@@ -522,10 +522,15 @@ begin
 end;
 
 procedure TWolfSSLLibrary.SetDefaultConfig(const AConfig: TSSLConfig);
+var
+  LConfig: TSSLConfig;
 begin
-  FDefaultConfig := AConfig;
-  FLogLevel := AConfig.LogLevel;
-  FLogCallback := AConfig.LogCallback;
+  LConfig := AConfig;
+  TSSLFactory.NormalizeConfig(LConfig);
+
+  FDefaultConfig := LConfig;
+  FLogLevel := LConfig.LogLevel;
+  FLogCallback := LConfig.LogCallback;
 end;
 
 function TWolfSSLLibrary.GetDefaultConfig: TSSLConfig;
@@ -570,15 +575,49 @@ begin
 end;
 
 function TWolfSSLLibrary.CreateContext(AType: TSSLContextType): ISSLContext;
+var
+  LConfig: TSSLConfig;
 begin
   // P0 后端语义统一：与 OpenSSL/WinSSL 后端保持一致的失败语义
   if not FInitialized then
     raise ESSLInitError.Create('Cannot create context: WolfSSL library not initialized');
 
+  LConfig := FDefaultConfig;
+  LConfig.ContextType := AType;
+
   if GetCapabilities.EarlyDataSupport <> sslSupportNone then
     Result := TWolfSSLEarlyDataContext.Create(Self, AType)
   else
     Result := TWolfSSLContext.Create(Self, AType);
+
+  if Result <> nil then
+  begin
+    if LConfig.ProtocolVersions <> [] then
+      Result.SetProtocolVersions(LConfig.ProtocolVersions);
+
+    if LConfig.PreferredVersion <> sslProtocolUnknown then
+      Result.SetPreferredVersion(LConfig.PreferredVersion);
+
+    if LConfig.VerifyMode <> [] then
+      Result.SetVerifyMode(LConfig.VerifyMode);
+
+    if LConfig.VerifyDepth > 0 then
+      Result.SetVerifyDepth(LConfig.VerifyDepth);
+
+    if LConfig.CipherList <> '' then
+      Result.SetCipherList(LConfig.CipherList);
+
+    if LConfig.CipherSuites <> '' then
+      Result.SetCipherSuites(LConfig.CipherSuites);
+
+    Result.SetOptions(LConfig.Options);
+    Result.SetSessionCacheSize(LConfig.SessionCacheSize);
+    Result.SetSessionTimeout(LConfig.SessionTimeout);
+    Result.SetSessionCacheMode(ssoEnableSessionCache in LConfig.Options);
+
+    if LConfig.ALPNProtocols <> '' then
+      Result.SetALPNProtocols(LConfig.ALPNProtocols);
+  end;
 end;
 
 function TWolfSSLLibrary.CreateCertificate: ISSLCertificate;

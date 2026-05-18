@@ -636,10 +636,15 @@ end;
 // ============================================================================
 
 procedure TWinSSLLibrary.SetDefaultConfig(const AConfig: TSSLConfig);
+var
+  LConfig: TSSLConfig;
 begin
-  FDefaultConfig := AConfig;
-  FLogLevel := AConfig.LogLevel;
-  FLogCallback := AConfig.LogCallback;
+  LConfig := AConfig;
+  TSSLFactory.NormalizeConfig(LConfig);
+
+  FDefaultConfig := LConfig;
+  FLogLevel := LConfig.LogLevel;
+  FLogCallback := LConfig.LogCallback;
   InternalLog(sslLogInfo, 'Default configuration updated');
 end;
 
@@ -769,17 +774,48 @@ end;
 // ============================================================================
 
 function TWinSSLLibrary.CreateContext(AType: TSSLContextType): ISSLContext;
+var
+  LConfig: TSSLConfig;
 begin
   // P0 后端语义统一：与 OpenSSL 后端保持一致的失败语义
   // 未初始化时抛出异常，而不是返回 nil
   if not FInitialized then
     raise ESSLInitError.Create('Cannot create context: WinSSL library not initialized');
 
+  LConfig := FDefaultConfig;
+  LConfig.ContextType := AType;
+
   // 让异常传播 - 调用方必须显式处理错误
   Result := TWinSSLContext.Create(Self, AType);
 
-  if (Result <> nil) and (FDefaultConfig.Options <> []) then
-    Result.SetOptions(FDefaultConfig.Options);
+  if Result <> nil then
+  begin
+    if LConfig.ProtocolVersions <> [] then
+      Result.SetProtocolVersions(LConfig.ProtocolVersions);
+
+    if LConfig.PreferredVersion <> sslProtocolUnknown then
+      Result.SetPreferredVersion(LConfig.PreferredVersion);
+
+    if LConfig.VerifyMode <> [] then
+      Result.SetVerifyMode(LConfig.VerifyMode);
+
+    if LConfig.VerifyDepth > 0 then
+      Result.SetVerifyDepth(LConfig.VerifyDepth);
+
+    if LConfig.CipherList <> '' then
+      Result.SetCipherList(LConfig.CipherList);
+
+    if LConfig.CipherSuites <> '' then
+      Result.SetCipherSuites(LConfig.CipherSuites);
+
+    Result.SetOptions(LConfig.Options);
+    Result.SetSessionCacheSize(LConfig.SessionCacheSize);
+    Result.SetSessionTimeout(LConfig.SessionTimeout);
+    Result.SetSessionCacheMode(ssoEnableSessionCache in LConfig.Options);
+
+    if LConfig.ALPNProtocols <> '' then
+      Result.SetALPNProtocols(LConfig.ALPNProtocols);
+  end;
 
   Inc(FStatistics.ConnectionsTotal);
   if AType = sslCtxClient then

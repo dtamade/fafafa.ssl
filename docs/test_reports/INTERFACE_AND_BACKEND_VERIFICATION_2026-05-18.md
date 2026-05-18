@@ -1218,3 +1218,54 @@
 - 这条问题现在是下一优先级：
   - 先做 `direct-library default-config parity audit/fix`
   - 再决定是否继续推进 broader `TSSLConfig` slimming 或 `ISSLConnection` surgery
+
+## direct-library default-config parity fix
+
+- 新增 bounded batch：
+  - `docs/plans/2026-05-18-direct-library-default-config-parity.md`
+  - 目标：
+    - 用 TDD 收口 `ISSLLibrary.SetDefaultConfig(...)` + `CreateContext(AType)` 的 backend parity gap
+
+- RED 证据：
+  - `tests/scripts/test_direct_library_default_config_parity_contract.sh`
+    - 初次运行 FAIL
+    - 证明 `freepascal` library unit 还没有先 normalize `SetDefaultConfig(...)`
+  - `tests/test_direct_library_default_config_parity.pas`
+    - 初次运行 FAIL
+    - 证明 FreePascal direct-library path 没有把 default-config 套到新建 context 上
+
+- 本批 production fix：
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - 统一补齐：
+    - `SetDefaultConfig(...)` 先 `TSSLFactory.NormalizeConfig(...)`
+    - direct-library `CreateContext(AType)` 应用 context-safe 默认字段
+
+- 当前 direct-library parity 已覆盖：
+  - `ProtocolVersions`
+  - `PreferredVersion`
+  - `VerifyMode`
+  - `VerifyDepth`
+  - `CipherList`
+  - `CipherSuites`
+  - `Options`
+  - `SessionCacheSize`
+  - `SessionTimeout`
+  - `SessionCacheMode`
+  - `ALPNProtocols`
+
+- focused 结果：
+  - `bash tests/scripts/test_direct_library_default_config_parity_contract.sh`
+    - PASS
+  - `tests/test_direct_library_default_config_parity.pas`
+    - PASS
+  - `tests/test_factory_connection_scope_clarification.pas`
+    - PASS
+  - `tests/test_factory_logging_scope_clarification.pas`
+    - PASS
+
+- 下一条仍未收口的 direct-library special-case parity：
+  - `ServerName` compatibility warning/reject parity
+  - early-data / replay-store direct-library parity

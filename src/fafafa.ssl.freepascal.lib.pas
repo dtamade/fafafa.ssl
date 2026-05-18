@@ -1533,10 +1533,15 @@ begin
 end;
 
 procedure TFreePascalSSLLibrary.SetDefaultConfig(const AConfig: TSSLConfig);
+var
+  LConfig: TSSLConfig;
 begin
-  FDefaultConfig := AConfig;
-  FLogLevel := AConfig.LogLevel;
-  FLogCallback := AConfig.LogCallback;
+  LConfig := AConfig;
+  TSSLFactory.NormalizeConfig(LConfig);
+
+  FDefaultConfig := LConfig;
+  FLogLevel := LConfig.LogLevel;
+  FLogCallback := LConfig.LogCallback;
   InvalidateCapabilitiesCache;
 end;
 
@@ -1583,6 +1588,8 @@ begin
 end;
 
 function TFreePascalSSLLibrary.CreateContext(AType: TSSLContextType): ISSLContext;
+var
+  LConfig: TSSLConfig;
 begin
   if not FInitialized then
     raise ESSLInitializationException.CreateWithContext(
@@ -1593,7 +1600,38 @@ begin
       sslFreePascal
     );
 
+  LConfig := FDefaultConfig;
+  LConfig.ContextType := AType;
+
   Result := TFreePascalContext.Create(Self, AType);
+  if Result <> nil then
+  begin
+    if LConfig.ProtocolVersions <> [] then
+      Result.SetProtocolVersions(LConfig.ProtocolVersions);
+
+    if LConfig.PreferredVersion <> sslProtocolUnknown then
+      Result.SetPreferredVersion(LConfig.PreferredVersion);
+
+    if LConfig.VerifyMode <> [] then
+      Result.SetVerifyMode(LConfig.VerifyMode);
+
+    if LConfig.VerifyDepth > 0 then
+      Result.SetVerifyDepth(LConfig.VerifyDepth);
+
+    if LConfig.CipherList <> '' then
+      Result.SetCipherList(LConfig.CipherList);
+
+    if LConfig.CipherSuites <> '' then
+      Result.SetCipherSuites(LConfig.CipherSuites);
+
+    Result.SetOptions(LConfig.Options);
+    Result.SetSessionCacheSize(LConfig.SessionCacheSize);
+    Result.SetSessionTimeout(LConfig.SessionTimeout);
+    Result.SetSessionCacheMode(ssoEnableSessionCache in LConfig.Options);
+
+    if LConfig.ALPNProtocols <> '' then
+      Result.SetALPNProtocols(LConfig.ALPNProtocols);
+  end;
 end;
 
 function TFreePascalSSLLibrary.CreateCertificate: ISSLCertificate;

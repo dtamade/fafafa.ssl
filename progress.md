@@ -1826,3 +1826,80 @@
     - FreePascal / MbedTLS / WolfSSL direct-library `CreateContext(AType)` currently just create contexts
     - those same libraries still store `FDefaultConfig`, while their context classes expose `SessionCacheSize` / `SessionTimeout` / `ALPNProtocols`
     - this is the next highest-value parity risk to verify/fix before broader interface slimming
+
+### Direct-Library Default-Config Parity Fix
+
+- add `docs/plans/2026-05-18-direct-library-default-config-parity.md`
+  - purpose:
+    - define a bounded TDD batch for `ISSLLibrary.SetDefaultConfig(...)` + `CreateContext(AType)` parity
+
+- add `tests/test_direct_library_default_config_parity.pas`
+  - purpose:
+    - prove a real runtime RED on the FreePascal direct-library path before touching production code
+
+- add `tests/scripts/test_direct_library_default_config_parity_contract.sh`
+  - purpose:
+    - prove a source RED across backend library units before touching production code
+
+- `bash -n tests/scripts/test_direct_library_default_config_parity_contract.sh`
+  - result: PASS
+  - summary:
+    - the new direct-library default-config parity contract script is syntactically valid
+
+- `bash tests/scripts/test_direct_library_default_config_parity_contract.sh`
+  - RED result: FAIL
+  - summary:
+    - `src/fafafa.ssl.freepascal.lib.pas` was not normalizing `SetDefaultConfig(...)`
+
+- `mkdir -p tmp/test_direct_library_default_config_parity && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_direct_library_default_config_parity -FEtmp/test_direct_library_default_config_parity -otmp/test_direct_library_default_config_parity/test_direct_library_default_config_parity tests/test_direct_library_default_config_parity.pas && ./tmp/test_direct_library_default_config_parity/test_direct_library_default_config_parity`
+  - RED result: FAIL
+  - summary:
+    - FreePascal direct-library `CreateContext(sslCtxClient)` failed to reflect default-config:
+      - `ProtocolVersions`
+      - `VerifyMode`
+      - `VerifyDepth`
+      - `CipherList`
+      - `CipherSuites`
+      - `SessionCacheSize`
+      - `SessionTimeout`
+      - `ALPNProtocols`
+      - normalized option-bridge `Options`
+
+- update:
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - change:
+    - normalize `SetDefaultConfig(...)` via `TSSLFactory.NormalizeConfig(...)`
+    - apply context-safe default fields in direct-library `CreateContext(AType)`
+
+- `bash tests/scripts/test_direct_library_default_config_parity_contract.sh`
+  - GREEN result: PASS
+  - summary:
+    - all targeted backend library units now keep the same direct-library default-config apply skeleton
+
+- `mkdir -p tmp/test_direct_library_default_config_parity && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_direct_library_default_config_parity -FEtmp/test_direct_library_default_config_parity -otmp/test_direct_library_default_config_parity/test_direct_library_default_config_parity tests/test_direct_library_default_config_parity.pas && ./tmp/test_direct_library_default_config_parity/test_direct_library_default_config_parity`
+  - GREEN result: PASS
+  - summary:
+    - FreePascal direct-library client context now reflects:
+      - `ProtocolVersions`
+      - `PreferredVersion`
+      - `VerifyMode`
+      - `VerifyDepth`
+      - `CipherList`
+      - `CipherSuites`
+      - `SessionCacheSize`
+      - `SessionTimeout`
+      - `ALPNProtocols`
+      - normalized option-bridge `Options`
+
+- `mkdir -p tmp/test_factory_connection_scope_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_factory_connection_scope_clarification -FEtmp/test_factory_connection_scope_clarification -otmp/test_factory_connection_scope_clarification/test_factory_connection_scope_clarification tests/test_factory_connection_scope_clarification.pas && ./tmp/test_factory_connection_scope_clarification/test_factory_connection_scope_clarification`
+  - result: PASS
+  - summary:
+    - connection-scoped rejection truth on factory paths remains green after the direct-library parity fix
+
+- `mkdir -p tmp/test_factory_logging_scope_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_factory_logging_scope_clarification -FEtmp/test_factory_logging_scope_clarification -otmp/test_factory_logging_scope_clarification/test_factory_logging_scope_clarification tests/test_factory_logging_scope_clarification.pas && ./tmp/test_factory_logging_scope_clarification/test_factory_logging_scope_clarification`
+  - result: PASS
+  - summary:
+    - library-scoped logging truth on factory paths remains green after the direct-library parity fix

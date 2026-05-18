@@ -66,6 +66,26 @@
 
 ---
 
+## Direct-Library Default Config Note
+
+`ISSLLibrary.SetDefaultConfig(...)` + `ISSLLibrary.CreateContext(AType)` 这条 direct-library path 现在也按统一规则应用一组 context-safe 默认配置，不再只在 OpenSSL 上看起来“比较完整”。
+
+- 当前对齐的字段：
+  - `ProtocolVersions`
+  - `PreferredVersion`
+  - `VerifyMode`
+  - `VerifyDepth`
+  - `CipherList`
+  - `CipherSuites`
+  - `Options`
+  - `SessionCacheSize`
+  - `SessionTimeout`
+  - `ALPNProtocols`
+- `SetDefaultConfig(...)` 会先归一化 `TSSLConfig`，所以 `EnableCompression` / `EnableSessionTickets` / `EnableOCSPStapling` 这类 option-bridge 字段也会先折叠进 `Options`，再由 direct-library `CreateContext(AType)` 应用到新 context。
+- 这条对齐当前只覆盖 context-safe 默认配置；`ServerName` compatibility 语义和 early-data / replay-store direct-library parity 仍按各自的专门收口批次继续推进。
+
+---
+
 ## FreePascal early-data replay-store opt-in
 
 FreePascal server-side `0-RTT / early data` 默认 shipped path 已经会把 replay truth 落到本地持久化 replay-store 路径。当前 capability 仍保持 `experimental`；如果默认路径不可用或不可写，恢复的 early data 会 fail-closed reject。public API 仍然开放 file / directory 两条 opt-in 路径，用来显式指定 replay-store 的落点。

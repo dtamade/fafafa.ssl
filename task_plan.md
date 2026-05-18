@@ -280,16 +280,33 @@
      - `option-bridge`
    - 新增 `tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
      守住 source/doc/factory/OpenSSL direct-path 的 bucket truth
-3. 新暴露的下一优先级问题不是 `ISSLConnection`，而是更具体的 backend parity gap：
-   - `ISSLLibrary.CreateContext(AType)` 的 default-config 套用在各 backend 间并不一致
-   - OpenSSL direct-library path 已明确套用 `SessionCacheSize` / `SessionTimeout` / `ALPNProtocols`
-   - WinSSL direct-library path 当前只显式套用 `Options`
-   - FreePascal / MbedTLS / WolfSSL 的 direct-library `CreateContext` 静态上仍只是直接创建 context
-   - 下一批应先验证并修正这条 direct-library default-config parity，而不是立刻切去 `ISSLConnection` 大手术
-4. 在 direct-library default-config parity 收口后，再决定 broader interface debt 的后续路线：
+3. `ISSLLibrary.CreateContext(AType)` 的 direct-library default-config parity 已完成第一轮收口：
+   - 新 plan：
+     - `docs/plans/2026-05-18-direct-library-default-config-parity.md`
+   - 新验证：
+     - `tests/test_direct_library_default_config_parity.pas`
+     - `tests/scripts/test_direct_library_default_config_parity_contract.sh`
+   - 当前已对齐的 context-safe 默认字段：
+     - `ProtocolVersions`
+     - `PreferredVersion`
+     - `VerifyMode`
+     - `VerifyDepth`
+     - `CipherList`
+     - `CipherSuites`
+     - `Options`
+     - `SessionCacheSize`
+     - `SessionTimeout`
+     - `SessionCacheMode`
+     - `ALPNProtocols`
+   - `SetDefaultConfig(...)` 也已在 `freepascal` / `winssl` / `mbedtls` / `wolfssl` library units 中补齐 normalization
+4. direct-library path 的下一优先级不再是“默认配置应用缺口”，而是尚未统一的剩余专门语义：
+   - `ServerName` compatibility warning/reject parity
+   - early-data / replay-store direct-library parity
+   - 这两类问题仍不适合和 `ISSLConnection` 大手术混成一批
+5. 在 direct-library special-case parity 收口后，再决定 broader interface debt 的后续路线：
    - 是否继续推进 `TSSLConfig` option-bridge freeze / slimming
    - 还是进入 `ISSLConnection` 核心 surface slimming roadmap
-5. 若未来要让 serializer 对“纯 legacy-only in-memory record”也具备完全无歧义的 projection，需要先为 capability model 补 presence/truth 元信息；当前批次不在无信号状态下瞎猜。
+6. 若未来要让 serializer 对“纯 legacy-only in-memory record”也具备完全无歧义的 projection，需要先为 capability model 补 presence/truth 元信息；当前批次不在无信号状态下瞎猜。
 
 ## Verification Discipline
 

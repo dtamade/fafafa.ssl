@@ -765,3 +765,52 @@
   - `direct-library default-config parity audit/fix`
   - 先把 `ISSLLibrary.CreateContext(AType)` 在各 backend 的 default-config 套用 truth 守住
   - 再继续 broader `TSSLConfig` slimming 或 `ISSLConnection` surgery
+
+- `direct-library default-config parity audit/fix` 现在已经完成第一轮收口：
+  - runtime RED 已真实出现：
+    - `tests/test_direct_library_default_config_parity.pas`
+      在修复前证明 FreePascal direct-library `CreateContext(sslCtxClient)` 没有套用：
+      - `ProtocolVersions`
+      - `VerifyMode`
+      - `VerifyDepth`
+      - `CipherList`
+      - `CipherSuites`
+      - `SessionCacheSize`
+      - `SessionTimeout`
+      - `ALPNProtocols`
+      - option-bridge normalized `Options`
+  - source RED 也真实出现：
+    - `tests/scripts/test_direct_library_default_config_parity_contract.sh`
+      在修复前证明 `freepascal` library unit 甚至还没有先 normalize `SetDefaultConfig(...)`
+
+- 当前已修正的实现 truth：
+  - `TFreePascalSSLLibrary`
+  - `TWinSSLLibrary`
+  - `TMbedTLSLibrary`
+  - `TWolfSSLLibrary`
+  - 以上 4 个 backend library units 现在都已：
+    - 在 `SetDefaultConfig(...)` 里先调用 `TSSLFactory.NormalizeConfig(...)`
+    - 在 direct-library `CreateContext(AType)` 里显式套用 context-safe 默认字段
+
+- 这轮 direct-library parity 现在覆盖的字段是：
+  - `ProtocolVersions`
+  - `PreferredVersion`
+  - `VerifyMode`
+  - `VerifyDepth`
+  - `CipherList`
+  - `CipherSuites`
+  - `Options`
+  - `SessionCacheSize`
+  - `SessionTimeout`
+  - `SessionCacheMode`
+  - `ALPNProtocols`
+
+- 这轮没有混入的未收口点，也因此成为下一优先级：
+  - `ServerName` compatibility warning/reject parity
+    - 目前 OpenSSL direct-library path 仍然更完整
+  - early-data / replay-store direct-library parity
+    - 当前仍主要以 factory/context path 为真相源
+
+- 因而当前更准确的 next queue 是：
+  - 先继续做 direct-library special-case parity
+  - 再决定是否进入 broader `TSSLConfig` slimming 或 `ISSLConnection` surgery
