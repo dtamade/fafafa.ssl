@@ -121,11 +121,13 @@ var
 begin
   TestHeader('Test 3: Client With Deprecated Context-Level SNI');
 
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   LBuilder := TSSLContextBuilder.Create
     .WithTLS12And13
     .WithVerifyPeer
     .WithSystemRoots
     .WithSNI('example.com');
+  {$POP}
 
   LResult := LBuilder.ValidateClient;
 
@@ -179,11 +181,13 @@ begin
     Exit;
   end;
 
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   LBuilder := TSSLContextBuilder.Create
     .WithTLS12And13
     .WithCertificatePEM(LCert)
     .WithPrivateKeyPEM(LKey)
     .WithSNI('server.example.com');
+  {$POP}
 
   LResult := LBuilder.ValidateServer;
 

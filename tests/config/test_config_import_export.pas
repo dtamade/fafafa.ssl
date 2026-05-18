@@ -375,11 +375,13 @@ var
 begin
   TestHeader('Test 12: Export With Advanced Options');
 
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   LBuilder := TSSLContextBuilder.Create
     .WithSNI('example.com')
     .WithALPN('h2,http/1.1')
     .WithSessionCache(True)
     .WithSessionTimeout(3600);
+  {$POP}
 
   LJSON := LBuilder.ExportToJSON;
   LRoot := GetJSON(LJSON);

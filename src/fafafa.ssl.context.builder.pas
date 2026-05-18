@@ -75,6 +75,7 @@ type
       TSSLConnectionBuilder.WithHostname(...) or
       ISSLClientConnection.SetServerName(...). }
     function WithSNI(const AServerName: string): ISSLContextBuilder;
+      deprecated 'Use per-connection hostname via TSSLConnectionBuilder.WithHostname or ISSLClientConnection.SetServerName';
     function WithALPN(const AProtocols: string): ISSLContextBuilder;
     function WithSessionCache(AEnabled: Boolean): ISSLContextBuilder;
     function WithSessionTimeout(ASeconds: Integer): ISSLContextBuilder;
@@ -293,6 +294,7 @@ type
     function WithSafeDefaults: ISSLContextBuilder;
 
     function WithSNI(const AServerName: string): ISSLContextBuilder;
+      deprecated 'Use per-connection hostname via TSSLConnectionBuilder.WithHostname or ISSLClientConnection.SetServerName';
     function WithALPN(const AProtocols: string): ISSLContextBuilder;
     function WithSessionCache(AEnabled: Boolean): ISSLContextBuilder;
     function WithSessionTimeout(ASeconds: Integer): ISSLContextBuilder;

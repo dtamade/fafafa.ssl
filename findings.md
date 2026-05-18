@@ -588,3 +588,29 @@
 - 这进一步确认了路线已经真正前移：
   - 现在不再需要继续做测试面排污或分类普查
   - 下一步的最高价值工作已经纯粹是最终 API 形状决策，而不是再找“还有没有哪个文件偷偷示范旧入口”
+
+- `WithSNI(...)` 在这之前还留着最后一个源码层 truth 漏口：
+  - runtime warning、validation wording、API 文档都已经把它降格成 compatibility-only
+  - 但 public declaration 自身还不是 compiler `deprecated`
+  - 这会让源码使用者在编译期看不到和文档/runtime 一致的信号
+
+- 当前这条漏口也已经被最小收口：
+  - `ISSLContextBuilder.WithSNI(...)`
+  - `TSSLContextBuilderImpl.WithSNI(...)`
+    都已挂上同一条 compiler `deprecated` message：
+    `Use per-connection hostname via TSSLConnectionBuilder.WithHostname or ISSLClientConnection.SetServerName`
+  - 新增 `tests/scripts/test_withsni_compiler_deprecated_contract.sh`
+    直接守住 declaration-level truth
+
+- 这次修法也顺手确认了一条工作流事实：
+  - intentional compatibility tests 继续保留 `.WithSNI(...)` 是合理的
+  - 但如果不做局部 warning quarantine，focused compile 输出会继续混入我们已知接受的 compiler deprecation 噪音
+  - 因而当前对 `.WithSNI(...)` 的剩余测试使用，应一律视为“故意覆盖 compatibility surface”，不是普通 fluent builder 示例
+
+- 因此 `WithSNI(...)` 这半边已经不再属于“语义还没收实”的范围：
+  - 它现在同时具备：
+    - compatibility-only 文档定位
+    - runtime warning + ignore
+    - compiler-level deprecated truth
+    - explicit compatibility-test classification
+  - 剩下真正未决的，只是最终 public surface 是否继续保留它当前的命名/挂载位置

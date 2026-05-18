@@ -44,11 +44,13 @@ var
 begin
   TestHeader('Builder context server name is not inherited by socket connection');
 
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   Ctx := TSSLContextBuilder.Create
     .WithBackend(sslFreePascal)
     .WithTLS13
     .WithSNI('ctx.example.com')
     .BuildClient;
+  {$POP}
 
   Conn := Ctx.CreateConnection(THandle(-1));
   ClientConn := Conn as ISSLClientConnection;

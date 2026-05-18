@@ -65,10 +65,12 @@ var
 begin
   TestHeader('Builder BuildClient ignores legacy WithSNI on client contexts');
 
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   Ctx := TSSLContextBuilder.Create
     .WithBackend(sslFreePascal)
     .WithSNI('builder-client.example.com')
     .BuildClient;
+  {$POP}
 
   Assert(LegacyContextServerName(Ctx) = '',
     'BuildClient no longer preserves explicit WithSNI ServerName on the built context');
@@ -89,12 +91,14 @@ begin
   ) then
     raise Exception.Create('Failed to generate self-signed certificate');
 
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   Ctx := TSSLContextBuilder.Create
     .WithBackend(sslFreePascal)
     .WithCertificatePEM(CertPEM)
     .WithPrivateKeyPEM(KeyPEM)
     .WithSNI('builder-server.example.com')
     .BuildServer;
+  {$POP}
 
   Assert(LegacyContextServerName(Ctx) = '',
     'BuildServer no longer preserves explicit WithSNI ServerName on the built context');

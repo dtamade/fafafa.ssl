@@ -947,11 +947,12 @@
 
 1. 进入 final public surface cleanup prep
    - builder / factory 的高层写入面已经全部变成 `warning + ignore`
+   - `WithSNI(...)` 现在也已经是 compiler-level `deprecated`
    - direct OpenSSL library default-config path 也已完成对齐
    - direct `ISSLContext.SetServerName/GetServerName` 已成为最后仍可观察的 context-level compatibility surface
    - 下一步应优先评估：
      - `TSSLConfig.ServerName` 是否继续保留当前字段位置
-     - `WithSNI(...)` 是否继续保留当前命名/入口
+     - `WithSNI(...)` 是否继续保留当前命名/入口，还是继续朝更窄的 compatibility surface 收口
      - direct context compatibility API 未来如何降格、替代或加 contract 护栏
 
 2. `TSSLConfig` 拆层与 capability model presence bits 仍然排在后面
@@ -965,3 +966,55 @@
 - **其中一部分已经是实现真相。**
 - **最小高价值修复已经落地。**
 - **更大的迁移方向也已经明确，不需要下次再重新判断。**
+
+## 增量收口：WithSNI compiler-level deprecated truth
+
+- 当主线已经收敛到 final public surface 时，`WithSNI(...)` 还剩最后一个不一致点：
+  - runtime warning、validation wording、API 文档都已经把它降格成 compatibility-only
+  - 但 public declaration 本身还没有编译期 `deprecated`
+  - 这会让 fluent builder 用户在源码层拿不到与当前迁移路线一致的信号
+
+- 这批已经把这条漏口补齐：
+  - `src/fafafa.ssl.context.builder.pas`
+    - `ISSLContextBuilder.WithSNI(...)`
+    - `TSSLContextBuilderImpl.WithSNI(...)`
+      都已经标成 compiler `deprecated`
+  - deprecated message 统一导向：
+    - `TSSLConnectionBuilder.WithHostname(...)`
+    - `ISSLClientConnection.SetServerName(...)`
+
+- 这一步保持 runtime 行为不变：
+  - `BuildClient` / `BuildServer` 继续是 warning + ignore
+  - 这批收的是 source-level truth，不是再改一轮行为语义
+
+- 这批还同步处理了 intentional compatibility tests 的 compile 噪音：
+  - 仍故意调用 `.WithSNI(...)` 的 focused compatibility tests 现在都做了局部 warning quarantine
+  - 这样 focused compile 输出不再反复夹带这条我们已经明确接受的 deprecated warning
+
+- focused 结果：
+  - `bash tests/scripts/test_withsni_compiler_deprecated_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_deprecated_context_servername_compat_surface_labels_contract.sh`
+    - PASS
+  - `tests/test_context_builder_server_name_compatibility_warning.pas`
+    - PASS (`16 passed, 0 failed`)
+  - `tests/config/test_config_validation.pas`
+    - PASS (`53 passed, 0 failed`)
+  - `git diff --check`
+    - PASS
+
+- 这意味着 `WithSNI(...)` 这半边已经真正收实：
+  - 它不再只是“文档上说别用了”
+  - 而是已经同时具备：
+    - compatibility-only 定位
+    - runtime warning + ignore
+    - compiler deprecated declaration
+    - explicit compatibility-test classification
+
+## 当前最重要的路线判断补充
+
+- `WithSNI(...)` 已不再属于“还要继续证明它是不是 compatibility-only”的问题
+- 下一步真正未决的只剩最终 public surface 取舍：
+  - `TSSLConfig.ServerName` 是否继续留在当前 record 上
+  - `WithSNI(...)` 是否继续保留当前 fluent naming / placement
+  - direct `ISSLContext.SetServerName/GetServerName` 是否继续作为最后 compatibility API 保留

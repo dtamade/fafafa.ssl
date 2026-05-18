@@ -129,6 +129,7 @@ var
 begin
   TestHeader('Test 2: Clone Copies All Fields');
 
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   LBuilder1 := TSSLContextBuilder.Create
     .WithTLS13
     .WithVerifyPeer
@@ -142,6 +143,7 @@ begin
     .WithALPN('h2,http/1.1')
     .WithSessionCache(True)
     .WithSessionTimeout(3600);
+  {$POP}
 
   LBuilder2 := LBuilder1.Clone;
 

@@ -42,6 +42,7 @@ Current caveat discovered by live focused retest:
 
 - all client backends now follow the same no-inheritance rule
 - builder / factory high-level write paths no longer preserve deprecated context-level `ServerName` state on newly built contexts
+- `WithSNI(...)` is now compiler deprecated in addition to the existing runtime warning + ignore behavior
 - this moves the remaining migration question forward to the final public surface cleanup:
   - whether `TSSLConfig.ServerName` should keep its current naming / placement
   - whether `WithSNI(...)` should keep its current naming / placement
@@ -165,6 +166,14 @@ Delivered sixth cut:
   - `tests/test_openssl_library_default_config_server_name_clarification.pas`
   - `tests/test_cross_backend_client_context_server_name_clarification.pas`
   so the remaining high-level write-surface drift is no longer hiding inside the OpenSSL direct library entry
+
+Delivered seventh cut:
+
+- `ISSLContextBuilder.WithSNI(...)` and `TSSLContextBuilderImpl.WithSNI(...)`
+  are now compiler deprecated with the same per-connection-hostname migration message used by the runtime warnings
+- new focused source contract `tests/scripts/test_withsni_compiler_deprecated_contract.sh`
+  now guards that `WithSNI(...)` cannot silently drift back to a non-deprecated declaration
+- intentional compatibility tests that still call `.WithSNI(...)` now carry local warning suppression so focused compile logs stay about new problems rather than this already-accepted deprecated surface
 
 ### Phase C: Replace Backend Inherited Fallback With Explicit Compatibility Shim
 
@@ -321,6 +330,7 @@ Delivered fifth cut:
 - ordinary smoke / edge-case tests no longer teach deprecated builder/config ServerName surfaces
 - remaining builder/config compatibility coverage is now explicitly labeled and confined by source contract
 - remaining active direct-context `SetServerName(...)` tests are now also explicitly classified and confined by source contract
+- `WithSNI(...)` is no longer merely documented as compatibility-only; the source declaration itself now enforces that status at compile time
 - we are now blocked on “which final API shape to keep for the remaining public compatibility surface”
 
 ## Next Recommended Batch
@@ -329,7 +339,7 @@ Choose one bounded implementation family only:
 
 1. **Final surface shape decision**
    - decide whether `TSSLConfig.ServerName` still deserves its current record placement now that ordinary tests no longer teach it
-   - decide whether builder `WithSNI(...)` should stay on the fluent public surface with its current naming
+   - decide whether builder `WithSNI(...)` should stay on the fluent public surface with its current naming now that it is already compiler deprecated
    - decide whether direct `ISSLContext.SetServerName/GetServerName` needs a narrower replacement story now that every active test hit is already explicitly classified
 2. **Direct context compatibility API cleanup staging**
    - decide how long direct `ISSLContext.SetServerName/GetServerName` should remain

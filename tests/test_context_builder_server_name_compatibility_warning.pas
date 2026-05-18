@@ -60,6 +60,13 @@ begin
   LastMessage := '';
 end;
 
+function LegacyContextServerName(ACtx: ISSLContext): string;
+begin
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
+  Result := ACtx.GetServerName;
+  {$POP}
+end;
+
 procedure Test_BuildClientWithSNI_LogsCompatibilityWarning;
 var
   LOriginalLogger: ISecurityLogger;
@@ -74,13 +81,15 @@ begin
   TSecurityLog.Logger := LLogger;
   try
     LLogger.Reset;
+    {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
     LCtx := TSSLContextBuilder.Create
       .WithBackend(sslFreePascal)
       .WithSNI('builder-client-warning.example.com')
       .BuildClient;
+    {$POP}
 
     Assert(LCtx <> nil, 'BuildClient still succeeds');
-    Assert(LCtx.GetServerName = '',
+    Assert(LegacyContextServerName(LCtx) = '',
       'BuildClient no longer retains the deprecated client-side ServerName on built contexts');
     Assert(LLogger.CallCount > 0, 'BuildClient WithSNI emits a warning');
     Assert(Pos('WithSNI', LLogger.LastMessage) > 0,
@@ -117,15 +126,17 @@ begin
   TSecurityLog.Logger := LLogger;
   try
     LLogger.Reset;
+    {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
     LCtx := TSSLContextBuilder.Create
       .WithBackend(sslFreePascal)
       .WithCertificatePEM(LCertPEM)
       .WithPrivateKeyPEM(LKeyPEM)
       .WithSNI('builder-server-warning.example.com')
       .BuildServer;
+    {$POP}
 
     Assert(LCtx <> nil, 'BuildServer still succeeds');
-    Assert(LCtx.GetServerName = '',
+    Assert(LegacyContextServerName(LCtx) = '',
       'BuildServer no longer retains the deprecated client-only ServerName on server contexts');
     Assert(LLogger.CallCount > 0, 'BuildServer WithSNI emits a warning');
     Assert(Pos('WithSNI', LLogger.LastMessage) > 0,

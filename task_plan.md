@@ -205,6 +205,14 @@
   - `tests/test_context_builder_server_servername_runtime_consistency.pas`
     现在对刻意保留的 deprecated context getter/setter 做局部 warning suppression
   - focused compile outputs 已不再额外夹带这些 direct-context deprecation 噪音
+- [completed] `WithSNI(...)` compiler-level deprecation alignment 已收口：
+  - `src/fafafa.ssl.context.builder.pas`
+    的 public `ISSLContextBuilder.WithSNI(...)` 与内部 `TSSLContextBuilderImpl.WithSNI(...)`
+    declaration 现在都已经是编译期 `deprecated`
+  - 新增 `tests/scripts/test_withsni_compiler_deprecated_contract.sh`
+    守住源码层 truth，不允许 `WithSNI(...)` 重新退回“只有注释/运行时 warning”的状态
+  - 刻意保留 `.WithSNI(...)` 的 compatibility tests 现在都做了局部 warning quarantine，
+    避免 focused compile 输出被这条已知 deprecated surface 反复刷屏
 
 ## Scope
 
@@ -234,12 +242,13 @@
 
 1. 进入 final public surface cleanup prep：
    - 当前 builder / factory 的高层输入都已经是 `warning + ignore`
+   - `WithSNI(...)` 也已经进入 compiler-level `deprecated` truth
    - OpenSSL backend-specific direct library default-config path 也已完成对齐
    - 普通测试面也已不再继续示范 deprecated builder/config ServerName surface
    - active direct-context `SetServerName(...)` 测试面也已不再存在未分类命中
    - 现在应直接进入最终 API 形状决策：
      - `TSSLConfig.ServerName` 是否还应继续留在当前 record 上
-     - builder `WithSNI(...)` 是否还应继续保留当前命名/挂载位置
+     - builder `WithSNI(...)` 是否还应继续保留当前命名/挂载位置，还是继续朝更窄的 compatibility surface 收口
      - direct `ISSLContext.SetServerName/GetServerName` 是否需要更明确的替代/降格方案
 2. 在 public surface prep 明确后，再决定 direct context compatibility API 的后续收口方式：
    - direct `SetServerName/GetServerName` 是否继续原样保留

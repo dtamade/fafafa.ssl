@@ -305,9 +305,11 @@ var
 begin
   TestHeader('Test 13: Override Server Name');
 
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   LBuilder := TSSLContextBuilder.Create
     .WithSNI('old.example.com')
     .Override('server_name', 'new.example.com');
+  {$POP}
 
   LJSON := LBuilder.ExportToJSON;
 

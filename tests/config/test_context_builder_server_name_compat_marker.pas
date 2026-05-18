@@ -47,8 +47,10 @@ var
 begin
   TestHeader('JSON export marks deprecated context-level SNI');
 
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   LBuilder := TSSLContextBuilder.Create
     .WithSNI('compat.example.com');
+  {$POP}
 
   LJSON := LBuilder.ExportToJSON;
   LRoot := GetJSON(LJSON);
@@ -71,8 +73,10 @@ var
 begin
   TestHeader('INI export marks deprecated context-level SNI');
 
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   LBuilder := TSSLContextBuilder.Create
     .WithSNI('compat.example.com');
+  {$POP}
 
   LINI := LBuilder.ExportToINI;
   Assert(Pos('server_name=compat.example.com', LINI) > 0,

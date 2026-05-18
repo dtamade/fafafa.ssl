@@ -1580,3 +1580,56 @@
   - summary:
     - focused builder/direct-context consistency contract stayed green after local warning quarantine (`6 passed, 0 failed`)
     - compile output no longer emits the direct-context `GetServerName` deprecated warnings from this test
+
+### WithSNI Compiler Deprecation Alignment
+
+- add `docs/plans/2026-05-18-withsni-compiler-deprecation-alignment.md`
+  - purpose:
+    - define the bounded source-truth batch that upgrades `WithSNI(...)` from documentation/runtime-only deprecation to compiler-level deprecation
+    - keep runtime behavior unchanged while making the public builder surface tell the truth at compile time
+
+- add `tests/scripts/test_withsni_compiler_deprecated_contract.sh`
+  - purpose:
+    - fail if `ISSLContextBuilder.WithSNI(...)` or `TSSLContextBuilderImpl.WithSNI(...)` loses its compiler `deprecated` marker
+
+- update `src/fafafa.ssl.context.builder.pas`
+  - change:
+    - mark both public `WithSNI(...)` declarations as compiler `deprecated`
+    - reuse the same per-connection-hostname migration message already used by the runtime warnings
+
+- update selected intentional compatibility tests under `tests/` and `tests/config/`
+  - change:
+    - add local warning suppression around intentional `.WithSNI(...)` callsites
+    - keep behavior assertions unchanged; the batch is source-truth alignment plus compile-noise quarantine
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - record that `WithSNI(...)` is now also compiler deprecated, not only runtime warning + ignore
+
+- `bash tests/scripts/test_withsni_compiler_deprecated_contract.sh`
+  - result: PASS
+  - summary:
+    - both builder `WithSNI(...)` declarations are now compiler deprecated
+    - the dedicated source contract now guards this declaration-level truth
+
+- `bash tests/scripts/test_deprecated_context_servername_compat_surface_labels_contract.sh`
+  - result: PASS
+  - summary:
+    - remaining deprecated builder/config compatibility usage stays confined to the existing allowlist after the compiler-deprecation alignment
+
+- `mkdir -p tmp/test_context_builder_server_name_compatibility_warning && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_context_builder_server_name_compatibility_warning -FEtmp/test_context_builder_server_name_compatibility_warning -otmp/test_context_builder_server_name_compatibility_warning/test_context_builder_server_name_compatibility_warning tests/test_context_builder_server_name_compatibility_warning.pas && ./tmp/test_context_builder_server_name_compatibility_warning/test_context_builder_server_name_compatibility_warning`
+  - result: PASS
+  - summary:
+    - focused builder warning suite finished `16 passed, 0 failed`
+    - intentional `.WithSNI(...)` coverage stayed green after the compiler-level deprecation change
+
+- `mkdir -p tmp/test_config_validation && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_config_validation -FEtmp/test_config_validation -otmp/test_config_validation/test_config_validation tests/config/test_config_validation.pas && ./tmp/test_config_validation/test_config_validation`
+  - result: PASS
+  - summary:
+    - focused config validation suite finished `53 passed, 0 failed`
+    - compatibility validation wording stayed aligned while compile output remained free of repeated known `.WithSNI(...)` deprecation noise
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `WithSNI` compiler-deprecation batch has no whitespace or patch-format issues

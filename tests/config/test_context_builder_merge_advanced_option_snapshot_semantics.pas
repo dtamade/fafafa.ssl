@@ -77,7 +77,9 @@ begin
     LSourceJSON.Free;
   end;
 
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   LTarget := TSSLContextBuilder.Create.WithSNI('target.example.com');
+  {$POP}
   LTarget.Merge(LSource);
 
   LResultJSON := ParseBuilderJSON(LTarget);
