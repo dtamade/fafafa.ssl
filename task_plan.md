@@ -1494,10 +1494,10 @@
       - `SetOptions(...)`
         不再只是改 `FOptions`，现在会在 session/ticket-related option 变化后显式触发 credential rebuild
       - `EnsureCredentialsAcquired`
-        现在会在：
-        - `not FSessionCacheEnabled`
-        - 或 `not (ssoEnableSessionTickets in FOptions)`
-        时把 disable truth 映射到 `SCH_CRED_DISABLE_RECONNECTS`
+        现在会在 server-side disable truth 下使用 `SCH_CRED_DISABLE_RECONNECTS`
+      - client-side reconnect truth 当前重新收紧为：
+        - same `target name`
+        - same context-level `credential handle`
       - 这说明 WinSSL 的 `session cache / session tickets` context surface 已不再只是 Pascal-level bookkeeping，而是开始真实影响 Schannel credential acquisition
     - 当前 focused proof 已覆盖：
       - `bash -n tests/scripts/test_winssl_session_cache_runtime_flag_contract.sh`
@@ -1508,6 +1508,25 @@
       - 在这个新的 context/runtime 基线上继续追 native resumed-handshake 观测
       - 优先调查为什么 current Windows proof 仍停在 `observed_reuse=false`
       - 不再把 session cache / ticket option runtime wiring 当成未知缺口重复拉起
+58. `WinSSL client reconnect truth alignment` 已完成并应作为当前 WinSSL native resumed-handshake 调查的最新上游基线保留：
+    - 新 plan：
+      - `docs/plans/2026-05-18-winssl-client-reconnect-truth-alignment.md`
+    - 当前已确认的 route truth：
+      - `SCH_CRED_DISABLE_RECONNECTS` 在 `SCHANNEL_CRED` 上当前只保留 server-side truth，不再直接挂到 client credential path
+      - client-side Schannel reconnect/cache lookup 当前更准确的 canonical truth 是：
+        - same `target name`
+        - same context-level `credential handle`
+        - same process / logon session
+      - `ISSLSessionResumption.SetSession(...)` 在 WinSSL 上当前更接近 compatibility metadata surface，而不是 native session-handle injection 点
+    - 当前 focused proof 已覆盖：
+      - `bash -n tests/scripts/test_winssl_session_cache_runtime_flag_contract.sh`
+      - `bash tests/scripts/test_winssl_session_cache_runtime_flag_contract.sh`
+      - `mkdir -p tmp/winssl_client_reconnect_truth_win64 && fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/winssl_client_reconnect_truth_win64 -FEtmp/winssl_client_reconnect_truth_win64 -otmp/winssl_client_reconnect_truth_win64/test_winssl_session_resumption.exe tests/winssl/test_winssl_session_resumption.pas`
+      - `git diff --check`
+    - 当前批收口后默认下一步应为：
+      - 继续在“same target name + same credential handle”这个真实模型上调查 Windows runtime 为何仍然 `observed_reuse=false`
+      - 不再把 `SetSession(...)` 当成 WinSSL native reconnect 的直接注入点
+      - 不再把 server-only `SCH_CRED_DISABLE_RECONNECTS` 错挂回 client path
 57. `WinSSL session serialization roundtrip alignment` 已完成并应作为当前 WinSSL session-object completeness 基线保留：
     - 新 plan：
       - `docs/plans/2026-05-18-winssl-session-serialization-roundtrip-alignment.md`

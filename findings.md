@@ -2527,3 +2527,21 @@
   - `SetTimeout(...)` / `SetSessionMetadata(...)` 也会同步刷新 serialized payload
   - 这仍不等于 serialized payload 可以直接驱动 Schannel native reconnect
   - 但至少把“WinSSL `ISSLSession` 序列化接口几乎是空壳”这条对象层缺口先关掉了
+
+- 在继续深挖 WinSSL native resumed-handshake 时，又确认了一个更上游的 truth correction：
+  - 我们上一批把 `SCH_CRED_DISABLE_RECONNECTS` 直接映射到了 client credential path
+  - 但按 Schannel 官方语义，这个 flag 是 server-side truth，不应该直接挂在 client `SCHANNEL_CRED`
+  - 这意味着“client-side session cache/ticket disable truth 已完全接线到 Schannel credential flags”这个说法过强，需要立即收紧
+
+- 顺着官方文档再往下压，也把 WinSSL reconnect 的核心模型压清楚了：
+  - client-side Schannel reconnect/cache lookup 当前更准确的条件是：
+    - same `target name`
+    - same `credential handle`
+    - same process / logon session
+  - 因而 `ISSLSessionResumption.SetSession(...)` 在 WinSSL 上更准确的定位不是“native handle injection”
+  - 而是 compatibility metadata surface；若 native reconnect 发生，其根因仍应优先归到 Schannel auto-cache 命中
+
+- 当前修完后的更准确结论是：
+  - server-side disable truth 仍可通过 `SCH_CRED_DISABLE_RECONNECTS` 表达
+  - client-side native reconnect 解释模型已经收紧回官方 Schannel auto-cache truth
+  - 这能让后续 `observed_reuse=false` 的调查少掉一条错误分支：不再误以为 WinSSL `SetSession(...)` 已经是可验证的 native reconnect 注入点

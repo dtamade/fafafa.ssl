@@ -41,11 +41,12 @@ require("FCredentialsNeedRebuild := True;" in set_options,
         "SetOptions must force credential rebuild when session/ticket-related options change")
 
 require("SCH_CRED_DISABLE_RECONNECTS" in ensure_credentials,
-        "EnsureCredentialsAcquired must map WinSSL session-cache/ticket disablement to SCH_CRED_DISABLE_RECONNECTS")
+        "EnsureCredentialsAcquired must keep a server-side reconnect-disable mapping for WinSSL session-cache/ticket truth")
 
-require(("not FSessionCacheEnabled" in ensure_credentials) and
+require(("FContextType = sslCtxServer" in ensure_credentials) and
+        ("not FSessionCacheEnabled" in ensure_credentials) and
         ("ssoEnableSessionTickets in FOptions" in ensure_credentials),
-        "EnsureCredentialsAcquired must derive reconnect disablement from session-cache mode and session-ticket option truth")
+        "EnsureCredentialsAcquired must scope SCH_CRED_DISABLE_RECONNECTS to server-side truth and still derive it from session-cache/ticket state")
 PY
 
 echo "[PASS] WinSSL session-cache runtime flag contract passed"

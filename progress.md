@@ -5675,3 +5675,48 @@
   - result: PASS
   - summary:
     - current `WinSSL session serialization roundtrip alignment` batch has no whitespace or patch-format issues
+
+### WinSSL Client Reconnect Truth Alignment
+
+- official Schannel documentation review
+  - result: PASS
+  - summary:
+    - confirmed client-side session cache lookup truth is anchored on same `target name` + same `credential handle` (+ same process/logon session)
+    - confirmed `SCH_CRED_DISABLE_RECONNECTS` is not a generic client-side credential flag to use as the reconnect toggle
+    - this immediately downgraded the previous broader wording from “fully wired client/session disable flag mapping” to a narrower server-side-only truth
+
+- add `docs/plans/2026-05-18-winssl-client-reconnect-truth-alignment.md`
+  - purpose:
+    - define a bounded correction batch that removes the wrong client-side reconnect-flag assumption
+    - pin the canonical WinSSL reconnect model to Schannel official truth
+
+- update:
+  - `src/fafafa.ssl.winssl.context.pas`
+  - `tests/scripts/test_winssl_session_cache_runtime_flag_contract.sh`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md`
+  - `docs/plans/2026-05-18-winssl-session-cache-runtime-flag-alignment.md`
+  - change:
+    - scope `SCH_CRED_DISABLE_RECONNECTS` back to server-side disable truth
+    - keep credential rebuild truth intact
+    - document that WinSSL client reconnect remains keyed to `target name + credential handle`
+    - document that `ISSLSessionResumption.SetSession(...)` is not yet a native session-handle injection point on WinSSL
+
+- `bash -n tests/scripts/test_winssl_session_cache_runtime_flag_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_session_cache_runtime_flag_contract.sh`
+  - result: PASS
+  - summary:
+    - the focused source contract now guards the corrected server-side-only reconnect flag truth
+
+- `mkdir -p tmp/winssl_client_reconnect_truth_win64 && fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/winssl_client_reconnect_truth_win64 -FEtmp/winssl_client_reconnect_truth_win64 -otmp/winssl_client_reconnect_truth_win64/test_winssl_session_resumption.exe tests/winssl/test_winssl_session_resumption.pas`
+  - result: PASS
+  - summary:
+    - Win64 dedicated session-resumption proof still compiles after the client reconnect truth correction
+    - no new compile blocker was introduced by removing the wrong client-side reconnect-flag assumption
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `WinSSL client reconnect truth alignment` batch has no whitespace or patch-format issues

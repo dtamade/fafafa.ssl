@@ -55,7 +55,8 @@ git diff --check
 
 - PASS
 - `SetSessionCacheMode(...)` 与 `SetOptions(...)` 的 session/ticket 相关变化现在都会触发 credential rebuild
-- `EnsureCredentialsAcquired` 现在会把 cache disabled 或 tickets disabled 的 truth 映射到 `SCH_CRED_DISABLE_RECONNECTS`
+- `EnsureCredentialsAcquired` 现在只会在 server-side disable truth 下使用 `SCH_CRED_DISABLE_RECONNECTS`
+- client-side reconnect truth 重新收紧为 Schannel auto-cache：`target name + credential handle`
 - focused verification：
   - `bash -n tests/scripts/test_winssl_session_cache_runtime_flag_contract.sh`
   - `bash tests/scripts/test_winssl_session_cache_runtime_flag_contract.sh`

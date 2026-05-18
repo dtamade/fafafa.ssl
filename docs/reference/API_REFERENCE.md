@@ -629,6 +629,8 @@ WinSSL 后端提供 `ISSLSession` 复用能力，但活跃公共接口以当前�
 > 当前 dedicated Windows CI runtime truth 已由 run `26037518301` 固定：
 > `observed_reuse=false`，`session_configured=true`。
 > 这意味着 WinSSL 的 session-resumption public surface 已可安全使用，但 native resumed-handshake 行为在 fafafa.ssl 中仍应视为实验性能力，而不是已稳定命中的 runtime 结论。
+> 按当前 Schannel truth，client-side reconnect/cache lookup 仍主要取决于相同的 `target name` 与相同的 context-level `credential handle`；
+> `ISSLSessionResumption.SetSession(...)` 在 WinSSL 上当前更接近 compatibility metadata surface，而不是 native session-handle injection 点。
 
 #### 核心接口
 
@@ -694,7 +696,7 @@ begin
   LConn2 := LContext.CreateConnection(Socket2);
   (LConn2 as ISSLClientConnection).SetServerName('api.example.com');
   if Supports(LConn2, ISSLSessionResumption, LResumption2) and Assigned(LSession) then
-    LResumption2.SetSession(LSession);  // 设置之前保存的 Session
+    LResumption2.SetSession(LSession);  // 保存 metadata/compatibility surface；Schannel reconnect truth 仍以 target name + credential handle 为主
 
   if LConn2.Connect then
   begin
