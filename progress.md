@@ -1672,3 +1672,45 @@
   - result: PASS
   - summary:
     - current TSSLConfig surface-freeze batch has no whitespace or patch-format issues
+
+### Direct Context ServerName Surface Truth Freeze
+
+- add `docs/plans/2026-05-18-direct-context-servername-surface-truth-freeze.md`
+  - purpose:
+    - define the bounded `v1.x` surface-freeze batch for direct `ISSLContext.SetServerName/GetServerName`
+    - keep runtime behavior unchanged while preventing deprecated direct context APIs from drifting back into ordinary client-path guidance
+
+- add `tests/scripts/test_direct_context_servername_surface_truth_contract.sh`
+  - purpose:
+    - fail if the direct-context deprecation messages, production-source caller boundary, or active-doc guidance drift away from the current compatibility-only truth
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - explicitly classify `ISSLContext.SetServerName(...)` / `GetServerName(...)` as deprecated direct context compatibility APIs
+
+- `bash -n tests/scripts/test_direct_context_servername_surface_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - the new direct-context surface-truth contract script is syntactically valid
+
+- `bash tests/scripts/test_direct_context_servername_surface_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - direct `ISSLContext` ServerName deprecation messages remain correct
+    - production `src/` contains no real direct context caller
+    - active docs contain no `Ctx.SetServerName(...)`-style guidance
+
+- `bash tests/scripts/test_active_direct_context_servername_surface_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - active direct-context test coverage remains explicitly classified and confined after the source/doc freeze batch
+
+- `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+  - result: PASS
+  - summary:
+    - the remaining intentional direct-context compatibility control case stays explicitly labeled
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current direct-context surface-freeze batch has no whitespace or patch-format issues

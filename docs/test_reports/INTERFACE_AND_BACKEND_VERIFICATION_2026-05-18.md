@@ -947,11 +947,10 @@
 
 1. 进入 final public surface cleanup prep
    - `TSSLConfig.ServerName` 这条线现在已经冻结成 `v1.x` compatibility-only field，不再是当前待定项
+   - direct `ISSLContext.SetServerName/GetServerName` 这条线现在也已经冻结成 `v1.x` deprecated compatibility API
    - `WithSNI(...)` 现在也已经是 compiler-level `deprecated`
    - direct OpenSSL library default-config path 也已完成对齐
-   - direct `ISSLContext.SetServerName/GetServerName` 已成为最后仍可观察的 context-level compatibility surface
    - 下一步应优先评估：
-     - direct context compatibility API 未来如何降格、替代或加 contract 护栏
      - `WithSNI(...)` 是否继续保留当前命名/入口，还是继续朝更窄的 compatibility surface 收口
 
 2. `TSSLConfig` 拆层与 capability model presence bits 仍然排在后面
@@ -1014,9 +1013,9 @@
 
 - `WithSNI(...)` 已不再属于“还要继续证明它是不是 compatibility-only”的问题
 - `TSSLConfig.ServerName` 也已不再属于“当前版本线要不要立刻改名/移除”的问题
+- direct `ISSLContext.SetServerName/GetServerName` 也已不再属于“当前版本线要不要立刻移除”的问题
 - 下一步真正未决的只剩：
   - `WithSNI(...)` 是否继续保留当前 fluent naming / placement
-  - direct `ISSLContext.SetServerName/GetServerName` 是否继续作为最后 compatibility API 保留
 
 ## 增量收口：TSSLConfig.ServerName v1.x surface truth freeze
 
@@ -1053,3 +1052,42 @@
   - 它不再是“下一刀必须先改掉”的问题
   - 它已经变成一个被 source/doc contract 锁住的 `v1.x` frozen compatibility surface
   - 因而下一批应直接前移到 direct context compatibility API 的最终收口
+
+## 增量收口：direct ISSLContext ServerName v1.x surface truth freeze
+
+- 在 `TSSLConfig.ServerName` 已冻结之后，direct `ISSLContext.SetServerName/GetServerName` 成了最后一组仍然可见的 context-level compatibility API。
+- 这次静态审查确认：
+  - 它们仍存在于 public interface，并由各 backend context 实现
+  - 但 production `src/` 已经不再存在真实 direct context caller
+  - active docs 也不再把 `Ctx.SetServerName(...)` 当普通 client 路径示例
+
+- 因而这批做出的 `v1.x` 设计决定是：
+  - 不在当前版本线直接移除这组 deprecated context API
+  - 保持 source compatibility
+  - 但把它们冻结成 deprecated compatibility-only context surface
+
+- 具体落地：
+  - 新增 `tests/scripts/test_direct_context_servername_surface_truth_contract.sh`
+    - 钉住 `src/fafafa.ssl.base.pas` 的 deprecated declaration message
+    - 钉住 production `src/` 无 direct context caller
+    - 钉住 active docs 无 `Ctx.SetServerName(...)` 风格 guidance
+  - `docs/reference/API_REFERENCE.md`
+    - 现在显式把 `ISSLContext.SetServerName(...)` / `GetServerName(...)` 标成 deprecated direct context compatibility API
+  - 既有 direct-context 分类合同继续保持：
+    - `tests/scripts/test_active_direct_context_servername_surface_classification_contract.sh`
+    - `tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+
+- focused 结果：
+  - `bash tests/scripts/test_direct_context_servername_surface_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_active_direct_context_servername_surface_classification_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+
+- 这一步之后，当前版本线里还剩的 final public-surface 形状问题已经再次收窄：
+  - `TSSLConfig.ServerName` 已 frozen
+  - direct context API 已 frozen
+  - 剩下真正还需要继续决定的，只剩 `WithSNI(...)` 的命名/挂载位置

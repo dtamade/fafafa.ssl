@@ -636,3 +636,29 @@
   - 它不再是“下一刀要不要删/改”的首要候选
   - 它已经被降成 `v1.x` compatibility-only frozen surface
   - 下一步真正该继续收口的，已经前移到 direct `ISSLContext.SetServerName/GetServerName` 这组最后的 context-level compatibility API
+
+- 对 direct `ISSLContext.SetServerName/GetServerName` 的最新静态审查也已经给出同样清晰的结论：
+  - 这组 API 仍然存在于 public interface，并由各 backend context 实现
+  - 但 production `src/` 已经不再存在真实 direct context caller
+  - active docs 也不再把 `Ctx.SetServerName(...)` 当普通 client 流指导路径
+
+- 因而当前最稳妥的 `v1.x` 设计决定也已经明确：
+  - 不在当前版本线直接移除这组 deprecated context API
+  - 保持 source compatibility
+  - 但把它们冻结成“deprecated but still present”的 compatibility-only context surface
+
+- 这条 direct-context `v1.x freeze` 现在已经被 source/doc contract 固化：
+  - `src/fafafa.ssl.base.pas` 的 deprecation message 继续统一指向 `ISSLClientConnection.Set/GetServerName`
+  - 新增 `tests/scripts/test_direct_context_servername_surface_truth_contract.sh`
+    钉住：
+    - deprecated declaration message
+    - production source 无 direct context caller
+    - active docs 无 direct context setter guidance
+  - 既有 `tests/scripts/test_active_direct_context_servername_surface_classification_contract.sh`
+    与 `tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+    则继续守住 active tests 的 intentional coverage 边界
+
+- 这也让主路线再次前移：
+  - `TSSLConfig.ServerName` 已 frozen
+  - direct context API 已 frozen
+  - 当前最后仍值得继续讨论 public shape 的，只剩 `WithSNI(...)` 的命名/挂载位置

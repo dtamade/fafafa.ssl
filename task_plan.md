@@ -221,6 +221,14 @@
     - active docs 只允许 `docs/reference/API_REFERENCE.md` 以 compatibility note 形式提及它
   - 新增 `tests/scripts/test_tsslconfig_servername_surface_truth_contract.sh`
     守住这条 `v1.x freeze` truth，不允许它重新漂回普通主路径
+- [completed] direct `ISSLContext.SetServerName/GetServerName` 的 `v1.x` surface truth freeze 已收口：
+  - 当前设计决定是不在 `v1.x` 直接移除这组 deprecated context API，避免破坏现有源码兼容
+  - 但它们现在已经被锁成 deprecated compatibility-only surface：
+    - `src/fafafa.ssl.base.pas` 的 deprecation message 统一指向 `ISSLClientConnection.Set/GetServerName`
+    - production `src/` 已不再存在真实 direct context caller
+    - active docs 不再把 `Ctx.SetServerName(...)` 当普通 client 指导路径
+  - 新增 `tests/scripts/test_direct_context_servername_surface_truth_contract.sh`
+    守住这条 `v1.x freeze` truth，不允许 direct context guidance 或 production caller 回流
 
 ## Scope
 
@@ -249,15 +257,15 @@
 ## Current Queue
 
 1. 进入 final public surface cleanup prep：
-   - `TSSLConfig.ServerName` 已冻结为 `v1.x` compatibility-only field，不再作为当前批次待定项反复重开
-   - `WithSNI(...)` 已进入 compiler-level `deprecated` truth
-   - direct `ISSLContext.SetServerName/GetServerName` 已成为当前最值得继续收口的最后 context-level compatibility API
+   - `TSSLConfig.ServerName` 已冻结为 `v1.x` compatibility-only field
+   - direct `ISSLContext.SetServerName/GetServerName` 已冻结为 `v1.x` deprecated compatibility API
+   - `WithSNI(...)` 已进入 compiler-level `deprecated` truth，并成为当前最后仍值得继续讨论命名/挂载位置的 public compatibility surface
    - 下一批应优先进入：
-     - direct context compatibility API 的最终保留边界
      - builder `WithSNI(...)` 是否还应继续保留当前命名/挂载位置
-2. 在 direct context compatibility API 明确后，再决定是否需要进一步收窄 builder naming / placement：
-   - direct `SetServerName/GetServerName` 是否继续原样保留
-   - 是否需要新的替代入口、文档降格和 focused source contract
+     - 是否需要把它进一步降成更窄的 legacy naming / placement
+2. 在 `WithSNI(...)` naming / placement 明确后，再决定是否需要继续规划更大 `v2` surface cleanup：
+   - deprecated context-level SNI surfaces 何时在 breaking window 中真正移除或重命名
+   - 是否需要新的迁移文档或 v2 contract 预留
 3. 在 capability 与 SNI 迁移边界都稳定后，再评估 `TSSLConfig` 的更大跨层字段拆分时机。
 4. 若未来要让 serializer 对“纯 legacy-only in-memory record”也具备完全无歧义的 projection，需要先为 capability model 补 presence/truth 元信息；当前批次不在无信号状态下瞎猜。
 

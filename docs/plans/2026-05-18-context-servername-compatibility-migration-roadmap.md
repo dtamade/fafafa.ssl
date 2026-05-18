@@ -44,9 +44,9 @@ Current caveat discovered by live focused retest:
 - builder / factory high-level write paths no longer preserve deprecated context-level `ServerName` state on newly built contexts
 - `WithSNI(...)` is now compiler deprecated in addition to the existing runtime warning + ignore behavior
 - `TSSLConfig.ServerName` is now best treated as a `v1.x` frozen compatibility field rather than an active behavior surface
+- direct `ISSLContext.SetServerName/GetServerName` is now best treated as a `v1.x` frozen deprecated compatibility API rather than an active client-path control surface
 - this moves the remaining migration question forward to the final public surface cleanup:
   - whether `WithSNI(...)` should keep its current naming / placement
-  - how long the direct context compatibility API should remain
 
 ### 2. Backend fallback read paths
 
@@ -184,6 +184,16 @@ Delivered eighth cut:
   - factory / OpenSSL direct-library warning wording
   - the rule that active docs may mention `TSSLConfig.ServerName` only in `docs/reference/API_REFERENCE.md`
 - `docs/reference/API_REFERENCE.md` now repeats the client-side warning + ignore truth next to the `Use TSSLConfig with TSSLFactory.CreateContext(...)` guidance so the field is not rediscovered as a recommended client path
+
+Delivered ninth cut:
+
+- direct `ISSLContext.SetServerName/GetServerName` is now explicitly frozen in place as a `v1.x` deprecated compatibility API instead of remaining an implicit “maybe we still need to shrink this immediately” surface
+- new focused source/doc contract `tests/scripts/test_direct_context_servername_surface_truth_contract.sh`
+  now guards:
+  - the deprecated declaration messages in `src/fafafa.ssl.base.pas`
+  - the rule that production `src/` no longer contains real direct context callers
+  - the rule that active docs do not reintroduce `Ctx.SetServerName(...)`-style guidance
+- `docs/reference/API_REFERENCE.md` now explicitly classifies direct `ISSLContext.SetServerName/GetServerName` as deprecated direct context compatibility APIs
 
 ### Phase C: Replace Backend Inherited Fallback With Explicit Compatibility Shim
 
@@ -342,6 +352,7 @@ Delivered fifth cut:
 - remaining active direct-context `SetServerName(...)` tests are now also explicitly classified and confined by source contract
 - `WithSNI(...)` is no longer merely documented as compatibility-only; the source declaration itself now enforces that status at compile time
 - `TSSLConfig.ServerName` no longer needs fresh v1.x redesign debate before every new batch; it is frozen in place as a compatibility-only field with an active source/doc truth contract
+- direct `ISSLContext.SetServerName/GetServerName` no longer needs fresh v1.x redesign debate before every new batch; it is frozen in place as a deprecated compatibility API with active source/doc and test-boundary contracts
 - we are now blocked on “which final API shape to keep for the remaining public compatibility surface”
 
 ## Next Recommended Batch
@@ -350,13 +361,12 @@ Choose one bounded implementation family only:
 
 1. **Final surface shape decision**
    - decide whether builder `WithSNI(...)` should stay on the fluent public surface with its current naming now that it is already compiler deprecated
-   - decide whether direct `ISSLContext.SetServerName/GetServerName` needs a narrower replacement story now that every active test hit is already explicitly classified
 2. **Direct context compatibility API cleanup staging**
-   - decide how long direct `ISSLContext.SetServerName/GetServerName` should remain
-   - decide whether it needs a clearer replacement path, narrower docs, or dedicated source contracts before any further shrink
+   - treat the API as frozen for `v1.x`; revisit only when a real breaking-window plan exists
+   - keep the current source/doc/test contracts rather than reopening runtime behavior
 3. **Wider public-surface cleanup**
-   - stage follow-up work only after the remaining direct-context compatibility surface has a stable prep plan
-Recommended first pick: **direct context compatibility API cleanup staging, then revisit final `WithSNI(...)` naming/placement**.
+   - stage follow-up work only after the remaining `WithSNI(...)` surface has a stable prep plan
+Recommended first pick: **final `WithSNI(...)` naming/placement decision now that `TSSLConfig.ServerName` and direct context APIs are both frozen for `v1.x`**.
 
 Builder/factory/shared-shim warning work, residual test-surface classification, connector-side contract cleanup, the `sslCtxBoth` ambiguity cut, the shared client fallback divergence, the final high-level direct-state control cut, ordinary-test de-guidance, and active direct-context surface classification are no longer the blocker; the next highest-value work is shaping the final public compatibility surface.
 
