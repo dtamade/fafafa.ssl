@@ -3262,3 +3262,86 @@
   - summary:
     - reran the lightweight `GetContext` allowlist proof after the final planning-file sync
     - no heavy Pascal contract rerun was needed because only planning files changed after the source/class split freeze passed
+
+### GetStateString Active Test De-emphasis
+
+- `rg -n "GetStateString|ISSLConnectionInfo" tests/connection/test_connection_basic.pas tests/integration/test_real_https_connection.pas`
+  - result: PASS
+  - summary:
+    - confirmed the highest-value remaining ordinary `GetStateString` usage lived in the generic connection smoke test and the real HTTPS integration suite
+    - confirmed the next batch could stay on active-test de-emphasis without reopening backend-specific runtime surfaces
+
+- add `docs/plans/2026-05-18-getstatestring-active-test-deemphasis.md`
+  - purpose:
+    - define a bounded `GetStateString` batch that moves ordinary generic/integration tests off the core getter before touching backend-specific runtime files
+
+- update:
+  - `tests/connection/test_connection_basic.pas`
+  - `tests/integration/test_real_https_connection.pas`
+  - change:
+    - route generic/integration state-string reads through `ISSLConnectionInfo`
+    - add an integration helper so handshake-failure reporting no longer directly calls the core getter
+
+- add `tests/scripts/test_isslconnectioninfo_getstatestring_active_test_contract.sh`
+  - purpose:
+    - fail if ordinary generic/integration tests reintroduce direct core `GetStateString`
+    - keep this first `GetStateString` route change cheap to verify
+
+- update `docs/plans/2026-05-18-post-sni-interface-debt-roadmap.md`
+  - change:
+    - mark `GetStateString` active-test de-emphasis as delivered
+    - move the next route to residual runtime classification vs. `GetSelectedALPNProtocol`
+
+- first run of `bash tests/scripts/test_isslconnectioninfo_getstatestring_active_test_contract.sh`
+  - result: RED
+  - summary:
+    - the initial contract expected an exact `Result := LConnInfo.GetStateString;` token, but the integration helper used a semicolon-free `if/else` form
+    - relaxed the check to the real source shape before re-running
+
+- `bash -n tests/scripts/test_isslconnectioninfo_getstatestring_active_test_contract.sh`
+  - result: PASS
+  - summary:
+    - new `GetStateString` active-test contract script is syntactically valid
+
+- `bash tests/scripts/test_isslconnectioninfo_getstatestring_active_test_contract.sh`
+  - result: PASS
+  - summary:
+    - active generic/integration tests now prefer `ISSLConnectionInfo.GetStateString`
+    - direct core `GetStateString` no longer appears in the guarded ordinary test paths
+
+- first run of `mkdir -p tmp/test_connection_basic && fpc -B -Fu./src -Fu./tests -FUtmp/test_connection_basic -FEtmp/test_connection_basic -otmp/test_connection_basic/test_connection_basic tests/connection/test_connection_basic.pas && ./tmp/test_connection_basic/test_connection_basic`
+  - result: RED
+  - summary:
+    - compile/run exposed a pre-existing companion drift in `tests/connection/test_connection_basic.pas`
+    - the file still treated `GetNativeHandle` as core `ISSLConnection` surface and used `FillChar` to build `TSSLConfig`, which triggered `LogLevel is library-scoped` at runtime
+
+- update `tests/connection/test_connection_basic.pas`
+  - change:
+    - switch the native-handle check to `ISSLNativeHandleAccess`
+    - replace `FillChar` config initialization with `CreateDefaultConfig(sslCtxClient)` so the test follows the current factory/config truth
+
+- `mkdir -p tmp/test_connection_basic && fpc -B -Fu./src -Fu./tests -FUtmp/test_connection_basic -FEtmp/test_connection_basic -otmp/test_connection_basic/test_connection_basic tests/connection/test_connection_basic.pas && ./tmp/test_connection_basic/test_connection_basic`
+  - result: PASS
+  - summary:
+    - generic connection smoke suite finished `11 passed, 0 failed`
+    - the state-string path now goes through `ISSLConnectionInfo`, and the same file no longer drifts on native-handle/config initialization truth
+
+- `mkdir -p tmp/test_real_https_connection && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_real_https_connection -FEtmp/test_real_https_connection -otmp/test_real_https_connection/test_real_https_connection tests/integration/test_real_https_connection.pas && ./tmp/test_real_https_connection/test_real_https_connection`
+  - result: PASS
+  - summary:
+    - integration suite compiled successfully and finished green under the current environment gate
+    - runtime result remained the expected network skip: `FAFAFA_RUN_NETWORK_TESTS!=1`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `GetStateString active-test de-emphasis` batch has no whitespace or patch-format issues
+
+- closeout revalidation before commit:
+  - `bash -n tests/scripts/test_isslconnectioninfo_getstatestring_active_test_contract.sh`
+  - `bash tests/scripts/test_isslconnectioninfo_getstatestring_active_test_contract.sh`
+  - `git diff --check`
+  - result: PASS
+  - summary:
+    - reran the lightweight `GetStateString` active-test proof after the final planning-file sync
+    - no extra compile rerun was needed because only planning files changed after the focused tests passed

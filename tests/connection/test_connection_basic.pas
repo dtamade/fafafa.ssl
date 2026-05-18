@@ -58,10 +58,9 @@ begin
   WriteLn('Test 2: Context Creation');
   try
     // TSSLFactory is a class - no instance initialization needed
-    
-    FillChar(LConfig, SizeOf(LConfig), 0);
+
+    LConfig := CreateDefaultConfig(sslCtxClient);
     LConfig.LibraryType := sslOpenSSL;
-    LConfig.ContextType := sslCtxClient;
     LConfig.ProtocolVersions := [sslProtocolTLS12, sslProtocolTLS13];
     LConfig.VerifyMode := [sslVerifyNone]; // No verification for basic test
     
@@ -125,6 +124,8 @@ begin
 end;
 
 procedure Test4_ConnectionProperties;
+var
+  LNativeHandleAccess: ISSLNativeHandleAccess;
 begin
   WriteLn('Test 4: Connection Properties');
   try
@@ -141,10 +142,15 @@ begin
       TestFailed('IsConnected', 'Should be False before connection');
       
     // Test GetNativeHandle
-    if LConnection.GetNativeHandle <> nil then
-      TestPassed('GetNativeHandle returns non-nil')
+    if Supports(LConnection, ISSLNativeHandleAccess, LNativeHandleAccess) then
+    begin
+      if LNativeHandleAccess.GetNativeHandle <> nil then
+        TestPassed('GetNativeHandle returns non-nil')
+      else
+        TestFailed('GetNativeHandle', 'Should not be nil after creation');
+    end
     else
-      TestFailed('GetNativeHandle', 'Should not be nil after creation');
+      TestFailed('GetNativeHandle', 'Connection does not expose ISSLNativeHandleAccess');
       
   except
     on E: Exception do
@@ -154,6 +160,8 @@ begin
 end;
 
 procedure Test5_ConnectionState;
+var
+  LConnInfo: ISSLConnectionInfo;
 begin
   WriteLn('Test 5: Connection State');
   try
@@ -174,8 +182,13 @@ begin
     
     // Get state string long
     try
-      WriteLn('  State (long): ', LConnection.GetStateString);
-      TestPassed('GetStateString method works');
+      if Supports(LConnection, ISSLConnectionInfo, LConnInfo) then
+      begin
+        WriteLn('  State (long): ', LConnInfo.GetStateString);
+        TestPassed('GetStateString method works');
+      end
+      else
+        TestFailed('GetStateString', 'Connection does not expose ISSLConnectionInfo');
     except
       on E: Exception do
         TestFailed('GetStateString', E.Message);

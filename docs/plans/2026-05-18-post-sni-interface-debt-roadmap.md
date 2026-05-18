@@ -185,6 +185,23 @@ Recommended first bounded batch:
     1. 直接进入 `GetContext` 的 public deprecation wording route
     2. 把主线切到下一条 mirror（更可能是 `GetStateString`）
 
+## Progress Since The GetContext Split-Freeze Batch
+
+- 已交付：
+  - `GetStateString` active generic/integration test de-emphasis
+  - `tests/connection/test_connection_basic.pas` 不再把 direct core `GetStateString` 当普通路径
+  - `tests/integration/test_real_https_connection.pas` 的握手失败输出已转到 `ISSLConnectionInfo`-first helper
+  - focused contract `tests/scripts/test_isslconnectioninfo_getstatestring_active_test_contract.sh`
+
+- 当前更准确的 next step：
+  - `GetStateString` 已不再由 generic/integration tests 教回 core getter
+  - 剩余 direct core `GetStateString` 主要收缩到：
+    - backend-specific runtime tests
+    - backend contract mirror proof
+  - 下一批应决定：
+    1. 把这些 residual uses 做 intentional classification / allowlist freeze
+    2. 或切到 `GetSelectedALPNProtocol`
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

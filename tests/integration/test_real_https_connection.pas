@@ -87,6 +87,16 @@ begin
   Result := fpConnect(ASocket, @Addr, SizeOf(Addr)) = 0;
 end;
 
+function GetConnectionStateString(AConn: ISSLConnection): string;
+var
+  LConnInfo: ISSLConnectionInfo;
+begin
+  if Supports(AConn, ISSLConnectionInfo, LConnInfo) then
+    Result := LConnInfo.GetStateString
+  else
+    Result := '[ISSLConnectionInfo unavailable]';
+end;
+
 { Set socket timeout }
 procedure SetSocketTimeout(ASocket: TSocket; ATimeoutMs: Integer);
 var
@@ -163,7 +173,7 @@ begin
 
     if not Conn.Connect then
     begin
-      WriteLn('    TLS handshake failed: ', Conn.GetStateString);
+      WriteLn('    TLS handshake failed: ', GetConnectionStateString(Conn));
       Exit;
     end;
 
@@ -336,7 +346,7 @@ begin
         Runner.Check('Get server certificate', False, 'Cannot get peer certificate');
     end
     else
-      Runner.Check('TLS handshake success', False, Conn.GetStateString);
+      Runner.Check('TLS handshake success', False, GetConnectionStateString(Conn));
 
   except
     on E: Exception do
@@ -423,7 +433,7 @@ begin
     if Conn.Connect then
       Runner.Check('SNI handshake success', True)
     else
-      Runner.Check('SNI handshake success', False, Conn.GetStateString);
+      Runner.Check('SNI handshake success', False, GetConnectionStateString(Conn));
 
   except
     on E: Exception do
@@ -481,7 +491,7 @@ begin
       Runner.Check('ALPN negotiation result', NegotiatedProtocol <> '', 'Protocol: ' + NegotiatedProtocol);
     end
     else
-      Runner.Check('ALPN handshake success', False, Conn.GetStateString);
+      Runner.Check('ALPN handshake success', False, GetConnectionStateString(Conn));
 
   except
     on E: Exception do

@@ -813,6 +813,23 @@
       - `git diff --check`
       - 新 contract 当前 PASS
     - 当前批收口后，`GetContext` 就不再需要继续做 evidence cleanup，可以决定是进入 public deprecation wording 还是切到下一条 mirror
+29. `GetStateString active test de-emphasis` 现在应作为下一条 mirror 的第一刀：
+    - 新 plan：
+      - `docs/plans/2026-05-18-getstatestring-active-test-deemphasis.md`
+    - 当前 high-value residual：
+      - `tests/connection/test_connection_basic.pas` 仍直接调用 `LConnection.GetStateString`
+      - `tests/integration/test_real_https_connection.pas` 仍把 `Conn.GetStateString` 用作普通握手失败输出
+    - 当前修法：
+      - 把 generic/integration 测试切到 `ISSLConnectionInfo.GetStateString`
+      - 新增 focused contract，防止普通测试路径把 direct core `GetStateString` 教回去
+    - 当前 focused proof 已覆盖：
+      - `bash -n tests/scripts/test_isslconnectioninfo_getstatestring_active_test_contract.sh`
+      - `bash tests/scripts/test_isslconnectioninfo_getstatestring_active_test_contract.sh`
+      - `mkdir -p tmp/test_connection_basic && fpc -B -Fu./src -Fu./tests -FUtmp/test_connection_basic -FEtmp/test_connection_basic -otmp/test_connection_basic/test_connection_basic tests/connection/test_connection_basic.pas && ./tmp/test_connection_basic/test_connection_basic`
+      - `mkdir -p tmp/test_real_https_connection && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_real_https_connection -FEtmp/test_real_https_connection -otmp/test_real_https_connection/test_real_https_connection tests/integration/test_real_https_connection.pas && ./tmp/test_real_https_connection/test_real_https_connection`
+      - `git diff --check`
+      - focused contract 当前 PASS
+    - 当前批收口后，下一刀就可以决定是收 residual runtime uses，还是切到 `GetSelectedALPNProtocol`
 
 ## Verification Discipline
 

@@ -1611,3 +1611,25 @@
   - 更合理的下一步会是：
     - 要么真正进入 public deprecation wording route
     - 要么确认 `GetContext` 已足够干净，然后把主线切到下一条 mirror
+
+- 把主线切到 `GetStateString` 后，最值钱的第一刀不是 backend runtime，而是普通测试路径：
+  - `tests/connection/test_connection_basic.pas` 属于 generic smoke，仍直接教 `LConnection.GetStateString`
+  - `tests/integration/test_real_https_connection.pas` 也还把 `Conn.GetStateString` 用作普通握手失败输出
+
+- 这两类文件比 backend-specific runtime tests 更像“普通推荐路径”：
+  - 它们更容易把新读者带回 core getter
+  - 但又不需要先讨论 backend-specific owner 语义
+
+- 所以 `GetStateString` 的当前最优路径是先做 active test de-emphasis：
+  - 先把 generic/integration 测试切到 `ISSLConnectionInfo.GetStateString`
+  - 让 residual direct core usage 收缩到 backend-specific runtime / contract 层
+  - 然后再决定这些 residual 是做 allowlist freeze 还是继续 deeper migration
+
+- 这批 focused 编译还顺手暴露出一个同文件的真实 drift，而且已经修掉：
+  - `tests/connection/test_connection_basic.pas` 不只直接用了 `GetStateString`
+  - 它还把 `GetNativeHandle` 当成 `ISSLConnection` 核心方法，并继续用 `FillChar` 初始化 `TSSLConfig`
+  - 前者与当前 `ISSLNativeHandleAccess` truth 不一致，后者会误把 library-scoped logging 字段带进 `TSSLFactory.CreateContext(const AConfig)`
+
+- 这类 drift 值得在同一批里一起修：
+  - 因为它们都属于“普通 generic test 还在教旧 public surface”
+  - 修完后 `test_connection_basic` 才重新变成可用的 focused proof，而不是一个本身就带着旧接口假设的弱信号
