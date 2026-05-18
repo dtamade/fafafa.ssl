@@ -29,6 +29,7 @@ const
 // file intentionally keeps direct core GetVerifyResult/GetVerifyResultString
 // coverage as backend proof. Generic ISSLCertificateVerification owner-path
 // guidance is frozen elsewhere.
+{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
 
 procedure TestSimpleConnection;
 var

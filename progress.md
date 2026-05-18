@@ -7292,3 +7292,59 @@
   - result: PASS
   - summary:
     - current FreePascal issuer-link batch has no whitespace or patch-format issues
+
+### GetVerifyResult Compiler Deprecation Alignment
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - replace dotted `ISSLCertificateVerification.GetVerifyResult*` doc wording with `ISSLCertificateVerification owner surface`
+    - keep compiler-deprecated compatibility-mirror truth without re-triggering residual direct-core doc grep
+
+- update `tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
+  - change:
+    - align API reference assertions with the new owner-surface wording
+    - keep source/doc/quarantine/mirror-proof coverage unchanged
+
+- `bash -n tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
+  - result: PASS
+  - summary:
+    - compiler-deprecated focused contract syntax remained valid after the wording tighten
+
+- `bash tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
+  - result: PASS
+  - summary:
+    - source declarations, API docs, V2 migration notes, warning quarantines, and backend mirror proof stayed aligned
+
+- `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - active docs no longer reintroduced `TypeName.GetVerifyResult*` wording
+    - residual direct-core allowlist stayed frozen to the expected file sets
+
+- `bash tests/scripts/test_isslcertificateverification_generic_examples_contract.sh`
+  - result: PASS
+  - summary:
+    - generic examples/tests still prefer `ISSLCertificateVerification` for verify-result surfaces
+
+- `mkdir -p tmp/test_connection_builder_hostname_precedence && fpc -B -Fu./src -Fu./tests -FUtmp/test_connection_builder_hostname_precedence -FEtmp/test_connection_builder_hostname_precedence -otmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence tests/test_connection_builder_hostname_precedence.pas && ./tmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence`
+  - result: PASS
+  - summary:
+    - `29 passed / 0 failed`
+    - builder owner-path fallback changes remained behavior-neutral
+
+- `mkdir -p tmp/test_tls_connector_hostname_override_precedence && fpc -B -Fu./src -Fu./tests -FUtmp/test_tls_connector_hostname_override_precedence -FEtmp/test_tls_connector_hostname_override_precedence -otmp/test_tls_connector_hostname_override_precedence/test_tls_connector_hostname_override_precedence tests/test_tls_connector_hostname_override_precedence.pas && ./tmp/test_tls_connector_hostname_override_precedence/test_tls_connector_hostname_override_precedence`
+  - result: PASS
+  - summary:
+    - `6 passed / 0 failed`
+    - TLS facade hostname precedence remained intact
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+  - result: PASS
+  - summary:
+    - `135 total / 111 passed / 0 failed / 24 skipped`
+    - cross-backend certificate-verification optional/core truth remained green after the doc-contract closeout
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current compiler-deprecated alignment batch has no whitespace or patch-format issues

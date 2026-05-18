@@ -10,6 +10,7 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.winssl.lib,
   fafafa.ssl.winssl.base;
+{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
 
 var
   Total, Passed, Failed: Integer;

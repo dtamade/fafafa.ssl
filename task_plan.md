@@ -2125,6 +2125,33 @@
     - 当前批收口后默认下一步应为：
       - 横向审其它 backend 是否仍缺 issuer-link completeness
       - 不再把 FreePascal peer-cert issuer-link gap 当成未定位问题重复拉起
+65. `GetVerifyResult` / `GetVerifyResultString` compiler deprecation alignment 已完成 focused 收口，并应作为当前 verify-result route 的最终 compatibility-only closeout 保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-getverifyresult-compiler-deprecation-alignment.md`
+   - 当前已确认的 route truth：
+     - `src/fafafa.ssl.base.pas`
+       - `ISSLConnection.GetVerifyResult`
+       - `ISSLConnection.GetVerifyResultString`
+       当前都已进入 compiler `deprecated`
+     - `docs/reference/API_REFERENCE.md`
+       - 现在用 `ISSLCertificateVerification owner surface` 记录推荐入口
+       - 不再在活跃文档里留下会撞到 residual grep 的 `TypeName.GetVerifyResult*` 字面
+     - 当前阻塞根因已被确认不是实现回归，而是：
+       - API reference 的点号写法与 residual-classification contract 的 direct-core grep 规则相撞
+       - 最小正确修法只是收紧文档 wording 与 focused contract 对齐
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
+     - `bash tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
+     - `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+     - `bash tests/scripts/test_isslcertificateverification_generic_examples_contract.sh`
+     - `mkdir -p tmp/test_connection_builder_hostname_precedence && fpc -B -Fu./src -Fu./tests -FUtmp/test_connection_builder_hostname_precedence -FEtmp/test_connection_builder_hostname_precedence -otmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence tests/test_connection_builder_hostname_precedence.pas && ./tmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence`
+     - `mkdir -p tmp/test_tls_connector_hostname_override_precedence && fpc -B -Fu./src -Fu./tests -FUtmp/test_tls_connector_hostname_override_precedence -FEtmp/test_tls_connector_hostname_override_precedence -otmp/test_tls_connector_hostname_override_precedence/test_tls_connector_hostname_override_precedence tests/test_tls_connector_hostname_override_precedence.pas && ./tmp/test_tls_connector_hostname_override_precedence/test_tls_connector_hostname_override_precedence`
+     - `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 把 `GetVerifyResult*` 这条 verify-result residual archaeology 视为阶段性关闭
+     - 重新把注意力切回更大的接口设计 / 各 backend completeness 审查
+     - 不再把同一类 verify-result wording / grep 误报当成新的实现问题反复拉起
 
 ## Verification Discipline
 

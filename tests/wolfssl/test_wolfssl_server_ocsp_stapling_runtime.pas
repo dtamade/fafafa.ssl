@@ -35,6 +35,7 @@ const
 // OCSP stapling runtime file intentionally keeps direct core verify-result
 // diagnostics as server-side proof. Generic ISSLCertificateVerification
 // owner-path guidance is frozen elsewhere.
+{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
 
 var
   GOriginalWolfSSLSetStatusOCSPResp: TwolfSSL_set_tlsext_status_ocsp_resp = nil;

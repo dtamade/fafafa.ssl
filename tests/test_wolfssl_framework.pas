@@ -48,6 +48,7 @@ var
 // file intentionally keeps direct core GetVerifyResult/GetVerifyResultString
 // coverage as backend proof. Generic ISSLCertificateVerification owner-path
 // guidance is frozen elsewhere.
+{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
 
 const
   STUB_WOLFSSL_SERIALIZED_SESSION: array[0..3] of Byte = (4, 3, 2, 1);

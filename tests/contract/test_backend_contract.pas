@@ -2090,6 +2090,7 @@ begin
         Exit;
       end;
 
+      {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
       if LCertVerify.GetVerifyResult <> LConn.GetVerifyResult then
       begin
         WriteLn('  [FAIL] Optional interface verify result drifted from core getter');
@@ -2105,6 +2106,7 @@ begin
           'ISSLCertificateVerification.GetVerifyResultString does not match ISSLConnection.GetVerifyResultString');
         Exit;
       end;
+      {$POP}
 
       LCoreChain := LConn.GetPeerCertificateChain;
       LOptionalChain := LCertVerify.GetPeerCertificateChain;

@@ -1232,14 +1232,20 @@ type
     {** 获取证书验证结果码
         @preferred-access 新代码优先通过 ISSLCertificateVerification.GetVerifyResult 获取
         @owner-note 当前默认 owner 为 ISSLCertificateVerification；ISSLConnection.GetVerifyResult 保留为 v1.x compatibility mirror
+        @compatibility-note v1.x compatibility-core mirror; not recommended as the primary entry for new code; Stage-A demotion target is ISSLCertificateVerification
+        @deprecated 推荐使用 ISSLCertificateVerification.GetVerifyResult
         @returns 平台相关的验证结果码 *}
     function GetVerifyResult: Integer;
+      deprecated 'Use ISSLCertificateVerification.GetVerifyResult';
 
     {** 获取证书验证结果描述
         @preferred-access 新代码优先通过 ISSLCertificateVerification.GetVerifyResultString 获取
         @owner-note 当前默认 owner 为 ISSLCertificateVerification；ISSLConnection.GetVerifyResultString 保留为 v1.x compatibility mirror
+        @compatibility-note v1.x compatibility-core mirror; not recommended as the primary entry for new code; Stage-A demotion target is ISSLCertificateVerification
+        @deprecated 推荐使用 ISSLCertificateVerification.GetVerifyResultString
         @returns 验证结果的文字描述 *}
     function GetVerifyResultString: string;
+      deprecated 'Use ISSLCertificateVerification.GetVerifyResultString';
 
     {** 获取当前会话（用于会话恢复）
         @returns 会话接口 *}

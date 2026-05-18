@@ -3339,3 +3339,27 @@
   - `GetPeerCertificate()` 返回的 leaf cert 现在会保留 issuer link
   - `GetPeerCertificateChain()[0]` 也会保留同一条 issuer-link truth
   - 这说明 `FreePascal` 连接态 peer cert public surface 已不再出现“leaf/chain 都在，但 issuer link 断掉”的 completeness 漂移
+
+- 当前这轮 `GetVerifyResult` / `GetVerifyResultString` compiler-deprecated alignment 的唯一阻塞，已经确认不是实现问题，而是文档 wording 与旧 grep 规则冲突：
+  - `docs/reference/API_REFERENCE.md` 一度写成了
+    - `ISSLCertificateVerification.GetVerifyResult`
+    - `ISSLCertificateVerification.GetVerifyResultString`
+  - 但 residual-classification contract 会把这类 `TypeName.GetVerifyResult*` 视为活跃文档 direct-core 风险命中
+  - 所以失败根因不是 owner path 错了，也不是 deprecated 设计错了，而是文档字面重新撞上了 allowlist 规则
+
+- 这次最小正确修法也因此非常窄，并已落地：
+  - `API_REFERENCE.md` 改成不带点号的 `ISSLCertificateVerification owner surface` 表达
+  - `tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh` 同步锁住新 wording
+  - 不触碰 runtime 语义，不重开 residual subgroup freeze，不再扩张验证面
+
+- focused 回归结果把这条结论钉死了：
+  - `test_getverifyresult_compiler_deprecated_contract.sh` 已 PASS
+  - `test_isslcertificateverification_residual_classification_contract.sh` 已 PASS
+  - `test_isslcertificateverification_generic_examples_contract.sh` 已 PASS
+  - hostname precedence 两个 focused 编译测试继续 PASS
+  - `tests/contract/test_backend_contract.pas` 继续保持 `135 total / 111 passed / 0 failed / 24 skipped`
+
+- 因而 `GetVerifyResult*` 这条 verify-result 路线现在可以视为阶段性关闭：
+  - ordinary guidance / generic examples / residual subgroup freeze / compiler-deprecated alignment 都已经收齐
+  - 后续更应该回到更大的接口设计与各 backend completeness 审查
+  - 不应再把 verify-result wording / grep 误报当成新的核心实现问题反复拉起

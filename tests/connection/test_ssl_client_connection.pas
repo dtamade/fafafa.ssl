@@ -84,8 +84,10 @@ begin
   end
   else
   begin
+    {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
     AVerifyResult := AConnection.GetVerifyResult;
     AVerifyResultString := AConnection.GetVerifyResultString;
+    {$POP}
   end;
 end;
 

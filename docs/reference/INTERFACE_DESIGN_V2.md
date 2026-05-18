@@ -244,7 +244,7 @@ if Supports(FSSLConn, ISSLSessionResumption, LSession) then
 | GetSession, SetSession | ISSLSessionResumption | 会话扩展 |
 | IsSessionReused | ISSLSessionResumption | 会话扩展 |
 | GetPeerCertificateChain | ISSLCertificateVerification | 证书扩展 |
-| GetVerifyResult, GetVerifyResultString | ISSLCertificateVerification | 证书扩展 |
+| GetVerifyResult, GetVerifyResultString | ISSLCertificateVerification | 默认 owner 已切到 ISSLCertificateVerification；core 侧仅兼容保留，源码声明已是编译期 deprecated |
 | GetOCSP* | ISSLOCSPStapling | OCSP 扩展 |
 
 ---
@@ -279,6 +279,8 @@ if Supports(FSSLConn, ISSLSessionResumption, LSession) then
 其中 `GetContext` 在核心 `ISSLConnection` 上当前也只保留为 compatibility mirror，源码声明已经进入编译期 `deprecated`。
 
 换句话说，`GetConnectionInfo` 在 `ISSLConnection` core 上虽然仍存在，但这里只把它视为 compatibility mirror，不再把它当作新代码默认入口；当前源码声明也已经进入编译期 `deprecated`。
+
+其中 `GetVerifyResult` / `GetVerifyResultString` 在核心 `ISSLConnection` 上当前也只保留为 compatibility mirror，源码声明已经进入编译期 `deprecated`；后续仍可再评估是否把这组结果 surface 进一步完全收窄到 `ISSLCertificateVerification`。
 
 也就是说，这一版文档不再提前把 Stage-B/Stage-C 的选择写死。
 

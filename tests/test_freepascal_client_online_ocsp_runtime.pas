@@ -74,6 +74,7 @@ type
 // intentionally keeps direct core GetVerifyResult/GetVerifyResultString
 // coverage as fail-closed/backend proof. Generic ISSLCertificateVerification
 // owner-path guidance is frozen elsewhere.
+{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
 
   TScriptedOnlineOCSPServerStream = class(TStream)
   private
