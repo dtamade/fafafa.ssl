@@ -65,6 +65,18 @@ Recommended first bounded batch:
 3. 先补 source/doc/test contract，守住“不再继续往 `TSSLConfig` 塞跨层字段”的方向。
 4. 只有在 buckets 稳定后，才决定是否做轻量 API 补面或 legacy bridge 缩减。
 
+## Progress Since This Roadmap Was Written
+
+- 已交付：
+  - `TSSLConfig` scope buckets truth
+  - fresh default-config option-bridge truth parity
+  - option-bridge conflict precedence freeze
+
+- 当前更准确的 next step：
+  - 不再继续讨论 “`Options` vs legacy booleans 到底谁赢”
+  - 转向真正的 `TSSLConfig` public-surface slimming / migration 设计
+  - 只有这条线稳定后，再考虑是否进入 `ISSLConnection` 核心 surface slimming
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

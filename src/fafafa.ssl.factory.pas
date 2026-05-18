@@ -351,6 +351,10 @@ var
 
 procedure NormalizeConfigOptions(var AConfig: TSSLConfig);
 begin
+  // Option-bridge compatibility inputs keep their historical write-through behavior:
+  // when callers pass conflicting legacy booleans and explicit Options bits, the
+  // legacy booleans update the relevant Options first, then the final Options truth
+  // is projected back into the compatibility booleans below.
   if AConfig.EnableCompression then
     Exclude(AConfig.Options, ssoDisableCompression)
   else

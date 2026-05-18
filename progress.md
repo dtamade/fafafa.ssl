@@ -2126,3 +2126,63 @@
   - result: PASS
   - summary:
     - current option-bridge default-truth batch has no whitespace or patch-format issues
+
+### TSSLConfig Option-Bridge Precedence Freeze
+
+- add `docs/plans/2026-05-18-tsslconfig-option-bridge-precedence-freeze.md`
+  - purpose:
+    - define a bounded batch for freezing the conflict-precedence truth between `Options` and option-bridge compatibility booleans
+
+- add `tests/test_tsslconfig_option_bridge_precedence_freeze.pas`
+  - purpose:
+    - prove runtime truth across:
+      - `TSSLFactory.NormalizeConfig(...)`
+      - `TSSLFactory.CreateContext(const AConfig)`
+      - `ISSLLibrary.SetDefaultConfig(...)` / `ISSLLibrary.CreateContext(AType)`
+
+- add `tests/scripts/test_tsslconfig_option_bridge_precedence_freeze_contract.sh`
+  - purpose:
+    - keep the precedence rule synchronized across source comments, docs, and backend normalization paths
+
+- update:
+  - `src/fafafa.ssl.factory.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - document the current `v1.x` precedence truth explicitly:
+      - legacy booleans remain the compatibility write surface
+      - conflicting option bits yield to the legacy booleans
+      - final `Options` truth is then projected back to the booleans
+
+- `bash -n tests/scripts/test_tsslconfig_option_bridge_precedence_freeze_contract.sh && bash tests/scripts/test_tsslconfig_option_bridge_precedence_freeze_contract.sh`
+  - RED result: FAIL
+  - summary:
+    - the first failure was only a shell-quoting bug in the new contract script
+    - the script string containing backticks was accidentally interpreted by bash before any real repo truth was checked
+
+- update `tests/scripts/test_tsslconfig_option_bridge_precedence_freeze_contract.sh`
+  - change:
+    - switch the API-reference needles containing backticks to single-quoted shell strings
+  - summary:
+    - this removed the shell parser noise so the contract can verify actual repo truth
+
+- `bash -n tests/scripts/test_tsslconfig_option_bridge_precedence_freeze_contract.sh && bash tests/scripts/test_tsslconfig_option_bridge_precedence_freeze_contract.sh`
+  - GREEN result: PASS
+  - summary:
+    - source/doc truth now explicitly records the option-bridge precedence rule
+    - backend `SetDefaultConfig(...)` normalization paths remain aligned
+
+- `mkdir -p tmp/test_tsslconfig_option_bridge_precedence_freeze && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_tsslconfig_option_bridge_precedence_freeze -FEtmp/test_tsslconfig_option_bridge_precedence_freeze -otmp/test_tsslconfig_option_bridge_precedence_freeze/test_tsslconfig_option_bridge_precedence_freeze tests/test_tsslconfig_option_bridge_precedence_freeze.pas && ./tmp/test_tsslconfig_option_bridge_precedence_freeze/test_tsslconfig_option_bridge_precedence_freeze`
+  - result: PASS
+  - summary:
+    - full focused suite finished `16 passed, 0 failed`
+    - `NormalizeConfig(...)`, one-shot factory path, and direct-library default-config path all follow the same precedence truth
+
+- `bash tests/scripts/test_tsslconfig_option_bridge_default_truth_contract.sh && bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - the earlier default-truth and scope-bucket batches remain intact after freezing precedence
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current option-bridge precedence-freeze batch has no whitespace or patch-format issues

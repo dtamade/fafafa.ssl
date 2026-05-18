@@ -945,3 +945,45 @@
   - 之后若继续推进，应讨论：
     - `Options vs legacy booleans` 冲突优先级是否要进一步单真相化
     - `TSSLConfig` option-bridge surface 是否要继续 freeze/slim
+
+- `TSSLConfig option-bridge precedence` 这轮也已经从“源码隐含行为”升级成了明确 contract：
+  - 当前 `v1.x` truth 不是 “`Options` 总是权威输入”
+  - 也不是 “legacy booleans 已经只剩只读投影”
+  - 更准确的 truth 是：
+    - legacy booleans 仍是兼容写入口
+    - 当调用方传入冲突的 `Options` 和 legacy booleans 时，legacy booleans 赢
+    - normalization 先把 legacy booleans 写入相关 option bit
+    - 再把最终 `Options` truth 回投到这三个 compatibility booleans
+
+- 这条结论不是纸面推理，而是现在已经有 focused production evidence：
+  - `TSSLFactory.NormalizeConfig(...)`
+    - 直接覆盖 conflict input
+  - `TSSLFactory.CreateContext(const AConfig)`
+    - 证明 one-shot factory path 跟随同一条 precedence truth
+  - `ISSLLibrary.SetDefaultConfig(...)` / `ISSLLibrary.CreateContext(AType)`
+    - 证明 direct-library path 也跟随同一条 precedence truth
+
+- 继续做 source search 后，这条线还多确认了一个关键背景：
+  - production code 里，真正会写这三个 legacy booleans 的地方已经非常集中：
+    - backend default-config constructors
+    - `CreateDefaultConfig(...)`
+    - `TSSLFactory.NormalizeConfig(...)`
+  - builder/import-export/config snapshot 等活跃高层 surface 实际上主要围绕 `Options`
+  - 这意味着当前“legacy booleans 仍是 compatibility write surface”这件事，边界已经足够清晰，不再是散落在各处的隐藏入口
+
+- 因而这轮之后，`Options vs legacy booleans` 不再是一个“未定义设计问题”，而是一个“已冻结的 `v1.x` compatibility contract”：
+  - 现在该问的已经不是：
+    - 冲突时到底谁赢？
+  - 而是：
+    - 未来要不要把这组 legacy booleans 继续缩成更窄的 compatibility-only surface
+    - 若要缩，应该走什么非破坏性的 migration path
+
+- 这也让总体路线图更清楚了一步：
+  - `TSSLConfig` 这条主线当前已完成：
+    - scope buckets
+    - fresh default-config truth parity
+    - conflict precedence freeze
+  - 下一条更值得开的批次，不再是继续补 “option-bridge 真相”
+  - 而是：
+    - `TSSLConfig` public-surface slimming / migration roadmap
+    - 或再往后才考虑 `ISSLConnection` 核心 surface slimming

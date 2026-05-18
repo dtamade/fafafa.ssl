@@ -355,6 +355,24 @@
    - 下一条相关路线不该再回到这个 fresh default-config surface：
      - 若继续推进，应讨论 `Options vs legacy booleans` 的 broader precedence/slimming 规则
      - 而不是重新怀疑 `CreateDefaultConfig(...)` 单点
+10. `TSSLConfig option-bridge precedence freeze` 当前也已完成第一轮收口：
+    - 新 plan：
+      - `docs/plans/2026-05-18-tsslconfig-option-bridge-precedence-freeze.md`
+    - 新验证：
+      - `tests/test_tsslconfig_option_bridge_precedence_freeze.pas`
+      - `tests/scripts/test_tsslconfig_option_bridge_precedence_freeze_contract.sh`
+    - 当前已冻结的 `v1.x` truth：
+      - legacy booleans 仍是 compatibility write surface
+      - 当 `Options` 与 legacy booleans 冲突时，legacy booleans 赢
+      - normalization 会先把 legacy booleans 写进 `Options`
+      - 再把最终 `Options` truth 回投到 legacy booleans
+    - 当前 production proof 已覆盖：
+      - `TSSLFactory.NormalizeConfig(...)`
+      - `TSSLFactory.CreateContext(const AConfig)`
+      - `ISSLLibrary.SetDefaultConfig(...)` / `ISSLLibrary.CreateContext(AType)`
+    - 下一条相关路线不该再回到“冲突输入到底谁赢”的讨论：
+      - 若继续推进，应进入真正的 `TSSLConfig` public-surface slimming / migration 设计
+      - 而不是再把 precedence 当成未定规则
 
 ## Verification Discipline
 

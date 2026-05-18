@@ -1401,3 +1401,49 @@
   - `tests/config/test_default_config.pas`
     - PASS
     - 说明既有 `CreateDefaultConfig(...)` baseline 没被 creator-path fix 误伤
+
+## 增量收口：option-bridge conflict precedence freeze
+
+- 继续沿着 `TSSLConfig` 主线往前收后，这轮又确认了一个设计层空白：
+  - 当前 repo 已经有 live behavior，但没有把它说成明确 contract：
+    - 当调用方同时传 `Options` 和 legacy option-bridge booleans 时，冲突输入谁赢？
+  - 如果这条规则不被正式固定，后续每次继续做 `TSSLConfig` slimming 都还要重新猜一次现状
+
+- 这轮 focused review 的结论已经足够清楚：
+  - 当前 `v1.x` truth 不是 “`Options` 一定优先”
+  - 更准确的 truth 是：
+    - legacy booleans 仍是 compatibility write surface
+    - normalization 会先让 legacy booleans 覆盖冲突的 option bits
+    - 再把最终 `Options` truth 回投回这三个 booleans
+
+- 这不是只在 helper 里成立的内部细节，而是现在已经有 production-path proof：
+  - `TSSLFactory.NormalizeConfig(...)`
+  - `TSSLFactory.CreateContext(const AConfig)`
+  - `ISSLLibrary.SetDefaultConfig(...)` / `ISSLLibrary.CreateContext(AType)`
+  - 这三条路径现在都被同一份 focused runtime suite 覆盖
+
+- 这轮修法刻意没有再改语义，而是把当前 truth freeze 下来：
+  - `src/fafafa.ssl.factory.pas`
+    - 补充 source comment，明确说明 option-bridge write-through precedence
+  - `docs/reference/API_REFERENCE.md`
+    - 补充 public-facing precedence rule
+  - `tests/test_tsslconfig_option_bridge_precedence_freeze.pas`
+    - 新增 runtime proof
+  - `tests/scripts/test_tsslconfig_option_bridge_precedence_freeze_contract.sh`
+    - 新增 source/doc contract
+
+- focused 验证：
+  - `tests/test_tsslconfig_option_bridge_precedence_freeze.pas`
+    - PASS (`16 passed, 0 failed`)
+  - `tests/scripts/test_tsslconfig_option_bridge_precedence_freeze_contract.sh`
+    - PASS
+  - `tests/scripts/test_tsslconfig_option_bridge_default_truth_contract.sh`
+    - PASS
+  - `tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+    - PASS
+
+- 这一步之后，`TSSLConfig` 这条主线又少了一个反复争议点：
+  - scope buckets 已定
+  - fresh default-config truth 已定
+  - conflict precedence 也已定
+  - 下一条更值得开的批次，应进入真正的 public-surface slimming / migration 设计，而不是继续补 option-bridge truth
