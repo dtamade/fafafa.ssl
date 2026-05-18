@@ -6480,3 +6480,48 @@
   - result: PASS
   - summary:
     - current WolfSSL certificate clone batch has no whitespace or patch-format issues
+
+### WolfSSL Connection Peer-Certificate Materialization
+
+- add `docs/plans/2026-05-19-wolfssl-connection-peer-cert-materialization.md`
+  - purpose:
+    - record the WolfSSL connection single-cert materialization batch
+
+- add `tests/test_wolfssl_connection_peer_certificate_contract.pas`
+  - change:
+    - lock that `GetPeerCertificate()` must return an owned/materialized public cert
+    - lock source-handle de-aliasing and helper-loss fail-closed behavior
+
+- `mkdir -p tmp/test_wolfssl_connection_peer_certificate_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_wolfssl_connection_peer_certificate_contract_units -FEtmp/test_wolfssl_connection_peer_certificate_contract_units -otmp/test_wolfssl_connection_peer_certificate_contract_units/test_wolfssl_connection_peer_certificate_contract tests/test_wolfssl_connection_peer_certificate_contract.pas && ./tmp/test_wolfssl_connection_peer_certificate_contract_units/test_wolfssl_connection_peer_certificate_contract`
+  - result: SKIP -> FAIL -> PASS
+  - summary:
+    - initial skip exposed a test-entry issue:
+      - helper-availability check ran before `LLib.Initialize`, so unbound symbols caused a false skip
+    - after fixing the test entry order, RED first exposed:
+      - `GetPeerCertificate must return an owned copy instead of the source native handle`
+      - `GetPeerCertificate should fail closed when cert-copy helper is unavailable`
+    - GREEN after fix:
+      - `Total: 4 / Passed: 4 / Failed: 0 / Skipped: 0`
+
+- update `src/fafafa.ssl.wolfssl.connection.pas`
+  - change:
+    - `GetPeerCertificate()` no longer returns the raw native wrapper from `wolfSSL_get_peer_certificate(...)`
+    - path now performs `native X509 -> DER export -> owned reload`
+    - helper-loss path now fails closed instead of returning a source-handle wrapper
+
+- `mkdir -p tmp/test_wolfssl_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas && ./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+  - result: PASS
+  - summary:
+    - `Total: 141 / Passed: 141 / Failed: 0`
+    - existing WolfSSL framework coverage remained green after the connection single-cert fix
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+  - result: PASS
+  - summary:
+    - `Total Tests: 135 / Passed: 111 / Failed: 0 / Skipped: 24`
+    - cross-backend optional/core surfaces remained green after the WolfSSL connection materialization change
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current WolfSSL connection peer-cert batch has no whitespace or patch-format issues

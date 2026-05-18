@@ -196,6 +196,21 @@
   - 当前结论：
     - `WolfSSL` loaded certificate 的 public clone surface 已不再退化成 metadata shell
     - 下一刀更适合继续横向审其它 backend 的 certificate clone / connection completeness seam，而不是再重开这条 clone 空壳问题
+- [completed] `WolfSSL` connection peer-certificate materialization 已完成 focused 收口：
+  - 新增计划：`docs/plans/2026-05-19-wolfssl-connection-peer-cert-materialization.md`
+  - 新增 focused contract：`tests/test_wolfssl_connection_peer_certificate_contract.pas`
+  - `src/fafafa.ssl.wolfssl.connection.pas`
+    - `GetPeerCertificate()` 不再直接返回 `wolfSSL_get_peer_certificate(...)` 的 native wrapper
+    - 当前改为 `native X509 -> DER export -> owned reload`
+    - copy helper 不足时改为 fail-closed
+  - focused verification 已通过：
+    - `tests/test_wolfssl_connection_peer_certificate_contract.pas`: `4 passed / 0 failed`
+    - `tests/test_wolfssl_framework.pas`: `141 passed / 0 failed`
+    - `tests/contract/test_backend_contract.pas`: `135 total / 111 passed / 0 failed / 24 skipped`
+    - `git diff --check`: PASS
+  - 当前结论：
+    - `WolfSSL` 连接态单证书 public surface 已与现有 chain/session materialization truth 对齐
+    - 下一刀更适合继续横向审其它 backend 的 connection-level completeness seam，而不是再重开这条单证书 materialization 缺口
 - [completed] generic session-cache persistence count truth 已完成 focused 修复并形成新基线：
   - 新增计划：`docs/plans/2026-05-19-session-cache-persistence-count-truth.md`
   - 新增 focused test：`tests/test_session_cache_persistence_contract.pas`
@@ -1798,6 +1813,35 @@
     - 当前批收口后默认下一步应为：
       - 横向继续审其它 backend 的 certificate clone / connection completeness seam
       - 不再把 WolfSSL loaded-certificate clone shell gap 当成未定位问题重复拉起
+63. `WolfSSL connection peer-certificate materialization` 已完成 focused 收口，并应作为当前 connection-level completeness 新基线保留：
+    - 新 plan：
+      - `docs/plans/2026-05-19-wolfssl-connection-peer-cert-materialization.md`
+    - 当前已确认的 route truth：
+      - `/usr/include/wolfssl/test.h` 的官方示例对 `wolfSSL_get_peer_certificate(ssl)` 会在使用后显式 `wolfSSL_FreeX509(peer)`
+      - 这说明当前问题不在“连接内部 borrowed 指针会立即悬空”
+      - 真正的缺口在于：
+        - `TWolfSSLConnection.GetPeerCertificate()`
+          之前直接返回 native wrapper
+        - 但同一 backend 的：
+          - `GetPeerCertificateChain()`
+          - `TWolfSSLSession.FromConnection()`
+          - `TWolfSSLCertificate.Clone()`
+          都已经走 owned/materialized truth
+      - 当前修复后：
+        - `GetPeerCertificate()` 统一改为 `native X509 -> DER export -> owned reload`
+        - 返回 cert 不再 alias source native handle
+        - copy helper 不足时 `fail-closed`
+      - 这说明当前 `WolfSSL` connection single-cert surface 的最小真相已经重新对齐为：
+        - public peer cert object 持有自有 native cert
+        - helper-loss 时不再继续吐出假完整 wrapper
+    - 当前 focused proof 已覆盖：
+      - `mkdir -p tmp/test_wolfssl_connection_peer_certificate_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_wolfssl_connection_peer_certificate_contract_units -FEtmp/test_wolfssl_connection_peer_certificate_contract_units -otmp/test_wolfssl_connection_peer_certificate_contract_units/test_wolfssl_connection_peer_certificate_contract tests/test_wolfssl_connection_peer_certificate_contract.pas && ./tmp/test_wolfssl_connection_peer_certificate_contract_units/test_wolfssl_connection_peer_certificate_contract`
+      - `mkdir -p tmp/test_wolfssl_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas && ./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+      - `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+      - `git diff --check`
+    - 当前批收口后默认下一步应为：
+      - 横向继续审其它 backend 的 connection-level certificate ownership/completeness seam
+      - 不再把 WolfSSL connection single-cert materialization gap 当成未定位问题重复拉起
 
 ## Verification Discipline
 

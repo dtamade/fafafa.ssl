@@ -714,14 +714,36 @@ end;
 function TWolfSSLConnection.DoGetPeerCertificate: ISSLCertificate;
 var
   LX509: PWOLFSSL_X509;
+  LDER: TBytes;
+  LTemp: TWolfSSLCertificate;
+  LOwned: TWolfSSLCertificate;
 begin
   Result := nil;
   if FWolfSSL = nil then Exit;
   if not Assigned(wolfSSL_get_peer_certificate) then Exit;
 
   LX509 := wolfSSL_get_peer_certificate(FWolfSSL);
-  if LX509 <> nil then
-    Result := TWolfSSLCertificate.Create(LX509);
+  if LX509 = nil then
+    Exit;
+
+  LTemp := TWolfSSLCertificate.Create(LX509);
+  try
+    LDER := LTemp.SaveToDER;
+    if Length(LDER) = 0 then
+      Exit;
+
+    LOwned := TWolfSSLCertificate.Create;
+    try
+      if not LOwned.LoadFromDER(LDER) then
+        Exit;
+      Result := LOwned;
+      LOwned := nil;
+    finally
+      LOwned.Free;
+    end;
+  finally
+    LTemp.Free;
+  end;
 end;
 
 function TWolfSSLConnection.DoGetPeerCertificateChain: TSSLCertificateArray;

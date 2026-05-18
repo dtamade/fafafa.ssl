@@ -2906,3 +2906,34 @@
   - 这也把 `WolfSSL` certificate completeness 的剩余边界说清了：
     - 当前问题已经不是 clone 会不会退化
     - 下一刀更适合横向审其它 backend 的 certificate clone / connection-level completeness，而不是再重开这条 WolfSSL clone 空壳问题
+
+- 继续沿着 `WolfSSL` connection-level certificate surface 深挖后，单证书入口又暴露出一条更细的 completeness 漂移：
+  - `/usr/include/wolfssl/test.h` 的官方示例里，
+    `wolfSSL_get_peer_certificate(ssl)` 会在使用后显式 `wolfSSL_FreeX509(peer)`
+  - 这说明这条 API 返回值并不是 “马上会被连接内部回收的 borrowed trap”
+  - 但 `TWolfSSLConnection.GetPeerCertificate()` 之前仍然直接把这条 source native cert 包成 public wrapper 返回
+  - 同时同一 backend 的：
+    - `GetPeerCertificateChain()`
+    - `TWolfSSLSession.FromConnection()`
+    - `TWolfSSLCertificate.Clone()`
+    已经都在走 owned/materialized truth
+  - 所以当前问题不是“内部 lifetime 崩坏”，而是 `WolfSSL` 单证书 public surface 还没和现有 materialization 规则收齐
+
+- focused RED 也把这条不一致钉成了具体行为，而不是代码风格问题：
+  - `GetPeerCertificate must return an owned copy instead of the source native handle` 先红
+  - `GetPeerCertificate should fail closed when cert-copy helper is unavailable` 先红
+  - 这说明单证书入口当时既保留了 source native-handle provenance，也没有在 helper-loss 时收紧成 fail-closed
+
+- 当前最小正确修法已经明确并落地：
+  - 不去重做 chain 路径
+  - 不重开 session/certificate clone 旧 lane
+  - 只把 `TWolfSSLConnection.GetPeerCertificate()` 对齐到现有 materialization 规则：
+    - 先拿 `wolfSSL_get_peer_certificate(...)` 返回的 native X509
+    - 再 `SaveToDER`
+    - 再 `LoadFromDER(...)` 重建 owned cert
+    - DER 无法导出时直接 `nil`
+
+- 当前收口后的 route truth 已明确：
+  - `TWolfSSLConnection.GetPeerCertificate()` 现在返回的 cert handle 不再与 source native handle 同指针
+  - helper-loss 时也不再继续返回 fake-complete wrapper
+  - 这说明 `WolfSSL` connection single-cert surface 现在终于和 chain/session/certificate clone 的 public truth 口径一致了
