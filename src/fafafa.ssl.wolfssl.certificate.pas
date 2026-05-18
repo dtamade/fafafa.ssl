@@ -967,6 +967,7 @@ begin
       LClone.FDERData := Copy(FDERData);
     end;
 
+    LClone.FIssuerCert := FIssuerCert;
     Result := LClone;
     LClone := nil;
   finally

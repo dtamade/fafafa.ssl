@@ -2,6 +2,92 @@
 
 ## 2026-05-19
 
+### Certificate Clone Issuer Link
+
+- add `docs/plans/2026-05-19-certificate-clone-issuer-link.md`
+  - change:
+    - define the bounded cross-backend clone issuer-link batch, commands, scope, and expected closeout
+
+- add `tests/test_certificate_clone_issuer_link_contract.pas`
+  - result: RED
+  - summary:
+    - new focused contract locks clone-level issuer-link truth across `OpenSSL` / `WolfSSL` / `MbedTLS` / `WinSSL` / `FreePascal`
+    - Linux first failure landed on:
+      - `OpenSSL: clone should preserve issuer link`
+      - `WolfSSL: clone should preserve issuer link`
+      - `MbedTLS: clone should preserve issuer link`
+    - Win64+wine first failure landed on:
+      - `WinSSL: clone should preserve issuer link`
+
+- `sed -n '1738,1815p' src/fafafa.ssl.openssl.certificate.pas`
+  - result: PASS
+  - summary:
+    - confirmed `TOpenSSLCertificate.Clone()` only wrapped the retained native cert
+    - confirmed it was not yet preserving `FIssuerCert`
+
+- `sed -n '928,1005p' src/fafafa.ssl.wolfssl.certificate.pas`
+  - result: PASS
+  - summary:
+    - confirmed `TWolfSSLCertificate.Clone()` was rebuilding DER/PEM/native truth
+    - confirmed it was not yet preserving `FIssuerCert`
+
+- `sed -n '1170,1248p' src/fafafa.ssl.mbedtls.certificate.pas`
+  - result: PASS
+  - summary:
+    - confirmed `TMbedTLSCertificate.Clone()` was rebuilding DER/PEM/native truth
+    - confirmed it was not yet preserving `FIssuerCert`
+
+- `sed -n '1425,1505p' src/fafafa.ssl.winssl.certificate.pas`
+  - result: PASS
+  - summary:
+    - confirmed `TWinSSLCertificate.Clone()` only duplicated the native cert context
+    - confirmed it was not yet preserving `FIssuerCert`
+
+- update `src/fafafa.ssl.openssl.certificate.pas`
+  - change:
+    - preserve `FIssuerCert` when clone wraps the retained native `X509`
+
+- update `src/fafafa.ssl.wolfssl.certificate.pas`
+  - change:
+    - preserve `FIssuerCert` after clone materializes the owned DER/native copy
+
+- update `src/fafafa.ssl.mbedtls.certificate.pas`
+  - change:
+    - preserve `FIssuerCert` after clone materializes the owned DER/native copy
+
+- update `src/fafafa.ssl.winssl.certificate.pas`
+  - change:
+    - preserve `FIssuerCert` when clone wraps the duplicated `PCCERT_CONTEXT`
+
+- `mkdir -p tmp/test_certificate_clone_issuer_link_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_certificate_clone_issuer_link_contract_units -FEtmp/test_certificate_clone_issuer_link_contract_units -otmp/test_certificate_clone_issuer_link_contract_units/test_certificate_clone_issuer_link_contract tests/test_certificate_clone_issuer_link_contract.pas && ./tmp/test_certificate_clone_issuer_link_contract_units/test_certificate_clone_issuer_link_contract`
+  - result: FAIL -> PASS
+  - summary:
+    - RED:
+      - `OpenSSL: clone should preserve issuer link`
+      - `WolfSSL: clone should preserve issuer link`
+      - `MbedTLS: clone should preserve issuer link`
+    - GREEN:
+      - `16 passed / 0 failed`
+
+- `mkdir -p tmp/test_certificate_clone_issuer_link_contract_win64 && fpc -B -Twin64 -Px86_64 -Fu./src -Fu./tests -FUtmp/test_certificate_clone_issuer_link_contract_win64 -FEtmp/test_certificate_clone_issuer_link_contract_win64 -otmp/test_certificate_clone_issuer_link_contract_win64/test_certificate_clone_issuer_link_contract.exe tests/test_certificate_clone_issuer_link_contract.pas && wine tmp/test_certificate_clone_issuer_link_contract_win64/test_certificate_clone_issuer_link_contract.exe`
+  - result: FAIL -> PASS
+  - summary:
+    - RED:
+      - `WinSSL: clone should preserve issuer link`
+    - GREEN:
+      - `8 passed / 0 failed / 3 skipped`
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp -otmp/tmp_backend_contract tests/contract/test_backend_contract.pas && ./tmp/tmp_backend_contract`
+  - result: PASS
+  - summary:
+    - backend contract stayed green at `135 total / 111 passed / 0 failed / 24 skipped`
+    - existing backend interface alignment did not regress after the clone issuer-link repair
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current certificate clone issuer-link batch has no whitespace or patch-format issues
+
 ### WinSSL Peer Certificate Issuer Link
 
 - `rg -n "GetPeerCertificate|GetPeerCertificateChain|IssuerCertificate|SetIssuerCertificate|CertGetCertificateChain|SECPKG_ATTR_REMOTE_CERT_CONTEXT" src/fafafa.ssl.winssl.connection.pas src/fafafa.ssl.winssl.certificate.pas`

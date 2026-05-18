@@ -25,6 +25,26 @@
   - `WolfSSL`
   - `WinSSL`
   - 下一刀应转向“各 backend 的 connection / verification / optional surface 还有没有剩余 completeness seam”，而不是重开已关掉的 issuer-link lane
+- [completed] cross-backend `ISSLCertificate.Clone()` issuer-link completeness 已完成 focused 收口：
+  - 新增计划：`docs/plans/2026-05-19-certificate-clone-issuer-link.md`
+  - 新增 focused contract：`tests/test_certificate_clone_issuer_link_contract.pas`
+  - `src/fafafa.ssl.openssl.certificate.pas`
+    - `Clone()` 现在会保留 `FIssuerCert`
+  - `src/fafafa.ssl.wolfssl.certificate.pas`
+    - `Clone()` 现在会保留 `FIssuerCert`
+  - `src/fafafa.ssl.mbedtls.certificate.pas`
+    - `Clone()` 现在会保留 `FIssuerCert`
+  - `src/fafafa.ssl.winssl.certificate.pas`
+    - `Clone()` 现在会保留 `FIssuerCert`
+  - 当前 clone truth 已重新对齐到 `FreePascal` 语义参考：
+    - clone 后保留 leaf fingerprint truth
+    - clone 后保留 `GetIssuerCertificate()` truth
+  - focused verification 已通过：
+    - Linux focused contract：`16 passed / 0 failed`
+    - `Win64 cross-target + wine` focused contract：`8 passed / 0 failed / 3 skipped`
+    - `tests/contract/test_backend_contract.pas`：`135 total / 111 passed / 0 failed / 24 skipped`
+    - `git diff --check`：PASS
+  - 下一刀应继续横向审剩余 certificate-verification / optional surface completeness seam，而不是重开这条 clone issuer-link lane
 - [completed] GitHub Actions Windows runner 已重新纳入当前 truth surface：
   - `wave-b-b2-manual.yml` 的 live run `26030261335` 已证实 `windows-gate` 三层都能在 GitHub CI 上实际执行
   - 当前 WinSSL lane 不再允许退回“本地没 Windows，只能静态审查”的旧入口

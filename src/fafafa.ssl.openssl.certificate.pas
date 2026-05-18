@@ -1752,6 +1752,8 @@ begin
 end;
 
 function TOpenSSLCertificate.Clone: ISSLCertificate;
+var
+  LClone: TOpenSSLCertificate;
 begin
   Result := nil;
   if FX509 = nil then
@@ -1761,7 +1763,9 @@ begin
   X509_up_ref(FX509);
   try
     // Create new certificate wrapper - if this fails, we must decrement ref
-    Result := TOpenSSLCertificate.Create(FX509, True);
+    LClone := TOpenSSLCertificate.Create(FX509, True);
+    LClone.FIssuerCert := FIssuerCert;
+    Result := LClone;
   except
     // Decrement reference count on failure to prevent leak
     if Assigned(X509_free) then

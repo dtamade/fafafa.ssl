@@ -1433,11 +1433,14 @@ end;
 function TWinSSLCertificate.Clone: ISSLCertificate;
 var
   DupContext: PCCERT_CONTEXT;
+  LClone: TWinSSLCertificate;
 begin
   if FCertContext <> nil then
   begin
     DupContext := CertDuplicateCertificateContext(FCertContext);
-    Result := TWinSSLCertificate.Create(DupContext, True);
+    LClone := TWinSSLCertificate.Create(DupContext, True);
+    LClone.FIssuerCert := FIssuerCert;
+    Result := LClone;
   end
   else
     Result := nil;

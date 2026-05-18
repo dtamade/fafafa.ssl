@@ -2,6 +2,39 @@
 
 ## 2026-05-19
 
+- 这次新的 focused contract 又压出了一条跨 backend 的 certificate-object completeness 漏口：
+  - `OpenSSL` / `WolfSSL` / `MbedTLS` / `WinSSL` 的 `ISSLCertificate.Clone()` 此前都能保留 leaf 本体
+  - 但 clone 后会把 `GetIssuerCertificate()` 这层 link truth 丢掉
+  - `FreePascal` 已经是正确语义参考：`Clone()` 会继续保留 `FIssuerCert`
+
+- 这条问题已经通过本地可重复的双平台 focused 证据锁实，而不是静态猜测：
+  - Linux focused contract 先红在：
+    - `OpenSSL: clone should preserve issuer link`
+    - `WolfSSL: clone should preserve issuer link`
+    - `MbedTLS: clone should preserve issuer link`
+  - `Win64 cross-target + wine` focused contract 先红在：
+    - `WinSSL: clone should preserve issuer link`
+
+- 这也把问题边界说得很清楚：
+  - 不是 leaf materialization 又坏了
+  - 不是 fingerprint / DER / PEM copy 退化了
+  - 而是 clone 路径没有把已有的 `FIssuerCert` 一起带过去
+
+- 因而这批最小安全修法也很直接，并已落地：
+  - `OpenSSL` clone 在 retained wrapper 建好后补回 `FIssuerCert`
+  - `WolfSSL` / `MbedTLS` clone 在 materialized copy 成功后补回 `FIssuerCert`
+  - `WinSSL` clone 在 duplicated cert context wrapper 建好后补回 `FIssuerCert`
+  - 全部对齐 `FreePascal` 现有 clone 语义，不额外发明新的 deep-clone 政策
+
+- focused 回归结果说明这次修法边界正确：
+  - Linux focused contract 已从 RED 转 GREEN：`16 passed / 0 failed`
+  - `Win64 cross-target + wine` focused contract 已从 RED 转 GREEN：`8 passed / 0 failed / 3 skipped`
+  - `tests/contract/test_backend_contract.pas` 继续 green：`135 total / 111 passed / 0 failed / 24 skipped`
+  - 这说明这次不是“为了补 clone link 改坏 certificate/session surface”，而是单纯补齐了 clone semantics
+
+- 当前这条 clone issuer-link lane 已经可以视为关闭：
+  - 后续继续审查时，不应再把它当成未定位问题反复拉起
+  - 下一刀更适合继续横向审剩余 certificate-verification / optional surface completeness seam
 - `WinSSL` 连接态 peer-certificate public surface 这次也被证实存在同类 completeness 缺口：
   - `DoGetPeerCertificate()` 之前只把 remote leaf context 包成 `ISSLCertificate`
   - `DoGetPeerCertificateChain()` 之前只把 `CertGetCertificateChain(...)` 产物 materialize 成 cert array
