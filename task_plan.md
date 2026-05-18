@@ -373,6 +373,27 @@
     - 下一条相关路线不该再回到“冲突输入到底谁赢”的讨论：
       - 若继续推进，应进入真正的 `TSSLConfig` public-surface slimming / migration 设计
       - 而不是再把 precedence 当成未定规则
+11. `TSSLConfig option-bridge surface truth freeze` 当前也已完成第一轮收口：
+    - 新 plan：
+      - `docs/plans/2026-05-18-tsslconfig-option-bridge-surface-truth-freeze.md`
+    - 新验证：
+      - `tests/scripts/test_tsslconfig_option_bridge_surface_truth_contract.sh`
+      - `tests/test_tsslconfig_option_bridge_default_truth.pas`
+      - `tests/test_tsslconfig_option_bridge_precedence_freeze.pas`
+      - `tests/security/test_session_security.pas`
+    - 当前已冻结的 `v1.x` public truth：
+      - `EnableCompression` / `EnableSessionTickets` / `EnableOCSPStapling`
+        是 compatibility-only option-bridge booleans
+      - 新代码应优先直接写 `Options`
+      - 仍需覆盖这些字段的测试必须显式标记为 compatibility coverage
+      - 非 compatibility 活跃测试不应再把它们当主写入口
+    - 当前 focused proof 已覆盖：
+      - source comment / API reference wording
+      - dedicated compatibility tests label truth
+      - active session-security coverage 改走 context `SetOptions(...)` / `GetOptions(...)`
+    - 下一条相关路线不该再回到“这些字段是不是普通主路径”的讨论：
+      - 若继续推进，应进入真正的 `TSSLConfig` slimming / migration design
+      - 而不是重复补 public wording 或兼容测试标签
 
 ## Verification Discipline
 

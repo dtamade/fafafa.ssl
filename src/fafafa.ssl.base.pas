@@ -414,9 +414,9 @@ type
     // 高级配置
     ServerName: string;                      // Deprecated compatibility-only context-level SNI; prefer ISSLClientConnection.SetServerName
     ALPNProtocols: string;                   // Context-scoped ALPN defaults（逗号分隔）
-    EnableCompression: Boolean;              // Option-bridge compatibility flag; normalized into Options
-    EnableSessionTickets: Boolean;           // Option-bridge compatibility flag; normalized into Options
-    EnableOCSPStapling: Boolean;             // Option-bridge compatibility flag; normalized into Options
+    EnableCompression: Boolean;              // Compatibility-only option-bridge flag; prefer Options; normalized into Options
+    EnableSessionTickets: Boolean;           // Compatibility-only option-bridge flag; prefer Options; normalized into Options
+    EnableOCSPStapling: Boolean;             // Compatibility-only option-bridge flag; prefer Options; normalized into Options
     ClientEarlyDataEnabled: Boolean;         // Context-scoped TLS 1.3 client early-data default
     ServerEarlyDataPolicy: TSSLEarlyDataServerPolicy; // Context-scoped TLS 1.3 server early-data policy
     ServerMaxEarlyDataSize: Cardinal;        // Context-scoped TLS 1.3 server early-data limit

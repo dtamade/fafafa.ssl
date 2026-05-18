@@ -1447,3 +1447,72 @@
   - fresh default-config truth 已定
   - conflict precedence 也已定
   - 下一条更值得开的批次，应进入真正的 public-surface slimming / migration 设计，而不是继续补 option-bridge truth
+
+## 增量收口：option-bridge surface truth freeze
+
+- 在 precedence freeze 之后继续看 active public surface，可以确认还有一层没有完全收口：
+  - runtime / normalization truth 已经冻结
+  - 但 source comment、API wording、以及部分活跃测试对这三个字段的表达还不够一致
+  - 这会让
+    - `EnableCompression`
+    - `EnableSessionTickets`
+    - `EnableOCSPStapling`
+    继续看起来像普通推荐主路径，而不是 compatibility-only option-bridge surface
+
+- 这轮 focused review 进一步确认了一个具体漂移点：
+  - `tests/security/test_session_security.pas`
+    原本不是 compatibility coverage，却还在通过 `EnableSessionTickets := ...` 驱动语义
+  - 这既会误导调用方向 legacy boolean 靠拢，也会和当前已冻结的 “legacy boolean 优先于冲突 `Options`” 规则发生概念缠绕
+
+- 当前修法没有改 runtime behavior，而是把 public truth 收紧并把测试分层说清楚：
+  - `src/fafafa.ssl.base.pas`
+    - 三个字段 source comment 统一改成
+      `Compatibility-only option-bridge flag; prefer Options; normalized into Options`
+  - `docs/reference/API_REFERENCE.md`
+    - 明确：
+      - 这三个字段只是历史 compatibility 写入口
+      - 新代码应优先直接写 `Options`
+      - factory / direct-library default-config path 会先把它们归一化进 `Options`
+      - fresh default-config surface 返回时也必须保持 boolean 与最终 `Options` 真相一致
+  - `tests/test_factory_logic.pas`
+  - `tests/test_data_structures.pas`
+  - `tests/test_tsslconfig_option_bridge_default_truth.pas`
+  - `tests/test_tsslconfig_option_bridge_precedence_freeze.pas`
+  - `tests/test_direct_library_default_config_parity.pas`
+    - 显式标记为 compatibility coverage
+  - `tests/security/test_session_security.pas`
+    - 改成直接覆盖 context `SetOptions(...)` / `GetOptions(...)` 主路径
+
+- 这轮也顺手消掉了一个后续很容易反复拉起的工作流噪音：
+  - 旧的 contract wording 会因为还盯着旧文案先报假红灯
+  - 当前已同步更新：
+    - `tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+    - `tests/scripts/test_tsslconfig_option_bridge_default_truth_contract.sh`
+    - `tests/scripts/test_tsslconfig_option_bridge_precedence_freeze_contract.sh`
+  - 并新增：
+    - `tests/scripts/test_tsslconfig_option_bridge_surface_truth_contract.sh`
+
+- focused 验证：
+  - `tests/scripts/test_tsslconfig_option_bridge_surface_truth_contract.sh`
+    - PASS
+  - `tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+    - RED -> GREEN
+    - 第一轮只是在盯旧 wording，不是 repo truth 回归
+  - `tests/scripts/test_tsslconfig_option_bridge_default_truth_contract.sh`
+    - PASS
+  - `tests/scripts/test_tsslconfig_option_bridge_precedence_freeze_contract.sh`
+    - PASS
+  - `tests/test_tsslconfig_option_bridge_default_truth.pas`
+    - PASS (`20 passed, 0 failed`)
+  - `tests/test_tsslconfig_option_bridge_precedence_freeze.pas`
+    - PASS (`16 passed, 0 failed`)
+  - `tests/security/test_session_security.pas`
+    - RED -> GREEN
+    - 第一轮说明 `NormalizeConfig(...)` 路径本来就会让 legacy boolean precedence 覆盖冲突 `Options`
+    - 最终改成 direct context option path 后 PASS (`35 passed, 0 failed`)
+
+- 这一步之后，`TSSLConfig` 这条主线已经不只冻结了 runtime truth，也冻结了 active public expression：
+  - 不需要再继续争论这三个字段是不是普通主路径
+  - 下一条真正值得开的批次，应进入：
+    - `TSSLConfig` slimming / migration design
+    - 再往后才是 `ISSLConnection` 核心 surface slimming

@@ -2186,3 +2186,73 @@
   - result: PASS
   - summary:
     - current option-bridge precedence-freeze batch has no whitespace or patch-format issues
+
+### TSSLConfig Option-Bridge Surface Truth Freeze
+
+- add `docs/plans/2026-05-18-tsslconfig-option-bridge-surface-truth-freeze.md`
+  - purpose:
+    - define a bounded batch for freezing the remaining public-surface truth of the three option-bridge booleans
+    - keep the scope on source/doc/test guidance instead of reopening runtime semantics
+
+- update:
+  - `src/fafafa.ssl.base.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - `tests/test_factory_logic.pas`
+  - `tests/test_data_structures.pas`
+  - `tests/test_tsslconfig_option_bridge_default_truth.pas`
+  - `tests/test_tsslconfig_option_bridge_precedence_freeze.pas`
+  - `tests/test_direct_library_default_config_parity.pas`
+  - `tests/security/test_session_security.pas`
+  - change:
+    - tighten the three `TSSLConfig` option-bridge booleans to explicit `compatibility-only` source/doc truth
+    - label the remaining dedicated compatibility tests
+    - move active session-security coverage away from legacy boolean writes
+
+- add `tests/scripts/test_tsslconfig_option_bridge_surface_truth_contract.sh`
+  - purpose:
+    - fail if source/docs/tests drift back toward treating the option-bridge booleans as ordinary primary inputs
+
+- `bash -n tests/scripts/test_tsslconfig_option_bridge_surface_truth_contract.sh && bash tests/scripts/test_tsslconfig_option_bridge_surface_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new source/doc/test contract holds the narrowed compatibility-only truth
+
+- `bash -n tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh && bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+  - RED -> GREEN result: PASS
+  - summary:
+    - the first failure was only wording drift against the new narrowed API text
+    - the scope-bucket contract was updated to the new compatibility-only phrasing instead of reopening runtime verification
+
+- `bash -n tests/scripts/test_tsslconfig_option_bridge_default_truth_contract.sh && bash tests/scripts/test_tsslconfig_option_bridge_default_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - the earlier fresh default-config contract now points at the new API wording and remains green
+
+- `bash -n tests/scripts/test_tsslconfig_option_bridge_precedence_freeze_contract.sh && bash tests/scripts/test_tsslconfig_option_bridge_precedence_freeze_contract.sh`
+  - result: PASS
+  - summary:
+    - the earlier precedence-freeze contract now points at the new API wording and remains green
+
+- `mkdir -p tmp/test_tsslconfig_option_bridge_default_truth && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_tsslconfig_option_bridge_default_truth -FEtmp/test_tsslconfig_option_bridge_default_truth -otmp/test_tsslconfig_option_bridge_default_truth/test_tsslconfig_option_bridge_default_truth tests/test_tsslconfig_option_bridge_default_truth.pas && ./tmp/test_tsslconfig_option_bridge_default_truth/test_tsslconfig_option_bridge_default_truth`
+  - result: PASS
+  - summary:
+    - focused default-truth suite finished `20 passed, 0 failed`
+    - the new compatibility labels/comments did not disturb the earlier runtime truth batch
+
+- `mkdir -p tmp/test_tsslconfig_option_bridge_precedence_freeze && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_tsslconfig_option_bridge_precedence_freeze -FEtmp/test_tsslconfig_option_bridge_precedence_freeze -otmp/test_tsslconfig_option_bridge_precedence_freeze/test_tsslconfig_option_bridge_precedence_freeze tests/test_tsslconfig_option_bridge_precedence_freeze.pas && ./tmp/test_tsslconfig_option_bridge_precedence_freeze/test_tsslconfig_option_bridge_precedence_freeze`
+  - result: PASS
+  - summary:
+    - focused precedence suite finished `16 passed, 0 failed`
+    - narrowed public-surface wording did not disturb the earlier precedence contract
+
+- `mkdir -p tmp/test_session_security && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_session_security -FEtmp/test_session_security -otmp/test_session_security/test_session_security tests/security/test_session_security.pas && ./tmp/test_session_security/test_session_security`
+  - RED -> GREEN result: PASS
+  - summary:
+    - the first attempt incorrectly tried to prove session-ticket configurability by writing only `Options` through `NormalizeConfig(...)`
+    - that failed because the already-frozen legacy-boolean precedence intentionally overrides conflicting option bits during normalization
+    - the final fix moved the active security test to direct context `SetOptions(...)` / `GetOptions(...)`, finishing with `35 passed, 0 failed`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current option-bridge surface-truth batch has no whitespace or patch-format issues

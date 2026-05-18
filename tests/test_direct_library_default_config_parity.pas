@@ -2,6 +2,10 @@ program test_direct_library_default_config_parity;
 
 {$mode objfpc}{$H+}
 
+{ INTENTIONAL_COMPAT: this file intentionally covers the direct-library
+  default-config projection of the remaining option-bridge booleans so the
+  compatibility default surface stays explicit. }
+
 uses
   SysUtils,
   fafafa.ssl.base,

@@ -2,6 +2,10 @@ program test_tsslconfig_option_bridge_precedence_freeze;
 
 {$mode objfpc}{$H+}
 
+{ INTENTIONAL_COMPAT: this file intentionally freezes the remaining
+  option-bridge boolean write precedence so the v1.x compatibility contract
+  cannot silently drift back into an unspecified surface. }
+
 uses
   SysUtils,
   fafafa.ssl,

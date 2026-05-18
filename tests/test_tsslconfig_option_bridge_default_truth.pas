@@ -2,6 +2,10 @@ program test_tsslconfig_option_bridge_default_truth;
 
 {$mode objfpc}{$H+}
 
+{ INTENTIONAL_COMPAT: this file intentionally keeps option-bridge boolean
+  coverage so the remaining TSSLConfig compatibility-write surface stays
+  explicit while new code is steered toward Options. }
+
 uses
   SysUtils,
   fafafa.ssl,

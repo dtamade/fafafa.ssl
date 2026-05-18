@@ -274,29 +274,34 @@ end;
 
 procedure TestSessionTicketSecurity;
 var
-  LConfig: TSSLConfig;
+  LContext: ISSLContext;
 begin
   WriteLn;
   WriteLn('=== Session Ticket Security ===');
 
-  // 检查会话票据默认设置
-  LConfig := Default(TSSLConfig);
-  TSSLFactory.NormalizeConfig(LConfig);
-
   // 会话票据应该可以配置
   Runner.Check('Session tickets configurable', True);
 
-  // 测试启用会话票据
-  LConfig.EnableSessionTickets := True;
-  TSSLFactory.NormalizeConfig(LConfig);
-  Runner.Check('Enable session tickets option',
-        ssoEnableSessionTickets in LConfig.Options);
+  try
+    LContext := TSSLFactory.CreateContext(sslCtxClient, sslOpenSSL);
+    if LContext = nil then
+    begin
+      Runner.Check('Session ticket context creation', False, 'Context is nil');
+      Exit;
+    end;
 
-  // 测试禁用会话票据
-  LConfig.EnableSessionTickets := False;
-  TSSLFactory.NormalizeConfig(LConfig);
-  Runner.Check('Disable session tickets option',
-        not (ssoEnableSessionTickets in LConfig.Options));
+    // 活跃安全测试直接走 context Options 主路径，而不是旧 compatibility boolean。
+    LContext.SetOptions([ssoEnableSessionTickets]);
+    Runner.Check('Enable session tickets option',
+      ssoEnableSessionTickets in LContext.GetOptions);
+
+    LContext.SetOptions([]);
+    Runner.Check('Disable session tickets option',
+      not (ssoEnableSessionTickets in LContext.GetOptions));
+  except
+    on E: Exception do
+      Runner.Check('Session ticket context settings', False, E.Message);
+  end;
 end;
 
 procedure TestRenegotiationSecurity;

@@ -3,8 +3,9 @@ program test_data_structures;
 {$mode objfpc}{$H+}
 
 { INTENTIONAL_COMPAT: this file intentionally keeps deprecated
-  TSSLConfig.ServerName field-surface coverage so the remaining public record
-  shape stays explicit. }
+  TSSLConfig.ServerName plus the remaining option-bridge boolean field surface
+  (`EnableCompression` / `EnableSessionTickets` / `EnableOCSPStapling`)
+  explicit so the v1.x compatibility record shape stays visible. }
 
 {
   test_data_structures - 数据结构测试

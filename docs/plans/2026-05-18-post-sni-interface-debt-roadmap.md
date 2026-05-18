@@ -71,9 +71,11 @@ Recommended first bounded batch:
   - `TSSLConfig` scope buckets truth
   - fresh default-config option-bridge truth parity
   - option-bridge conflict precedence freeze
+  - option-bridge surface truth freeze
 
 - 当前更准确的 next step：
   - 不再继续讨论 “`Options` vs legacy booleans 到底谁赢”
+  - 不再继续补 option-bridge public wording / test labels
   - 转向真正的 `TSSLConfig` public-surface slimming / migration 设计
   - 只有这条线稳定后，再考虑是否进入 `ISSLConnection` 核心 surface slimming
 

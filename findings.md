@@ -987,3 +987,44 @@
   - 而是：
     - `TSSLConfig` public-surface slimming / migration roadmap
     - 或再往后才考虑 `ISSLConnection` 核心 surface slimming
+
+- `TSSLConfig option-bridge surface` 这轮继续往前收后，public truth 也终于不再停留在“行为已经冻结，但表达还松”的状态：
+  - `src/fafafa.ssl.base.pas` 现在明确把
+    - `EnableCompression`
+    - `EnableSessionTickets`
+    - `EnableOCSPStapling`
+    定义为 compatibility-only option-bridge flags，并直接提示新代码优先写 `Options`
+  - `docs/reference/API_REFERENCE.md` 也同步改成同一套 public-facing truth：
+    - 这三个字段是历史 compatibility 写入口
+    - factory / direct-library default-config path 会先把它们折叠进 `Options`
+    - fresh default-config surfaces 返回时也必须保持 boolean 与最终 `Options` 真相一致
+
+- 这轮同时暴露了一个比“文案松”更具体的问题：
+  - `tests/security/test_session_security.pas` 原本不是 compatibility coverage，却还在通过 `EnableSessionTickets := ...` 驱动语义
+  - 这会继续把 legacy boolean 教成普通主路径，也会和已经冻结的 “legacy boolean 优先于冲突 `Options`” 规则纠缠在一起
+  - 当前已经把这条活跃安全测试改成直接覆盖 context `SetOptions(...)` / `GetOptions(...)` 主路径
+
+- 与此对应，仍然故意覆盖 compatibility surface 的测试也已经显式化：
+  - `tests/test_factory_logic.pas`
+  - `tests/test_data_structures.pas`
+  - `tests/test_tsslconfig_option_bridge_default_truth.pas`
+  - `tests/test_tsslconfig_option_bridge_precedence_freeze.pas`
+  - `tests/test_direct_library_default_config_parity.pas`
+  - 它们现在都明确说明自己是在保留 option-bridge compatibility coverage，而不是继续把这组字段当普通推荐 API
+
+- 这轮还有一个工作流层面的 live 教训值得保留：
+  - 当 public wording 被收紧后，旧 contract 脚本会先因为盯旧文案而报假红灯
+  - 这次 `test_tsslconfig_scope_bucket_truth_contract.sh`
+    / `test_tsslconfig_option_bridge_default_truth_contract.sh`
+    / `test_tsslconfig_option_bridge_precedence_freeze_contract.sh`
+    都一起对齐到了新的 wording truth
+  - 这比“重新跑更多重型验证”更有价值，因为它直接消掉了后续重复拉起的噪音源
+
+- 因而当前 `TSSLConfig` 这条线的 next queue 已经进一步收敛：
+  - 不需要再反复补
+    - option-bridge precedence wording
+    - fresh default-config wording
+    - compatibility labels
+  - 真正值得开的下一批，应是：
+    - `TSSLConfig` public-surface slimming / migration design
+    - 明确哪些 compatibility-only 字段在 `v2` 继续保留、改挂、还是迁到更窄入口

@@ -44,11 +44,11 @@ require_rg "SessionTimeout: Integer;[[:space:]]+// Context-scoped session lifeti
   "$base_file" "TSSLConfig.SessionTimeout source comment no longer states its context-scoped truth"
 require_rg "ALPNProtocols: string;[[:space:]]+// Context-scoped ALPN defaults" \
   "$base_file" "TSSLConfig.ALPNProtocols source comment no longer states its context-scoped truth"
-require_rg "EnableCompression: Boolean;[[:space:]]+// Option-bridge compatibility flag; normalized into Options" \
+require_rg "EnableCompression: Boolean;[[:space:]]+// Compatibility-only option-bridge flag; prefer Options; normalized into Options" \
   "$base_file" "TSSLConfig.EnableCompression source comment no longer states option-bridge normalization"
-require_rg "EnableSessionTickets: Boolean;[[:space:]]+// Option-bridge compatibility flag; normalized into Options" \
+require_rg "EnableSessionTickets: Boolean;[[:space:]]+// Compatibility-only option-bridge flag; prefer Options; normalized into Options" \
   "$base_file" "TSSLConfig.EnableSessionTickets source comment no longer states option-bridge normalization"
-require_rg "EnableOCSPStapling: Boolean;[[:space:]]+// Option-bridge compatibility flag; normalized into Options" \
+require_rg "EnableOCSPStapling: Boolean;[[:space:]]+// Compatibility-only option-bridge flag; prefer Options; normalized into Options" \
   "$base_file" "TSSLConfig.EnableOCSPStapling source comment no longer states option-bridge normalization"
 require_rg "ClientEarlyDataEnabled: Boolean;[[:space:]]+// Context-scoped TLS 1\\.3 client early-data default" \
   "$base_file" "TSSLConfig.ClientEarlyDataEnabled source comment no longer states its context scope"
@@ -87,7 +87,7 @@ require_fixed '- `EnableSessionTickets`' "$api_ref" \
   "API reference no longer lists EnableSessionTickets inside the TSSLConfig scope buckets"
 require_fixed '- `EnableOCSPStapling`' "$api_ref" \
   "API reference no longer lists EnableOCSPStapling inside the TSSLConfig scope buckets"
-require_fixed 'factory 会把它们归一化进 `Options`' "$api_ref" \
+require_fixed 'factory 与 direct-library default-config path 会先把它们归一化进 `Options`' "$api_ref" \
   "API reference no longer states that option-bridge flags normalize into Options"
 
 require_fixed "LogLevel is library-scoped. Configure logging through ISSLLibrary defaults instead of TSSLFactory.CreateContext(const AConfig)." \

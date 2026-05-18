@@ -45,7 +45,7 @@ if ! rg -n --quiet 'FDefaultConfig\.EnableSessionTickets := True;' "src/fafafa.s
   exit 1
 fi
 
-if ! rg -F -n --quiet 'fresh default-config surfaces (`ISSLLibrary.GetDefaultConfig(...)` / `CreateDefaultConfig(...)`) should now expose option-bridge booleans that stay aligned with the final `Options` truth.' "$api_ref"; then
+if ! rg -F -n --quiet '`ISSLLibrary.GetDefaultConfig(...)` / `CreateDefaultConfig(...)` 这类 fresh default-config surface 返回时，也必须保持这些 compatibility booleans 与最终 `Options` 真相一致。' "$api_ref"; then
   echo "[FAIL] API reference no longer records option-bridge truth on fresh default-config surfaces"
   exit 1
 fi

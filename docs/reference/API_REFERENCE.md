@@ -58,14 +58,15 @@
 - compatibility-only
   - `ServerName`
   - 当前 client context 创建路径是 warning + ignore，server context 创建路径会 reject；新代码应改走 per-connection SNI。
-- option-bridge compatibility flags
+- compatibility-only option-bridge flags
   - `EnableCompression`
   - `EnableSessionTickets`
   - `EnableOCSPStapling`
-  - 这几个布尔字段当前仍保留在 `v1.x` public record 中，但 factory 会把它们归一化进 `Options`，不应继续把它们扩成新的 backend-private 配置槽。
-  - fresh default-config surfaces (`ISSLLibrary.GetDefaultConfig(...)` / `CreateDefaultConfig(...)`) should now expose option-bridge booleans that stay aligned with the final `Options` truth.
-  - When callers pass conflicting `Options` and option-bridge booleans, normalization currently treats the legacy booleans as the compatibility write surface:
-    the legacy boolean wins, updates the relevant option bit, and then the final `Options` truth is projected back into the boolean fields.
+  - 这几个布尔字段当前仍保留在 `v1.x` public record 中，但它们只是历史 compatibility 写入口；新代码应优先直接写 `Options`。
+  - factory 与 direct-library default-config path 会先把它们归一化进 `Options`，不应继续把它们扩成新的 backend-private 配置槽。
+  - `ISSLLibrary.GetDefaultConfig(...)` / `CreateDefaultConfig(...)` 这类 fresh default-config surface 返回时，也必须保持这些 compatibility booleans 与最终 `Options` 真相一致。
+  - 当调用方同时传入冲突的 `Options` 与 option-bridge booleans 时，当前冻结规则是：
+    legacy boolean 赢，先回写对应 option bit，再把最终 `Options` 真相投影回这三个 boolean 字段。
 
 ---
 
@@ -89,7 +90,7 @@
   - `ServerMaxEarlyDataSize`
   - `ServerEarlyDataReplayStoreFile`
   - `ServerEarlyDataReplayStoreDirectory`
-- `SetDefaultConfig(...)` 会先归一化 `TSSLConfig`，所以 `EnableCompression` / `EnableSessionTickets` / `EnableOCSPStapling` 这类 option-bridge 字段也会先折叠进 `Options`，再由 direct-library `CreateContext(AType)` 应用到新 context。
+- `SetDefaultConfig(...)` 会先归一化 `TSSLConfig`，所以 `EnableCompression` / `EnableSessionTickets` / `EnableOCSPStapling` 这类 compatibility-only option-bridge 字段也会先折叠进 `Options`，再由 direct-library `CreateContext(AType)` 应用到新 context。
 - 同一条 direct-library path 现在也已对齐 deprecated `ServerName` compatibility 语义：
   - client default-config = warning + ignore
   - server default-config = reject

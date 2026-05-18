@@ -43,10 +43,10 @@ require_fixed "AConfig.EnableOCSPStapling := ssoEnableOCSPStapling in AConfig.Op
   "$factory_file" \
   "factory no longer projects final OCSP stapling truth back to legacy boolean"
 
-require_fixed 'When callers pass conflicting `Options` and option-bridge booleans, normalization currently treats the legacy booleans as the compatibility write surface:' \
+require_fixed '当调用方同时传入冲突的 `Options` 与 option-bridge booleans 时，当前冻结规则是：' \
   "$api_ref" \
   "API reference no longer records option-bridge conflict precedence"
-require_fixed 'the legacy boolean wins, updates the relevant option bit, and then the final `Options` truth is projected back into the boolean fields.' \
+require_fixed 'legacy boolean 赢，先回写对应 option bit，再把最终 `Options` 真相投影回这三个 boolean 字段。' \
   "$api_ref" \
   "API reference no longer explains the final option-truth projection"
 
