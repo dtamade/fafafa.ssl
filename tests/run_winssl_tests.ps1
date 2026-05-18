@@ -40,6 +40,16 @@ $tests = @(
         Description = "多场景集成测试 - 80 个测试点"
     },
     @{
+        Name = "WinSSL Peer Certificate Surface"
+        Lpi = "test_winssl_peer_certificate_surface.lpi"
+        Exe = "bin\test_winssl_peer_certificate_surface.exe"
+        Description = "连接态 peer certificate / chain issuer-link truth 测试"
+        Env = @{
+            FAFAFA_RUN_NETWORK_TESTS = "1"
+            FAFAFA_WINSSL_PEER_CERT_HOST = "api.github.com"
+        }
+    },
+    @{
         Name = "Backend Comparison Tests"
         Lpi = "..\integration\test_backend_comparison.lpi"
         Exe = "..\integration\bin\test_backend_comparison.exe"

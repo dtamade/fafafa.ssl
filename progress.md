@@ -2,6 +2,80 @@
 
 ## 2026-05-19
 
+### WinSSL Peer Certificate Issuer Link
+
+- `rg -n "GetPeerCertificate|GetPeerCertificateChain|IssuerCertificate|SetIssuerCertificate|CertGetCertificateChain|SECPKG_ATTR_REMOTE_CERT_CONTEXT" src/fafafa.ssl.winssl.connection.pas src/fafafa.ssl.winssl.certificate.pas`
+  - result: PASS
+  - summary:
+    - confirmed `WinSSL` leaf / chain surfaces already materialized peer certs
+    - confirmed connection layer still was not wiring `GetIssuerCertificate()` truth
+
+- `lazbuild tests/winssl/test_winssl_integration_multi.lpi`
+  - result: FAIL
+  - summary:
+    - local Linux-target Lazarus build failed on missing `unit Windows`
+    - this confirmed the focused WinSSL runtime path must use explicit `Win64` cross-target rather than default host target
+
+- `lazbuild --os=win64 --cpu=x86_64 tests/winssl/test_winssl_integration_multi.lpi`
+  - result: PASS
+  - summary:
+    - confirmed the local `Win64 cross-target + wine` route is available for real WinSSL RED/GREEN work
+
+- add `docs/plans/2026-05-19-winssl-peer-cert-issuer-link.md`
+  - change:
+    - define the bounded WinSSL issuer-link completeness batch, commands, scope, and expected closeout
+
+- add `tests/winssl/test_winssl_peer_certificate_surface.pas`
+  - change:
+    - add focused runtime surface coverage for leaf/chain issuer-link truth against a real WinSSL handshake
+
+- add `tests/winssl/test_winssl_peer_certificate_surface.lpi`
+  - change:
+    - create dedicated Lazarus entry so the focused WinSSL runtime test can be compiled under `Win64`
+
+- `lazbuild --os=win64 --cpu=x86_64 tests/winssl/test_winssl_peer_certificate_surface.lpi`
+  - result: PASS
+  - summary:
+    - focused WinSSL peer-certificate surface test compiled successfully for `Win64`
+
+- `FAFAFA_RUN_NETWORK_TESTS=1 FAFAFA_WINSSL_PEER_CERT_HOST=api.github.com wine tests/winssl/bin/test_winssl_peer_certificate_surface.exe`
+  - result: FAIL -> PASS
+  - summary:
+    - RED:
+      - `peer leaf certificate should preserve issuer link`
+      - `peer chain leaf entry should preserve issuer link`
+    - GREEN after connection-layer repair:
+      - leaf issuer link now matches the returned issuer chain entry
+      - chain leaf issuer link now also matches the returned issuer chain entry
+
+- update `src/fafafa.ssl.winssl.connection.pas`
+  - change:
+    - add WinSSL-local issuer lookup/link helpers
+    - `GetPeerCertificate()` now supplements leaf issuer truth from the returned chain
+    - `GetPeerCertificateChain()` now preserves issuer links across returned chain entries
+
+- update `tests/run_winssl_tests.ps1`
+  - change:
+    - add `WinSSL Peer Certificate Surface` to the broader WinSSL runtime suite
+    - runtime lane now sets `FAFAFA_RUN_NETWORK_TESTS=1` and `FAFAFA_WINSSL_PEER_CERT_HOST=api.github.com`
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+  - result: PASS
+  - summary:
+    - backend contract stayed green at `135 total / 111 passed / 0 failed / 24 skipped`
+    - existing backend surface alignment did not regress after the WinSSL issuer-link repair
+
+- `pwsh -NoProfile -Command ...ParseFile(...)`
+  - result: FAIL
+  - summary:
+    - local host does not provide `pwsh`; no same-command retry was attempted
+    - this batch instead relied on direct file diff review plus the new runtime-suite entry for Windows execution coverage
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current WinSSL issuer-link batch has no whitespace or patch-format issues
+
 ### WolfSSL Peer Certificate Issuer Link
 
 - `nl -ba src/fafafa.ssl.wolfssl.connection.pas | sed -n '714,798p'`

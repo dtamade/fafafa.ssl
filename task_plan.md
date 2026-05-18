@@ -10,6 +10,21 @@
 
 ## Current Status
 
+- [completed] `WinSSL` connection peer-certificate issuer-link completeness 已完成 focused 收口：
+  - 新增计划：`docs/plans/2026-05-19-winssl-peer-cert-issuer-link.md`
+  - 新增 focused runtime test：`tests/winssl/test_winssl_peer_certificate_surface.pas`
+  - 新增 Lazarus entry：`tests/winssl/test_winssl_peer_certificate_surface.lpi`
+  - `src/fafafa.ssl.winssl.connection.pas`
+    - `GetPeerCertificate()` 现在会在可用链中补回 leaf issuer link
+    - `GetPeerCertificateChain()` 现在会给 returned chain entries 接上 issuer link
+  - `tests/run_winssl_tests.ps1` 现在已接入 `WinSSL Peer Certificate Surface` runtime lane
+  - 本地 `Win64 cross-target + wine` 已先 RED 后 GREEN，`tests/contract/test_backend_contract.pas` 继续 green
+- [in_progress] connection-level peer-certificate issuer-link completeness 现在已经覆盖：
+  - `FreePascal`
+  - `OpenSSL`
+  - `WolfSSL`
+  - `WinSSL`
+  - 下一刀应转向“各 backend 的 connection / verification / optional surface 还有没有剩余 completeness seam”，而不是重开已关掉的 issuer-link lane
 - [completed] GitHub Actions Windows runner 已重新纳入当前 truth surface：
   - `wave-b-b2-manual.yml` 的 live run `26030261335` 已证实 `windows-gate` 三层都能在 GitHub CI 上实际执行
   - 当前 WinSSL lane 不再允许退回“本地没 Windows，只能静态审查”的旧入口

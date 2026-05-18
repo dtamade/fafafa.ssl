@@ -232,6 +232,59 @@ uses
   fafafa.ssl.context.compat,
   fafafa.ssl.winssl.lib;
 
+function NormalizeWinSSLCertificateLinkText(const AValue: string): string;
+begin
+  Result := Trim(UpperCase(AValue));
+  Result := StringReplace(Result, ',', '', [rfReplaceAll]);
+  Result := StringReplace(Result, ' ', '', [rfReplaceAll]);
+end;
+
+function FindWinSSLIssuerCertificate(const ALeaf: ISSLCertificate;
+  const ACertificates: TSSLCertificateArray): ISSLCertificate;
+var
+  I: Integer;
+  LTargetIssuer: string;
+  LLeafFingerprint: string;
+  LCandidateFingerprint: string;
+begin
+  Result := nil;
+  if ALeaf = nil then
+    Exit;
+
+  LTargetIssuer := NormalizeWinSSLCertificateLinkText(ALeaf.GetIssuer);
+  if LTargetIssuer = '' then
+    Exit;
+
+  LLeafFingerprint := ALeaf.GetFingerprintSHA256;
+  for I := 0 to High(ACertificates) do
+  begin
+    if ACertificates[I] = nil then
+      Continue;
+
+    LCandidateFingerprint := ACertificates[I].GetFingerprintSHA256;
+    if SameText(LCandidateFingerprint, LLeafFingerprint) then
+      Continue;
+
+    if NormalizeWinSSLCertificateLinkText(ACertificates[I].GetSubject) = LTargetIssuer then
+    begin
+      Result := ACertificates[I];
+      Exit;
+    end;
+  end;
+end;
+
+procedure LinkWinSSLPeerCertificateIssuerLinks(
+  const ACertificates: TSSLCertificateArray
+);
+var
+  I: Integer;
+begin
+  for I := 0 to High(ACertificates) do
+    if ACertificates[I] <> nil then
+      ACertificates[I].SetIssuerCertificate(
+        FindWinSSLIssuerCertificate(ACertificates[I], ACertificates));
+end;
+
 // ============================================================================
 // TWinSSLSession - 会话实现
 // ============================================================================
@@ -1753,6 +1806,8 @@ function TWinSSLConnection.DoGetPeerCertificate: ISSLCertificate;
 var
   CertContext: PCCERT_CONTEXT;
   Status: SECURITY_STATUS;
+  LChain: TSSLCertificateArray;
+  LIssuer: ISSLCertificate;
 begin
   Result := nil;
 
@@ -1762,7 +1817,16 @@ begin
   Status := QueryContextAttributesW(@FCtxtHandle, SECPKG_ATTR_REMOTE_CERT_CONTEXT, @CertContext);
 
   if IsSuccess(Status) and (CertContext <> nil) then
+  begin
     Result := CreateWinSSLCertificateFromContext(CertContext, True);
+    if Result = nil then
+      Exit;
+
+    LChain := DoGetPeerCertificateChain;
+    LIssuer := FindWinSSLIssuerCertificate(Result, LChain);
+    if LIssuer <> nil then
+      Result.SetIssuerCertificate(LIssuer);
+  end;
 end;
 
 function TWinSSLConnection.DoGetPeerCertificateChain: TSSLCertificateArray;
@@ -1831,6 +1895,7 @@ begin
         end;
 
         SetLength(Result, ChainCount);
+        LinkWinSSLPeerCertificateIssuerLinks(Result);
       finally
         CertFreeCertificateChain(ChainContext);
       end;

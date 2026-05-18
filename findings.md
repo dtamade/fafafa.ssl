@@ -2,6 +2,35 @@
 
 ## 2026-05-19
 
+- `WinSSL` 连接态 peer-certificate public surface 这次也被证实存在同类 completeness 缺口：
+  - `DoGetPeerCertificate()` 之前只把 remote leaf context 包成 `ISSLCertificate`
+  - `DoGetPeerCertificateChain()` 之前只把 `CertGetCertificateChain(...)` 产物 materialize 成 cert array
+  - 但两条路径此前都没有把 `ISSLCertificate.GetIssuerCertificate()` 链接起来
+
+- 这次不是只靠静态猜测，而是走通了本地可重复的 WinSSL runtime RED：
+  - 先确认本机有 `Win64` cross-target 与 `wine`
+  - 新增 focused test `tests/winssl/test_winssl_peer_certificate_surface.pas`
+  - `FAFAFA_RUN_NETWORK_TESTS=1 FAFAFA_WINSSL_PEER_CERT_HOST=api.github.com wine ...`
+    第一处失败直接落在：
+    - `peer leaf certificate should preserve issuer link`
+    - `peer chain leaf entry should preserve issuer link`
+
+- 这也把 WinSSL 这条线的性质说清楚了：
+  - 当前不是 session/runtime capture/Windows workflow 老问题
+  - 握手、leaf 暴露、chain 暴露都已经成立
+  - 真正缺的是 public `issuer-link truth`
+
+- 这批最小安全修法也已经明确并落地：
+  - 在 `src/fafafa.ssl.winssl.connection.pas` 增加本地 issuer-lookup/link helper
+  - `GetPeerCertificate()` 现在会从 returned chain 中补 leaf issuer link
+  - `GetPeerCertificateChain()` 现在会给 returned chain entries 按 subject/issuer truth 接上 issuer link
+  - `tests/run_winssl_tests.ps1` 现在会把这条 surface 测试纳入 broader WinSSL runtime suite，避免后续再脱离主证据链
+
+- focused 回归结果说明这次修法边界正确：
+  - 本地 Win64 runtime focused test 已从 RED 转 GREEN
+  - `tests/contract/test_backend_contract.pas` 继续 green
+  - 这说明这次不是“为了补 issuer link 改坏别的 surface”，而是单纯补齐了 WinSSL public cert surface
+
 - `WolfSSL` 连接态 peer-certificate public surface 这次也被证实存在一条真实 completeness 缺口：
   - `DoGetPeerCertificate()` 之前只把 native peer cert materialize 成 owned copy
   - `DoGetPeerCertificateChain()` 之前只把 native chain materialize 成 owned cert array
