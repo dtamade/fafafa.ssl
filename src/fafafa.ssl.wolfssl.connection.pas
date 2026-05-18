@@ -52,6 +52,11 @@ type
     function CompleteStreamHandshake(AIsClient: Boolean): Boolean;
     function ApplyPreHandshakeOCSPStaplingRequest: Boolean;
     function ApplyPreHandshakeServerOCSPStaplingConfiguration: Boolean;
+    function MaterializePeerCertificateFromDER(const ADER: TBytes): ISSLCertificate;
+    function MaterializePeerCertificateChain: TSSLCertificateArray;
+    function FindIssuerCertificate(const ALeaf: ISSLCertificate;
+      const ACertificates: TSSLCertificateArray): ISSLCertificate;
+    procedure LinkPeerCertificateIssuerLinks(const ACertificates: TSSLCertificateArray);
     function ResolveEarlyDataLimitFromSession(const ASession: ISSLSession): Cardinal;
     function SendQueuedEarlyData: Boolean;
     procedure UpdateEarlyDataStatusFromNative;
@@ -128,6 +133,13 @@ uses
   fafafa.ssl.wolfssl.session;
 
 { WolfSSL I/O 回调函数（用于流支持）}
+
+function NormalizeWolfCertificateLinkText(const AValue: string): string;
+begin
+  Result := Trim(UpperCase(AValue));
+  Result := StringReplace(Result, ',', '', [rfReplaceAll]);
+  Result := StringReplace(Result, ' ', '', [rfReplaceAll]);
+end;
 
 function WolfSSL_StreamRecvCallback(ssl: PWOLFSSL; buf: PAnsiChar; sz: Integer;
   ctx: Pointer): Integer; cdecl;
@@ -711,49 +723,81 @@ begin
   end;
 end;
 
-function TWolfSSLConnection.DoGetPeerCertificate: ISSLCertificate;
+function TWolfSSLConnection.MaterializePeerCertificateFromDER(
+  const ADER: TBytes
+): ISSLCertificate;
 var
-  LX509: PWOLFSSL_X509;
-  LDER: TBytes;
-  LTemp: TWolfSSLCertificate;
-  LOwned: TWolfSSLCertificate;
+  LCert: TWolfSSLCertificate;
 begin
   Result := nil;
-  if FWolfSSL = nil then Exit;
-  if not Assigned(wolfSSL_get_peer_certificate) then Exit;
-
-  LX509 := wolfSSL_get_peer_certificate(FWolfSSL);
-  if LX509 = nil then
+  if Length(ADER) = 0 then
     Exit;
 
-  LTemp := TWolfSSLCertificate.Create(LX509);
+  LCert := TWolfSSLCertificate.Create;
   try
-    LDER := LTemp.SaveToDER;
-    if Length(LDER) = 0 then
+    if not LCert.LoadFromDER(ADER) then
       Exit;
-
-    LOwned := TWolfSSLCertificate.Create;
-    try
-      if not LOwned.LoadFromDER(LDER) then
-        Exit;
-      Result := LOwned;
-      LOwned := nil;
-    finally
-      LOwned.Free;
-    end;
+    Result := LCert;
+    LCert := nil;
   finally
-    LTemp.Free;
+    LCert.Free;
   end;
 end;
 
-function TWolfSSLConnection.DoGetPeerCertificateChain: TSSLCertificateArray;
+function TWolfSSLConnection.FindIssuerCertificate(const ALeaf: ISSLCertificate;
+  const ACertificates: TSSLCertificateArray): ISSLCertificate;
+var
+  I: Integer;
+  LTargetIssuer: string;
+  LLeafFingerprint: string;
+  LCandidateFingerprint: string;
+begin
+  Result := nil;
+  if ALeaf = nil then
+    Exit;
+
+  LTargetIssuer := NormalizeWolfCertificateLinkText(ALeaf.GetIssuer);
+  if LTargetIssuer = '' then
+    Exit;
+
+  LLeafFingerprint := ALeaf.GetFingerprintSHA256;
+  for I := 0 to High(ACertificates) do
+  begin
+    if ACertificates[I] = nil then
+      Continue;
+
+    LCandidateFingerprint := ACertificates[I].GetFingerprintSHA256;
+    if SameText(LCandidateFingerprint, LLeafFingerprint) then
+      Continue;
+
+    if NormalizeWolfCertificateLinkText(ACertificates[I].GetSubject) = LTargetIssuer then
+    begin
+      Result := ACertificates[I];
+      Exit;
+    end;
+  end;
+end;
+
+procedure TWolfSSLConnection.LinkPeerCertificateIssuerLinks(
+  const ACertificates: TSSLCertificateArray
+);
+var
+  I: Integer;
+begin
+  for I := 0 to High(ACertificates) do
+    if ACertificates[I] <> nil then
+      ACertificates[I].SetIssuerCertificate(
+        FindIssuerCertificate(ACertificates[I], ACertificates));
+end;
+
+function TWolfSSLConnection.MaterializePeerCertificateChain: TSSLCertificateArray;
 var
   LChain: PWOLFSSL_X509_CHAIN;
   LCount: Integer;
   I: Integer;
   LDERPtr: PByte;
   LDERLen: Integer;
-  LCert: TWolfSSLCertificate;
+  LDER: TBytes;
 begin
   SetLength(Result, 0);
 
@@ -785,16 +829,57 @@ begin
       Exit;
     end;
 
-    LCert := TWolfSSLCertificate.Create;
-    if not LCert.LoadFromMemory(LDERPtr, LDERLen) then
+    SetLength(LDER, LDERLen);
+    Move(LDERPtr^, LDER[0], LDERLen);
+    Result[I] := MaterializePeerCertificateFromDER(LDER);
+    if Result[I] = nil then
     begin
-      LCert.Free;
       SetLength(Result, 0);
       Exit;
     end;
-
-    Result[I] := LCert;
   end;
+
+  LinkPeerCertificateIssuerLinks(Result);
+end;
+
+function TWolfSSLConnection.DoGetPeerCertificate: ISSLCertificate;
+var
+  LX509: PWOLFSSL_X509;
+  LDER: TBytes;
+  LTemp: TWolfSSLCertificate;
+  LChain: TSSLCertificateArray;
+  LIssuer: ISSLCertificate;
+begin
+  Result := nil;
+  if FWolfSSL = nil then Exit;
+  if not Assigned(wolfSSL_get_peer_certificate) then Exit;
+
+  LX509 := wolfSSL_get_peer_certificate(FWolfSSL);
+  if LX509 = nil then
+    Exit;
+
+  LTemp := TWolfSSLCertificate.Create(LX509);
+  try
+    LDER := LTemp.SaveToDER;
+    if Length(LDER) = 0 then
+      Exit;
+
+    Result := MaterializePeerCertificateFromDER(LDER);
+    if Result = nil then
+      Exit;
+
+    LChain := MaterializePeerCertificateChain;
+    LIssuer := FindIssuerCertificate(Result, LChain);
+    if LIssuer <> nil then
+      Result.SetIssuerCertificate(LIssuer);
+  finally
+    LTemp.Free;
+  end;
+end;
+
+function TWolfSSLConnection.DoGetPeerCertificateChain: TSSLCertificateArray;
+begin
+  Result := MaterializePeerCertificateChain;
 end;
 
 function TWolfSSLConnection.DoGetVerifyResult: Integer;

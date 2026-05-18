@@ -2,6 +2,63 @@
 
 ## 2026-05-19
 
+### WolfSSL Peer Certificate Issuer Link
+
+- `nl -ba src/fafafa.ssl.wolfssl.connection.pas | sed -n '714,798p'`
+  - result: PASS
+  - summary:
+    - confirmed `DoGetPeerCertificate()` and `DoGetPeerCertificateChain()` were materializing certs
+    - confirmed neither path was wiring `GetIssuerCertificate()` truth yet
+
+- `sed -n '1,260p' tests/connection/test_wolfssl_client_peer_certificate_surface.pas`
+  - result: PASS
+  - summary:
+    - existing WolfSSL surface test only locked chain materialization and safe-degrade
+    - it did not yet lock leaf/chain issuer-link truth
+
+- add `docs/plans/2026-05-19-wolfssl-peer-cert-issuer-link.md`
+  - change:
+    - define the bounded WolfSSL issuer-link completeness batch, commands, scope, and expected closeout
+
+- update `tests/connection/test_wolfssl_client_peer_certificate_surface.pas`
+  - result: RED
+  - summary:
+    - add leaf/chain issuer-link truth assertions on top of the existing scripted chain fixture
+    - first failure landed on `WolfSSL peer leaf certificate should preserve issuer link`
+
+- update `src/fafafa.ssl.wolfssl.connection.pas`
+  - change:
+    - add local chain materialization and issuer-link helpers
+    - `GetPeerCertificate()` now supplements leaf issuer truth from the peer chain when available
+    - `GetPeerCertificateChain()` now preserves issuer links across returned chain entries
+
+- `mkdir -p tmp/test_wolfssl_client_peer_certificate_surface_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_wolfssl_client_peer_certificate_surface_units -FEtmp/test_wolfssl_client_peer_certificate_surface_units -otmp/test_wolfssl_client_peer_certificate_surface_units/test_wolfssl_client_peer_certificate_surface tests/connection/test_wolfssl_client_peer_certificate_surface.pas && ./tmp/test_wolfssl_client_peer_certificate_surface_units/test_wolfssl_client_peer_certificate_surface`
+  - result: FAIL -> PASS
+  - summary:
+    - RED: `WolfSSL peer leaf certificate should preserve issuer link`
+    - GREEN: `PASS: WolfSSL client peer certificate chain surface contract passed`
+
+- `mkdir -p tmp/test_wolfssl_connection_peer_certificate_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_wolfssl_connection_peer_certificate_contract_units -FEtmp/test_wolfssl_connection_peer_certificate_contract_units -otmp/test_wolfssl_connection_peer_certificate_contract_units/test_wolfssl_connection_peer_certificate_contract tests/test_wolfssl_connection_peer_certificate_contract.pas && ./tmp/test_wolfssl_connection_peer_certificate_contract_units/test_wolfssl_connection_peer_certificate_contract`
+  - result: PASS
+  - summary:
+    - existing WolfSSL single-cert materialization contract stayed green at `4 passed / 0 failed`
+
+- `mkdir -p tmp/test_wolfssl_framework_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas && ./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+  - result: PASS
+  - summary:
+    - WolfSSL framework suite stayed green at `141 passed / 0 failed`
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+  - result: PASS
+  - summary:
+    - backend contract stayed green at `135 total / 111 passed / 0 failed / 24 skipped`
+    - `Contract 21: Certificate-verification interface alignment - WolfSSL` remained self-consistent after the issuer-link repair
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current WolfSSL issuer-link batch has no whitespace or patch-format issues
+
 ### OpenSSL Peer Certificate Issuer Link
 
 - `rg -n "GetPeerCertificate|GetPeerCertificateChain|issuer|Clone|SSL_get_peer_certificate|SSL_get_peer_cert_chain|FindIssuerX509InChain" src/fafafa.ssl.openssl.connection.pas src/fafafa.ssl.openssl.certificate.pas tests/test_openssl_connection_peer_certificate_contract.pas tests/test_openssl_connection_peer_certificate_chain_contract.pas`

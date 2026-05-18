@@ -241,6 +241,22 @@
   - 当前结论：
     - `OpenSSL` 连接态 peer cert surface 已不再出现“leaf/chain 已有，但 issuer link 仍为空”的链真相缺口
     - 下一刀更适合继续横向审剩余 backend 的 issuer-link completeness seam，而不是重开这条 OpenSSL surface
+- [completed] `WolfSSL` peer-certificate issuer link 已完成 focused 收口：
+  - 新增计划：`docs/plans/2026-05-19-wolfssl-peer-cert-issuer-link.md`
+  - 更新 focused surface：`tests/connection/test_wolfssl_client_peer_certificate_surface.pas`
+  - `src/fafafa.ssl.wolfssl.connection.pas`
+    - `GetPeerCertificate()` 现在会在可用时从 peer chain 补 issuer link
+    - `GetPeerCertificateChain()` 现在会为返回的 chain entries 补 issuer link
+    - 现有 materialization / safe-degrade 边界保持不变
+  - focused verification 已通过：
+    - `tests/connection/test_wolfssl_client_peer_certificate_surface.pas`: PASS
+    - `tests/test_wolfssl_connection_peer_certificate_contract.pas`: `4 passed / 0 failed`
+    - `tests/test_wolfssl_framework.pas`: `141 passed / 0 failed`
+    - `tests/contract/test_backend_contract.pas`: `135 total / 111 passed / 0 failed / 24 skipped`
+    - `git diff --check`: PASS
+  - 当前结论：
+    - `WolfSSL` 连接态 peer cert surface 已不再出现“leaf/chain 已有，但 issuer link 仍为空”的链真相缺口
+    - 下一刀更适合继续横向审剩余 backend 的 issuer-link completeness seam，而不是重开这条 WolfSSL surface
 - [completed] generic session-cache persistence count truth 已完成 focused 修复并形成新基线：
   - 新增计划：`docs/plans/2026-05-19-session-cache-persistence-count-truth.md`
   - 新增 focused test：`tests/test_session_cache_persistence_contract.pas`

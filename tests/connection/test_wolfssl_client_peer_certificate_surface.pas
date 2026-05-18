@@ -15,6 +15,7 @@ uses
 var
   GLeafDER: TBytes;
   GIssuerDER: TBytes;
+  GOriginalGetPeerCertificate: TwolfSSL_get_peer_certificate = nil;
   GOriginalGetPeerChain: TwolfSSL_get_peer_chain = nil;
   GOriginalGetChainCount: TwolfSSL_get_chain_count = nil;
   GOriginalGetChainLength: TwolfSSL_get_chain_length = nil;
@@ -74,6 +75,16 @@ begin
   AssertTrue(Length(GIssuerDER) > 0, 'Issuer fixture DER should not be empty');
 end;
 
+function StubWolfSSLGetPeerCertificateFromDER(ssl: PWOLFSSL): PWOLFSSL_X509; cdecl;
+begin
+  Result := nil;
+  if (ssl = nil) or (Length(GLeafDER) = 0) or
+     (not Assigned(wolfSSL_X509_d2i)) then
+    Exit;
+
+  Result := wolfSSL_X509_d2i(nil, @GLeafDER[0], Length(GLeafDER));
+end;
+
 function StubWolfSSLGetPeerChain(ssl: PWOLFSSL): PWOLFSSL_X509_CHAIN; cdecl;
 begin
   if ssl = nil then
@@ -126,6 +137,7 @@ end;
 
 procedure RestoreChainAPIs;
 begin
+  wolfSSL_get_peer_certificate := GOriginalGetPeerCertificate;
   wolfSSL_get_peer_chain := GOriginalGetPeerChain;
   wolfSSL_get_chain_count := GOriginalGetChainCount;
   wolfSSL_get_chain_length := GOriginalGetChainLength;
@@ -134,11 +146,13 @@ end;
 
 procedure OverrideChainAPIs;
 begin
+  GOriginalGetPeerCertificate := wolfSSL_get_peer_certificate;
   GOriginalGetPeerChain := wolfSSL_get_peer_chain;
   GOriginalGetChainCount := wolfSSL_get_chain_count;
   GOriginalGetChainLength := wolfSSL_get_chain_length;
   GOriginalGetChainCert := wolfSSL_get_chain_cert;
 
+  wolfSSL_get_peer_certificate := @StubWolfSSLGetPeerCertificateFromDER;
   wolfSSL_get_peer_chain := @StubWolfSSLGetPeerChain;
   wolfSSL_get_chain_count := @StubWolfSSLGetChainCount;
   wolfSSL_get_chain_length := @StubWolfSSLGetChainLength;
@@ -151,6 +165,8 @@ var
   LCtx: ISSLContext;
   LStream: TMemoryStream;
   LConn: TWolfSSLConnection;
+  LPeerCert: ISSLCertificate;
+  LIssuerFromPeerCert: ISSLCertificate;
   LChain: TSSLCertificateArray;
   LExpectedLeaf: ISSLCertificate;
   LExpectedIssuer: ISSLCertificate;
@@ -190,6 +206,22 @@ begin
   OverrideChainAPIs;
   try
     LConn := TWolfSSLConnection.Create(LCtx, LStream);
+
+    LPeerCert := LConn.GetPeerCertificate;
+    AssertTrue(LPeerCert <> nil,
+      'WolfSSL peer leaf certificate should be exposed when peer certificate exists');
+    AssertTrue(
+      SameText(LPeerCert.GetFingerprintSHA256, LExpectedLeaf.GetFingerprintSHA256),
+      'WolfSSL peer leaf certificate should match the scripted leaf fixture');
+
+    LIssuerFromPeerCert := LPeerCert.GetIssuerCertificate;
+    AssertTrue(LIssuerFromPeerCert <> nil,
+      'WolfSSL peer leaf certificate should preserve issuer link');
+    AssertTrue(
+      (LIssuerFromPeerCert <> nil) and
+      SameText(LIssuerFromPeerCert.GetFingerprintSHA256, LExpectedIssuer.GetFingerprintSHA256),
+      'WolfSSL peer leaf issuer link should match the scripted issuer fixture');
+
     LChain := LConn.GetPeerCertificateChain;
 
     AssertEqualsInt(2, Length(LChain),
@@ -202,6 +234,14 @@ begin
     AssertTrue(
       SameText(LChain[1].GetFingerprintSHA256, LExpectedIssuer.GetFingerprintSHA256),
       'WolfSSL peer chain issuer entry should match the scripted issuer fixture');
+    AssertTrue(LChain[0].GetIssuerCertificate <> nil,
+      'WolfSSL peer chain leaf entry should preserve issuer link');
+    AssertTrue(
+      (LChain[0].GetIssuerCertificate <> nil) and
+      SameText(LChain[0].GetIssuerCertificate.GetFingerprintSHA256, LExpectedIssuer.GetFingerprintSHA256),
+      'WolfSSL peer chain leaf issuer link should match the scripted issuer fixture');
+    AssertTrue(LChain[1].GetIssuerCertificate = nil,
+      'WolfSSL peer chain issuer entry should not invent a higher issuer link');
 
     wolfSSL_get_chain_cert := nil;
     LChain := LConn.GetPeerCertificateChain;

@@ -2,6 +2,32 @@
 
 ## 2026-05-19
 
+- `WolfSSL` 连接态 peer-certificate public surface 这次也被证实存在一条真实 completeness 缺口：
+  - `DoGetPeerCertificate()` 之前只把 native peer cert materialize 成 owned copy
+  - `DoGetPeerCertificateChain()` 之前只把 native chain materialize 成 owned cert array
+  - 但两条路径此前都没有把 `ISSLCertificate.GetIssuerCertificate()` 链接起来
+
+- 新增 focused RED 后，第一处失败直接落在：
+  - `WolfSSL peer leaf certificate should preserve issuer link`
+  - 这说明问题不是“只缺测试”，而是 public chain truth 真少了一层
+
+- 这批最小安全修法也已经明确并落地：
+  - 在 `src/fafafa.ssl.wolfssl.connection.pas` 增加本地 materialize/link helper
+  - `GetPeerCertificate()` 现在会在 chain 可用时给 leaf cert 补 issuer link
+  - `GetPeerCertificateChain()` 现在会用 subject/issuer truth 给 returned chain entries 接上 issuer link
+  - 既有 materialization / safe-degrade contract 没有被放宽或改口
+
+- 这也把 `WolfSSL` 这条线的性质进一步说清楚了：
+  - `GetPeerCertificate()` 的 owned-copy materialization 问题前一批已经修掉
+  - 当前剩下的不是 lifetime，而是 public `issuer-link truth`
+  - 所以这批是 connection-level chain completeness 收口，而不是重新修 clone/ownership
+
+- focused 回归结果说明这次修法边界正确：
+  - `tests/test_wolfssl_connection_peer_certificate_contract.pas` 继续 green
+  - `tests/test_wolfssl_framework.pas` 继续 green
+  - `tests/contract/test_backend_contract.pas` 继续 green
+  - 这说明这次不是“为了补 issuer link 换来新的 materialization 回归”，而是单纯补全了 WolfSSL public cert surface
+
 - `OpenSSL` 连接态 peer-certificate public surface 这次被证实存在一条真实 completeness 缺口：
   - `DoGetPeerCertificate()` 只包 `SSL_get_peer_certificate(...)` 返回的 leaf wrapper
   - `DoGetPeerCertificateChain()` 只包 `SSL_get_peer_cert_chain(...)` 返回的 chain wrappers
