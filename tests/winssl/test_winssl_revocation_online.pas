@@ -86,6 +86,10 @@ begin
       Check('TLS 握手完成', ok);
       if not ok then Exit;
 
+      // INTENTIONAL_VERIFY_RESULT_CORE_SURFACE: keep this direct core
+      // GetVerifyResult/GetVerifyResultString path as a WinSSL-specific online
+      // certificate-error proof. The ISSLCertificateVerification owner-path
+      // coverage is frozen by generic/contract guidance checks elsewhere.
       vr := Conn.GetVerifyResult;
       vrs := Conn.GetVerifyResultString;
       WriteLn('    验证结果: ', vrs, ' (', IntToHex(vr, 8), ')');
@@ -115,4 +119,3 @@ begin
   WriteLn; WriteLn('总计: ', Total, ' 通过: ', Passed, ' 失败: ', Failed);
   if Failed > 0 then Halt(1);
 end.
-

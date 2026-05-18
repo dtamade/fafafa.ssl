@@ -2,6 +2,25 @@
 
 ## 2026-05-19
 
+- `ISSLCertificateVerification` 的 broad residual allowlist 虽然已经把 `tests/winssl/` 收缩到只剩 3 个 `GetVerifyResult*` 命中，但如果不把这 3 个文件再单独标成 intentional proof，它们看起来仍会像 accidental drift：
+  - `tests/winssl/test_winssl_error_mapping_online.pas`
+  - `tests/winssl/test_winssl_hostname_mismatch_online.pas`
+  - `tests/winssl/test_winssl_revocation_online.pas`
+
+- 这 3 个文件的真实定位也已经进一步说清楚了：
+  - 它们不是 ordinary docs、也不是 generic examples、更不是 generic tests
+  - 它们都是 WinSSL-specific online certificate-error runtime proof
+  - 它们保留 direct core `GetVerifyResult` / `GetVerifyResultString` 的意义，是继续盯住 compatibility mirror 在在线错误映射场景下的 runtime truth
+
+- 因而这批最小安全收口并不是“再做一次 owner-path 改写”，而是把 residual 用意固定下来：
+  - 在 3 个文件的 direct core 读取点前补 `INTENTIONAL_VERIFY_RESULT_CORE_SURFACE`
+  - 新增 focused source contract，锁住 `tests/winssl/` 当前 direct-core verify-result file set 恰好只等于这 3 个文件
+  - 并且每个文件都必须继续带意图注释、继续覆盖 `GetVerifyResult` 与 `GetVerifyResultString`
+
+- 这样一来，`ISSLCertificateVerification` 这条线就不仅有 broad residual allowlist，也有 WinSSL residual subgroup 的专门 freeze：
+  - 后续不应再把这 3 个 WinSSL 文件当作 generic guidance 漂移反复拉起
+  - 下一刀更适合直接转向 `MbedTLS` residual cluster
+
 - generic examples 收口后，`ISSLCertificateVerification` 这条线当前真正剩下的已经不是“还有没有普通入口直读 core”，而是 residual direct-core file set 还没有被正式冻结：
   - active docs 已经是 owner path
   - generic examples / `tests/examples` 已经是 owner path

@@ -2,6 +2,54 @@
 
 ## 2026-05-19
 
+### ISSLCertificateVerification WinSSL Runtime Residual Freeze
+
+- `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
+  - result: PASS
+  - summary:
+    - no unsynced catchup output was needed before the WinSSL runtime residual batch
+
+- add `docs/plans/2026-05-19-isslcertificateverification-winssl-runtime-residual-freeze.md`
+  - change:
+    - define the bounded WinSSL runtime residual freeze batch for the remaining direct core verify-result trio
+
+- add `tests/scripts/test_isslcertificateverification_winssl_runtime_residual_contract.sh`
+  - change:
+    - lock the `tests/winssl/` direct-core verify-result file set to the current trio
+    - require intentional residual comments plus both verify-result reads in each file
+
+- update WinSSL online runtime residual proofs:
+  - `tests/winssl/test_winssl_error_mapping_online.pas`
+  - `tests/winssl/test_winssl_hostname_mismatch_online.pas`
+  - `tests/winssl/test_winssl_revocation_online.pas`
+  - change:
+    - add `INTENTIONAL_VERIFY_RESULT_CORE_SURFACE` notes ahead of the direct core `GetVerifyResult` / `GetVerifyResultString` reads
+    - record that these paths stay as WinSSL-specific online certificate-error proof while owner-path coverage lives elsewhere
+
+- `bash -n tests/scripts/test_isslcertificateverification_winssl_runtime_residual_contract.sh`
+  - result: PASS
+  - summary:
+    - WinSSL runtime residual contract syntax is valid
+
+- `bash tests/scripts/test_isslcertificateverification_winssl_runtime_residual_contract.sh`
+  - result: PASS
+  - summary:
+    - `tests/winssl/` direct-core verify-result file set stayed frozen to:
+      - `tests/winssl/test_winssl_error_mapping_online.pas`
+      - `tests/winssl/test_winssl_hostname_mismatch_online.pas`
+      - `tests/winssl/test_winssl_revocation_online.pas`
+    - each file still carries the intentional residual note and both direct verify-result reads
+
+- `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - the broader certificate-verification residual allowlist remained aligned after the WinSSL subgroup freeze
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current WinSSL runtime residual freeze batch has no whitespace or patch-format issues
+
 ### ISSLCertificateVerification Residual Classification Freeze
 
 - add `docs/plans/2026-05-19-isslcertificateverification-residual-classification-freeze.md`

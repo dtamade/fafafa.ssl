@@ -135,6 +135,24 @@
   - 当前结论：
     - `ISSLCertificateVerification` 这条 ordinary guidance / generic examples / residual freeze 路线当前已完整收口
     - 下一刀更适合继续 backend-specific runtime / residual deprecation lane，而不是再回头做 residual archaeology
+- [completed] `ISSLCertificateVerification` WinSSL runtime residual trio 已冻结成 intentional proof：
+  - 新增计划：`docs/plans/2026-05-19-isslcertificateverification-winssl-runtime-residual-freeze.md`
+  - 新增 focused source contract：`tests/scripts/test_isslcertificateverification_winssl_runtime_residual_contract.sh`
+  - `tests/winssl/test_winssl_error_mapping_online.pas`
+  - `tests/winssl/test_winssl_hostname_mismatch_online.pas`
+  - `tests/winssl/test_winssl_revocation_online.pas`
+    - direct core `GetVerifyResult` / `GetVerifyResultString` 已显式标记为 `INTENTIONAL_VERIFY_RESULT_CORE_SURFACE`
+    - 当前用途被固定为 WinSSL-specific online certificate-error proof
+    - `ISSLCertificateVerification` owner-path coverage 已明确由 generic/contract guidance tests 在别处守住
+  - 当前 WinSSL direct-core verify-result file set 已锁住为这 3 个文件，未再扩张到其他 `tests/winssl/*`
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_isslcertificateverification_winssl_runtime_residual_contract.sh`
+    - `bash tests/scripts/test_isslcertificateverification_winssl_runtime_residual_contract.sh`
+    - `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+    - `git diff --check`: PASS
+  - 当前结论：
+    - WinSSL verify-result runtime residual trio 现在可以视为关闭，不应再作为 generic guidance 漂移反复拉起
+    - 下一刀更适合继续 `MbedTLS` residual cluster，而不是重扫 WinSSL trio
 - [completed] GitHub Actions Windows runner 已重新纳入当前 truth surface：
   - `wave-b-b2-manual.yml` 的 live run `26030261335` 已证实 `windows-gate` 三层都能在 GitHub CI 上实际执行
   - 当前 WinSSL lane 不再允许退回“本地没 Windows，只能静态审查”的旧入口
