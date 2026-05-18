@@ -2280,12 +2280,9 @@ var
   CipherSuiteId: Word;
   CipherSuiteName: string;
   Status: SECURITY_STATUS;
-  PeerCert: ISSLCertificate;
 begin
-  FillChar(Result, SizeOf(Result), 0);
-
-  Result.ProtocolVersion := DoGetProtocolVersion;
-  Result.CipherSuite := DoGetCipherName;
+  Result := inherited GetConnectionInfo;
+  Result.CompressionMethod := 'none';
 
   if not FConnected then
     Exit;
@@ -2294,7 +2291,8 @@ begin
   if IsSuccess(Status) then
   begin
     Result.KeySize := ConnInfo.dwCipherStrength;
-    Result.MacSize := ConnInfo.dwHashStrength div 8;
+    if (Result.MacSize = 0) and (ConnInfo.dwHashStrength > 0) then
+      Result.MacSize := ConnInfo.dwHashStrength div 8;
 
     case ConnInfo.aiExch of
       CALG_RSA_KEYX, CALG_RSA_SIGN:
@@ -2338,10 +2336,6 @@ begin
   Result.CompressionMethod := 'none';
   Result.ServerName := FServerName;
   Result.ALPNProtocol := DoGetSelectedALPNProtocol;
-
-  PeerCert := DoGetPeerCertificate;
-  if PeerCert <> nil then
-    Result.PeerCertificate := PeerCert.GetInfo;
 end;
 
 end.

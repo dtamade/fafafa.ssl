@@ -994,6 +994,8 @@ begin
     'ConnectionInfo.Hash is derived from the negotiated cipher-suite name');
   Check(Info.KeySize = 128,
     'ConnectionInfo.KeySize is derived from the negotiated cipher-suite name');
+  Check(Info.MacSize = 16,
+    'ConnectionInfo.MacSize is derived as the AEAD tag length for TLS 1.3 GCM suites');
 
   WriteLn('=== Case 5: GetConnectionInfo preserves legacy key exchange, session identifier and peer certificate ===');
   MockCtx.SetNextCipherName('ECDHE-RSA-AES128-GCM-SHA256');
@@ -1011,12 +1013,28 @@ begin
   Info := Conn.GetConnectionInfo;
   Check(Info.KeyExchange = sslKexECDHE_RSA,
     'ConnectionInfo.KeyExchange is derived from the negotiated legacy cipher-suite name');
+  Check(Info.MacSize = 16,
+    'ConnectionInfo.MacSize is derived as the AEAD tag length for legacy GCM suites');
   CheckEqualsStr('ConnectionInfo.SessionId mirrors ISSLSession.GetID',
     'session-123', Info.SessionId);
   CheckEqualsStr('ConnectionInfo.PeerCertificate.Subject mirrors ISSLCertificate.GetInfo',
     'CN=peer.example.com', Info.PeerCertificate.Subject);
   CheckEqualsStr('ConnectionInfo.PeerCertificate.Issuer mirrors ISSLCertificate.GetInfo',
     'CN=Mock Root CA', Info.PeerCertificate.Issuer);
+
+  WriteLn('=== Case 6: GetConnectionInfo does not guess legacy non-AEAD MAC sizes from hash names ===');
+  MockCtx.SetNextCipherName('ECDHE-RSA-AES128-SHA256');
+  Builder := TSSLConnectionBuilder.Create
+    .WithContext(Ctx)
+    .WithSocket(THandle(1))
+    .WithHostname('legacy.example.com');
+  Res := Builder.TryBuildClient(Conn);
+  Check(Res.Success, 'TryBuildClient should succeed');
+  Info := Conn.GetConnectionInfo;
+  Check(Info.Hash = sslHashSHA256,
+    'ConnectionInfo.Hash still reflects the negotiated legacy cipher-suite name');
+  Check(Info.MacSize = 0,
+    'ConnectionInfo.MacSize stays unset for legacy non-AEAD suites without a stable shared truth source');
 end;
 
 begin

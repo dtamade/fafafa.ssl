@@ -1085,7 +1085,7 @@ TSSLConnectionInfo = record
   Cipher: TSSLCipher;                    // 加密算法
   Hash: TSSLHash;                        // 哈希算法
   KeySize: Integer;                      // 密钥长度（位）
-  MacSize: Integer;                      // MAC长度（字节）
+  MacSize: Integer;                      // 认证/MAC/tag 长度（字节，best-effort）
   IsResumed: Boolean;                    // 是否为恢复的会话
   SessionId: string;                     // 会话ID
   CompressionMethod: string;             // 压缩方法
@@ -1107,7 +1107,11 @@ end;
 - `CipherSuiteId` 对标准 TLS 1.3 suite name 会先由共享层做 best-effort 推导；OpenSSL / WinSSL 这类后端也可能直接提供 low-level truth
 - `Cipher` / `Hash` / `KeySize` 这组字段会先由共享连接层基于 negotiated cipher-suite name 做 best-effort 推导
 - `KeyExchange` 在 cipher-suite name 显式携带旧式密钥交换前缀时，也会由共享层做 best-effort 推导
-- `MacSize` 等更细的平台/库专属字段仍按后端能力 best-effort 填充；在 AEAD / TLS 1.3 场景不承诺等于记录层 auth tag，未连接或后端未提供时返回默认值
+- `MacSize` 现在会先由共享连接层对可识别的 AEAD suite name 做 best-effort 推导：
+  - `...GCM` / `...POLY1305` / `...OCB` / `...CCM` -> `16`
+  - `...CCM_8` -> `8`
+- WinSSL 只有在共享层无法从 suite name 得到稳定值时，才回退到 `dwHashStrength div 8`
+- legacy non-AEAD suites 以及后端未提供稳定 truth 的场景，`MacSize` 仍返回默认值 `0`
 
 ---
 

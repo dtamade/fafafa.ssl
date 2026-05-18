@@ -996,6 +996,27 @@
       - `MacSize`
       - 无法只靠名字或统一 low-level helper 稳定归一的更细平台差异
       - 更强 owner / deprecation wording route
+39. `GetConnectionInfo` `MacSize` semantics matrix 已完成并应作为当前 implementation-completeness 主线的下一条 bounded 收口保留：
+    - 新 plan：
+      - `docs/plans/2026-05-18-getconnectioninfo-macsize-semantics-matrix.md`
+    - 当前已确认的 shared + backend truth：
+      - shared `GetConnectionInfo` 现在会对可识别 AEAD suite name best-effort 推导：
+        - `...GCM` / `...POLY1305` / `...OCB` / `...CCM` -> `MacSize = 16`
+        - `...CCM_8` -> `MacSize = 8`
+      - OpenSSL / FreePascal / MbedTLS / WolfSSL 当前都已通过 shared path 吃到这组统一 truth
+      - WinSSL `GetConnectionInfo` 现在会先走 inherited shared path
+      - WinSSL 只有在 shared path 仍未给出稳定值时，才回退：
+        - `ConnInfo.dwHashStrength div 8`
+    - 当前 focused proof 已覆盖：
+      - `bash tests/scripts/test_winssl_connectioninfo_cipher_truth_contract.sh`
+      - `bash tests/scripts/test_winssl_connectioninfo_macsize_semantics_contract.sh`
+      - `tests/test_connection_builder_hostname_precedence.pas`
+      - `tests/test_openssl_connection_info_cipher_contract.pas`
+      - `git diff --check`
+    - 当前批收口后，`GetConnectionInfo` implementation-completeness 主线已进一步收缩到：
+      - legacy non-AEAD `MacSize` 是否值得补更强 low-level truth
+      - 无法只靠 shared suite-name 路径稳定归一的更细平台差异
+      - 更强 owner / deprecation wording route
 
 ## Verification Discipline
 

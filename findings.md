@@ -1837,3 +1837,31 @@
     - 但它用的是 `dwHashStrength div 8`
     - 这更像 hash-strength proxy，而不是已经跨 backend 统一定义好的“记录层 MAC/tag 长度”
   - 因而下一批不该直接照着 WinSSL 现值去扩散实现，而应先把语义矩阵盘清楚
+
+- `MacSize` 语义矩阵现在已经盘清到一个可稳定复用的层次：
+  - shared layer 之前确实完全没有统一 `MacSize`
+  - OpenSSL / FreePascal / MbedTLS / WolfSSL 主要都依赖 shared `GetConnectionInfo`
+  - WinSSL 则独自把 `dwHashStrength div 8` 写进 `MacSize`
+  - 因而“WinSSL 有值、其他 backend 没值”并不代表 WinSSL 更接近统一 truth，只代表它先填了一个 backend-local proxy
+
+- 当前最安全、也最能跨 backend 复用的收法已经验证成立：
+  - 对可识别 AEAD suite name，shared layer 可以稳定给出 auth-tag 长度：
+    - `GCM` / `POLY1305` / `OCB` / `CCM` -> `16`
+    - `CCM_8` -> `8`
+  - 这条共享语义同时覆盖：
+    - OpenSSL
+    - FreePascal
+    - MbedTLS
+    - WolfSSL
+    - 以及改成 inherited-first 之后的 WinSSL
+
+- WinSSL 因而也不该再把 `dwHashStrength div 8` 当作无条件 truth：
+  - 它现在更适合扮演：
+    - shared path 已经识别出 AEAD suite 时不覆盖
+    - shared path 没有稳定 `MacSize` 时的 legacy fallback
+  - 这把 WinSSL 的 `MacSize` 从“可能误导 AEAD/TLS1.3 的主值”降格成了“缺省保底的 backend-local best-effort”
+
+- 这次收口也把 `MacSize` 主线的剩余边界说清楚了：
+  - 还没统一的不是 AEAD/TLS 1.3 这组场景
+  - 而是 legacy non-AEAD suites 是否值得继续补更强 low-level `MacSize` truth
+  - 如果后续不想继续在 connection-info completeness 上深挖，就可以比较放心地把主线切回 owner / deprecation wording route

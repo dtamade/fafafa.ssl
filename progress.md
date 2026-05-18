@@ -3802,6 +3802,63 @@
   - summary:
     - current batch has no whitespace or patch-format issues
 
+### GetConnectionInfo MacSize Semantics Matrix
+
+- add `docs/plans/2026-05-18-getconnectioninfo-macsize-semantics-matrix.md`
+  - purpose:
+    - capture the bounded follow-up after the WinSSL cipher-truth correction
+    - turn `MacSize` from an ambiguous one-backend field into a reusable shared/backend matrix with a clear next-step boundary
+
+- implementation:
+  - `src/fafafa.ssl.connection.base.pas`
+  - `src/fafafa.ssl.winssl.connection.pas`
+  - `tests/test_connection_builder_hostname_precedence.pas`
+  - `tests/scripts/test_winssl_connectioninfo_macsize_semantics_contract.sh`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/WINSSL_DESIGN.md`
+  - change:
+    - shared connection-info derivation now fills AEAD `MacSize` from recognized suite names
+    - `GCM` / `POLY1305` / `OCB` / `CCM` map to `16`
+    - `CCM_8` maps to `8`
+    - WinSSL `GetConnectionInfo` now starts from inherited shared truth
+    - WinSSL only falls back to `ConnInfo.dwHashStrength div 8` when shared derivation still leaves `MacSize = 0`
+    - focused mock proof now explicitly checks:
+      - TLS 1.3 AEAD suite -> `MacSize = 16`
+      - legacy GCM suite -> `MacSize = 16`
+      - legacy non-AEAD suite -> `MacSize = 0`
+
+- `bash tests/scripts/test_winssl_connectioninfo_cipher_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - the earlier WinSSL cipher-suite truth correction still holds after the new `MacSize` batch
+
+- `bash tests/scripts/test_winssl_connectioninfo_macsize_semantics_contract.sh`
+  - result: PASS
+  - summary:
+    - verified WinSSL now starts from inherited shared connection-info truth
+    - verified `dwHashStrength div 8` is guarded behind a missing shared `MacSize`
+    - verified shared source contains the new AEAD-first `MacSize` derivation rules
+
+- `mkdir -p tmp/test_connection_builder_hostname_precedence && fpc -B -Fu./src -Fu./tests -FUtmp/test_connection_builder_hostname_precedence -FEtmp/test_connection_builder_hostname_precedence -otmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence tests/test_connection_builder_hostname_precedence.pas && ./tmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence`
+  - result: PASS
+  - summary:
+    - focused builder/connection-info suite finished `26 passed, 0 failed`
+    - the shared `MacSize` derivation is now covered on:
+      - TLS 1.3 GCM
+      - legacy GCM
+      - legacy non-AEAD no-guess behavior
+
+- `mkdir -p tmp/test_openssl_connection_info_cipher_contract && fpc -B -Fu./src -Fu./tests -FUtmp/test_openssl_connection_info_cipher_contract -FEtmp/test_openssl_connection_info_cipher_contract -otmp/test_openssl_connection_info_cipher_contract/test_openssl_connection_info_cipher_contract tests/test_openssl_connection_info_cipher_contract.pas && ./tmp/test_openssl_connection_info_cipher_contract/test_openssl_connection_info_cipher_contract`
+  - result: PASS
+  - summary:
+    - focused OpenSSL connection-info suite remained green at `14 passed, 0 failed`
+    - the new shared `MacSize` derivation did not regress the existing safe-degrade or `CipherSuiteId` truth coverage
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `MacSize` semantics batch has no whitespace or patch-format issues
+
 ### WinSSL GetConnectionInfo Cipher Truth Correction
 
 - add `docs/plans/2026-05-18-winssl-connectioninfo-cipher-truth-correction.md`

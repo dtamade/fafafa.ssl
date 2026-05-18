@@ -1606,3 +1606,29 @@
   - 当前最优先候选是：
     - `LogLevel` / `LogCallback` library-default detachment
     - 因为它们已经被 factory request path reject，且替代入口稳定存在，兼容风险比 `ServerName` / option-bridge 更低
+
+## 增量收口：GetConnectionInfo `MacSize` semantics matrix
+
+- 继续沿着 `GetConnectionInfo` implementation-completeness 主线往下审后，`MacSize` 的真实问题也被压实了：
+  - 并不是“所有 backend 都完全缺值”
+  - 而是 shared layer 之前没有统一语义，而 WinSSL 独自用了 `dwHashStrength div 8`
+  - 这个 WinSSL 值对 legacy HMAC suites 可能仍有参考性，但对 AEAD/TLS 1.3 明显更像 hash-strength proxy，不适合作为跨 backend 主真相
+
+- 本批收法因此刻意保持保守：
+  - shared layer 只在可识别 AEAD suite name 时补统一 `MacSize`
+  - `GCM` / `POLY1305` / `OCB` / `CCM` -> `16`
+  - `CCM_8` -> `8`
+  - WinSSL 改成 inherited-first，只在 shared layer 仍无值时才回退 `dwHashStrength div 8`
+
+- 这一步的意义有两层：
+  - OpenSSL / FreePascal / MbedTLS / WolfSSL / WinSSL 终于在一组共享、稳定、可验证的 AEAD 场景上对齐了 `MacSize`
+  - WinSSL 的 `dwHashStrength` 也被降格成 legacy fallback，而不是继续冒充统一 truth
+
+- focused 证据：
+  - `tests/test_connection_builder_hostname_precedence.pas`
+    - 现在直接覆盖：
+      - TLS 1.3 GCM -> `MacSize = 16`
+      - legacy GCM -> `MacSize = 16`
+      - legacy non-AEAD -> `MacSize = 0`
+  - `tests/scripts/test_winssl_connectioninfo_macsize_semantics_contract.sh`
+    - 静态守住 shared AEAD-first 规则与 WinSSL guarded fallback 形态

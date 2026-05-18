@@ -389,6 +389,25 @@ Recommended first bounded batch:
     3. 只有在口径统一后再决定是否补实现
   - 更强 owner / deprecation wording route 继续保留为平行候选，但当前不应压过 implementation-completeness 主线
 
+## Progress Since The GetConnectionInfo MacSize Semantics Matrix
+
+- 已交付：
+  - `GetConnectionInfo` `MacSize` semantics matrix
+  - shared suite-name AEAD-first `MacSize` derivation
+  - WinSSL `inherited-first + guarded dwHashStrength fallback`
+
+- 当前更准确的 next step：
+  - 不再把 `MacSize` 当成“所有 backend 都完全缺值”的残余 debt
+  - 当前已经统一收住的真相是：
+    - 可识别 AEAD suite name -> shared `MacSize` truth
+    - WinSSL `dwHashStrength div 8` -> 只剩 legacy fallback
+  - 剩余未统一的更窄边界是：
+    1. legacy non-AEAD suites 是否要继续保持 `0`
+    2. 是否值得为 OpenSSL/WinSSL 再补更强的 low-level legacy `MacSize` truth
+  - 若继续推进，应优先在两条路径里二选一：
+    1. 继续做 legacy/non-AEAD `MacSize` truth feasibility
+    2. 把主线切回更强的 owner / deprecation wording route
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

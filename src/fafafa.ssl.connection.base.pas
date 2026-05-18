@@ -657,6 +657,20 @@ begin
   else if Pos('SHA', LName) > 0 then
     AInfo.Hash := sslHashSHA1;
 
+  if AInfo.MacSize = 0 then
+  begin
+    // AEAD suites can safely expose their auth-tag length from the suite name;
+    // legacy HMAC suites remain backend-specific best-effort.
+    if (Pos('CCM_8', LName) > 0) or (Pos('CCM8', LName) > 0) then
+      AInfo.MacSize := 8
+    else if (Pos('GCM', LName) > 0) or
+            (Pos('POLY1305', LName) > 0) or
+            (Pos('OCB', LName) > 0) or
+            ((Pos('CCM', LName) > 0) and (Pos('CCM_8', LName) = 0) and
+             (Pos('CCM8', LName) = 0)) then
+      AInfo.MacSize := 16;
+  end;
+
   if SameText(ACipherSuite, TLS13CipherSuiteToString(TLS13_CIPHER_AES_128_GCM_SHA256)) then
     AInfo.CipherSuiteId := TLS13_CIPHER_AES_128_GCM_SHA256
   else if SameText(ACipherSuite, TLS13CipherSuiteToString(TLS13_CIPHER_AES_256_GCM_SHA384)) then

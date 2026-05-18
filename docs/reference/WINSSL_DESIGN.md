@@ -101,6 +101,7 @@ type
 - `SECPKG_ATTR_CIPHER_INFO`
   - 才是 WinSSL 侧真实 cipher-suite id/name 的首选 truth source
   - `CipherSuiteId` 不应继续从 `ConnectionInfo.aiCipher` 这种算法 ID 直接推回
+  - `MacSize` 也不应无条件把 `dwHashStrength` 当作统一 truth；当前应先吃共享层基于 suite name 的 AEAD tag-length 推导，只在缺值时再回退到 `dwHashStrength div 8`
 
 ## 4. 实现细节
 
