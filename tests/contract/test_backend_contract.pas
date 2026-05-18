@@ -1762,6 +1762,7 @@ var
   LConnInfoAccess: ISSLConnectionInfo;
   LProbeStream: TMemoryStream;
   LCoreInfo: TSSLConnectionInfo;
+  LCoreALPN: string;
   LOptionalInfo: TSSLConnectionInfo;
   LOptionalCtx: ISSLContext;
   LCoreCtx: ISSLContext;
@@ -1843,14 +1844,22 @@ begin
           AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
             'ISSLConnection.GetConnectionInfo.ALPNProtocol does not mirror ISSLConnectionInfo.GetConnectionInfo');
         end
-        else if LConnInfoAccess.GetSelectedALPNProtocol <> LConn.GetSelectedALPNProtocol then
-        begin
-          WriteLn('  [FAIL] Optional interface ALPN getter drifted from core getter');
-          AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
-            'ISSLConnectionInfo.GetSelectedALPNProtocol does not match ISSLConnection.GetSelectedALPNProtocol');
-        end
         else
         begin
+          // INTENTIONAL_CORE_SURFACE: keep this direct core GetSelectedALPNProtocol
+          // read as the single ALPN mirror proof while the public core declaration
+          // is compiler-deprecated in favor of ISSLConnectionInfo.GetSelectedALPNProtocol.
+          {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
+          LCoreALPN := LConn.GetSelectedALPNProtocol;
+          {$POP}
+          if LConnInfoAccess.GetSelectedALPNProtocol <> LCoreALPN then
+          begin
+            WriteLn('  [FAIL] Optional interface ALPN getter drifted from core getter');
+            AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
+              'ISSLConnectionInfo.GetSelectedALPNProtocol does not match ISSLConnection.GetSelectedALPNProtocol');
+          end
+          else
+          begin
           {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
           if LConnInfoAccess.GetStateString <> LConn.GetStateString then
           {$POP}
@@ -1884,6 +1893,7 @@ begin
               WriteLn('  [PASS] Connection-info surface is self-consistent');
               AddResult('ConnectionInfoInterfaceAligned', ABackend, True);
             end;
+          end;
           end;
         end;
       end;

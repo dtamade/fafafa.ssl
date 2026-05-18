@@ -379,7 +379,9 @@ begin
       LConnection := TWinSSLConnection.Create(LContext, LSocket);
 
       // 在未连接时获取 ALPN 协议应该返回空
+      {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
       LALPNProtocol := LConnection.GetSelectedALPNProtocol;
+      {$POP}
       Assert(LALPNProtocol = '', '未连接时 ALPN 协议为空');
 
     finally

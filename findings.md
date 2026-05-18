@@ -2119,3 +2119,37 @@
     - “如果你在写新代码，并且需要连接信息 / ALPN / 状态字符串这组 mirrors”
   - 我们在强化 `GetContext` 时把总句拆散了，但脚本契约还没跟着调整
   - 当前做法不是弱化新文案，而是补回这条总句，同时保留单独的 `GetContext` / `GetStateString` compiler-deprecated guidance
+
+- `GetSelectedALPNProtocol` 这条线在进入 compiler deprecation 之前，也已经足够“干净”：
+  - active integration/contract tests 已经切到 `ISSLConnectionInfo.GetSelectedALPNProtocol`
+  - residual direct-core surface 已 freeze 到：
+    - backend contract mirror proof
+    - MbedTLS runtime proof
+    - WinSSL ALPN/SNI runtime proof
+    - WinSSL edge-case runtime proof
+  - ordinary docs/tests 已不再把 `Conn.GetSelectedALPNProtocol` 当推荐路径
+
+- 这意味着它真正还缺的，也不是新的 backend/runtime 迁移，而是最后一层 compiler-surface truth：
+  - source/doc 虽然已经写明 owner 是 `ISSLConnectionInfo.GetSelectedALPNProtocol`
+  - 但 public core declaration 自身还没进入 compiler `deprecated`
+  - 因而编译器层面还没有把“compatibility-only mirror”这件事彻底说死
+
+- 当前这一刀的风险同样是 compile noise，而不是 runtime 行为：
+  - non-script direct core `GetSelectedALPNProtocol` 已只剩 4 个 residual 文件
+  - 它们都属于 intentional mirror/runtime proof，不需要迁移行为
+  - 因而完全适合沿用前面三批模式：
+    - declaration 做 compiler `deprecated`
+    - residual callsite 做局部 warning quarantine
+    - 用 focused shell contract + backend contract proof 收口
+
+- 这批还顺手暴露出第二条 workflow 层的小真相：
+  - `tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+    一直还锁着 4 条 mirrors 的旧迁移表文案
+  - 之前因为没重跑它，这个漂移一直潜伏着
+  - 当前修法不是只改 ALPN 一条，而是把 4 条 mirror row 的 required truth 一起同步到当前 compiler-deprecated wording，避免后续再被旧契约反复误拦
+
+- 当前修完后的更准确结论是：
+  - `ISSLConnection.GetSelectedALPNProtocol` 现在也已经在 source/doc/compiler 三层都被明确定义为 compatibility-only mirror
+  - `GetSelectedALPNProtocol` 的第一条真正 public slimming slice 已经落地
+  - 到这一步，`ISSLConnectionInfo` 这 4 条 Stage-A mirrors 都已经完成 compiler-surface 收口
+  - 因而下一步不该再继续做 mirror wording/deprecation archaeology，而应把主线切回 interface-design completeness / implementation-completeness 审查

@@ -96,7 +96,9 @@ begin
       Check('TLS 握手完成', Handshook);
       if not Handshook then Exit;
 
+      {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
       Proto := Conn.GetSelectedALPNProtocol;
+      {$POP}
       WriteLn('    协商 ALPN: "', Proto, '"');
       // 不强制要求为 h2，部分平台默认回退 http/1.1 或空
       Check('读取协商协议（可为空/h2/http/1.1）', True, 'ALPN=' + Proto);
@@ -118,4 +120,3 @@ begin
   WriteLn; WriteLn('总计: ', Total, ' 通过: ', Passed, ' 失败: ', Failed);
   if Failed > 0 then Halt(1);
 end.
-

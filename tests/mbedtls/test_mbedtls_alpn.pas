@@ -83,7 +83,9 @@ begin
 
     // 检查 ALPN 协商结果
     WriteLn('7. Check ALPN negotiation result...');
+    {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
     LSelectedProtocol := LConn.GetSelectedALPNProtocol;
+    {$POP}
     WriteLn('   Selected protocol: "', LSelectedProtocol, '"');
 
     if LSelectedProtocol <> '' then

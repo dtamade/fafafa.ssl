@@ -1256,6 +1256,35 @@
     - 当前批收口后，`GetStateString` route 的默认下一步应为：
       - 切到下一条 mirror 的 feasibility / slimming 选择
       - 不再重复做这条 getter 的 wording / deprecation 清扫
+50. `GetSelectedALPNProtocol` compiler deprecation alignment 已完成并应作为当前下一条 public slimming slice 的正式收口保留：
+    - 新 plan：
+      - `docs/plans/2026-05-18-getselectedalpn-compiler-deprecation-alignment.md`
+    - 当前已确认的 route truth：
+      - `src/fafafa.ssl.base.pas`
+        现在把 `ISSLConnection.GetSelectedALPNProtocol` 声明成：
+        - `deprecated 'Use ISSLConnectionInfo.GetSelectedALPNProtocol'`
+      - `docs/reference/API_REFERENCE.md`
+        与 `docs/reference/INTERFACE_DESIGN_V2.md`
+        现在都明确记录：
+        - core getter 仅兼容保留
+        - 当前源码声明已经是编译期 deprecated
+      - residual direct-core proofs 已带局部 warning quarantine：
+        - `tests/contract/test_backend_contract.pas`
+        - `tests/mbedtls/test_mbedtls_alpn.pas`
+        - `tests/winssl/test_winssl_alpn_sni.pas`
+        - `tests/winssl/test_winssl_connection_edge_cases.pas`
+    - 当前 focused proof 已覆盖：
+      - `bash -n tests/scripts/test_getselectedalpn_compiler_deprecated_contract.sh`
+      - `bash tests/scripts/test_getselectedalpn_compiler_deprecated_contract.sh`
+      - `bash tests/scripts/test_isslconnectioninfo_getselectedalpn_active_test_contract.sh`
+      - `bash tests/scripts/test_isslconnectioninfo_getselectedalpn_residual_classification_contract.sh`
+      - `bash tests/scripts/test_isslconnectioninfo_active_guidance_contract.sh`
+      - `bash tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+      - `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+      - `git diff --check`
+    - 当前批收口后，`GetSelectedALPNProtocol` route 的默认下一步应为：
+      - 从 mirrors wording/compiler 治理线切回 interface-design completeness / implementation-completeness 主线
+      - 不再重复做这条 getter 的 wording / deprecation 清扫
 
 ## Verification Discipline
 

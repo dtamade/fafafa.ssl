@@ -447,7 +447,7 @@ ISSLConnection = interface
   function GetSession: ISSLSession;
   procedure SetSession(ASession: ISSLSession);
   function IsSessionReused: Boolean;
-  function GetSelectedALPNProtocol: string;
+  function GetSelectedALPNProtocol: string; // 编译期 deprecated，仅兼容保留；新代码优先走 ISSLConnectionInfo.GetSelectedALPNProtocol
 
   function IsConnected: Boolean;
   function GetState: string;
@@ -484,7 +484,7 @@ end;
 - `ISSLConnection` 当前仍保留一批未来可能继续下沉到可选接口的能力面；当前文档只记录 **源码真相**，不等于推荐把更多能力继续塞回核心接口。
 - `GetConnectionInfo` 在 `ISSLConnection` 上仅作为 `v1.x` compatibility-core mirror 保留；当前源码声明已经是编译期 `deprecated`，需要完整连接信息记录时，新代码优先通过 `ISSLConnectionInfo.GetConnectionInfo`。
 - `GetContext` 在 `ISSLConnection` 上仅作为 `v1.x` compatibility-core mirror 保留；当前源码声明已经是编译期 `deprecated`，需要连接所属 context 引用时，新代码优先通过 `ISSLConnectionInfo.GetContext`。
-- `GetSelectedALPNProtocol` 也由 `ISSLConnectionInfo` 暴露。
+- `GetSelectedALPNProtocol` 在 `ISSLConnection` 上仅作为 `v1.x` compatibility-core mirror 保留；当前源码声明已经是编译期 `deprecated`，需要当前连接的协商 ALPN 结果时，新代码优先通过 `ISSLConnectionInfo.GetSelectedALPNProtocol`。
 - `GetStateString` 在 `ISSLConnection` 上仅作为 `v1.x` compatibility-core mirror 保留；当前源码声明已经是编译期 `deprecated`，需要后端相关状态描述时，新代码优先通过 `ISSLConnectionInfo.GetStateString`。
 - `GetHealthStatus` / `IsHealthy` / `GetDiagnosticInfo` / `GetPerformanceMetrics` 也由 `ISSLDiagnostics` 暴露。
 - `GetSession` / `SetSession` / `IsSessionReused` 也由 `ISSLSessionResumption` 暴露。
@@ -583,8 +583,8 @@ end;
 需要上下文引用时，也优先通过 `ISSLConnectionInfo.GetContext` 获取。
 `GetConnectionInfo` 不再应被当作核心 `ISSLConnection` 的主入口；它当前在源码声明里也已经是编译期 `deprecated`。拿完整连接信息记录请优先通过 `ISSLConnectionInfo.GetConnectionInfo`。
 `GetContext` 也不再应被当作核心 `ISSLConnection` 的主入口；它当前在源码声明里同样已经是编译期 `deprecated`。需要连接所属 context 引用时，请优先通过 `ISSLConnectionInfo.GetContext`。
+`GetSelectedALPNProtocol` 也不再应被当作核心 `ISSLConnection` 的主入口；它当前在源码声明里同样已经是编译期 `deprecated`。需要当前连接的协商 ALPN 结果时，请优先通过 `ISSLConnectionInfo.GetSelectedALPNProtocol`。
 `GetStateString` 也不再应被当作核心 `ISSLConnection` 的主入口；它当前在源码声明里同样已经是编译期 `deprecated`。需要后端相关状态描述时，请优先通过 `ISSLConnectionInfo.GetStateString`。
-同一组 mirrors 里的 ALPN 也优先通过 `ISSLConnectionInfo` 获取。
 
 #### Session 复用
 

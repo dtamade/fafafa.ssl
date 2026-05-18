@@ -237,7 +237,7 @@ if Supports(FSSLConn, ISSLSessionResumption, LSession) then
 | SetBlocking, GetBlocking | **移除** | 由外部框架控制 |
 | GetContext | ISSLConnectionInfo | 默认 owner 已切到 ISSLConnectionInfo；core 侧仅兼容保留，源码声明已是编译期 deprecated |
 | SetServerName, GetServerName | ISSLClientConnection | 客户端特有 |
-| GetSelectedALPNProtocol | ISSLConnectionInfo | Stage A 先 demote 出 core，后续再评估是否只留给客户端扩展 |
+| GetSelectedALPNProtocol | ISSLConnectionInfo | 默认 owner 已切到 ISSLConnectionInfo；core 侧仅兼容保留，源码声明已是编译期 deprecated |
 | GetHealthStatus, IsHealthy | ISSLDiagnostics | 诊断扩展 |
 | GetPerformanceMetrics | ISSLDiagnostics | 诊断扩展 |
 | GetDiagnosticInfo | ISSLDiagnostics | 诊断扩展 |
@@ -271,6 +271,8 @@ if Supports(FSSLConn, ISSLSessionResumption, LSession) then
    - `GetSelectedALPNProtocol` 是否进一步收窄到 `ISSLClientConnection`
    - `GetStateString` 是否并入 `GetState`
    - `GetContext` 是否最终彻底退出 public surface
+
+其中 `GetSelectedALPNProtocol` 在核心 `ISSLConnection` 上当前也只保留为 compatibility mirror，源码声明已经进入编译期 `deprecated`；后续仍可再评估是否进一步收窄到 `ISSLClientConnection`。
 
 其中 `GetStateString` 在核心 `ISSLConnection` 上当前也只保留为 compatibility mirror，源码声明已经进入编译期 `deprecated`；后续仍可再评估是否并入 `GetState`。
 

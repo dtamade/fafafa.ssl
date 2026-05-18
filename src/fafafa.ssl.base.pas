@@ -1252,8 +1252,11 @@ type
     {** 获取 ALPN 协商结果
         @returns 协商的协议名称（如 "h2"），未协商返回空
         @preferred-access 新代码优先通过 ISSLConnectionInfo.GetSelectedALPNProtocol 获取
-        @compatibility-note v1.x compatibility-core mirror; Stage-A demotion target is ISSLConnectionInfo *}
+        @owner-note 当前 ALPN 协商结果的默认 owner；ISSLConnection.GetSelectedALPNProtocol 保留为 v1.x compatibility mirror
+        @compatibility-note v1.x compatibility-core mirror; not recommended as the primary entry for new code; Stage-A demotion target is ISSLConnectionInfo
+        @deprecated 推荐使用 ISSLConnectionInfo.GetSelectedALPNProtocol *}
     function GetSelectedALPNProtocol: string;
+      deprecated 'Use ISSLConnectionInfo.GetSelectedALPNProtocol';
 
     {** 检查连接是否活动
         @returns True 如果连接已建立且未关闭 *}

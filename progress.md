@@ -4619,3 +4619,96 @@
   - result: PASS
   - summary:
     - current `GetStateString` compiler-deprecation batch has no whitespace or patch-format issues
+
+### GetSelectedALPNProtocol Compiler Deprecation Alignment
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - current branch started from clean `master...origin/master`
+    - the new batch could be scoped directly on top of the already-pushed GetStateString compiler-surface closeout
+
+- `rg -n "GetSelectedALPNProtocol|ISSLConnectionInfo.GetSelectedALPNProtocol|deprecated 'Use ISSLConnectionInfo.GetSelectedALPNProtocol|compiler.*deprecated|active test de-emphasis|residual classification" src docs/reference docs/plans tests/scripts task_plan.md findings.md progress.md --glob '!docs/archive/**'`
+  - result: PASS
+  - summary:
+    - confirmed `GetSelectedALPNProtocol` had already finished active-test de-emphasis and residual-classification freeze work
+    - the remaining gap was the public core declaration itself still not being compiler deprecated
+
+- `sed -n '1238,1272p' src/fafafa.ssl.base.pas`
+  - result: PASS
+  - summary:
+    - source comment already had preferred-access wording for `ISSLConnectionInfo.GetSelectedALPNProtocol`
+    - but the public core declaration still lacked compiler deprecation and stronger owner/de-emphasis wording
+
+- `rg -n "\\.GetSelectedALPNProtocol\\b|GetSelectedALPNProtocol\\(" tests docs src --glob '!docs/archive/**' --glob '!docs/plans/**' --glob '!tests/scripts/**'`
+  - result: PASS
+  - summary:
+    - confirmed ordinary docs/tests no longer used direct core `GetSelectedALPNProtocol`
+    - confirmed the remaining direct-core residuals had stayed confined to backend-contract mirror proof plus MbedTLS/WinSSL backend-specific runtime proofs
+
+- add `docs/plans/2026-05-18-getselectedalpn-compiler-deprecation-alignment.md`
+  - purpose:
+    - capture the bounded source-truth batch that upgrades `ISSLConnection.GetSelectedALPNProtocol` from source/doc de-emphasis to compiler-level deprecation
+    - keep runtime behavior unchanged while aligning the public core mirror surface with current owner truth
+
+- add `tests/scripts/test_getselectedalpn_compiler_deprecated_contract.sh`
+  - purpose:
+    - fail if the core `GetSelectedALPNProtocol` declaration loses its compiler `deprecated` marker
+    - guard the new doc wording and residual warning-quarantine boundary
+
+- implementation:
+  - `src/fafafa.ssl.base.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/INTERFACE_DESIGN_V2.md`
+  - `tests/contract/test_backend_contract.pas`
+  - `tests/mbedtls/test_mbedtls_alpn.pas`
+  - `tests/winssl/test_winssl_alpn_sni.pas`
+  - `tests/winssl/test_winssl_connection_edge_cases.pas`
+  - `tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+  - change:
+    - mark `ISSLConnection.GetSelectedALPNProtocol` as compiler `deprecated 'Use ISSLConnectionInfo.GetSelectedALPNProtocol'`
+    - upgrade active docs to say the core getter is now compiler deprecated
+    - add local warning suppression around the remaining direct-core `GetSelectedALPNProtocol` mirror/runtime proofs
+    - sync the older migration-target contract to the current compiler-deprecated mirror wording
+
+- `bash -n tests/scripts/test_getselectedalpn_compiler_deprecated_contract.sh && bash tests/scripts/test_getselectedalpn_compiler_deprecated_contract.sh`
+  - result: PASS
+  - summary:
+    - the core declaration is compiler deprecated
+    - active docs and the residual backend/runtime proofs all match the expected source-truth boundary
+
+- `bash tests/scripts/test_isslconnectioninfo_getselectedalpn_active_test_contract.sh`
+  - result: PASS
+  - summary:
+    - active integration/contract tests still prefer `ISSLConnectionInfo.GetSelectedALPNProtocol`
+    - the compiler-deprecation upgrade did not reintroduce direct core guidance
+
+- `bash tests/scripts/test_isslconnectioninfo_getselectedalpn_residual_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - `GetSelectedALPNProtocol` residual direct-core surface stayed confined to the existing allowlist
+    - compiler deprecation did not re-expand direct-core usage
+
+- `bash tests/scripts/test_isslconnectioninfo_active_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - active docs still de-emphasize direct core mirror usage
+    - the stronger ALPN compiler-deprecation wording still matches the shared `ISSLConnectionInfo` guidance contract
+
+- `bash tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+  - result: PASS
+  - summary:
+    - the migration-target contract now matches the current compiler-deprecated wording for all 4 `ISSLConnectionInfo` mirrors
+    - this closes a stale-script drift that had been left behind by earlier wording upgrades
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+  - result: PASS
+  - summary:
+    - focused backend contract still finished `Total Tests: 135 / Passed: 111 / Failed: 0 / Skipped: 24`
+    - the direct-core `GetSelectedALPNProtocol` mirror proof stayed green after local deprecation-warning quarantine
+    - WinSSL continued to keep the expected Linux-host skip truth
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `GetSelectedALPNProtocol` compiler-deprecation batch has no whitespace or patch-format issues
