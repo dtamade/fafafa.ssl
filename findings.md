@@ -3363,3 +3363,35 @@
   - ordinary guidance / generic examples / residual subgroup freeze / compiler-deprecated alignment 都已经收齐
   - 后续更应该回到更大的接口设计与各 backend completeness 审查
   - 不应再把 verify-result wording / grep 误报当成新的核心实现问题反复拉起
+
+- 当前这轮 broader interface-design 审查又压出一条真实且高可见的 canonical truth 漂移：
+  - `src/fafafa.ssl.base.pas` 已明确把 `GetNativeHandle` 放在 `ISSLNativeHandleAccess`
+  - `docs/reference/API_REFERENCE.md` 却还把 `GetNativeHandle` 列进 `ISSLContext` code listing
+  - `docs/reference/INTERFACE_DESIGN_V2.md` 还把它画进 `ISSLConnection` core
+  - 同一份 `INTERFACE_DESIGN_V2.md` 还把 `GetSelectedALPNProtocol` 误画进 `ISSLClientConnection`
+
+- 这说明当前问题不是“设计讨论还没达成一致”，而是活跃 truth source 已经开始互相打架：
+  - canonical source truth 已经是 optional native-handle surface
+  - 但 active reference / design doc 仍在把它教回 core
+  - 这会直接削弱我们前面已经花很多批次收出来的 `optional-owner` 分层语义
+
+- 更关键的是，这条漂移不只停留在文档：
+  - `tests/connection/test_ssl_connection_local.pas` 的 fresh compile RED 直接证明 generic smoke 还在按旧 core 假设读 `ClientConnection.GetNativeHandle` / `ServerConnection.GetNativeHandle`
+  - 同文件也还在普通路径上直读 deprecated `ClientConnection.GetConnectionInfo`
+  - 所以这是“活跃文档 + 活跃 generic test 一起失真”，不是孤立的注释错误
+
+- 这批最小正确修法也因此很清楚，并已落地：
+  - `API_REFERENCE` 的 `ISSLContext` listing 去掉 `GetNativeHandle`
+  - 同页新增 `ISSLNativeHandleAccess` optional surface 说明
+  - `INTERFACE_DESIGN_V2` 去掉：
+    - `ISSLConnection` core 中的 `GetNativeHandle`
+    - `ISSLClientConnection` 中错误的 `GetSelectedALPNProtocol`
+  - migration table 也把 `GetNativeHandle` 的 owner 改成 `ISSLNativeHandleAccess`
+  - `test_ssl_connection_local.pas` 改走：
+    - `ISSLNativeHandleAccess`
+    - `ISSLConnectionInfo.GetConnectionInfo`
+
+- focused 回归结果说明这条面现在已经重新对齐：
+  - 新 shell contract 已 PASS
+  - `test_ssl_connection_local.pas` 已从 compile RED 转成 compile + runtime PASS：`27 passed / 0 failed`
+  - 因而 `native-handle / owner-surface truth` 现在可以视为当前 canonical docs + generic smoke 的稳定真相

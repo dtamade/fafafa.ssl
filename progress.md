@@ -7348,3 +7348,61 @@
   - result: PASS
   - summary:
     - current compiler-deprecated alignment batch has no whitespace or patch-format issues
+
+### Native-Handle Owner Surface Truth Freeze
+
+- add `docs/plans/2026-05-19-native-handle-owner-surface-truth-freeze.md`
+  - change:
+    - define the bounded active-doc + generic-smoke truth-freeze batch for native-handle owner surface drift
+
+- add `tests/scripts/test_native_handle_owner_surface_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `API_REFERENCE` still listed `GetNativeHandle` inside `ISSLContext`
+    - GREEN after fix:
+      - source / API reference / V2 doc / generic smoke are now aligned to `ISSLNativeHandleAccess` and `ISSLConnectionInfo` owner truth
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - remove `GetNativeHandle` from the `ISSLContext` code listing
+    - add explicit `ISSLNativeHandleAccess` optional-surface block
+    - record that `GetNativeHandle` does not belong to `ISSLContext` / `ISSLConnection` core
+
+- update `docs/reference/INTERFACE_DESIGN_V2.md`
+  - change:
+    - remove `GetNativeHandle` from the `ISSLConnection` core sketch
+    - remove stale `GetSelectedALPNProtocol` from the `ISSLClientConnection` sketch
+    - add `ISSLNativeHandleAccess` extension sketch
+    - move the migration-table owner of `GetNativeHandle` to `ISSLNativeHandleAccess`
+
+- update `tests/connection/test_ssl_connection_local.pas`
+  - change:
+    - replace direct `Connection.GetNativeHandle` calls with `ISSLNativeHandleAccess`
+    - replace deprecated core `GetConnectionInfo` call with `ISSLConnectionInfo.GetConnectionInfo`
+
+- `bash -n tests/scripts/test_native_handle_owner_surface_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - focused native-handle owner-surface contract syntax is valid
+
+- `bash tests/scripts/test_native_handle_owner_surface_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - active canonical docs no longer contradict the optional native-handle surface
+    - generic local connection smoke no longer assumes removed core getters
+
+- `mkdir -p tmp/test_ssl_connection_local_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_ssl_connection_local_units -FEtmp/test_ssl_connection_local_units -otmp/test_ssl_connection_local_units/test_ssl_connection_local tests/connection/test_ssl_connection_local.pas && ./tmp/test_ssl_connection_local_units/test_ssl_connection_local`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `Identifier idents no member "GetNativeHandle"` at two connection call sites
+      - a fresh deprecated warning on direct core `GetConnectionInfo`
+    - GREEN after fix:
+      - compile succeeded
+      - runtime summary: `27 passed / 0 failed`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current native-handle owner-surface batch has no whitespace or patch-format issues

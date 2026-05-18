@@ -11,8 +11,9 @@
 ## 接口层次结构
 
 ```
-ISSLConnection (核心 - 18 个方法)
+ISSLConnection (核心 - 17 个方法)
 ├── ISSLClientConnection (客户端扩展 - SNI)
+├── ISSLNativeHandleAccess (原生句柄访问)
 ├── ISSLConnectionInfo (连接信息 mirrors)
 ├── ISSLDiagnostics (诊断扩展)
 ├── ISSLSessionResumption (会话扩展)
@@ -62,13 +63,10 @@ ISSLConnection = interface
   function GetProtocolVersion: TSSLProtocolVersion;
   function GetCipherName: string;
   function GetPeerCertificate: ISSLCertificate;
-
-  // === 原生访问 (1) ===
-  function GetNativeHandle: Pointer;
 end;
 ```
 
-**总计: 18 个方法**（从原来的 ~50 个精简）
+**总计: 17 个方法**（从原来的 ~50 个精简）
 
 ---
 
@@ -80,7 +78,16 @@ end;
 ISSLClientConnection = interface(ISSLConnection)
   procedure SetServerName(const AServerName: string);  // SNI
   function GetServerName: string;
-  function GetSelectedALPNProtocol: string;
+end;
+```
+
+### ISSLNativeHandleAccess (原生句柄访问)
+
+```pascal
+ISSLNativeHandleAccess = interface
+  function GetNativeHandle: Pointer;
+  function GetBackendType: TSSLLibraryType;
+  function IsNativeHandleValid: Boolean;
 end;
 ```
 
@@ -229,7 +236,7 @@ if Supports(FSSLConn, ISSLSessionResumption, LSession) then
 | IsConnected, GetState | ISSLConnection | 保留 |
 | GetProtocolVersion, GetCipherName | ISSLConnection | 保留 |
 | GetPeerCertificate | ISSLConnection | 保留 |
-| GetNativeHandle | ISSLConnection | 保留 |
+| GetNativeHandle | ISSLNativeHandleAccess | 不属于核心 ISSLConnection；通过可选 native-handle 接口访问 |
 | ReadString, WriteString | **移除** | 使用 Read/Write |
 | GetConnectionInfo | ISSLConnectionInfo | 默认 owner 已切到 ISSLConnectionInfo；core 侧仅兼容保留，源码声明已是编译期 deprecated |
 | GetStateString | ISSLConnectionInfo | 默认 owner 已切到 ISSLConnectionInfo；core 侧仅兼容保留，源码声明已是编译期 deprecated |

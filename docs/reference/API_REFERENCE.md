@@ -322,9 +322,21 @@ ISSLContext = interface
 
   // 状态
   function IsValid: Boolean;
-  function GetNativeHandle: Pointer;
 end;
 ```
+
+原生句柄访问通过可选接口暴露：
+
+```pascal
+ISSLNativeHandleAccess = interface
+  function GetNativeHandle: Pointer;
+  function GetBackendType: TSSLLibraryType;
+  function IsNativeHandleValid: Boolean;
+end;
+```
+
+- `GetNativeHandle` 不属于 `ISSLContext` / `ISSLConnection` 核心接口；需要底层句柄时，请先通过 `ISSLNativeHandleAccess` 访问。
+- 纯 `FreePascal` backend 不实现这个可选接口；`OpenSSL` / `WinSSL` / `MbedTLS` / `WolfSSL` 等 C-library backend 才会暴露它。
 
 **使用示例**:
 
@@ -491,7 +503,7 @@ end;
 - `GetPeerCertificateChain` / `GetVerifyResult` / `GetVerifyResultString` 也由 `ISSLCertificateVerification` 暴露。
 - `GetVerifyResult` / `GetVerifyResultString` 在 `ISSLConnection` 上仅作为 `v1.x` compatibility-core mirror 保留；当前源码声明已经是编译期 `deprecated`，需要证书验证结果时，新代码优先通过 `ISSLCertificateVerification` 暴露的 owner surface 访问。
 - `GetOCSPStaplingEnabled` / `GetOCSPResponse` / `IsOCSPResponseVerified` / `GetOCSPResponseStatus` 也由 `ISSLOCSPStapling` 暴露。
-- `GetNativeHandle` 不属于核心 `ISSLConnection`；当前应通过可选接口 `ISSLNativeHandleAccess` 访问。
+- `GetNativeHandle` 不属于 `ISSLContext` / `ISSLConnection` 核心接口；当前应通过可选接口 `ISSLNativeHandleAccess` 访问。
 - 下列旧名字不是当前活跃源码：`GetCipherBits`、`VerifyPeerCertificate`、`GetSessionID`、`IsSessionResumed`、`GetSessionData`、`SetSessionData`。
 
 #### 基本用法

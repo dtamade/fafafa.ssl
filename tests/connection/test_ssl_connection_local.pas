@@ -99,6 +99,8 @@ begin
 end;
 
 procedure Test3_CreateConnections;
+var
+  LNativeHandleAccess: ISSLNativeHandleAccess;
 begin
   WriteLn('Test 3: Create SSL Connections');
   try
@@ -118,10 +120,16 @@ begin
     if ClientConnection <> nil then
     begin
       TestResult('Create client connection', True);
-      if ClientConnection.GetNativeHandle <> nil then
-        TestResult('Client connection has valid handle', True)
+      if Supports(ClientConnection, ISSLNativeHandleAccess, LNativeHandleAccess) then
+      begin
+        if LNativeHandleAccess.GetNativeHandle <> nil then
+          TestResult('Client connection has valid handle', True)
+        else
+          TestResult('Client connection has valid handle', False);
+      end
       else
-        TestResult('Client connection has valid handle', False);
+        TestResult('Client connection has valid handle', False,
+          'Connection does not expose ISSLNativeHandleAccess');
     end
     else
       TestResult('Create client connection', False, 'Connection is nil');
@@ -131,10 +139,16 @@ begin
     if ServerConnection <> nil then
     begin
       TestResult('Create server connection', True);
-      if ServerConnection.GetNativeHandle <> nil then
-        TestResult('Server connection has valid handle', True)
+      if Supports(ServerConnection, ISSLNativeHandleAccess, LNativeHandleAccess) then
+      begin
+        if LNativeHandleAccess.GetNativeHandle <> nil then
+          TestResult('Server connection has valid handle', True)
+        else
+          TestResult('Server connection has valid handle', False);
+      end
       else
-        TestResult('Server connection has valid handle', False);
+        TestResult('Server connection has valid handle', False,
+          'Connection does not expose ISSLNativeHandleAccess');
     end
     else
       TestResult('Create server connection', False, 'Connection is nil');
@@ -149,6 +163,7 @@ end;
 procedure Test4_ConnectionProperties;
 var
   Info: TSSLConnectionInfo;
+  LConnInfoAccess: ISSLConnectionInfo;
 begin
   WriteLn('Test 4: Test Connection Properties');
   try
@@ -193,9 +208,15 @@ begin
     
     // Test GetConnectionInfo
     try
-      Info := ClientConnection.GetConnectionInfo;
-      WriteLn('Connection info retrieved');
-      TestResult('GetConnectionInfo works', True);
+      if Supports(ClientConnection, ISSLConnectionInfo, LConnInfoAccess) then
+      begin
+        Info := LConnInfoAccess.GetConnectionInfo;
+        WriteLn('Connection info retrieved, cipher suite: ', Info.CipherSuite);
+        TestResult('GetConnectionInfo works', True);
+      end
+      else
+        TestResult('GetConnectionInfo works', False,
+          'Connection does not expose ISSLConnectionInfo');
     except
       on E: Exception do
         TestResult('GetConnectionInfo works', False, E.Message);

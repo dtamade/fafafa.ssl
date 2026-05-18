@@ -2152,6 +2152,30 @@
      - 把 `GetVerifyResult*` 这条 verify-result residual archaeology 视为阶段性关闭
      - 重新把注意力切回更大的接口设计 / 各 backend completeness 审查
      - 不再把同一类 verify-result wording / grep 误报当成新的实现问题反复拉起
+66. `native-handle / owner-surface truth` 已完成 focused 收口，并应作为当前 interface-design completeness 的 canonical truth 保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-native-handle-owner-surface-truth-freeze.md`
+   - 当前已确认的 route truth：
+     - `src/fafafa.ssl.base.pas`
+       - `GetNativeHandle` 当前 owner 是 `ISSLNativeHandleAccess`
+       - 它不属于 `ISSLContext` / `ISSLConnection` core surface
+     - `docs/reference/API_REFERENCE.md`
+       - 之前还把 `GetNativeHandle` 列在 `ISSLContext` code listing 里
+     - `docs/reference/INTERFACE_DESIGN_V2.md`
+       - 之前还把 `GetNativeHandle` 画进 `ISSLConnection` core
+       - 并把 `GetSelectedALPNProtocol` 错画进 `ISSLClientConnection`
+     - `tests/connection/test_ssl_connection_local.pas`
+       - 真实编译 RED 也已证明 generic smoke 还在按旧 core 假设读 `Connection.GetNativeHandle`
+       - 同文件还在普通路径上直读 deprecated `GetConnectionInfo`
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_native_handle_owner_surface_truth_contract.sh`
+     - `bash tests/scripts/test_native_handle_owner_surface_truth_contract.sh`
+     - `mkdir -p tmp/test_ssl_connection_local_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_ssl_connection_local_units -FEtmp/test_ssl_connection_local_units -otmp/test_ssl_connection_local_units/test_ssl_connection_local tests/connection/test_ssl_connection_local.pas && ./tmp/test_ssl_connection_local_units/test_ssl_connection_local`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 不再把 `GetNativeHandle` owner surface 当成文档/测试层的未定真相
+     - 继续回到更大的 interface-design / backend completeness 审查
+     - 优先找下一条“活跃 canonical docs / 活跃 generic tests / backend truth”仍互相打架的接口面
 
 ## Verification Discipline
 
