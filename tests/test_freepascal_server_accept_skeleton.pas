@@ -80,6 +80,7 @@ procedure TestServerAcceptSkeleton;
 var
   LCtx: ISSLContext;
   LConn: ISSLConnection;
+  LInfo: TSSLConnectionInfo;
   LIOStream: TMemoryStream;
   LClientPrivate: TBytes;
   LClientPublic: TBytes;
@@ -133,6 +134,13 @@ begin
       'Server skeleton should at least negotiate TLS 1.3 before stopping');
     AssertTrue(LConn.GetCipherName = 'TLS_AES_128_GCM_SHA256',
       'Server skeleton should select AES-128-GCM when client offers it');
+    LInfo := LConn.GetConnectionInfo;
+    AssertEqualsWord(TLS13_CIPHER_AES_128_GCM_SHA256, LInfo.CipherSuiteId,
+      'Server skeleton connection info should derive the TLS 1.3 cipher-suite id');
+    AssertTrue(LInfo.KeySize = 128,
+      'Server skeleton connection info should derive AES-128 key size');
+    AssertTrue(LInfo.MacSize = 16,
+      'Server skeleton connection info should derive 16-byte AEAD tag length');
 
     LServerResponseLen := LIOStream.Size - Length(LClientHelloRecord);
     AssertTrue(LServerResponseLen > 0, 'Server should write a ServerHello record to transport');

@@ -491,6 +491,33 @@ Recommended first bounded batch:
     2. 明确 FreePascal 是否还有必须单独补的 low-level truth
     3. 若没有新的高价值真问题，就把默认主线切回 owner / deprecation wording route
 
+## Progress Since The FreePascal GetConnectionInfo Completion Audit
+
+- 已交付：
+  - `FreePascal` completion audit for the current `GetConnectionInfo` implementation-completeness route
+  - focused static contract `tests/scripts/test_freepascal_connectioninfo_completion_contract.sh`
+  - focused runtime proof on:
+    - `tests/test_freepascal_server_accept_skeleton.pas`
+    - `tests/test_freepascal_client_session_resumption.pas`
+
+- 当前更准确的 next step：
+  - `FreePascal` backend 没有 dedicated `GetConnectionInfo` override
+  - 它当前稳定提供的 truth path 是：
+    - client / server runtime 把 negotiated TLS 1.3 suite 写成标准 `FCipherName`
+    - session / resumption state 保留 `FCipherSuite: Word`
+  - shared `GetConnectionInfo` 已经能对这组 truth 稳定补齐：
+    - `CipherSuiteId`
+    - `Hash`
+    - `KeySize`
+    - `MacSize`
+  - 这意味着当前 `GetConnectionInfo` implementation-completeness 主线已经可以视为基本收口
+  - 下一批不应再默认继续往 backend 里盲补 low-level helper
+  - 默认主线应切回更强的 owner / deprecation wording route
+  - 若要继续沿 connection-info 相关路线推进，重点也应变成：
+    1. `ISSLConnection` / `ISSLConnectionInfo` owner wording
+    2. public surface slimming / de-emphasis 顺序
+    3. route-level next-slice selection
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

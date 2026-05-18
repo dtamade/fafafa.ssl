@@ -1957,3 +1957,21 @@
   - 下一步更应该做一次 completion audit
   - 确认 FreePascal 是否仍然存在必须单独补的缺口
   - 如果没有，就该把默认主线切回 owner / deprecation wording route，而不是继续机械地往每个 backend 里找新 helper
+
+- `FreePascal` completion audit 现在已经把这个“自然收口点”真正坐实了：
+  - `TFreePascalConnection` 没有 dedicated `GetConnectionInfo` override
+  - 它当前的 backend truth 主要是：
+    - client / server runtime 把 negotiated TLS 1.3 suite 写成标准 `FCipherName`
+    - session / resumption state 保留 `FCipherSuite: Word`
+  - focused server/client proof 进一步证明 shared `GetConnectionInfo` 已能稳定补齐：
+    - `CipherSuiteId`
+    - `KeySize`
+    - `MacSize`
+    - `ServerName`
+    - `SessionId`
+    - `IsResumed`
+
+- 因而当前更准确的 route-level 结论是：
+  - `FreePascal` 不需要像 `OpenSSL` / `WolfSSL` / `MbedTLS` 那样继续补 backend-local helper
+  - 当前 `GetConnectionInfo` implementation-completeness 主线已经可以视为基本完成
+  - 默认主线应切回 owner / deprecation wording route，而不是继续按 backend 名单机械深挖

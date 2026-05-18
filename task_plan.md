@@ -1085,6 +1085,31 @@
       - 是否需要对这条 route 做一次 completion audit
       - FreePascal 是否还有必须单独补的 low-level truth
       - 若没有新的高价值实现缺口，是否切回更强 owner / deprecation wording route
+43. `FreePascal GetConnectionInfo completion audit` 已完成并应作为当前 implementation-completeness 主线的正式收口保留：
+    - 新 plan：
+      - `docs/plans/2026-05-18-freepascal-getconnectioninfo-completion-audit.md`
+    - 当前已确认的 FreePascal truth：
+      - `TFreePascalConnection` 没有 dedicated `GetConnectionInfo` override
+      - 当前 backend 只额外提供：
+        - `DoGetConnectionInfoServerName`
+      - client / server TLS 1.3 runtime path 都会把 negotiated suite truth 写成：
+        - `FCipherName := TLS13CipherSuiteToString(...)`
+      - session / resumption path 继续保留：
+        - `FCipherSuite: Word`
+      - shared `GetConnectionInfo` 已能对这组标准 suite-name truth 补齐：
+        - `CipherSuiteId`
+        - `Hash`
+        - `KeySize`
+        - `MacSize`
+    - 当前 focused proof 已覆盖：
+      - `bash tests/scripts/test_freepascal_connectioninfo_completion_contract.sh`
+      - `tests/test_freepascal_server_accept_skeleton.pas`
+      - `tests/test_freepascal_client_session_resumption.pas`
+      - `git diff --check`
+    - 当前批收口后，`GetConnectionInfo` implementation-completeness 主线已可视为基本完成：
+      - 不再默认继续往 backend 里盲补 low-level helper
+      - 下一步应先切回 route-level completion audit / next-route selection
+      - 默认主线回到更强 owner / deprecation wording route
 
 ## Verification Discipline
 

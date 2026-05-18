@@ -41,6 +41,31 @@ begin
     Fail(Format('%s (expected=%d actual=%d)', [AMessage, AExpected, AActual]));
 end;
 
+procedure AssertConnectionInfo(
+  const ALabel: string;
+  const AInfo: TSSLConnectionInfo;
+  ACipherSuite: Word;
+  AExpectedKeySize: Integer;
+  AExpectedResumed: Boolean;
+  const AExpectedSessionId: string
+);
+begin
+  AssertTrue(AInfo.ProtocolVersion = sslProtocolTLS13,
+    ALabel + ' connection info should report TLS 1.3');
+  AssertEqualsInt(ACipherSuite, AInfo.CipherSuiteId,
+    ALabel + ' connection info should derive the negotiated cipher-suite id');
+  AssertTrue(AInfo.KeySize = AExpectedKeySize,
+    ALabel + ' connection info should derive the negotiated key size');
+  AssertTrue(AInfo.MacSize = 16,
+    ALabel + ' connection info should derive the AEAD tag length');
+  AssertTrue(AInfo.ServerName = 'example.com',
+    ALabel + ' connection info should mirror the configured server name');
+  AssertTrue(AInfo.IsResumed = AExpectedResumed,
+    ALabel + ' connection info should mirror the session reuse state');
+  AssertTrue(AInfo.SessionId = AExpectedSessionId,
+    ALabel + ' connection info should mirror the active session identifier');
+end;
+
 function BytesEqual(const ALeft, ARight: TBytes): Boolean;
 var
   I: Integer;
@@ -535,6 +560,7 @@ var
   LCtx2: ISSLContext;
   LConn1: ISSLConnection;
   LConn2: ISSLConnection;
+  LInfo: TSSLConnectionInfo;
   LStream1: TOfflineTLS13ServerStream;
   LStream2: TOfflineTLS13ServerStream;
   LSession: ISSLSession;
@@ -578,6 +604,15 @@ begin
       'Captured session should preserve max_early_data_size from NewSessionTicket');
     LSerialized := LSession.Serialize;
     AssertTrue(Length(LSerialized) > 0, 'Captured session should serialize to non-empty bytes');
+    LInfo := LConn1.GetConnectionInfo;
+    AssertConnectionInfo(
+      'Initial handshake',
+      LInfo,
+      TLS13_CIPHER_CHACHA20_POLY1305_SHA256,
+      256,
+      False,
+      LSession.GetID
+    );
   finally
     LStream1.Free;
   end;
@@ -600,6 +635,15 @@ begin
       'Resumed client handshake should send pre_shared_key in ClientHello');
     AssertTrue(LStream2.ObservedTicketIdentityMatch,
       'Resumed ClientHello identity should match previous ticket');
+    LInfo := LConn2.GetConnectionInfo;
+    AssertConnectionInfo(
+      'Resumed handshake',
+      LInfo,
+      TLS13_CIPHER_CHACHA20_POLY1305_SHA256,
+      256,
+      True,
+      LSession.GetID
+    );
   finally
     LStream2.Free;
   end;

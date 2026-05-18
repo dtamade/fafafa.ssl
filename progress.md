@@ -3802,6 +3802,78 @@
   - summary:
     - current batch has no whitespace or patch-format issues
 
+### FreePascal GetConnectionInfo Completion Audit
+
+- add `docs/plans/2026-05-18-freepascal-getconnectioninfo-completion-audit.md`
+  - purpose:
+    - close the last open question on the current `GetConnectionInfo` implementation-completeness route
+    - prove whether `FreePascal` still needs a backend-local low-level truth helper or can now close on shared TLS 1.3 truth
+
+- update focused FreePascal runtime proofs:
+  - `tests/test_freepascal_server_accept_skeleton.pas`
+  - `tests/test_freepascal_client_session_resumption.pas`
+  - change:
+    - add explicit `GetConnectionInfo` assertions on the server skeleton path for:
+      - `CipherSuiteId`
+      - `KeySize`
+      - `MacSize`
+    - add explicit `GetConnectionInfo` assertions on the client initial/resumed paths for:
+      - `ProtocolVersion`
+      - `CipherSuiteId`
+      - `KeySize`
+      - `MacSize`
+      - `ServerName`
+      - `IsResumed`
+      - `SessionId`
+
+- add `tests/scripts/test_freepascal_connectioninfo_completion_contract.sh`
+  - purpose:
+    - fail if `FreePascal` grows a dedicated `GetConnectionInfo` override
+    - guard that client/server TLS 1.3 paths still feed standard suite-name truth into shared `GetConnectionInfo`
+    - guard that session/resumption state still carries `FCipherSuite: Word`
+
+- `bash tests/scripts/test_freepascal_connectioninfo_completion_contract.sh`
+  - result: PASS
+  - summary:
+    - confirmed `TFreePascalConnection` does not implement a dedicated `GetConnectionInfo` override
+    - confirmed the active truth path still depends on:
+      - `FCipherName := TLS13CipherSuiteToString(...)`
+      - `FCipherSuite: Word`
+
+- `mkdir -p tmp/test_freepascal_server_accept_skeleton && fpc -B -Fu./src -Fu./tests -FUtmp/test_freepascal_server_accept_skeleton -FEtmp/test_freepascal_server_accept_skeleton -otmp/test_freepascal_server_accept_skeleton/test_freepascal_server_accept_skeleton tests/test_freepascal_server_accept_skeleton.pas && ./tmp/test_freepascal_server_accept_skeleton/test_freepascal_server_accept_skeleton`
+  - result: PASS
+  - summary:
+    - server skeleton proof now covers:
+      - `GetConnectionInfo.CipherSuiteId = TLS13_CIPHER_AES_128_GCM_SHA256`
+      - `KeySize = 128`
+      - `MacSize = 16`
+
+- `mkdir -p tmp/test_freepascal_client_session_resumption && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_freepascal_client_session_resumption -FEtmp/test_freepascal_client_session_resumption -otmp/test_freepascal_client_session_resumption/test_freepascal_client_session_resumption tests/test_freepascal_client_session_resumption.pas && ./tmp/test_freepascal_client_session_resumption/test_freepascal_client_session_resumption`
+  - result: PASS
+  - summary:
+    - initial and resumed client proofs now cover:
+      - `ProtocolVersion = TLS 1.3`
+      - `CipherSuiteId = TLS13_CIPHER_CHACHA20_POLY1305_SHA256`
+      - `KeySize = 256`
+      - `MacSize = 16`
+      - `ServerName = 'example.com'`
+      - `IsResumed` false/true truth
+      - `SessionId` mirror truth
+
+- update `docs/plans/2026-05-18-post-sni-interface-debt-roadmap.md`
+  - change:
+    - mark `FreePascal` completion audit as delivered
+    - move the default mainline from backend-helper hunting back to owner / deprecation wording route
+
+- update `task_plan.md`, `findings.md`, `progress.md`
+  - change:
+    - sync the `FreePascal` completion-audit conclusion into persistent repo working memory
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current FreePascal completion-audit batch has no whitespace or patch-format issues
+
 ### WolfSSL GetConnectionInfo Legacy MacSize Truth
 
 - add `docs/plans/2026-05-18-wolfssl-connectioninfo-macsize-legacy-truth-feasibility.md`
