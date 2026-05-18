@@ -218,6 +218,24 @@ Recommended first bounded batch:
     1. 讨论 `GetStateString` 的更强 deprecation wording / owner route
     2. 把主线切到 `GetSelectedALPNProtocol`
 
+## Progress Since The GetStateString Residual-Classification Batch
+
+- 已交付：
+  - `GetSelectedALPNProtocol` active generic/integration test de-emphasis
+  - `tests/integration/test_real_https_connection.pas` 的 ALPN 成功路径已转到 `ISSLConnectionInfo`-first helper
+  - `tests/integration/test_cross_backend_consistency_contract.pas` 的归一化 ALPN 探测已转到 `ISSLConnectionInfo`-first helper
+  - focused contract `tests/scripts/test_isslconnectioninfo_getselectedalpn_active_test_contract.sh`
+
+- 当前更准确的 next step：
+  - ordinary integration/contract tests 已不再把 direct core `GetSelectedALPNProtocol` 当推荐路径
+  - 剩余 direct core `GetSelectedALPNProtocol` 已收缩到：
+    - backend contract mirror proof
+    - MbedTLS backend-specific runtime test
+    - WinSSL backend-specific runtime tests
+  - 下一批应在两条路径里二选一：
+    1. 把这些 residual uses 做 intentional classification / allowlist freeze
+    2. 讨论 `GetSelectedALPNProtocol` 的更强 client-owner / deprecation wording route
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

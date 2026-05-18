@@ -845,6 +845,23 @@
       - `git diff --check`
       - 新 contract 当前 PASS
     - 当前批收口后，`GetStateString` 就不再需要继续做 evidence cleanup，可以决定是进入更强 deprecation wording 还是切到 `GetSelectedALPNProtocol`
+31. `GetSelectedALPNProtocol active test de-emphasis` 现在应作为下一条 mirror 的第一刀：
+    - 新 plan：
+      - `docs/plans/2026-05-18-getselectedalpn-active-test-deemphasis.md`
+    - 当前 high-value residual：
+      - `tests/integration/test_real_https_connection.pas` 仍直接调用 `Conn.GetSelectedALPNProtocol`
+      - `tests/integration/test_cross_backend_consistency_contract.pas` 仍把 `Conn.GetSelectedALPNProtocol` 当归一化 ALPN 探测输出
+    - 当前修法：
+      - 在这两个 ordinary integration/contract 文件里补 `ISSLConnectionInfo`-first helper
+      - 新增 focused contract，防止普通测试路径把 direct core `GetSelectedALPNProtocol` 教回去
+    - 当前 focused proof 已覆盖：
+      - `bash -n tests/scripts/test_isslconnectioninfo_getselectedalpn_active_test_contract.sh`
+      - `bash tests/scripts/test_isslconnectioninfo_getselectedalpn_active_test_contract.sh`
+      - `mkdir -p tmp/test_real_https_connection && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_real_https_connection -FEtmp/test_real_https_connection -otmp/test_real_https_connection/test_real_https_connection tests/integration/test_real_https_connection.pas && ./tmp/test_real_https_connection/test_real_https_connection`
+      - `mkdir -p tmp/test_cross_backend_consistency_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_cross_backend_consistency_contract -FEtmp/test_cross_backend_consistency_contract -otmp/test_cross_backend_consistency_contract/test_cross_backend_consistency_contract tests/integration/test_cross_backend_consistency_contract.pas && ./tmp/test_cross_backend_consistency_contract/test_cross_backend_consistency_contract`
+      - `git diff --check`
+      - focused contract 当前 PASS
+    - 当前批收口后，下一刀就可以决定是收 residual runtime uses，还是进入更强 client-owner / deprecation wording 讨论
 
 ## Verification Discipline
 

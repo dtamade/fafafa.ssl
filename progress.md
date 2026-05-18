@@ -3411,3 +3411,80 @@
   - summary:
     - reran the lightweight `GetStateString` residual allowlist proof after the final planning-file sync
     - no extra Pascal rerun was needed because only planning files changed after the allowlist contract passed
+
+### GetSelectedALPNProtocol Active Test De-emphasis
+
+- `rg -n '\b(?:Conn|LConn|LConnection)\.GetSelectedALPNProtocol\b' tests --glob '!tests/scripts/**'`
+  - result: PASS
+  - summary:
+    - confirmed the highest-value remaining ordinary `GetSelectedALPNProtocol` usage lived in the real HTTPS integration suite and the cross-backend consistency contract
+    - confirmed the next batch could stay on active-test de-emphasis without reopening backend-specific runtime ALPN files
+
+- add `docs/plans/2026-05-18-getselectedalpn-active-test-deemphasis.md`
+  - purpose:
+    - define a bounded `GetSelectedALPNProtocol` batch that moves ordinary integration/contract tests off the core getter before touching backend-specific runtime files
+
+- add `tests/scripts/test_isslconnectioninfo_getselectedalpn_active_test_contract.sh`
+  - purpose:
+    - fail if ordinary integration/contract tests reintroduce direct core `GetSelectedALPNProtocol`
+    - keep this first ALPN route change cheap to verify
+
+- first run of `bash tests/scripts/test_isslconnectioninfo_getselectedalpn_active_test_contract.sh`
+  - result: RED
+  - summary:
+    - the new contract correctly caught the first residual ordinary-path use in `tests/integration/test_real_https_connection.pas`
+    - this confirmed the batch boundary before any Pascal edits landed
+
+- update:
+  - `tests/integration/test_real_https_connection.pas`
+  - `tests/integration/test_cross_backend_consistency_contract.pas`
+  - change:
+    - add `ISSLConnectionInfo`-first ALPN helpers
+    - replace direct core `GetSelectedALPNProtocol` reads in the guarded ordinary integration/contract paths
+
+- `bash -n tests/scripts/test_isslconnectioninfo_getselectedalpn_active_test_contract.sh`
+  - result: PASS
+  - summary:
+    - new `GetSelectedALPNProtocol` active-test contract script is syntactically valid
+
+- `bash tests/scripts/test_isslconnectioninfo_getselectedalpn_active_test_contract.sh`
+  - result: PASS
+  - summary:
+    - ordinary integration/contract tests now prefer `ISSLConnectionInfo.GetSelectedALPNProtocol`
+    - direct core `GetSelectedALPNProtocol` no longer appears in the guarded test paths
+
+- `mkdir -p tmp/test_real_https_connection && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_real_https_connection -FEtmp/test_real_https_connection -otmp/test_real_https_connection/test_real_https_connection tests/integration/test_real_https_connection.pas && ./tmp/test_real_https_connection/test_real_https_connection`
+  - result: PASS
+  - summary:
+    - integration suite compiled successfully and finished green under the current environment gate
+    - runtime result remained the expected network skip: `FAFAFA_RUN_NETWORK_TESTS!=1`
+
+- `mkdir -p tmp/test_cross_backend_consistency_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_cross_backend_consistency_contract -FEtmp/test_cross_backend_consistency_contract -otmp/test_cross_backend_consistency_contract/test_cross_backend_consistency_contract tests/integration/test_cross_backend_consistency_contract.pas && ./tmp/test_cross_backend_consistency_contract/test_cross_backend_consistency_contract`
+  - result: PASS
+  - summary:
+    - cross-backend consistency contract compiled successfully and stayed green under the current environment gate
+    - runtime result remained the expected network skip: `FAFAFA_RUN_NETWORK_TESTS!=1`
+
+- `rg -n '\b(?:Conn|LConn|LConnection)\.GetSelectedALPNProtocol\b' tests --glob '!tests/scripts/**'`
+  - result: PASS
+  - summary:
+    - confirmed the remaining direct-core ALPN surface had shrunk to backend contract mirror proof plus MbedTLS/WinSSL backend-specific runtime files
+
+- update `docs/plans/2026-05-18-post-sni-interface-debt-roadmap.md`
+  - change:
+    - mark `GetSelectedALPNProtocol` active-test de-emphasis as delivered
+    - move the next route decision to residual runtime classification vs. stronger client-owner wording
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `GetSelectedALPNProtocol active-test de-emphasis` batch has no whitespace or patch-format issues
+
+- closeout revalidation before commit:
+  - `bash -n tests/scripts/test_isslconnectioninfo_getselectedalpn_active_test_contract.sh`
+  - `bash tests/scripts/test_isslconnectioninfo_getselectedalpn_active_test_contract.sh`
+  - `git diff --check`
+  - result: PASS
+  - summary:
+    - reran the lightweight `GetSelectedALPNProtocol` active-test proof after the final planning-file sync
+    - no extra Pascal rerun was needed because only planning files changed after the focused tests passed

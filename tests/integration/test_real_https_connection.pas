@@ -97,6 +97,16 @@ begin
     Result := '[ISSLConnectionInfo unavailable]';
 end;
 
+function GetConnectionSelectedALPN(AConn: ISSLConnection): string;
+var
+  LConnInfo: ISSLConnectionInfo;
+begin
+  if Supports(AConn, ISSLConnectionInfo, LConnInfo) then
+    Result := LConnInfo.GetSelectedALPNProtocol
+  else
+    Result := '';
+end;
+
 { Set socket timeout }
 procedure SetSocketTimeout(ASocket: TSocket; ATimeoutMs: Integer);
 var
@@ -487,7 +497,7 @@ begin
     if Conn.Connect then
     begin
       Runner.Check('ALPN handshake success', True);
-      NegotiatedProtocol := Conn.GetSelectedALPNProtocol;
+      NegotiatedProtocol := GetConnectionSelectedALPN(Conn);
       Runner.Check('ALPN negotiation result', NegotiatedProtocol <> '', 'Protocol: ' + NegotiatedProtocol);
     end
     else

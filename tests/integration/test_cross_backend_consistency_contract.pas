@@ -60,6 +60,16 @@ begin
   Result := GetEnvironmentVariable(VarName) = '1';
 end;
 
+function GetNegotiatedALPN(AConn: ISSLConnection): string;
+var
+  LConnInfo: ISSLConnectionInfo;
+begin
+  if Supports(AConn, ISSLConnectionInfo, LConnInfo) then
+    Result := LConnInfo.GetSelectedALPNProtocol
+  else
+    Result := '';
+end;
+
 function CreateLib(aSide: TSide): ISSLLibrary;
 begin
   Result := nil;
@@ -147,7 +157,7 @@ begin
     if not ok then Exit;
     Proto := Conn.GetProtocolVersion;
     Cipher := Conn.GetCipherName;
-    Alpn := Conn.GetSelectedALPNProtocol;
+    Alpn := GetNegotiatedALPN(Conn);
     VerifyCode := Conn.GetVerifyResult;
     Result := True;
     Conn.Shutdown;

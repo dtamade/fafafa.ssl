@@ -1641,3 +1641,21 @@
 - 这意味着 `GetStateString` 也已经到了适合直接 freeze allowlist 的时点：
   - 没必要再重复扫“普通路径到底还有没有 core getter”
   - 更合理的是把 residual file set 固定下来，然后把路线切到更强 wording 或下一条 mirror
+
+- 把主线切到 `GetSelectedALPNProtocol` 后，第一刀同样不该先碰 backend-specific runtime：
+  - `tests/integration/test_real_https_connection.pas` 还直接把 `Conn.GetSelectedALPNProtocol` 当普通握手成功路径
+  - `tests/integration/test_cross_backend_consistency_contract.pas` 也还把 `Conn.GetSelectedALPNProtocol` 当归一化探测输出
+
+- 这两个 ordinary integration/contract 文件比 backend-specific runtime ALPN tests 更像“公开推荐路径”：
+  - 它们更容易把新读者带回 core getter
+  - 但又不需要提前决定 `GetSelectedALPNProtocol` 最终是否只留给客户端扩展
+
+- 所以 `GetSelectedALPNProtocol` 的当前最优路径，是先做 active test de-emphasis：
+  - 先把 ordinary integration/contract 测试切到 `ISSLConnectionInfo.GetSelectedALPNProtocol`
+  - 让 residual direct core usage 收缩到 backend-specific runtime / contract 层
+  - 然后再决定这些 residual 是做 allowlist freeze，还是继续进入更强 client-owner 讨论
+
+- 这批落下后，`GetSelectedALPNProtocol` 的 ordinary 测试路径已经和 Stage-A demotion map 对齐：
+  - `tests/integration/test_real_https_connection.pas` 现在通过 helper 走 `ISSLConnectionInfo`
+  - `tests/integration/test_cross_backend_consistency_contract.pas` 也不再直接读 core getter
+  - 当前 residual direct-core `GetSelectedALPNProtocol` 已收缩到 backend contract mirror proof 与 MbedTLS/WinSSL backend-specific runtime files
