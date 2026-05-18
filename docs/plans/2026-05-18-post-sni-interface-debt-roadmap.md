@@ -87,6 +87,25 @@ Recommended first bounded batch:
   - 只有在这条文档/contract 真相冻结稳定后，再决定第一条真实 slimming slice
   - `LogLevel` / `LogCallback` library-default detachment 继续保留为后续候选，但不再是默认 immediate next batch
 
+## Progress Since The Truth-Freeze Batch
+
+- 已交付：
+  - `ISSLConnection` / `ISSLSession` active-doc truth freeze
+  - focused contract `tests/scripts/test_isslconnection_surface_truth_contract.sh`
+  - 连接层剩余三份历史 completion-audit plan 的 focused execution receipt 补齐：
+    - client-connection SNI
+    - connection native-handle
+    - connection OCSP interface
+
+- 当前更准确的 next step：
+  - 不再继续停留在历史 execution receipt closeout
+  - `ISSLConnectionInfo` / `ISSLSessionResumption` / `ISSLCertificateVerification` 也都已有 current execution evidence
+  - 连接层当前真正剩下的，已经主要是 `compatibility-core slimming` 设计债，而不是“有没有验证过”
+  - 因此下一批应进入第一条真正的 slimming slice
+  - 推荐优先顺序：
+    1. 先做 `ISSLConnectionInfo` mirror demotion / migration-map batch
+    2. 再决定是否进入 `GetStateString` / `GetContext` / `GetSelectedALPNProtocol` 这组 convenience mirror 的实际收瘦路线
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

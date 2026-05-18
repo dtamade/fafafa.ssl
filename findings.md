@@ -1472,3 +1472,42 @@
   - 把活跃文档修回当前源码真相
   - 把 compatibility-core mirrors 与 optional owners 说明写清楚
   - 用 focused shell contract 把旧接口名回流风险钉住
+
+- 在沿着 `ISSLConnection` 主线继续下钻时，新的证据又把一个隐藏的工作流偏差暴露出来：
+  - 我们原本准备从 `ISSLConnectionInfo` 这组 mirror 开第一刀
+  - 但 live repo 重新核对后发现：
+    - `ISSLConnectionInfo`
+    - `ISSLSessionResumption`
+    - `ISSLCertificateVerification`
+    这几条连接层 optional surface 其实都已经有 execution result
+  - 反而是另外 3 份更早的 connection-layer 旧计划还缺当前 execution receipt
+
+- 这 3 条缺口都直接落在 `ISSLConnection` 主面，而不是外围文档噪音：
+  - `backend-client-connection-sni-interface-alignment`
+  - `backend-connection-native-handle-interface-alignment`
+  - `backend-ocsp-connection-interface-alignment`
+  - 如果不补，会继续制造“这些 connection surface 也许没真正验证过”的假象
+
+- focused live revalidation 进一步证明这里的问题仍然是“证据缺口”，不是“实现缺口”：
+  - `tests/contract/test_backend_contract.pas` 当前结果仍是：
+    - `Total Tests: 135`
+    - `Passed: 111`
+    - `Failed: 0`
+    - `Skipped: 24`
+  - `Contract 8` 当前 truth：
+    - OpenSSL / WolfSSL / MbedTLS / FreePascal 都继续 PASS
+    - WinSSL 继续按 Linux 主机边界 SKIP
+  - `Contract 10` 当前 truth：
+    - OpenSSL / WolfSSL / FreePascal 的 OCSP-capable connection 继续 PASS
+    - MbedTLS 的 OCSP-absent 继续 PASS
+    - WinSSL 继续 SKIP
+  - `Contract 11` 当前 truth：
+    - OpenSSL / WolfSSL / MbedTLS 的 native-handle surface 继续 PASS
+    - FreePascal 的 absent 继续 PASS
+    - WinSSL 继续 SKIP
+
+- 因此连接层当前最准确的状态已经更明确：
+  - 连接层 completion-audit contract 本身并不缺
+  - 大部分连接层旧 plan 的 execution evidence 也不再缺
+  - 真正残留的 connection-layer evidence gap，当前已经收缩到这 3 份旧 plan 的 focused receipt write-back
+  - 这批补完之后，`ISSLConnection` 主线就可以更干净地转向真实的 `compatibility-core slimming`

@@ -62,3 +62,18 @@ bash scripts/run_minimal_ci_gate.sh --fast-local
 - `FreePascal` connection 继续保持 absent
 - focused contract、compile gate、minimal CI gate 全绿
 - 台账同步到当前真相
+
+## Focused Revalidation Result (2026-05-18)
+
+- focused 重新编译并运行 `tests/contract/test_backend_contract.pas`
+- 当前结果：`Total Tests: 135 / Passed: 111 / Failed: 0 / Skipped: 24`
+- 与本 plan 直接相关的 `Contract 11: Connection native-handle interface alignment` 当前 live truth：
+  - `OpenSSL`：PASS，C-library backend connection 暴露 native-handle surface
+  - `WolfSSL`：PASS，C-library backend connection 暴露 native-handle surface
+  - `MbedTLS`：PASS，C-library backend connection 暴露 native-handle surface
+  - `FreePascal`：PASS，pure backend connection 继续保持 `ISSLNativeHandleAccess` absent
+  - `WinSSL`：SKIP，当前 Linux 主机无该 backend live runtime
+- 结论：
+  - connection-level native-handle alignment 当前继续成立
+  - 本批不重跑 `compile_all_modules.py` / `run_minimal_ci_gate.sh --fast-local`
+    因为没有生产代码改动，本次目标只是补当前 focused execution receipt

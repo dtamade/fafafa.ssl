@@ -678,6 +678,39 @@
     - 当前批收口后，下一步才适合从稳定真相上选择第一条真正的 slimming slice：
       - `ISSLConnection` compatibility-core slimming
       - 或回到 `TSSLConfig` 的更小实现切片
+22. `backend connection-surface completion-audit revalidation` 当前也应补齐：
+    - 新 plan：
+      - `docs/plans/2026-05-18-backend-connection-surface-completion-audit-revalidation.md`
+    - 当前重新核对后确认的事实：
+      - `ISSLConnectionInfo` / `ISSLSessionResumption` / `ISSLCertificateVerification`
+        这些连接层 optional surface 已经有 execution result
+      - 真正缺当前 execution receipt 的，是另外 3 份仍直接落在 `ISSLConnection` 主面上的旧计划：
+        - `docs/plans/2026-05-04-backend-client-connection-sni-interface-alignment.md`
+        - `docs/plans/2026-05-04-backend-connection-native-handle-interface-alignment.md`
+        - `docs/plans/2026-05-04-backend-ocsp-connection-interface-alignment.md`
+    - 当前修法：
+      - focused 重新编译并运行 `tests/contract/test_backend_contract.pas`
+      - 仅把 Contracts 8 / 10 / 11 的当前 live 结果回写到上述 3 份 plan
+      - 不混入新的生产代码变更，也不虚报未重跑的重门禁
+    - 当前 focused proof：
+      - `tests/contract/test_backend_contract.pas` 当前结果仍为：
+        - `Total Tests: 135`
+        - `Passed: 111`
+        - `Failed: 0`
+        - `Skipped: 24`
+      - `Contract 8`：
+        - OpenSSL / WolfSSL / MbedTLS / FreePascal PASS
+        - WinSSL SKIP
+      - `Contract 10`：
+        - OpenSSL / WolfSSL / FreePascal non-stub PASS
+        - MbedTLS absent PASS
+        - WinSSL SKIP
+      - `Contract 11`：
+        - OpenSSL / WolfSSL / MbedTLS native-handle PASS
+        - FreePascal absent PASS
+        - WinSSL SKIP
+    - 当前批收口后，连接层历史 execution receipt 的主要缺口将被清空
+    - 下一条应优先进入真正的 `ISSLConnection` slimming，而不是继续补旧计划结果
 
 ## Verification Discipline
 

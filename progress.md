@@ -2883,3 +2883,56 @@
   - result: PASS
   - summary:
     - current `ISSLConnection surface truth freeze` batch has no whitespace or patch-format issues
+
+### Backend Connection-Surface Completion-Audit Revalidation
+
+- `for f in docs/plans/2026-05-04-backend-*.md; do ...; done`
+  - result: PASS
+  - summary:
+    - re-scan confirmed only 3 targeted connection-layer plans were still missing current execution receipts:
+      - `docs/plans/2026-05-04-backend-client-connection-sni-interface-alignment.md`
+      - `docs/plans/2026-05-04-backend-connection-native-handle-interface-alignment.md`
+      - `docs/plans/2026-05-04-backend-ocsp-connection-interface-alignment.md`
+    - `ISSLConnectionInfo` / `ISSLSessionResumption` / `ISSLCertificateVerification` plans already had execution results and were not the next gap
+
+- `rg -n "Contract [0-9]+: .*SNI|Contract [0-9]+: .*native-handle|Contract [0-9]+: .*OCSP|ISSLClientConnection|ISSLNativeHandleAccess|ISSLOCSPStapling" tests/contract/test_backend_contract.pas`
+  - result: PASS
+  - summary:
+    - confirmed the repo already has the right focused verifier for the three missing plan receipts:
+      - Contract 8: client connection SNI interface alignment
+      - Contract 10: client connection OCSP interface alignment
+      - Contract 11: connection native-handle interface alignment
+
+- add `docs/plans/2026-05-18-backend-connection-surface-completion-audit-revalidation.md`
+  - purpose:
+    - define a bounded evidence-closeout batch for the remaining connection-layer plans missing current execution receipts
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+  - result: PASS
+  - summary:
+    - focused contract suite finished `Total Tests: 135 / Passed: 111 / Failed: 0 / Skipped: 24`
+    - direct connection-layer truth relevant to this batch:
+      - Contract 8:
+        - OpenSSL / WolfSSL / MbedTLS / FreePascal PASS
+        - WinSSL SKIP on the current Linux host
+      - Contract 10:
+        - OpenSSL / WolfSSL / FreePascal OCSP-capable connection surfaces PASS
+        - MbedTLS absent-path PASS
+        - WinSSL SKIP
+      - Contract 11:
+        - OpenSSL / WolfSSL / MbedTLS native-handle surfaces PASS
+        - FreePascal absent-path PASS
+        - WinSSL SKIP
+
+- update:
+  - `docs/plans/2026-05-04-backend-client-connection-sni-interface-alignment.md`
+  - `docs/plans/2026-05-04-backend-connection-native-handle-interface-alignment.md`
+  - `docs/plans/2026-05-04-backend-ocsp-connection-interface-alignment.md`
+  - change:
+    - add `Focused Revalidation Result (2026-05-18)` sections
+    - record current live `test_backend_contract` evidence without falsely claiming heavy compile/minimal-ci gates were rerun in this batch
+
+- update `docs/plans/2026-05-18-post-sni-interface-debt-roadmap.md`
+  - change:
+    - mark the remaining connection-layer execution-receipt gap as closed
+    - move the next route forward to a real `ISSLConnection` slimming slice

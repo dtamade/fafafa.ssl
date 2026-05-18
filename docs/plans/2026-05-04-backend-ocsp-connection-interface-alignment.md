@@ -65,3 +65,18 @@ bash scripts/run_minimal_ci_gate.sh --fast-local
 - `FreePascal` / `OpenSSL` / `WolfSSL` 的 connection OCSP surface 继续可见且不走基类 `Not Supported` 存根
 - focused contract、compile gate、minimal CI gate 全绿
 - 台账和 capability 文档同步到当前真相
+
+## Focused Revalidation Result (2026-05-18)
+
+- focused 重新编译并运行 `tests/contract/test_backend_contract.pas`
+- 当前结果：`Total Tests: 135 / Passed: 111 / Failed: 0 / Skipped: 24`
+- 与本 plan 直接相关的 `Contract 10: Client connection OCSP interface alignment` 当前 live truth：
+  - `OpenSSL`：PASS，OCSP-capable backend 暴露 non-stub OCSP surface
+  - `WolfSSL`：PASS，OCSP-capable backend 暴露 non-stub OCSP surface
+  - `FreePascal`：PASS，OCSP-capable backend 暴露 non-stub OCSP surface
+  - `MbedTLS`：PASS，backend without OCSP capability keeps `ISSLOCSPStapling` absent
+  - `WinSSL`：SKIP，当前 Linux 主机无该 backend live runtime
+- 结论：
+  - connection-level OCSP alignment 当前继续成立
+  - 本批不重跑 `compile_all_modules.py` / `run_minimal_ci_gate.sh --fast-local`
+    因为没有生产代码改动，本次目标只是补当前 focused execution receipt
