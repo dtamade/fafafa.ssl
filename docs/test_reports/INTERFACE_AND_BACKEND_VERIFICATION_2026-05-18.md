@@ -948,13 +948,13 @@
 1. 进入 final public surface cleanup prep
    - `TSSLConfig.ServerName` 这条线现在已经冻结成 `v1.x` compatibility-only field，不再是当前待定项
    - direct `ISSLContext.SetServerName/GetServerName` 这条线现在也已经冻结成 `v1.x` deprecated compatibility API
-   - `WithSNI(...)` 现在也已经是 compiler-level `deprecated`
+   - `WithSNI(...)` 现在也已经冻结成 `v1.x` deprecated compatibility-only fluent surface
    - direct OpenSSL library default-config path 也已完成对齐
-   - 下一步应优先评估：
-     - `WithSNI(...)` 是否继续保留当前命名/入口，还是继续朝更窄的 compatibility surface 收口
 
-2. `TSSLConfig` 拆层与 capability model presence bits 仍然排在后面
-   - 它们是更大的设计债，不是当前 SNI 迁移主线的下一刀
+2. 下一批应回到 broader interface debt
+   - `TSSLConfig` 拆层 / slimming
+   - `ISSLConnection` 核心 surface slimming
+   - capability model presence bits 仍然排在这些结构性接口债之后
 
 ## 总结
 
@@ -1014,8 +1014,7 @@
 - `WithSNI(...)` 已不再属于“还要继续证明它是不是 compatibility-only”的问题
 - `TSSLConfig.ServerName` 也已不再属于“当前版本线要不要立刻改名/移除”的问题
 - direct `ISSLContext.SetServerName/GetServerName` 也已不再属于“当前版本线要不要立刻移除”的问题
-- 下一步真正未决的只剩：
-  - `WithSNI(...)` 是否继续保留当前 fluent naming / placement
+- 当前版本线里，这整个 context-level SNI compatibility family 都已不再属于待定项
 
 ## 增量收口：TSSLConfig.ServerName v1.x surface truth freeze
 
@@ -1090,4 +1089,45 @@
 - 这一步之后，当前版本线里还剩的 final public-surface 形状问题已经再次收窄：
   - `TSSLConfig.ServerName` 已 frozen
   - direct context API 已 frozen
-  - 剩下真正还需要继续决定的，只剩 `WithSNI(...)` 的命名/挂载位置
+  - `WithSNI(...)` 也已 frozen
+
+## 增量收口：WithSNI v1.x surface truth freeze
+
+- 在 `TSSLConfig.ServerName` 和 direct context API 都已 frozen 之后，`WithSNI(...)` 成了同一家族里最后一个还可能被误判成“也许以后还会恢复为普通 fluent path”的表面。
+- 这次静态审查确认：
+  - `src/fafafa.ssl.context.builder.pas` 里只剩两处 declaration + 一处 implementation 命中
+  - active docs 也只剩 `docs/reference/API_REFERENCE.md` 以 compatibility note 形式提及它
+  - active tests 中的 `.WithSNI(...)` 命中已经由 builder/config allowlist 合同明确收口
+
+- 因而这批做出的 `v1.x` 设计决定是：
+  - 不在当前版本线直接移除或改挂 `WithSNI(...)`
+  - 保持 source compatibility
+  - 但把它冻结成 deprecated compatibility-only fluent surface
+
+- 具体落地：
+  - 新增 `tests/scripts/test_withsni_surface_truth_contract.sh`
+    - 钉住 compatibility-only source comment
+    - 钉住 active docs 只允许 `docs/reference/API_REFERENCE.md` 提及 `WithSNI(...)`
+    - 钉住 `src/` 中 `WithSNI(...)` 命中不再扩散出当前 declaration/implementation 边界
+  - 既有合同继续保持：
+    - `tests/scripts/test_withsni_compiler_deprecated_contract.sh`
+    - `tests/scripts/test_deprecated_context_servername_compat_surface_labels_contract.sh`
+
+- focused 结果：
+  - `bash tests/scripts/test_withsni_surface_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_withsni_compiler_deprecated_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_deprecated_context_servername_compat_surface_labels_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+
+- 这一步之后，当前版本线里的整个 context-level SNI compatibility family 已经完整 frozen：
+  - `TSSLConfig.ServerName`
+  - direct `ISSLContext.SetServerName/GetServerName`
+  - `TSSLContextBuilder.WithSNI(...)`
+
+- 因而下一步最值得做的事不再是继续围绕这条旧兼容主线转圈，而是回到更大的 interface-design debt：
+  - `TSSLConfig` 跨层字段拆分 / slimming
+  - `ISSLConnection` 核心 surface slimming

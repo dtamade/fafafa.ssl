@@ -229,6 +229,15 @@
     - active docs 不再把 `Ctx.SetServerName(...)` 当普通 client 指导路径
   - 新增 `tests/scripts/test_direct_context_servername_surface_truth_contract.sh`
     守住这条 `v1.x freeze` truth，不允许 direct context guidance 或 production caller 回流
+- [completed] `WithSNI(...)` 的 `v1.x` surface truth freeze 已收口：
+  - 当前设计决定是不在 `v1.x` 直接移除或改挂这个 fluent method，避免破坏现有源码兼容
+  - 但它现在已经被锁成 deprecated compatibility-only fluent surface：
+    - `src/fafafa.ssl.context.builder.pas` 保持 compatibility-only comment
+    - compiler `deprecated` declaration 已由 dedicated contract 守住
+    - active docs 只允许 `docs/reference/API_REFERENCE.md` 提及 `WithSNI(...)`
+    - active tests 继续只允许 allowlist compatibility coverage
+  - 新增 `tests/scripts/test_withsni_surface_truth_contract.sh`
+    守住这条 `v1.x freeze` truth，不允许 `.WithSNI(...)` 重新漂回普通 fluent builder 示例
 
 ## Scope
 
@@ -259,14 +268,15 @@
 1. 进入 final public surface cleanup prep：
    - `TSSLConfig.ServerName` 已冻结为 `v1.x` compatibility-only field
    - direct `ISSLContext.SetServerName/GetServerName` 已冻结为 `v1.x` deprecated compatibility API
-   - `WithSNI(...)` 已进入 compiler-level `deprecated` truth，并成为当前最后仍值得继续讨论命名/挂载位置的 public compatibility surface
-   - 下一批应优先进入：
-     - builder `WithSNI(...)` 是否还应继续保留当前命名/挂载位置
-     - 是否需要把它进一步降成更窄的 legacy naming / placement
-2. 在 `WithSNI(...)` naming / placement 明确后，再决定是否需要继续规划更大 `v2` surface cleanup：
+   - `WithSNI(...)` 已冻结为 `v1.x` deprecated compatibility-only fluent surface
+   - 当前 `context-level SNI` 兼容家族在 `v1.x` 已无新的即时 surface 收口项
+2. 下一批应切回更大的 interface-design debt：
+   - `TSSLConfig` 跨层字段拆分 / slimming roadmap
+   - `ISSLConnection` 核心 surface slimming roadmap
+   - 选择一个最可执行、最不容易把我们重新拖回旧兼容语义的入口
+3. 在 broader interface debt 路线明确后，再决定是否需要为 `v2` 预留 breaking cleanup 方案：
    - deprecated context-level SNI surfaces 何时在 breaking window 中真正移除或重命名
    - 是否需要新的迁移文档或 v2 contract 预留
-3. 在 capability 与 SNI 迁移边界都稳定后，再评估 `TSSLConfig` 的更大跨层字段拆分时机。
 4. 若未来要让 serializer 对“纯 legacy-only in-memory record”也具备完全无歧义的 projection，需要先为 capability model 补 presence/truth 元信息；当前批次不在无信号状态下瞎猜。
 
 ## Verification Discipline

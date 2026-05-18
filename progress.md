@@ -1714,3 +1714,41 @@
   - result: PASS
   - summary:
     - current direct-context surface-freeze batch has no whitespace or patch-format issues
+
+### WithSNI Surface Truth Freeze
+
+- add `docs/plans/2026-05-18-withsni-surface-truth-freeze.md`
+  - purpose:
+    - define the bounded `v1.x` surface-freeze batch for `TSSLContextBuilder.WithSNI(...)`
+    - keep runtime behavior unchanged while preventing the deprecated fluent method from drifting back into ordinary builder guidance
+
+- add `tests/scripts/test_withsni_surface_truth_contract.sh`
+  - purpose:
+    - fail if the WithSNI source comment, active-doc confinement, or source-hit boundary drifts away from the current compatibility-only truth
+
+- `bash -n tests/scripts/test_withsni_surface_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - the new WithSNI surface-truth contract script is syntactically valid
+
+- `bash tests/scripts/test_withsni_surface_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - `WithSNI(...)` remains fenced to its current declaration/implementation boundary in `src/`
+    - active docs currently mention `WithSNI(...)` only in `docs/reference/API_REFERENCE.md`
+    - the source comment still classifies it as compatibility-only context-level SNI
+
+- `bash tests/scripts/test_withsni_compiler_deprecated_contract.sh`
+  - result: PASS
+  - summary:
+    - the dedicated compiler-deprecation contract still proves both public WithSNI declarations remain deprecated
+
+- `bash tests/scripts/test_deprecated_context_servername_compat_surface_labels_contract.sh`
+  - result: PASS
+  - summary:
+    - the existing builder/config compatibility allowlist stays green after the WithSNI surface-freeze batch
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current WithSNI surface-freeze batch has no whitespace or patch-format issues
