@@ -71,6 +71,33 @@
   - `tests/run_winssl_tests.ps1` 会把这些观测提升成 `[WINSSL-RUNTIME] session_resumption ...` markers
   - 但是否稳定观测到 `observed_reuse=true`，仍然必须由 GitHub Windows runner 的 live artifact 给出最终结论
 
+- GitHub Actions live run `26033545656` 进一步把当前 first hard blocker 压缩成了一条纯 workflow-entry 漂移，而不是新的 WinSSL runtime 语义失败：
+  - `windows-gate` 失败在 `Run broader WinSSL runtime suite`
+  - 失败原因不是 `observed_reuse=false`，也不是 owner/core/info/perf consistency 断言
+  - 而是 `test_winssl_session_resumption.lpi` 自己仍硬编码了 `TargetOS=linux`
+  - Windows runner 因而以 `-Tlinux` 编译这条新 lane，并在 `Can't find unit system` 处直接终止
+
+- 这次 live run 也顺手暴露了一个流程层漏口：
+  - 仓库里已有 `tests/scripts/test_winssl_windows_runtime_project_target_contract.sh`
+  - 它本来就是用来防止 WinSSL runtime-entry `.lpi` 再次漂回非 Windows target
+  - 但新加的 `test_winssl_session_resumption.lpi` 没有被纳入 guard 列表
+  - 所以本地 focused contracts 全绿时，这个新文件仍然可以悄悄绕过旧 guard 进入 CI
+
+- 因而当前最小正确修法不是继续猜 runtime 行为，而是先把 workflow-entry 真相补齐：
+  - 去掉 `test_winssl_session_resumption.lpi` 的硬编码 Linux target
+  - 把 `test_winssl_windows_runtime_project_target_contract.sh` 扩到该文件
+  - 重新触发 `wave-b-b2-manual.yml`，再看 Windows live artifact 给出的真正 runtime 结论
+
+- 同一 run 的 `macos-gate` 失败面已确认是另一条既有 OpenSSL 模块测试 lane：
+  - `scripts/run_all_module_tests.sh` 结果为 `17` 个测试中 `8` 通过、`9` 失败、通过率 `47.1%`
+  - 它与本批新增的 WinSSL session-resumption lane 无直接耦合
+  - 因而本批不把 macOS module failures 误记成“WinSSL runtime proof 回归”
+
+- 这次本地复核也再次确认了 Windows runtime truth source 的边界：
+  - 去掉 `.lpi` 里的硬编码 Linux target 后，Linux 宿主上的 `lazbuild tests/winssl/test_winssl_session_resumption.lpi` 会自然落到 `unit Windows` 缺失
+  - 这说明当前 `.lpi` 已不再偷带错误平台目标，而是回到了“宿主是谁就按谁编”的正确形态
+  - 这也再次证明 dedicated WinSSL session-resumption lane 的最终验收必须继续看 GitHub Windows runner，而不是把 Linux 本地 Lazarus 结果误当成目标真相
+
 - 根因已被压缩到 evidence capture 层，而不是 WinSSL 实现层：
   - workflow 用 `Start-Transcript` 包住父 PowerShell
   - broader suite 则在子 `pwsh -File tests/run_winssl_tests.ps1` 里执行

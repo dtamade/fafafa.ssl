@@ -20,6 +20,7 @@ projects = [
     root / "tests/winssl/test_winssl_certificate_loading.lpi",
     root / "tests/winssl/test_winssl_unit_comprehensive.lpi",
     root / "tests/winssl/test_winssl_integration_multi.lpi",
+    root / "tests/winssl/test_winssl_session_resumption.lpi",
     root / "tests/integration/test_backend_comparison.lpi",
     root / "tests/winssl/test_winssl_performance.lpi",
     root / "tests/winssl/test_winssl_handshake_debug.lpi",

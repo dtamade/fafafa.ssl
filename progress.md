@@ -332,6 +332,50 @@
   - change:
     - 固化本批目标、source/runtime 边界、验证命令与 live-proof pending 状态
 
+- `gh run view 26033545656 --job 76525564608 --log`
+  - result: PASS
+  - summary:
+    - `windows-gate` 失败点已压缩到 `Run broader WinSSL runtime suite`
+    - `test_winssl_session_resumption.lpi` 被 Lazarus 以 `-Tlinux` 编译
+    - 真实报错是 `Can't find unit system used by test_winssl_session_resumption`
+    - 这说明当前 first hard blocker 是新 `.lpi` 的 host-target drift，不是 session runtime assertion 失败
+
+- `gh run view 26033545656 --job 76525564448 --log`
+  - result: PASS
+  - summary:
+    - `macos-gate` 失败在 `scripts/run_all_module_tests.sh`
+    - 与本批新增的 WinSSL session-resumption lane 无直接耦合
+
+- `sed -n '1,200p' tests/winssl/test_winssl_session_resumption.lpi`
+  - result: PASS
+  - summary:
+    - 确认该新 `.lpi` 硬编码了 `TargetCPU=x86_64` 与 `TargetOS=linux`
+    - 这与其它 broader-suite WinSSL `.lpi` 默认走宿主平台的做法不一致
+
+- `bash tests/scripts/test_winssl_windows_runtime_project_target_contract.sh`
+  - result: PASS (false negative)
+  - summary:
+    - 旧 contract 本来用于阻止 runtime-entry `.lpi` 再次漂回非 Windows target
+    - 但它没有包含新加的 `test_winssl_session_resumption.lpi`
+    - 因此当前需要先扩 guard，再修 `.lpi` 本身
+
+- update `tests/winssl/test_winssl_session_resumption.lpi`
+  - change:
+    - 移除硬编码的 `TargetCPU/TargetOS` block
+    - 改回与其它 WinSSL runtime-entry `.lpi` 一样使用宿主平台 target truth
+
+- update `tests/scripts/test_winssl_windows_runtime_project_target_contract.sh`
+  - change:
+    - 把 `tests/winssl/test_winssl_session_resumption.lpi` 纳入 guard 列表
+    - 防止 dedicated session-resumption lane 再次绕过旧的 Windows runtime project target contract
+
+- `lazbuild tests/winssl/test_winssl_session_resumption.lpi`
+  - result: FAIL (expected host-platform boundary)
+  - summary:
+    - 在当前 Linux 宿主上，去掉硬编码 Linux target 后，Lazarus 会按宿主真相编这份 WinSSL 专项工程
+    - 编译随后落在 `fafafa.ssl.winssl.lib` 依赖 `unit Windows` 的既有平台边界
+    - 这不是本批 regression；它反而证明 `.lpi` 不再偷偷带错误 target，真正的验收面仍应回到 GitHub Windows runner
+
 ### Interface And Backend Truth Cross-Check
 
 - `rg -n "ISSLConnection = interface|ISSLClientConnection = interface|ISSLServerConnection|SetServerName|TSSLConfig = record|Supports[A-Z][A-Za-z]+: Boolean|[A-Za-z]+Support: TSSLSupportLevel" src/fafafa.ssl.base.pas src/fafafa.ssl.factory.pas src/fafafa.ssl.context.builder.pas src/fafafa.ssl.pas docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md docs/ARCHITECTURE.md docs/reference/INTERFACE_DESIGN_V2.md`

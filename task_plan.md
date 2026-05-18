@@ -35,7 +35,13 @@
   - `tests/run_winssl_tests.ps1` 现在已接入 `test_winssl_session_resumption.lpi`
   - broader suite 会把 `[WINSSL-SESSION-RESUME]` 原始观测行提升成 `[WINSSL-RUNTIME] session_resumption ...` evidence markers
   - focused source contracts + Win64 cross-target compile 已通过
-  - 仍待 GitHub Windows runner live artifact 刷新 `observed_reuse=true|false` 的真实 runtime 结论
+  - GitHub Actions live run `26033545656` 已先暴露出一个 workflow-entry 漂移，而不是 runtime 语义失败：
+    - `test_winssl_session_resumption.lpi` 仍硬编码 `TargetOS=linux`
+    - Windows `Run broader WinSSL runtime suite` 因此把这条 dedicated lane 当成 Linux 项目编译，卡在 compile phase
+  - 当前这批的最小收口是：
+    - 去掉 `test_winssl_session_resumption.lpi` 的硬编码 Linux target
+    - 把 `tests/scripts/test_winssl_windows_runtime_project_target_contract.sh` 扩到该新 `.lpi`
+    - push 后重新看 Windows artifact 刷新的 `observed_reuse=true|false` 真实结论
 - [in_progress] 当前 repo-level 下一步应回到更高价值的 completeness 路线：
   - 继续审查各 backend implementation completeness / optional surface completeness
   - 若继续深挖 WinSSL，则优先扩展真实 resumed handshake / session tickets / certstore / OCSP / enterprise 等高风险 lane，而不是再重复治理 runtime capture 或已修掉的 semantic false positive

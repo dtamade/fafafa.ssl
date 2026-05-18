@@ -17,11 +17,13 @@
 
 - `src/fafafa.ssl.winssl.base.pas`
 - `src/fafafa.ssl.winssl.connection.pas`
+- `tests/winssl/test_winssl_session_resumption.lpi`
 - `tests/winssl/test_winssl_session_resumption.pas`
 - `tests/run_winssl_tests.ps1`
 - `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md`
 - `tests/windows/VALIDATION_BUNDLE.md`
 - `tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+- `tests/scripts/test_winssl_windows_runtime_project_target_contract.sh`
 - `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md`
 - `task_plan.md`
 - `findings.md`
@@ -70,6 +72,13 @@ git diff --check
   - Windows validation docs contracts 继续通过
   - `session_reused_semantic_truth_contract` 继续通过
   - focused Win64 cross-target compile 通过
+- RED:
+  - GitHub Actions live run `26033545656` 证明 broader suite 并未卡在 runtime proof 本身，而是 `test_winssl_session_resumption.lpi` 仍硬编码 `TargetOS=linux`
+  - Windows runner 因此把 dedicated session-resumption lane 当成 Linux 工程去编，直接在 `Run broader WinSSL runtime suite` 的 compile phase 失败
+- FOLLOW-UP:
+  - 去掉 `test_winssl_session_resumption.lpi` 的硬编码 Linux target
+  - 把现有 `test_winssl_windows_runtime_project_target_contract.sh` 扩到该新 `.lpi`
+  - push 后重新触发 `wave-b-b2-manual.yml`，再看 live runtime artifact 给出的 `observed_reuse=true|false`
 - PENDING:
   - GitHub Windows runner live run 尚未刷新
   - 是否稳定观测到 `observed_reuse=true` 仍待 Windows artifact 给出结论
