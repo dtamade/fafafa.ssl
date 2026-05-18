@@ -2545,3 +2545,31 @@
   - server-side disable truth 仍可通过 `SCH_CRED_DISABLE_RECONNECTS` 表达
   - client-side native reconnect 解释模型已经收紧回官方 Schannel auto-cache truth
   - 这能让后续 `observed_reuse=false` 的调查少掉一条错误分支：不再误以为 WinSSL `SetSession(...)` 已经是可验证的 native reconnect 注入点
+
+- 在 client reconnect truth 收紧后，当前 WinSSL native resumed-handshake 调查也进一步明确了一条方法论边界：
+  - shared/public path 当前故意保持 conservative false
+  - 因而 `observed_reuse=false` 不能再单独拿来断言 “Schannel native reconnect 没发生”
+  - 如果还想继续往下压，必须把 public truth 与 native observation 分开收集
+
+- 当前最小而安全的下一刀因此已经固定：
+  - 不改生产 `winssl.connection` 的 shared reconnect 逻辑
+  - 只在 dedicated `tests/winssl/test_winssl_session_resumption.pas` 里通过：
+    - `ISSLNativeHandleAccess.GetNativeHandle`
+    - `PCtxtHandle`
+    - `QueryContextAttributesW(..., SECPKG_ATTR_SESSION_INFO, ...)`
+    去额外读取一次 native `SSL_SESSION_RECONNECT` 观测
+
+- 这条 dedicated evidence lane 的价值在于：
+  - 一旦 GitHub Windows artifact 给出
+    - `native_probe_succeeded=true`
+    - `native_observed_reuse=true|false`
+    我们就能区分两种完全不同的后续路线：
+    - public truth 仍保守，但 native reconnect 其实已命中
+    - current same-context same-target proof 连 native reconnect 也没命中
+  - 这样后续就不必再反复重开 shared probe crash / docs truth / client reconnect truth 那几条已经收口的旧 lane
+
+- 当前新的 dedicated proof 程序已经把这条分离写成稳定 marker：
+  - `native_probe label=initial_handshake ...`
+  - `native_probe label=same_context_attempt_N ...`
+  - `summary ... observed_reuse=... native_observed_reuse=... native_probe_succeeded=... require_native_reuse=...`
+  - 因而接下来真正需要的新事实，只剩 GitHub Windows live artifact

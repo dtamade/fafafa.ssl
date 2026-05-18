@@ -5720,3 +5720,53 @@
   - result: PASS
   - summary:
     - current `WinSSL client reconnect truth alignment` batch has no whitespace or patch-format issues
+
+### WinSSL Native Probe Evidence Lane
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - current branch remains `master...origin/master`
+    - this lane started from a single uncommitted test change in `tests/winssl/test_winssl_session_resumption.pas`
+
+- `git diff -- tests/winssl/test_winssl_session_resumption.pas`
+  - result: PASS
+  - summary:
+    - confirmed the pending batch only expands dedicated evidence
+    - no production WinSSL reconnect logic was touched
+    - new proof surface adds:
+      - `TryQueryNativeSessionReuse(...)`
+      - `native_probe label=...`
+      - `native_observed_reuse`
+      - `native_probe_succeeded`
+      - `require_native_reuse`
+
+- add `docs/plans/2026-05-18-winssl-native-probe-evidence-lane.md`
+  - purpose:
+    - pin this lane as “split public truth from native observation”
+    - keep the next follow-up anchored on Windows artifact evidence instead of reopening closed WinSSL lanes
+
+- update `tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+  - change:
+    - lock the dedicated native probe helper
+    - lock the new `native_probe` markers
+    - lock the summary split between public reuse truth and native probe truth
+
+- `bash -n tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - focused session-resumption runtime-truth contract now guards the dedicated native probe evidence surface
+
+- `mkdir -p tmp/winssl_native_probe_truth_win64 && fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/winssl_native_probe_truth_win64 -FEtmp/winssl_native_probe_truth_win64 -otmp/winssl_native_probe_truth_win64/test_winssl_session_resumption.exe tests/winssl/test_winssl_session_resumption.pas`
+  - result: PASS
+  - summary:
+    - dedicated WinSSL native-probe proof still cross-compiles for Win64
+    - compile finished with only the pre-existing `GetConnectionInfo` deprecation warning
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `WinSSL native probe evidence lane` batch has no whitespace or patch-format issues

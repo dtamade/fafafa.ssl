@@ -9,6 +9,9 @@ uses
   {$ENDIF}
   SysUtils, Classes,
   fafafa.ssl.base,
+  fafafa.ssl.winssl.base,
+  fafafa.ssl.winssl.api,
+  fafafa.ssl.winssl.utils,
   fafafa.ssl.winssl.lib;
 
 var
@@ -126,6 +129,54 @@ begin
   end;
 end;
 
+function TryQueryNativeSessionReuse(const AConn: ISSLConnection;
+  out AReused: Boolean; out ADetails: string): Boolean;
+var
+  LNativeAccess: ISSLNativeHandleAccess;
+  LCtxtHandle: PCtxtHandle;
+  LSessionInfo: SecPkgContext_SessionInfo;
+  LStatus: SECURITY_STATUS;
+begin
+  Result := False;
+  AReused := False;
+  ADetails := '';
+
+  if not Supports(AConn, ISSLNativeHandleAccess, LNativeAccess) then
+  begin
+    ADetails := 'native_handle_access_unavailable';
+    Exit;
+  end;
+
+  LCtxtHandle := PCtxtHandle(LNativeAccess.GetNativeHandle);
+  if LCtxtHandle = nil then
+  begin
+    ADetails := 'native_handle_nil';
+    Exit;
+  end;
+
+  FillChar(LSessionInfo, SizeOf(LSessionInfo), 0);
+  try
+    LStatus := QueryContextAttributesW(LCtxtHandle, SECPKG_ATTR_SESSION_INFO,
+      @LSessionInfo);
+    if not IsSuccess(LStatus) then
+    begin
+      ADetails := Format('status=0x%x', [LStatus]);
+      Exit;
+    end;
+
+    AReused := (LSessionInfo.dwFlags and SSL_SESSION_RECONNECT) <> 0;
+    ADetails := Format('status=0x%x flags=0x%x',
+      [LStatus, LSessionInfo.dwFlags]);
+    Result := True;
+  except
+    on E: Exception do
+    begin
+      ADetails := Format('exception=%s:%s', [E.ClassName, E.Message]);
+      Result := False;
+    end;
+  end;
+end;
+
 procedure ValidateReuseTruth(const ALabel: string; const AConn: ISSLConnection;
   out AReused: Boolean);
 var
@@ -172,11 +223,16 @@ var
   LRunNet: Boolean;
   LRequireReuse: Boolean;
   LObservedReuse: Boolean;
+  LObservedNativeReuse: Boolean;
+  LNativeProbeSucceeded: Boolean;
+  LRequireNativeReuse: Boolean;
   LSessionConfigured: Boolean;
   LAttemptCount: Integer;
   LAttempt: Integer;
   LOk: Boolean;
   LReused: Boolean;
+  LNativeReused: Boolean;
+  LNativeDetails: string;
   LInitError: string;
 begin
   BeginSection('WinSSL session resumption truth');
@@ -193,7 +249,10 @@ begin
   if LAttemptCount < 1 then
     LAttemptCount := 1;
   LRequireReuse := EnvEnabled('FAFAFA_WINSSL_REQUIRE_REUSE');
+  LRequireNativeReuse := EnvEnabled('FAFAFA_WINSSL_REQUIRE_NATIVE_REUSE');
   LObservedReuse := False;
+  LObservedNativeReuse := False;
+  LNativeProbeSucceeded := False;
   LSessionConfigured := False;
   LSession := nil;
 
@@ -270,6 +329,20 @@ begin
       Check('initial handshake must not report reuse', not LReused,
         'fresh handshake unexpectedly reported session reuse');
 
+      if TryQueryNativeSessionReuse(LConn, LNativeReused, LNativeDetails) then
+      begin
+        LNativeProbeSucceeded := True;
+        Check('initial native probe must not report reconnect', not LNativeReused,
+          LNativeDetails);
+        EmitResumeMarker(Format(
+          'native_probe label=initial_handshake available=true reused=%s %s',
+          [BoolText(LNativeReused), LNativeDetails]));
+      end
+      else
+        EmitResumeMarker(Format(
+          'native_probe label=initial_handshake available=false reason=%s',
+          [LNativeDetails]));
+
       LSession := LResumption1.GetSession;
       LSessionConfigured := LSession <> nil;
       Check('initial handshake captures session metadata', LSessionConfigured);
@@ -324,6 +397,20 @@ begin
         if LReused then
           LObservedReuse := True;
 
+        if TryQueryNativeSessionReuse(LConn, LNativeReused, LNativeDetails) then
+        begin
+          LNativeProbeSucceeded := True;
+          EmitResumeMarker(Format(
+            'native_probe label=same_context_attempt_%d available=true reused=%s %s',
+            [LAttempt, BoolText(LNativeReused), LNativeDetails]));
+          if LNativeReused then
+            LObservedNativeReuse := True;
+        end
+        else
+          EmitResumeMarker(Format(
+            'native_probe label=same_context_attempt_%d available=false reason=%s',
+            [LAttempt, LNativeDetails]));
+
         LConn.Shutdown;
       finally
         if LSocket <> INVALID_SOCKET then
@@ -335,9 +422,10 @@ begin
     end;
 
     EmitResumeMarker(Format(
-      'summary host=%s attempts=%d observed_reuse=%s require_reuse=%s session_configured=%s',
-      [AHost, LAttemptCount, BoolText(LObservedReuse), BoolText(LRequireReuse),
-       BoolText(LSessionConfigured)]));
+      'summary host=%s attempts=%d observed_reuse=%s native_observed_reuse=%s native_probe_succeeded=%s require_reuse=%s require_native_reuse=%s session_configured=%s',
+      [AHost, LAttemptCount, BoolText(LObservedReuse), BoolText(LObservedNativeReuse),
+       BoolText(LNativeProbeSucceeded), BoolText(LRequireReuse),
+       BoolText(LRequireNativeReuse), BoolText(LSessionConfigured)]));
 
     if LRequireReuse then
       Check('same-context reconnect eventually observes session reuse',
@@ -347,6 +435,12 @@ begin
       Check('same-context reconnect evidence recorded', True,
         Format('observed_reuse=%s attempts=%d',
           [BoolText(LObservedReuse), LAttemptCount]));
+
+    if LRequireNativeReuse then
+      Check('same-context reconnect eventually observes native reuse',
+        LNativeProbeSucceeded and LObservedNativeReuse,
+        Format('native_probe_succeeded=%s host=%s attempts=%d',
+          [BoolText(LNativeProbeSucceeded), AHost, LAttemptCount]));
   finally
     CleanupWinsock;
   end;

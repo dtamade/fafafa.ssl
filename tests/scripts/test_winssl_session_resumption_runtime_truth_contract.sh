@@ -89,6 +89,10 @@ require_match "$proof_file" \
   'WinSSL session-resumption proof program emits stable session-resume markers'
 
 require_match "$proof_file" \
+  'function TryQueryNativeSessionReuse\(const AConn: ISSLConnection;.*?ISSLNativeHandleAccess.*?GetNativeHandle.*?QueryContextAttributesW\(LCtxtHandle,\s*SECPKG_ATTR_SESSION_INFO,\s*@LSessionInfo\).*?SSL_SESSION_RECONNECT' \
+  'WinSSL session-resumption proof owns a dedicated native session-reuse probe'
+
+require_match "$proof_file" \
   'GetConnectionInfo' \
   'WinSSL session-resumption proof checks connection-info reuse truth'
 
@@ -99,6 +103,22 @@ require_match "$proof_file" \
 require_match "$proof_file" \
   'FAFAFA_WINSSL_REQUIRE_REUSE' \
   'WinSSL session-resumption proof supports a strict reuse-observed mode'
+
+require_match "$proof_file" \
+  'FAFAFA_WINSSL_REQUIRE_NATIVE_REUSE' \
+  'WinSSL session-resumption proof supports a strict native-reuse-observed mode'
+
+require_match "$proof_file" \
+  'native_probe label=initial_handshake' \
+  'WinSSL session-resumption proof emits native-probe evidence for the initial handshake'
+
+require_match "$proof_file" \
+  'native_probe label=same_context_attempt_%d' \
+  'WinSSL session-resumption proof emits native-probe evidence for resumed attempts'
+
+require_match "$proof_file" \
+  'native_observed_reuse=%s native_probe_succeeded=%s require_reuse=%s require_native_reuse=%s session_configured=%s' \
+  'WinSSL session-resumption summary separates public reuse truth from native probe truth'
 
 require_match "$checklist_file" \
   'test_winssl_session_resumption\.lpi' \
