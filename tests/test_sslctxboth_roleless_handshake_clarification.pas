@@ -54,6 +54,7 @@ var
   LName: string;
   LCtx: ISSLContext;
   LConn: ISSLConnection;
+  LDiag: ISSLDiagnostics;
   LStream: TMemoryStream;
   LState: TSSLHandshakeState;
   LHealth: TSSLHealthStatus;
@@ -82,7 +83,12 @@ begin
       Exit;
 
     LState := LConn.DoHandshake;
-    LHealth := LConn.GetHealthStatus;
+    CheckTrue(LName + ' dual-context stream connection exposes ISSLDiagnostics',
+      Supports(LConn, ISSLDiagnostics, LDiag),
+      'connection should expose diagnostics owner interface');
+    if not Supports(LConn, ISSLDiagnostics, LDiag) then
+      Exit;
+    LHealth := LDiag.GetHealthStatus;
 
     CheckTrue(LName + ' dual-context DoHandshake fails instead of guessing a role',
       LState = sslHsFailed,
@@ -102,6 +108,7 @@ procedure TestOpenSSLDualContextImplicitWriteMustFailFast;
 var
   LCtx: ISSLContext;
   LConn: ISSLConnection;
+  LDiag: ISSLDiagnostics;
   LStream: TMemoryStream;
   LBuffer: Byte;
   LWritten: Integer;
@@ -120,7 +127,12 @@ begin
     LConn := LCtx.CreateConnection(LStream);
     LBuffer := $42;
     LWritten := LConn.Write(LBuffer, SizeOf(LBuffer));
-    LHealth := LConn.GetHealthStatus;
+    CheckTrue('OpenSSL dual-context implicit write exposes ISSLDiagnostics',
+      Supports(LConn, ISSLDiagnostics, LDiag),
+      'connection should expose diagnostics owner interface');
+    if not Supports(LConn, ISSLDiagnostics, LDiag) then
+      Exit;
+    LHealth := LDiag.GetHealthStatus;
 
     CheckTrue('OpenSSL dual-context implicit write returns -1',
       LWritten = -1,
@@ -137,6 +149,7 @@ procedure TestOpenSSLDualContextImplicitReadMustFailFast;
 var
   LCtx: ISSLContext;
   LConn: ISSLConnection;
+  LDiag: ISSLDiagnostics;
   LStream: TMemoryStream;
   LBuffer: Byte;
   LRead: Integer;
@@ -155,7 +168,12 @@ begin
     LConn := LCtx.CreateConnection(LStream);
     LBuffer := 0;
     LRead := LConn.Read(LBuffer, SizeOf(LBuffer));
-    LHealth := LConn.GetHealthStatus;
+    CheckTrue('OpenSSL dual-context implicit read exposes ISSLDiagnostics',
+      Supports(LConn, ISSLDiagnostics, LDiag),
+      'connection should expose diagnostics owner interface');
+    if not Supports(LConn, ISSLDiagnostics, LDiag) then
+      Exit;
+    LHealth := LDiag.GetHealthStatus;
 
     CheckTrue('OpenSSL dual-context implicit read returns -1',
       LRead = -1,

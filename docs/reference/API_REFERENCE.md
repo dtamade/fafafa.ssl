@@ -808,6 +808,7 @@ end;
 ```pascal
 var
   LConn: ISSLConnection;
+  LDiag: ISSLDiagnostics;
   LHealth: TSSLHealthStatus;
   LServerName: string;
 begin
@@ -815,16 +816,16 @@ begin
   LConn := LContext.CreateConnection(MySocket);
   (LConn as ISSLClientConnection).SetServerName(LServerName);
 
-  if LConn.Connect then
+  if LConn.Connect and Supports(LConn, ISSLDiagnostics, LDiag) then
   begin
     // 快速健康检查
-    if LConn.IsHealthy then
+    if LDiag.IsHealthy then
       WriteLn('✓ 连接健康')
     else
       WriteLn('✗ 连接不健康');
 
     // 获取详细健康状态
-    LHealth := LConn.GetHealthStatus;
+    LHealth := LDiag.GetHealthStatus;
     WriteLn('健康状态详情:');
     WriteLn('  已连接: ', BoolToStr(LHealth.IsConnected, True));
     WriteLn('  握手完成: ', BoolToStr(LHealth.HandshakeComplete, True));
@@ -841,6 +842,7 @@ end;
 ```pascal
 var
   LConn: ISSLConnection;
+  LDiag: ISSLDiagnostics;
   LPerf: TSSLPerformanceMetrics;
   LServerName: string;
 begin
@@ -848,10 +850,10 @@ begin
   LConn := LContext.CreateConnection(MySocket);
   (LConn as ISSLClientConnection).SetServerName(LServerName);
 
-  if LConn.Connect then
+  if LConn.Connect and Supports(LConn, ISSLDiagnostics, LDiag) then
   begin
     // 获取性能指标
-    LPerf := LConn.GetPerformanceMetrics;
+    LPerf := LDiag.GetPerformanceMetrics;
 
     WriteLn('性能指标:');
     WriteLn('  握手时间: ', LPerf.HandshakeTime, ' ms');
@@ -874,6 +876,7 @@ end;
 ```pascal
 var
   LConn: ISSLConnection;
+  LDiagExt: ISSLDiagnostics;
   LDiag: TSSLDiagnosticInfo;
   I: Integer;
   LServerName: string;
@@ -882,10 +885,10 @@ begin
   LConn := LContext.CreateConnection(MySocket);
   (LConn as ISSLClientConnection).SetServerName(LServerName);
 
-  if LConn.Connect then
+  if LConn.Connect and Supports(LConn, ISSLDiagnostics, LDiagExt) then
   begin
     // 获取完整诊断信息
-    LDiag := LConn.GetDiagnosticInfo;
+    LDiag := LDiagExt.GetDiagnosticInfo;
 
     WriteLn('=== 完整诊断报告 ===');
 
@@ -992,9 +995,10 @@ begin
     // 检查活动连接健康状态
     for LConn in ActiveConnections do
     begin
-      if not LConn.IsHealthy then
+      if Supports(LConn, ISSLDiagnostics, LDiag) and
+         (not LDiag.IsHealthy) then
       begin
-        LHealth := LConn.GetHealthStatus;
+        LHealth := LDiag.GetHealthStatus;
         WriteLn('⚠ 不健康连接: 最后错误 ', GetErrorName(LHealth.LastError));
       end;
     end;
@@ -1183,6 +1187,7 @@ end;
 - 通过 `ISSLConnection.GetHealthStatus` 获取连接健康状态
 - 用于快速诊断连接问题和监控连接状态
 - `ConnectionAge` 从连接创建时开始计算
+- 对新代码，优先通过 `ISSLDiagnostics.GetHealthStatus` 获取该结构，而不是直接走核心 `ISSLConnection` mirror。
 
 #### TSSLPerformanceMetrics
 
@@ -1201,6 +1206,7 @@ end;
 - 通过 `ISSLConnection.GetPerformanceMetrics` 获取性能指标
 - 用于性能分析和优化
 - `HandshakeTime` 使用高精度计时器测量
+- 对新代码，优先通过 `ISSLDiagnostics.GetPerformanceMetrics` 获取该结构，而不是直接走核心 `ISSLConnection` mirror。
 
 #### TSSLErrorRecord
 
@@ -1233,6 +1239,7 @@ end;
 - 通过 `ISSLConnection.GetDiagnosticInfo` 获取完整诊断信息
 - 包含连接的所有监控和诊断数据
 - 用于故障排查和性能分析
+- 对新代码，优先通过 `ISSLDiagnostics.GetDiagnosticInfo` 获取该结构，而不是直接走核心 `ISSLConnection` mirror。
 
 ---
 

@@ -1285,6 +1285,27 @@
     - 当前批收口后，`GetSelectedALPNProtocol` route 的默认下一步应为：
       - 从 mirrors wording/compiler 治理线切回 interface-design completeness / implementation-completeness 主线
       - 不再重复做这条 getter 的 wording / deprecation 清扫
+51. `ISSLDiagnostics` active-guidance de-emphasis 已完成并应作为当前 optional-owner surface 的下一条普通路径收口保留：
+    - 新 plan：
+      - `docs/plans/2026-05-18-issldiagnostics-active-guidance-deemphasis.md`
+    - 当前已确认的 route truth：
+      - `docs/reference/API_REFERENCE.md`
+        的普通 diagnostics examples 现在统一优先走：
+        - `ISSLDiagnostics.IsHealthy`
+        - `ISSLDiagnostics.GetHealthStatus`
+        - `ISSLDiagnostics.GetPerformanceMetrics`
+        - `ISSLDiagnostics.GetDiagnosticInfo`
+      - `tests/test_sslctxboth_roleless_handshake_clarification.pas`
+        现在先验证 `Supports(LConn, ISSLDiagnostics, LDiag)`，再读取 diagnostics owner path
+      - WinSSL diagnostics runtime tests 继续保留为 backend-specific residual proof，不属于这批收口范围
+    - 当前 focused proof 已覆盖：
+      - `bash -n tests/scripts/test_issldiagnostics_active_guidance_contract.sh`
+      - `bash tests/scripts/test_issldiagnostics_active_guidance_contract.sh`
+      - `mkdir -p tmp/test_sslctxboth_roleless_handshake_clarification && fpc -B -Fu./src -Fu./tests -FUtmp/test_sslctxboth_roleless_handshake_clarification -FEtmp/test_sslctxboth_roleless_handshake_clarification -otmp/test_sslctxboth_roleless_handshake_clarification/test_sslctxboth_roleless_handshake_clarification tests/test_sslctxboth_roleless_handshake_clarification.pas && ./tmp/test_sslctxboth_roleless_handshake_clarification/test_sslctxboth_roleless_handshake_clarification`
+      - `git diff --check`
+    - 当前批收口后默认下一步应为：
+      - 继续盘点下一个 ordinary guidance 仍偏 core 的 optional-owner surface
+      - 或切回更大的 interface-design completeness 选择
 
 ## Verification Discipline
 

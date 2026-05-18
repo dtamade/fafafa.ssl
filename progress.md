@@ -4712,3 +4712,49 @@
   - result: PASS
   - summary:
     - current `GetSelectedALPNProtocol` compiler-deprecation batch has no whitespace or patch-format issues
+
+### ISSLDiagnostics Active Guidance De-emphasis
+
+- `rg -n "GetHealthStatus|IsHealthy|GetDiagnosticInfo|GetPerformanceMetrics|ISSLDiagnostics" docs/reference/API_REFERENCE.md tests/test_sslctxboth_roleless_handshake_clarification.pas tests/winssl/test_winssl_monitoring.pas tests/winssl/test_winssl_connection_edge_cases.pas docs/INTEGRATION_GUIDE.md`
+  - result: PASS
+  - summary:
+    - confirmed the ordinary diagnostics guidance drift lived mainly in `API_REFERENCE`
+    - confirmed the generic dual-context boundary test still used direct core `GetHealthStatus`
+    - confirmed WinSSL monitoring/edge-case files were backend-specific residual proof and should stay out of this batch
+
+- add `docs/plans/2026-05-18-issldiagnostics-active-guidance-deemphasis.md`
+  - purpose:
+    - define a bounded diagnostics batch that moves ordinary docs/tests onto `ISSLDiagnostics`
+    - keep scope off backend-specific runtime proofs and production implementation
+
+- add `tests/scripts/test_issldiagnostics_active_guidance_contract.sh`
+  - purpose:
+    - fail if ordinary diagnostics docs/tests reintroduce direct core `IsHealthy` / `GetHealthStatus` / `GetPerformanceMetrics` / `GetDiagnosticInfo`
+    - keep this owner-path guidance change cheap to verify
+
+- update:
+  - `docs/reference/API_REFERENCE.md`
+  - `tests/test_sslctxboth_roleless_handshake_clarification.pas`
+  - change:
+    - route ordinary diagnostics examples through `Supports(LConn, ISSLDiagnostics, LDiag)`
+    - route the generic dual-context health-status proof through `ISSLDiagnostics.GetHealthStatus`
+    - add explicit note lines that new code should prefer `ISSLDiagnostics` owner methods for the diagnostics records
+
+- `bash -n tests/scripts/test_issldiagnostics_active_guidance_contract.sh && bash tests/scripts/test_issldiagnostics_active_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - active docs/tests now prefer `ISSLDiagnostics` for diagnostics surfaces
+    - ordinary guidance no longer reintroduces direct core diagnostics getters
+
+- `mkdir -p tmp/test_sslctxboth_roleless_handshake_clarification && fpc -B -Fu./src -Fu./tests -FUtmp/test_sslctxboth_roleless_handshake_clarification -FEtmp/test_sslctxboth_roleless_handshake_clarification -otmp/test_sslctxboth_roleless_handshake_clarification/test_sslctxboth_roleless_handshake_clarification tests/test_sslctxboth_roleless_handshake_clarification.pas && ./tmp/test_sslctxboth_roleless_handshake_clarification/test_sslctxboth_roleless_handshake_clarification`
+  - result: PASS
+  - summary:
+    - focused generic dual-context suite compiled and ran successfully
+    - finished `30 passed, 0 failed, 0 skipped`
+    - FreePascal / OpenSSL / WolfSSL / MbedTLS all proved the boundary test can read health status through `ISSLDiagnostics`
+    - OpenSSL implicit read/write fail-fast proofs stayed green after the owner-path switch
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `ISSLDiagnostics active-guidance de-emphasis` batch has no whitespace or patch-format issues

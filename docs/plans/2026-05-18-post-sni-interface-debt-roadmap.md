@@ -666,6 +666,25 @@ Recommended first bounded batch:
   - 默认下一步不该再重复做这条 getter 的 wording/deprecation archaeology
   - 若继续沿同一组 mirrors 推进，应把注意力切到下一条 interface-design completeness / implementation-completeness 选择
 
+## Progress Since The `ISSLDiagnostics` Active Guidance De-emphasis Batch
+
+- 已交付：
+  - ordinary diagnostics guidance now prefers `ISSLDiagnostics`
+  - focused active-guidance guard:
+    - `tests/scripts/test_issldiagnostics_active_guidance_contract.sh`
+  - `docs/reference/API_REFERENCE.md` 的 diagnostics examples 已同步：
+    - 健康检查示例走 `ISSLDiagnostics.IsHealthy / GetHealthStatus`
+    - 性能示例走 `ISSLDiagnostics.GetPerformanceMetrics`
+    - 完整诊断示例走 `ISSLDiagnostics.GetDiagnosticInfo`
+  - generic dual-context boundary proof 已同步：
+    - `tests/test_sslctxboth_roleless_handshake_clarification.pas`
+      不再把 `LConn.GetHealthStatus` 当普通读取路径
+
+- 当前更准确的 next step：
+  - `ISSLDiagnostics` 的 cross-backend completion truth 已有，ordinary docs/tests 也已不再优先教 core getter
+  - 默认下一步不该再重复做 diagnostics active-guidance 清扫
+  - 若继续沿同一类 optional-owner surface 推进，应把注意力转向下一组普通 guidance 仍然偏 core 的接口，或切回更大的 interface-design completeness 选择
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

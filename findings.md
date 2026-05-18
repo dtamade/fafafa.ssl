@@ -2153,3 +2153,25 @@
   - `GetSelectedALPNProtocol` 的第一条真正 public slimming slice 已经落地
   - 到这一步，`ISSLConnectionInfo` 这 4 条 Stage-A mirrors 都已经完成 compiler-surface 收口
   - 因而下一步不该再继续做 mirror wording/deprecation archaeology，而应把主线切回 interface-design completeness / implementation-completeness 审查
+
+- 当这 4 条 mirror 的 compiler-surface 收口完以后，继续盘点 `ISSLConnection` 剩余的 optional-owner surfaces，最像“普通 guidance 还在教回 core”的下一组不是 session/证书验证，而是 diagnostics：
+  - `docs/reference/API_REFERENCE.md` 的健康检查 / 性能监控 / 完整诊断 / 告警示例仍直接使用：
+    - `LConn.IsHealthy`
+    - `LConn.GetHealthStatus`
+    - `LConn.GetPerformanceMetrics`
+    - `LConn.GetDiagnosticInfo`
+  - `tests/test_sslctxboth_roleless_handshake_clarification.pas` 也仍把 `LConn.GetHealthStatus` 当普通读取路径
+  - 相比之下，session / certificate-verification 线已经有更多 backend-specific runtime 依赖，不适合作为这一步的最小收口批次
+
+- 这条 diagnostics 线的好处是 owner truth 已经先有了：
+  - `tests/contract/test_backend_contract.pas` 的 `Contract 18: Diagnostics interface alignment`
+    已经证明：
+    - `Supports(LConn, ISSLDiagnostics, ...)` 对当前可用 backend 成立
+    - `GetHealthStatus` / `GetPerformanceMetrics` / `GetDiagnosticInfo` 的 owner path 已有 cross-backend 自洽性证据
+  - 因而当前更值钱的不是再补实现，而是把 ordinary docs/tests 也切到同一条 owner path
+
+- 当前修完后的更准确结论是：
+  - ordinary diagnostics guidance 现在已经优先走 `ISSLDiagnostics`
+  - `sslCtxBoth` 这份 generic dual-context boundary test 也不再把 `GetHealthStatus` 当默认 core 读取路径
+  - 所有当前本机可用 backend 的该测试都已证明 `ISSLDiagnostics` owner interface 可直接用于这条边界
+  - 因而 `ISSLDiagnostics` 这组能力面暂时不再是“普通路径仍在教回 core”的残余点
