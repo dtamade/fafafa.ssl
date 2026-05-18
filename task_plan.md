@@ -990,6 +990,7 @@
       - `bash tests/scripts/test_winssl_connectioninfo_cipher_truth_contract.sh`
       - `tests/test_connection_builder_hostname_precedence.pas`
       - `tests/test_openssl_connection_info_cipher_contract.pas`
+      - GitHub Actions `Wave B B2 Manual Gate (Template)` run `26019296095`
       - `git diff --check`
     - 当前批收口后，`GetConnectionInfo` implementation-completeness 主线更准确地收缩到：
       - `MacSize`

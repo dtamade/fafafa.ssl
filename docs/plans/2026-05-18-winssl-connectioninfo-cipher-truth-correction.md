@@ -76,6 +76,18 @@ git diff --check
   - result:
     - `14 passed, 0 failed`
 
+- GitHub workflow proof:
+  - `Wave B B2 Manual Gate (Template)`
+  - run:
+    - `26019296095`
+    - `https://github.com/dtamade/fafafa.ssl/actions/runs/26019296095`
+  - result:
+    - overall workflow: `success`
+    - `windows-gate`: `success`
+    - `Run quick WinSSL smoke`: `success`
+    - `Run Windows Wave B gate`: `success`
+    - `Run broader WinSSL runtime suite`: `success`
+
 ## Expected Outcome
 
 - WinSSL `CipherSuiteId` 不再建立在错误的算法 ID 假设上

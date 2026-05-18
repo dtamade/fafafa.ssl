@@ -3852,6 +3852,21 @@
     - authenticated account has `workflow` scope
     - Windows gate can be dispatched from this environment after the batch lands
 
+- `gh workflow run wave-b-b2-manual.yml --ref master -f run_id=\"winssl_cipher_truth_20260518_152020\" -f strict_closure=false`
+  - result: PASS
+  - summary:
+    - dispatched GitHub workflow `Wave B B2 Manual Gate (Template)` against pushed commit `dcde2ff`
+
+- `gh run watch 26019296095`
+  - result: PASS
+  - summary:
+    - workflow `https://github.com/dtamade/fafafa.ssl/actions/runs/26019296095` finished `success`
+    - `windows-gate` finished `success`
+    - `Run quick WinSSL smoke` finished `success`
+    - `Run Windows Wave B gate` finished `success`
+    - `Run broader WinSSL runtime suite` finished `success`
+    - `linux-gate`, `macos-gate`, and final `summary` job also finished `success`
+
 - `git diff --check`
   - result: PASS
   - summary:
