@@ -13238,3 +13238,89 @@
   - result: PASS
   - summary:
     - current control-query boundary batch has no whitespace or patch-format issues
+
+- `git push origin master`
+  - result: PASS
+  - summary:
+    - pushed control-query boundary batch as commit `45d968d`
+
+- `gh workflow run "Wave B B2 Manual Gate (Template)" --ref master -f run_id=winssl_native_probe_control_query_20260519_234404 -f strict_closure=false -f winssl_enable_native_probe=true`
+  - result: PASS
+  - summary:
+    - launched fresh Windows/manual lane against commit `45d968d`
+
+- `gh run watch 26108237632 --exit-status`
+  - result: FAIL
+  - summary:
+    - linux gate passed
+    - windows quick smoke passed
+    - windows Wave B gate passed
+    - broader WinSSL runtime suite still failed
+    - macOS gate also failed independently
+
+- `gh run download 26108237632 --dir tmp/gh-run-26108237632`
+  - result: PASS
+  - summary:
+    - downloaded fresh artifacts for the control-query verification run
+
+- `rg -n "session_resumption|query_resolver|query_api|before_control_query|after_control_query|control_query_failed|native_probe_worker exit_code|before_query_context_attributes|after_query_context_attributes|query_failed|native_probe_succeeded|test_result index=5|suite_end" tmp/gh-run-26108237632/wave-b-windows-winssl_native_probe_control_query_20260519_234404/winssl_runtime_suite_winssl_native_probe_control_query_20260519_234404.log`
+  - result: PASS
+  - summary:
+    - fresh runtime transcript proved:
+      - control query reached `after_control_query status=0x0`
+      - resolver still reached `module=sspicli.dll symbol=QueryContextAttributesExW resolved=true`
+      - crash still remained after `query_context_attributes_exw`
+    - handle-path suspicion was eliminated; the remaining issue is now attribute-specific to `SECPKG_ATTR_SESSION_INFO`
+
+- add `docs/plans/2026-05-19-winssl-native-probe-worker-evidence-only.md`
+  - change:
+    - recorded the next bounded batch that downgrades the known investigatory worker crash to evidence-only by default
+
+- add `tests/scripts/test_winssl_native_probe_worker_evidence_only_contract.sh`
+  - change:
+    - added a focused shell contract that guards strict-vs-evidence-only worker-exit semantics
+
+- update `tests/winssl/test_winssl_session_resumption.pas`
+  - change:
+    - downgraded parent-side native-probe worker nonzero exit to evidence-only by default
+    - preserved strict worker-exit failure when `FAFAFA_WINSSL_REQUIRE_NATIVE_REUSE=1`
+
+- `bash -n tests/scripts/test_winssl_native_probe_worker_evidence_only_contract.sh && bash tests/scripts/test_winssl_native_probe_worker_evidence_only_contract.sh`
+  - result: PASS
+  - summary:
+    - strict-vs-evidence-only worker-exit semantics are present in source
+
+- `bash tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - broader runtime-truth contract remained green after the evidence-only worker batch
+
+- `bash tests/scripts/test_winssl_native_probe_control_query_contract.sh`
+  - result: PASS
+  - summary:
+    - control-query boundary remained green after changing parent-side worker-exit semantics
+
+- `mkdir -p tmp/winssl_native_probe_worker_evidence_only_win64 && fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/winssl_native_probe_worker_evidence_only_win64 -FEtmp/winssl_native_probe_worker_evidence_only_win64 -otmp/winssl_native_probe_worker_evidence_only_win64/test_winssl_session_resumption.exe tests/winssl/test_winssl_session_resumption.pas`
+  - result: PASS
+  - summary:
+    - Win64 focused cross-target compile accepted the evidence-only worker changes
+
+- `bash tests/scripts/test_winssl_native_probe_safe_query_contract.sh`
+  - result: PASS
+  - summary:
+    - safe-query proof remained green after downgrading worker nonzero exit to evidence-only
+
+- `bash tests/scripts/test_winssl_native_probe_resolver_diagnostics_contract.sh`
+  - result: PASS
+  - summary:
+    - resolver-diagnostics proof remained green after the evidence-only worker batch
+
+- `bash tests/scripts/test_winssl_native_probe_handle_metadata_contract.sh`
+  - result: PASS
+  - summary:
+    - handle-metadata proof remained green after the evidence-only worker batch
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current evidence-only worker batch has no whitespace or patch-format issues

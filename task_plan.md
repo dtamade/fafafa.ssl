@@ -4899,3 +4899,39 @@
        - 或返回 `control_query_failed`
      - 若 control query 先过，再继续看 session-info probe 是否仍停在：
        - `stage=query_api api=query_context_attributes_exw`
+104. `WinSSL native probe worker evidence-only` 现在应作为这条 attribute-specific crash 已经被充分证明后的默认收口批次：
+   - 新 plan：
+     - `docs/plans/2026-05-19-winssl-native-probe-worker-evidence-only.md`
+   - 当前 fresh runtime evidence：
+     - run `26108237632`
+       已明确：
+       - `before_control_query`
+       - `after_control_query status=0x0`
+       - `query_resolver module=sspicli.dll symbol=QueryContextAttributesExW resolved=true`
+       - 最后仍停在：
+         - `stage=query_api api=query_context_attributes_exw`
+         - `native_probe_worker exit_code=-1073741819`
+   - 当前语义判断：
+     - handle path 已被 control query 证明可用
+     - 崩溃点已收窄为：
+       - `SECPKG_ATTR_SESSION_INFO` 的 attribute-specific provider/runtime boundary
+   - 当前最小正确修法：
+     - 默认只把 worker 非零退出记为 evidence
+     - 仅 `FAFAFA_WINSSL_REQUIRE_NATIVE_REUSE=1` 时继续严格失败
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_winssl_native_probe_worker_evidence_only_contract.sh`
+     - `bash tests/scripts/test_winssl_native_probe_worker_evidence_only_contract.sh`
+     - `bash tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+     - `bash tests/scripts/test_winssl_native_probe_control_query_contract.sh`
+     - `bash tests/scripts/test_winssl_native_probe_safe_query_contract.sh`
+     - `bash tests/scripts/test_winssl_native_probe_resolver_diagnostics_contract.sh`
+     - `bash tests/scripts/test_winssl_native_probe_handle_metadata_contract.sh`
+     - `mkdir -p tmp/winssl_native_probe_worker_evidence_only_win64 && fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/winssl_native_probe_worker_evidence_only_win64 -FEtmp/winssl_native_probe_worker_evidence_only_win64 -otmp/winssl_native_probe_worker_evidence_only_win64/test_winssl_session_resumption.exe tests/winssl/test_winssl_session_resumption.pas`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 推送后重新发起 native-probe Windows manual lane
+     - 验证在默认 `require_native_reuse=false` 下：
+       - Windows quick smoke 仍 PASS
+       - Windows Wave B gate 仍 PASS
+       - broader WinSSL runtime suite 由 FAIL 转为 PASS
+       - native probe marker 仍完整保留在 transcript 中

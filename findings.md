@@ -6332,3 +6332,19 @@
   - 这样下一轮 Windows run 才能把问题继续分成：
     - handle path / lifetime
     - 或 attribute-specific provider/runtime boundary
+
+- run `26108237632` 已经把这个分叉彻底收口了：
+  - 在同一个 extracted native handle 上：
+    - `SECPKG_ATTR_CONNECTION_INFO` control query 成功
+    - `QueryContextAttributesExW(..., SECPKG_ATTR_SESSION_INFO, ...)` 仍在调用后崩溃
+  - 这说明：
+    - handle path 本身不是当前主问题
+    - 当前 crash 已经是 `SECPKG_ATTR_SESSION_INFO` 的 attribute-specific provider/runtime boundary
+
+- 基于这条新证据，native probe worker 继续默认 hard-fail broader suite 的价值已经很低：
+  - public/canonical truth 本来就没有依赖这条 probe
+  - control query 已经证明 extracted handle path 正常
+  - 继续让 broader suite 因 investigatory probe 非零退出而红，会持续放大一个已知 runtime boundary，而不是揭示新的 public-contract 缺口
+  - 更合理的默认收口应该是：
+    - evidence-only by default
+    - strict only when `FAFAFA_WINSSL_REQUIRE_NATIVE_REUSE=1`

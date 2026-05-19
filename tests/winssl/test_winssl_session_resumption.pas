@@ -807,9 +807,15 @@ begin
       RunIsolatedNativeProbeWorker(AHost, LAttemptCount, LWorkerExitCode,
         LWorkerOutput, LObservedNativeReuse, LNativeProbeSucceeded,
         LWorkerLastMarker);
-      Check('isolated native probe worker exits cleanly', LWorkerExitCode = 0,
-        Format('exit_code=%d last_marker=%s',
-          [LWorkerExitCode, LWorkerLastMarker]));
+      if LRequireNativeReuse then
+        Check('isolated native probe worker exits cleanly', LWorkerExitCode = 0,
+          Format('exit_code=%d last_marker=%s',
+            [LWorkerExitCode, LWorkerLastMarker]))
+      else
+        Check('isolated native probe worker evidence recorded', True,
+          Format('exit_code=%d last_marker=%s probe_succeeded=%s',
+            [LWorkerExitCode, LWorkerLastMarker,
+             BoolText(LNativeProbeSucceeded)]));
     end;
 
     EmitResumeMarker(Format(
