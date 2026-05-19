@@ -5662,3 +5662,51 @@
     - `DER` / `PKCS#8` 当前都不发布
   - docs / guide 示例：
     - 也不再继续暗示 `client.key` / `server.key` 是 WinSSL 当前推荐路径
+
+- 顺着 backend-specific active docs 继续往上抬一层后，又确认了一类更容易反复误导开发路线的漂移：
+  - 有些高入口参考页已经不只是“某个 capability 讲宽”
+  - 而是整个页面仍停留在更早阶段的 snapshot 心智
+  - `docs/reference/API_INVENTORY.md` 就是这一类代表：
+    - 仍只列 `OpenSSL` / `WinSSL` context/connection family
+    - 仍把 shipped `OCSP` compatibility methods 写成“待实现”
+    - 仍把 `PKCS#11` / `OCSP Stapling` 写成 next-step backlog
+
+- 这类页面的风险比普通文档漂移更高：
+  - 它们往往是“重新进入项目时最先打开的入口页”
+  - 一旦高入口页先把人带回旧世界
+  - 后续就算 source truth 已经收口，审查和讨论也会一直从错误前提出发
+
+- 这次因此没有去补更多 runtime，而是先把高入口真相源重新定型：
+  - `API_INVENTORY.md`
+    - 不再承载 phase snapshot / 测试统计 / 性能数字 / next-step 待办
+    - 只保留 current public-surface index
+  - 这个方向的价值在于：
+    - 以后继续审接口设计时，入口页先给出的是 current surface
+    - 而不是一份已经失效的历史阶段报告
+
+- 顺着这条线继续看 `PKCS11` 专题页，又确认了另一层同构 drift：
+  - builder 示例虽然已经较新
+  - 但高层叙事还没有显式强调：
+    - 当前 published PKCS#11 path 只在 `OpenSSL` backend
+    - capability truth 是 runtime-aware，而不是“仓库里有代码就算支持”
+    - 其它 backend 当前 `SupportsPKCS11=False`
+
+- 这类问题之所以要单独收，是因为它会直接模糊两个边界：
+  - `Provider / ENGINE` 是 `OpenSSL` runtime backend 的内部选择
+  - 它不等于“所有 SSL backend 都有 PKCS#11 public capability”
+  - 如果不写清，后面再看 `WinSSL` / `FreePascal` / `MbedTLS` / `WolfSSL` 时，很容易误以为只是“尚未接线”，而不是“当前根本没有 published path”
+
+- 这批收口后的稳定结论是：
+  - 高入口参考页应该优先写 current source/runtime truth，而不是保留历史阶段叙事
+  - `PKCS11` 当前的 public truth 是：
+    - `OpenSSL` backend 有 shipped path
+    - `SupportsPKCS11` 跟随 `TPKCS11BackendFactory.IsBackendAvailable(btAuto)`
+    - 非 `OpenSSL` backend 当前不发布 PKCS#11 capability
+
+- 因而当前路线图又更清晰了一层：
+  - 后续如果继续做“接口设计与各 backend 实现”的全面验证
+  - 下一优先级不该回头重扫已完成 capability 行
+  - 而应继续审其它高入口 guide/reference 页面，看看是否还残留：
+    - 统一等价接口叙事
+    - 历史 phase snapshot 叙事
+    - 或 backend-specific truth 被抹平的入口示例

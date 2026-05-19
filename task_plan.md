@@ -4067,3 +4067,46 @@
      - 继续审查：
        - 其它 backend 专属 active guide/reference 是否也残留同类“旧方法名 + 过宽 capability 叙事”
        - 以及还有哪些高入口文档仍把 backend-specific truth 写成“统一等价接口”
+87. `API inventory / PKCS11 high-entry doc truth` 已完成 focused 收口，并应作为当前高入口参考页的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-api-inventory-pkcs11-high-entry-doc-truth.md`
+   - 当前已确认的真实 drift：
+     - `docs/reference/API_INVENTORY.md`
+       - 仍停在 2026-01-31 的 phase snapshot 叙事
+       - 仍只列 `OpenSSL` / `WinSSL` context/connection family
+       - 仍把 `GetOCSPStaplingEnabled` / `GetOCSPResponse` / `IsOCSPResponseVerified` / `GetOCSPResponseStatus` 写成“待实现”
+       - 仍把 `PKCS#11` / `OCSP Stapling` 写成“下一步计划”
+     - `docs/guides/PKCS11_USER_GUIDE.md`
+       - 虽然 builder 示例已更新
+       - 但高层叙事还没有把当前 published path 明确锚到 `OpenSSL` backend
+       - 也没有把 `SupportsPKCS11` 的 runtime-aware truth 作为主叙事
+     - `docs/reference/PKCS11_ARCHITECTURE.md`
+       - 仍缺少“其它 backend 当前 `SupportsPKCS11=False`”的显式边界
+       - `TOpenSSLContext.LoadPrivateKeyFromPKCS11(...)` 示例签名也还残留旧形态
+   - 当前最小正确修法已落地：
+     - 不改生产源码
+     - 只把高入口参考页重新锚回当前 source/runtime truth：
+       - `API_INVENTORY.md`
+         - 改成 current public-surface index
+         - 去掉历史 phase snapshot / 测试统计 / 性能数字 / next-step 待办
+         - 明确多 backend context / connection / certificate / store / session family
+         - 明确 OCSP compatibility methods 已 shipped，owner truth 在 `ISSLOCSPStapling`
+       - `PKCS11_USER_GUIDE.md`
+         - 明确当前 published PKCS#11 private-key path 只在 `OpenSSL` backend 暴露
+         - 明确 capability truth 跟随 `TPKCS11BackendFactory.IsBackendAvailable(btAuto)`
+         - 明确其它 backend 当前不发布 `SupportsPKCS11`
+       - `PKCS11_ARCHITECTURE.md`
+         - 明确当前 published path = OpenSSL backend integration
+         - 修正 `LoadPrivateKeyFromPKCS11(const AURI: string; const APIN: string)` 签名示例
+         - 补齐 runtime-aware capability / non-OpenSSL boundary
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_api_inventory_pkcs11_high_entry_truth_contract.sh`
+     - `bash tests/scripts/test_api_inventory_pkcs11_high_entry_truth_contract.sh`
+     - `bash tests/scripts/test_pkcs11_docs_builder_guidance_contract.sh`
+     - `npx prettier --write docs/reference/API_INVENTORY.md docs/guides/PKCS11_USER_GUIDE.md docs/reference/PKCS11_ARCHITECTURE.md`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 不再把 `API_INVENTORY` 或 `PKCS11` 专题页当成历史 phase snapshot
+     - 继续审查：
+       - 其它高入口 reference / guide 页面是否仍把 backend-specific truth 写成统一等价接口
+       - 以及还有哪些入口页仍保留“阶段报告式”快照内容而不是 current source truth

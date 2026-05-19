@@ -11724,3 +11724,75 @@
   - result: PASS
   - summary:
     - current WinSSL private-key-format batch has no whitespace or patch-format issues
+
+### API Inventory / PKCS11 High-Entry Doc Truth
+
+- `rg -n "LoadCertificateFromFile|LoadPrivateKeyFromFile|LoadCAFromFile|SetHostname|Connect\\(host, port\\)|ReadAll|GetCipherSuite|GetLastError: string|完全相同的接口|统一等价接口|SupportsPKCS12|SupportsPasswordProtectedKeys|SupportsCallbacks|SupportsFIPSMode|0-RTT|证书固定|自定义 I/O|PKCS#11|TPM" docs/guides docs/reference`
+  - result: PASS
+  - summary:
+    - static sweep showed the next high-value lane was no longer source capability booleans
+    - the highest-risk remaining drift had moved into high-entry docs, especially:
+      - `docs/reference/API_INVENTORY.md`
+      - `docs/guides/PKCS11_USER_GUIDE.md`
+      - `docs/reference/PKCS11_ARCHITECTURE.md`
+
+- `rg -n "TOpenSSLContext|TWinSSLContext|TMbedTLSContext|TWolfSSLContext|TFreePascalContext|GetOCSPStaplingEnabled|LoadPrivateKeyFromPKCS11|SupportsPKCS11|SupportsOCSPStapling|SupportsCertificateTransparency" src docs/reference/API_INVENTORY.md`
+  - result: PASS
+  - summary:
+    - confirmed `API_INVENTORY.md` had fallen far behind current implementation truth:
+      - missing `FreePascal` / `MbedTLS` / `WolfSSL` context and connection families
+      - still claiming shipped OCSP compatibility methods were "待实现"
+      - still framing `PKCS#11` as a future completion item
+
+- add `docs/plans/2026-05-19-api-inventory-pkcs11-high-entry-doc-truth.md`
+  - change:
+    - recorded the bounded docs-only plan for retightening high-entry inventory and PKCS#11 truth
+
+- add `tests/scripts/test_api_inventory_pkcs11_high_entry_truth_contract.sh`
+  - change:
+    - added a focused shell contract that guards:
+      - `API_INVENTORY.md` current-surface index truth
+      - shipped OCSP compatibility method truth
+      - OpenSSL-only PKCS#11 published-path truth
+      - runtime-aware `SupportsPKCS11` guidance
+      - non-OpenSSL backend `SupportsPKCS11=False` boundary
+      - corrected `LoadPrivateKeyFromPKCS11` signature in the PKCS#11 architecture doc
+
+- update docs:
+  - `docs/reference/API_INVENTORY.md`
+  - `docs/guides/PKCS11_USER_GUIDE.md`
+  - `docs/reference/PKCS11_ARCHITECTURE.md`
+  - change:
+    - rewrote `API_INVENTORY.md` into a current public-surface index
+    - removed stale phase-snapshot / test-stat / performance / next-step backlog sections from the inventory page
+    - added OpenSSL-only PKCS#11 published-path guidance
+    - added runtime-aware Provider / ENGINE readiness wording
+    - added explicit non-OpenSSL backend `SupportsPKCS11=False` boundary
+    - fixed the PKCS#11 architecture doc's stale `LoadPrivateKeyFromPKCS11(...)` signature example
+
+- `bash -n tests/scripts/test_api_inventory_pkcs11_high_entry_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new high-entry docs contract syntax is valid
+
+- `bash tests/scripts/test_api_inventory_pkcs11_high_entry_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed a wording mismatch in the new Provider / ENGINE readiness assertion
+    - GREEN after tightening the contract to the actual guide wording:
+      - `API_INVENTORY` and PKCS#11 high-entry docs now match current source truth
+
+- `bash tests/scripts/test_pkcs11_docs_builder_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - the earlier builder/runtime PKCS#11 doc contract remained green after adding runtime-aware boundary guidance
+
+- `npx prettier --write docs/reference/API_INVENTORY.md docs/guides/PKCS11_USER_GUIDE.md docs/reference/PKCS11_ARCHITECTURE.md`
+  - result: PASS
+  - summary:
+    - targeted doc files are formatted and stable
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current API inventory / PKCS#11 high-entry docs batch has no whitespace or patch-format issues

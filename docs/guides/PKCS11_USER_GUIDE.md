@@ -5,15 +5,23 @@
 
 本指南介绍如何在 fafafa.ssl 中使用 PKCS#11 硬件安全模块 (HSM)。
 
+当前边界先说清楚：
+
+- 当前 published PKCS#11 private-key path 只在 `OpenSSL` backend 暴露。
+- 当前 capability truth 跟随 `TPKCS11BackendFactory.IsBackendAvailable(btAuto)`。
+- 其它 backend 当前都不发布 `SupportsPKCS11` capability。
+
 ---
 
 ## 概述
 
-PKCS#11 是访问加密令牌（如智能卡、HSM）的标准 API。fafafa.ssl 支持：
+PKCS#11 是访问加密令牌（如智能卡、HSM）的标准 API。fafafa.ssl 当前通过 `OpenSSL` backend 的 published PKCS#11 path 支持：
 
 - **SoftHSM2** - 软件模拟的 HSM（用于开发和测试）
 - **硬件 HSM** - 各种 PKCS#11 兼容设备
 - **智能卡** - 支持 PKCS#11 的智能卡
+
+如果当前 OpenSSL runtime 既没有可用 Provider path，也没有可用 ENGINE path，`SupportsPKCS11` 会降为 `False`，builder / auto-backend selection 也不会把它继续发布成可用 capability。
 
 ---
 
@@ -193,14 +201,20 @@ end;
 
 ## 后端选择
 
-fafafa.ssl 提供两种 PKCS#11 后端：
+fafafa.ssl 当前在 `OpenSSL` backend 下提供两种 PKCS#11 runtime backend：
 
 | 后端         | OpenSSL 版本 | 说明                                |
 | ------------ | ------------ | ----------------------------------- |
 | **Provider** | 3.0+         | 推荐，使用 OpenSSL 3.x provider API |
 | **ENGINE**   | 1.1.1+       | 兼容模式，使用 ENGINE API           |
 
-系统会自动选择最佳后端。
+系统会自动选择当前可用的最佳 OpenSSL runtime backend。
+
+补充边界：
+
+- `SupportsPKCS11=True` 不再代表“仓库里有 PKCS#11 代码就算支持”
+- 它只代表当前 runtime 至少有一条可工作的 Provider / ENGINE path
+- `WinSSL` / `FreePascal` / `MbedTLS` / `WolfSSL` 当前都不发布 `SupportsPKCS11` capability
 
 ---
 

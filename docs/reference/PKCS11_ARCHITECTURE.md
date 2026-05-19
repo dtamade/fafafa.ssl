@@ -2,7 +2,9 @@
 
 ## Overview
 
-This document describes the architecture of the PKCS#11 integration in the fafafa.ssl library. The implementation provides seamless support for hardware security modules (HSMs) and smart cards through the PKCS#11 standard interface.
+This document describes the architecture of the PKCS#11 integration in the fafafa.ssl library.
+
+The current published PKCS#11 context path is the OpenSSL backend integration. It exposes a shipped PKCS#11 private-key loading path, while other SSL backends currently publish `SupportsPKCS11=False`.
 
 ## Architecture Layers
 
@@ -248,9 +250,7 @@ TOpenSSLContext integration:
 
 ```pascal
 TOpenSSLContext = class(TInterfacedObject, ISSLContext)
-  procedure LoadPrivateKeyFromPKCS11(const AURI: string;
-                                     const APIN: string = '';
-                                     APINMethod: TPKCS11PINMethod = pmNone);
+  procedure LoadPrivateKeyFromPKCS11(const AURI: string; const APIN: string);
 end;
 ```
 
@@ -292,13 +292,15 @@ Context := TSSLContextBuilder.Create
   - `pmFile`
 - Builder callers can switch source modes with `WithPKCS11PINMethod(...)`
 - `pmCallback` and `pmInteractive` remain lower-level `TPKCS11Config` / backend integrations, not builder runtime paths
+- `SupportsPKCS11` follows `TPKCS11BackendFactory.IsBackendAvailable(btAuto)`
+- Other SSL backends currently publish `SupportsPKCS11=False`.
 
 ## Data Flow
 
 ### Private Key Loading Flow
 
 ```
-1. Application calls LoadPrivateKeyFromPKCS11
+1. Application calls the OpenSSL PKCS#11 path (`LoadPrivateKeyFromPKCS11` or builder PKCS#11 configuration)
    ↓
 2. URI Parser validates and parses PKCS#11 URI
    ↓
@@ -335,7 +337,7 @@ Context := TSSLContextBuilder.Create
 
 ### 1. Abstraction
 
-- **Backend Independence**: Application code doesn't need to know about Provider vs ENGINE
+- **OpenSSL Runtime Backend Independence**: Application code doesn't need to know about Provider vs ENGINE
 - **URI-based Configuration**: Standard RFC 7512 URIs for portability
 - **Interface-based Design**: Easy to add new backends
 
