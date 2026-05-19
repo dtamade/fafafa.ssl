@@ -106,8 +106,8 @@ Ctx := TSSLContextBuilder.Create
 | ALPN | ✅ 支持 | Windows 8.1+ |
 | 重协商 | ✅ 支持 | 安全重协商 |
 | 客户端证书 | ✅ 支持 | 双向 TLS |
-| 智能卡 | ✅ 支持 | 原生支持 |
-| TPM | ✅ 支持 | 硬件密钥 |
+| 智能卡 / PKCS#11 | ❌ 当前 capability 不发布 | Windows 平台底层可接触硬件密钥，但 fafafa.ssl 当前 WinSSL backend 没有 shipped PKCS#11 URI / smart-card 私钥加载 surface |
+| TPM | ❌ 当前 capability 不发布 | Schannel/CNG 的平台潜在能力不等于 fafafa.ssl 已发布 TPM loading/runtime contract |
 
 ## 与 OpenSSL 对比
 
@@ -240,7 +240,7 @@ end.
 1. **零依赖**: 无需安装额外 DLL
 2. **系统集成**: 自动使用 Windows 证书存储
 3. **自动更新**: 通过 Windows Update 获取安全更新
-4. **硬件支持**: 原生支持智能卡和 TPM
+4. **平台生态集成**: 与 Schannel / 系统证书存储 / 组策略配置保持一致
 5. **企业功能**: 支持组策略配置
 
 ## 限制与注意事项

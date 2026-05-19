@@ -2795,3 +2795,36 @@
    - 当前批收口后默认下一步应为：
      - 继续找下一条“低层 binding readiness 被误抬成 public capability truth”的 backend drift
      - 不再把 OpenSSL CT 这条线按“默认 capability 看起来没问题所以无需处理”重新拉起
+69. `hardware-key capability truth` 已完成 focused 收口，并应作为当前 selector/capability 审查的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-hardware-key-capability-truth-tightening.md`
+   - 当前已确认的 route truth：
+     - `src/fafafa.ssl.openssl.context.pas`
+       - 已存在 shipped `LoadPrivateKeyFromPKCS11(...)` 路径
+       - `TPKCS11BackendFactory.CreateBackend(btAuto)` 仍是当前真实 PKCS#11 loader bridge
+     - `src/fafafa.ssl.openssl.backed.pas`
+       - 之前把 `SupportsTPM` 直接写成 `True`
+       - 但当前仓库并没有 shipped TPM public/runtime path
+     - `src/fafafa.ssl.winssl.lib.pas`
+       - 之前把 `SupportsPKCS11` / `SupportsTPM` 都直接写成 `True`
+       - 但当前 WinSSL backend 只有系统证书存储 / PFX / DER 等已发布 surface，没有 shipped PKCS#11 URI / TPM loading/runtime path
+     - `src/fafafa.ssl.backend.selector.pas`
+       - 会直接消费 `SupportsPKCS11` / `SupportsTPM` 做 required-match 与 platform-score 判断
+       - 所以前述 capability 假阳性不是“文档味道”，而是会把 auto backend selection 带偏的真实实现问题
+     - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+       - 之前还把“智能卡 / TPM”写成已支持
+   - 当前最小正确修法已落地：
+     - 保留 OpenSSL 已 shipped 的 PKCS#11 capability truth
+     - 只把 OpenSSL `SupportsTPM` 收紧回 `False`
+     - 只把 WinSSL `SupportsPKCS11` / `SupportsTPM` 收紧回 `False`
+     - 同步把 WinSSL active capability doc 改成“当前 capability 不发布”叙事
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_hardware_key_capability_truth_contract.sh`
+     - `bash tests/scripts/test_hardware_key_capability_truth_contract.sh`
+     - `mkdir -p tmp/test_openssl_features_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_openssl_features_units -FEtmp/test_openssl_features_units -otmp/test_openssl_features_units/test_openssl_features tests/openssl/test_openssl_features.pas && ./tmp/test_openssl_features_units/test_openssl_features`
+     - `mkdir -p tmp/test_auto_backend_tpm_truth_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_auto_backend_tpm_truth_units -FEtmp/test_auto_backend_tpm_truth_units -otmp/test_auto_backend_tpm_truth_units/test_auto_backend_tpm_truth_contract tests/test_auto_backend_tpm_capability_truth_contract.pas && ./tmp/test_auto_backend_tpm_truth_units/test_auto_backend_tpm_truth_contract`
+     - `python3 scripts/compile_all_modules.py`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 继续找下一条“平台潜在能力 / 低层 helper 可用性被误抬成 public capability truth”的 backend drift
+     - 优先复审 `OpenSSL SupportsPKCS11` 是否还需要更细的 runtime-readiness gate，而不是重开已关闭的 TPM / WinSSL hardware-key 假阳性路线

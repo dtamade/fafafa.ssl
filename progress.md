@@ -8965,3 +8965,87 @@
   - summary:
     - first caught trailing whitespace in the new CT capability note
     - rerun passed after cleanup
+
+### Hardware-Key Capability Truth Tightening
+
+- add `docs/plans/2026-05-19-hardware-key-capability-truth-tightening.md`
+  - purpose:
+    - record the bounded batch that tightens `PKCS11/TPM` capability truth back to shipped public/runtime surface
+
+- add `tests/scripts/test_hardware_key_capability_truth_contract.sh`
+  - change:
+    - lock that:
+      - OpenSSL still has a shipped PKCS#11 loader path
+      - OpenSSL no longer publishes TPM capability
+      - WinSSL no longer publishes PKCS#11 / TPM capability
+      - active WinSSL capability docs no longer market smart-card / TPM support as current backend capability truth
+
+- add `tests/test_auto_backend_tpm_capability_truth_contract.pas`
+  - change:
+    - prove the downstream selector consequence:
+      - when `RequireTPM` is requested
+      - auto backend selection must fail with `no suitable backend`
+      - instead of being satisfied by a fake capability-positive backend
+
+- update `tests/openssl/test_openssl_features.pas`
+  - change:
+    - add `TestTPMPublicCapabilityTruthContract`
+    - prove OpenSSL must not publish `SupportsTPM` without a shipped TPM public/runtime path
+
+- `bash -n tests/scripts/test_hardware_key_capability_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new static source/doc truth contract syntax is valid
+
+- `bash tests/scripts/test_hardware_key_capability_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - OpenSSL still advertised `SupportsTPM`
+      - WinSSL source/doc still advertised hardware-key capability as published truth
+    - GREEN after fix:
+      - static source/doc truth for OpenSSL PKCS#11 and OpenSSL/WinSSL TPM/PKCS11 capability now aligns with shipped public/runtime surface
+
+- `mkdir -p tmp/test_openssl_features_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_openssl_features_units -FEtmp/test_openssl_features_units -otmp/test_openssl_features_units/test_openssl_features tests/openssl/test_openssl_features.pas && ./tmp/test_openssl_features_units/test_openssl_features`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `OpenSSL must not publish TPM capability without a shipped TPM public/runtime path`
+    - GREEN after fix:
+      - focused OpenSSL feature suite returned `All tests passed`
+      - new TPM public-capability truth contract stayed green
+
+- `mkdir -p tmp/test_auto_backend_tpm_truth_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_auto_backend_tpm_truth_units -FEtmp/test_auto_backend_tpm_truth_units -otmp/test_auto_backend_tpm_truth_units/test_auto_backend_tpm_truth_contract tests/test_auto_backend_tpm_capability_truth_contract.pas && ./tmp/test_auto_backend_tpm_truth_units/test_auto_backend_tpm_truth_contract`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - auto-backend selection still treated fake TPM capability as satisfiable and created a client context
+    - GREEN after fix:
+      - requiring TPM now correctly reports `No suitable SSL backend found for requirements`
+
+- update `src/fafafa.ssl.openssl.backed.pas`
+  - change:
+    - keep shipped PKCS#11 capability truth
+    - pin `SupportsTPM` back to `False`
+    - stop treating hypothetical engine/provider ecosystem paths as current backend TPM public capability
+
+- update `src/fafafa.ssl.winssl.lib.pas`
+  - change:
+    - pin `SupportsPKCS11` back to `False`
+    - pin `SupportsTPM` back to `False`
+    - stop treating platform potential / CNG ecosystem reach as current WinSSL backend public capability truth
+
+- update `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  - change:
+    - replace `智能卡` / `TPM` supported rows with current non-published capability truth
+    - remove the old “原生支持智能卡和 TPM” advantage claim
+
+- `python3 scripts/compile_all_modules.py`
+  - result: PASS
+  - summary:
+    - `187/187` core modules compiled successfully after the hardware-key capability truth tightening batch
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current hardware-key capability truth batch has no whitespace or patch-format issues

@@ -4180,3 +4180,58 @@
   - RED 首先报出：
     - `OpenSSL must not publish CT feature support merely because low-level CT bindings are marked loaded`
   - GREEN 后同一合同转绿，并且 `tests/contract/test_backend_contract.pas` 继续保持 `0 failed`
+
+- 继续沿着 capability/public-surface 主线往下审时，又压出一条更直接会影响 selector 的硬问题：
+  - `src/fafafa.ssl.openssl.backed.pas` 之前仍把 `SupportsTPM` 直接写成 `True`
+  - `src/fafafa.ssl.winssl.lib.pas` 之前仍把 `SupportsPKCS11` / `SupportsTPM` 直接写成 `True`
+  - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md` 也还把“智能卡 / TPM”写成已支持
+
+- 这条线比普通文档 drift 更危险，因为 `src/fafafa.ssl.backend.selector.pas` 会直接消费这些 capability 字段：
+  - `RequireTPM`
+  - `RequirePKCS11`
+  - platform-score / reason generation
+  - 所以只要 capability 假阳性存在，auto backend selection 就可能被带偏
+
+- 这次静态审查把边界也钉得很清楚：
+  - `OpenSSL`
+    - 当前确实有 shipped `LoadPrivateKeyFromPKCS11(...)` 路径
+    - `TPKCS11BackendFactory.CreateBackend(btAuto)` 也仍是当前真实 loader bridge
+    - 所以 `SupportsPKCS11` 这次不该顺手砍掉
+  - 但同一 backend 当前并没有 shipped TPM public/runtime path
+    - 之前的 `SupportsTPM=True` 只是把“也许能靠外部 engine/provider 生态接入”误写成默认 backend public capability
+  - `WinSSL`
+    - 当前已发布 surface 主要是系统证书存储 / PFX / DER / Schannel connection path
+    - 仓库里没有 shipped PKCS#11 URI / smart-card 私钥加载路径
+    - 也没有 dedicated TPM loading/runtime contract
+    - 所以 `SupportsPKCS11=True` / `SupportsTPM=True` 同样属于“平台潜在能力被误抬成 public capability truth”
+
+- focused RED 也把这条问题从“看起来怪”压成了真实回归：
+  - 新 shell contract 首先红在：
+    - `OpenSSL capability truth still advertises TPM without a shipped public/runtime path`
+  - `tests/openssl/test_openssl_features.pas` 新增 runtime contract 首先红在：
+    - `OpenSSL must not publish TPM capability without a shipped TPM public/runtime path`
+  - 新增 auto-selector downstream contract 也同步红：
+    - `Auto-backend selection must fail when TPM support is required but no shipped backend publishes it`
+
+- 这批最小正确修法也因此非常窄，并已落地：
+  - 不新增 TPM / smart-card / PKCS#11 新实现
+  - 不改 selector 算法
+  - 只把 capability truth 拉回当前已发布 surface：
+    - `OpenSSL SupportsTPM := False`
+    - `WinSSL SupportsPKCS11 := False`
+    - `WinSSL SupportsTPM := False`
+  - 同时把 WinSSL active capability doc 改成：
+    - `智能卡 / PKCS#11` 当前 capability 不发布
+    - `TPM` 当前 capability 不发布
+
+- focused GREEN 结果把这条线钉得很实：
+  - shell contract 已 PASS
+  - OpenSSL feature suite 已 PASS
+  - auto-backend TPM truth contract 已 PASS
+  - `python3 scripts/compile_all_modules.py` 继续保持 `187/187` 成功
+
+- 因而当前 `hardware-key capability truth` 这条线已经形成了稳定结论：
+  - `OpenSSL` 当前只保留 shipped PKCS#11 truth，不再把 TPM 当作默认 backend capability
+  - `WinSSL` 不再把平台潜在硬件密钥能力误写成已发布 `PKCS11/TPM` capability
+  - 后续若继续审这组字段，默认下一刀应是 `OpenSSL SupportsPKCS11` 是否还需要更细的 runtime-readiness gate
+  - 不应再把本轮已收掉的 WinSSL / TPM 假阳性重新拉起

@@ -1120,8 +1120,8 @@ begin
   {$ELSE}
   Result.SupportsSystemCertStore := False;
   {$ENDIF}
-  Result.SupportsPKCS11 := True;           // 通过 ENGINE 支持
-  Result.SupportsTPM := True;              // 通过 ENGINE 支持
+  Result.SupportsPKCS11 := True;           // shipped PKCS#11 loader path exists
+  Result.SupportsTPM := False;             // current backend does not publish a TPM public/runtime path
 
   // ----- 安全特性 -----
   Result.HasConstantTimeOperations := True;   // OpenSSL 实现恒定时间算法

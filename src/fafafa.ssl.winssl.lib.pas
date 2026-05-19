@@ -600,8 +600,8 @@ begin
   // 平台特性
   Result.RequiresExternalLibrary := False;  // Schannel 是系统内置
   Result.SupportsSystemCertStore := True;   // WinSSL 的核心优势
-  Result.SupportsPKCS11 := True;            // 通过 CNG 支持
-  Result.SupportsTPM := True;               // Windows 原生 TPM 支持
+  Result.SupportsPKCS11 := False;           // current WinSSL backend does not publish a PKCS#11 loading/runtime path
+  Result.SupportsTPM := False;              // platform potential is not a shipped TPM public capability
 
   // 安全特性
   Result.HasConstantTimeOperations := True;  // 系统级实现

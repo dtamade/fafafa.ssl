@@ -847,6 +847,31 @@ begin
   WriteLn('✅ Certificate-transparency public surface truth contract verified');
 end;
 
+procedure TestTPMPublicCapabilityTruthContract;
+var
+  SSLLib: ISSLLibrary;
+  LCaps: TSSLBackendCapabilities;
+begin
+  WriteLn;
+  WriteLn('Testing TPM Public Capability Truth Contract');
+  WriteLn('============================================');
+
+  SSLLib := TOpenSSLLibrary.Create as ISSLLibrary;
+  Require(SSLLib <> nil, 'OpenSSL library instance is nil');
+
+  if not SSLLib.Initialize then
+  begin
+    WriteLn('Failed to initialize OpenSSL');
+    Exit;
+  end;
+
+  LCaps := SSLLib.GetCapabilities;
+  Require(not LCaps.SupportsTPM,
+    'OpenSSL must not publish TPM capability without a shipped TPM public/runtime path');
+
+  WriteLn('✅ TPM public capability truth contract verified');
+end;
+
 procedure TestChaChaPolyCapabilityMatrixRuntimeDriftContract;
 var
   SSLLib: TOpenSSLLibrary;
@@ -1506,6 +1531,7 @@ begin
     TestRenegotiationCapabilityMatrixRuntimeDriftContract;
     TestCertificateTransparencyCapabilityMatrixRuntimeDriftContract;
     TestCertificateTransparencyPublicSurfaceTruthContract;
+    TestTPMPublicCapabilityTruthContract;
     TestChaChaPolyCapabilityMatrixRuntimeDriftContract;
     TestPKCS12CapabilityMatrixRuntimeDriftContract;
     TestTLS13CapabilityMatrixPolicyAwareContract;
