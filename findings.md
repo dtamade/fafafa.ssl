@@ -6816,3 +6816,39 @@
      - `MIGRATION_GUIDE.md` 与
        `test_migration_troubleshooting_connection_level_sni_omissions_contract.sh`
        再次对齐，不会在这类回归里反复误报
+
+118. `backend feature capability parity` 这批证明，当前更值钱的 residual
+   已经不是 capability producer 再次写错，而是 runtime consumer 是否仍偷跑第二套语义：
+   - `GetCapabilities` / serializer / selector / diff
+     这几层之前都已经各自收紧
+   - 但如果没有直接验证
+     `ISSLLibrary.IsFeatureSupported(...)`
+     和 capability record 的 published truth，
+     调用方仍可能在 runtime probe 与 capability 发布面之间读到两套结论
+   - 新 focused contract 现在已经把这条线钉住：
+     - `sslFeatSNI`
+     - `sslFeatALPN`
+     - `sslFeatSessionCache`
+     - `sslFeatSessionTickets`
+     - `sslFeatRenegotiation`
+     - `sslFeatOCSPStapling`
+     - `sslFeatCertificateTransparency`
+     都必须满足：
+     - `IsFeatureSupported(feature) =
+        (对应 *Support <> sslSupportNone)`
+   - 这次本机结果也给了一个很清楚的当前事实：
+     - `OpenSSL`
+     - `WolfSSL`
+     - `MbedTLS`
+     - `FreePascal Native`
+     全部通过
+     - `Windows Schannel`
+       在当前非 Windows 环境只按
+       `[SKIP] not available`
+       处理，不把平台不可运行误判成 capability drift
+   - 所以这批的正确结论不是“又发现 backend 实现缺口”，而是：
+     - 当前 7 条 public feature 的 runtime consumer parity
+       已经具备 durable proof
+     - capability dual-truth 这条线以后不必再为
+       `IsFeatureSupported(...)` vs `GetCapabilities`
+       反复从头拉起

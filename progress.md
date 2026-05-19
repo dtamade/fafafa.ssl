@@ -14271,3 +14271,49 @@
   - result: PASS
   - summary:
     - current troubleshooting WinSSL session-truth batch has no whitespace or patch-format issues
+
+### Backend Feature Capability Parity
+
+- add `docs/plans/2026-05-20-backend-feature-capability-parity.md`
+  - change:
+    - define the bounded runtime-consumer parity batch for
+      `IsFeatureSupported(...)` vs `GetCapabilities`
+
+- add `tests/test_backend_feature_capability_parity_contract.pas`
+  - change:
+    - add a focused Pascal contract that walks every available backend and checks
+      the current 7 `TSSLFeature` values against
+      `corresponding *Support <> sslSupportNone`
+
+- `mkdir -p tmp/test_backend_feature_capability_parity_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_backend_feature_capability_parity_contract -FEtmp/test_backend_feature_capability_parity_contract -otmp/test_backend_feature_capability_parity_contract/test_backend_feature_capability_parity_contract tests/test_backend_feature_capability_parity_contract.pas && ./tmp/test_backend_feature_capability_parity_contract/test_backend_feature_capability_parity_contract`
+  - result: PASS
+  - summary:
+    - focused contract compiled and ran green
+    - verified parity on:
+      - `OpenSSL`
+      - `WolfSSL`
+      - `MbedTLS`
+      - `FreePascal Native`
+    - `Windows Schannel` was correctly reported as
+      `[SKIP] not available`
+    - first run also showed two local `unreachable code` warnings in the new test,
+      so the contract itself was tightened before final closeout
+
+- update `tests/test_backend_feature_capability_parity_contract.pas`
+  - change:
+    - initialize default results and drop exhaustive-case `else` branches
+      so the new contract no longer adds avoidable warning noise
+
+- `mkdir -p tmp/test_backend_feature_capability_parity_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_backend_feature_capability_parity_contract -FEtmp/test_backend_feature_capability_parity_contract -otmp/test_backend_feature_capability_parity_contract/test_backend_feature_capability_parity_contract tests/test_backend_feature_capability_parity_contract.pas && ./tmp/test_backend_feature_capability_parity_contract/test_backend_feature_capability_parity_contract`
+  - result: PASS
+  - summary:
+    - rerun stayed green after cleaning the contract warnings
+    - current proof now records a clean runtime consumer parity baseline
+
+- update planning files:
+  - `docs/plans/2026-05-20-backend-feature-capability-parity.md`
+  - `task_plan.md`
+  - `findings.md`
+  - `progress.md`
+  - change:
+    - recorded this batch as a proof-gap closeout rather than a backend implementation fix

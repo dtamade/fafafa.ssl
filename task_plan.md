@@ -10,6 +10,54 @@
 
 ## Current Status
 
+- [completed] `backend feature capability parity runtime proof`
+  当前 focused 目标：
+  - 给 `ISSLLibrary.IsFeatureSupported(...)` 与
+    `ISSLLibrary.GetCapabilities` 之间补一条 runtime consumer parity proof，
+    锁住当前 `TSSLFeature` 枚举 7 条 feature 的发布口径一致性
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-backend-feature-capability-parity.md`
+  - 新增 focused contract：
+    - `tests/test_backend_feature_capability_parity_contract.pas`
+  当前预判：
+  - capability dual-truth 的 producer / serializer / selector 路线已经收紧，
+    更值钱的 residual 是补齐 runtime consumer proof，
+    防止 `IsFeatureSupported(...)` 和 capability record 再次分叉
+  当前最终收口证据：
+  - focused contract 在本机编译并运行通过：
+    - `OpenSSL`
+    - `WolfSSL`
+    - `MbedTLS`
+    - `FreePascal Native`
+  - `Windows Schannel` 在非 Windows 环境被正确标记为
+    `[SKIP] not available`
+  - 当前 7 条 feature：
+    - `sslFeatSNI`
+    - `sslFeatALPN`
+    - `sslFeatSessionCache`
+    - `sslFeatSessionTickets`
+    - `sslFeatRenegotiation`
+    - `sslFeatOCSPStapling`
+    - `sslFeatCertificateTransparency`
+    都满足：
+    - `LLib.IsFeatureSupported(AFeature) =
+       (对应 *Support <> sslSupportNone)`
+  focused verification 已通过：
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_backend_feature_capability_parity_contract -FEtmp/test_backend_feature_capability_parity_contract -otmp/test_backend_feature_capability_parity_contract/test_backend_feature_capability_parity_contract tests/test_backend_feature_capability_parity_contract.pas`
+  - `./tmp/test_backend_feature_capability_parity_contract/test_backend_feature_capability_parity_contract`
+  当前结论：
+  - 这轮没有再暴露新的 backend source drift；
+    真正缺的是 proof，而不是实现修复
+  - 现在 capability dual-truth 路线已经补上了
+    runtime consumer parity 这层 durable 基线
+  当前下一条真实工作：
+  - 继续沿 `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+    回到更大的接口/实现结构债
+  - 优先再看：
+    - 还有没有其他 runtime consumer / facade surface
+      在 capability published truth 之外保留第二套语义
+    - 或审计报告里更高价值的接口设计问题
 - [completed] `troubleshooting winssl session truth`
   当前 focused 目标：
   - 把 `TROUBLESHOOTING.md` 里 WinSSL session 排障段收回当前 truth，
