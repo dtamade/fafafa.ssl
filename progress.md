@@ -2,6 +2,50 @@
 
 ## 2026-05-19
 
+### WinSSL Callback Runtime Proof Markers
+
+- add `docs/plans/2026-05-19-winssl-callback-runtime-proof-markers.md`
+  - change:
+    - define the bounded batch that closes the remaining WinSSL callback proof gap by making Windows runtime transcript evidence grep-able
+
+- add `tests/scripts/test_winssl_runtime_callback_markers_contract.sh`
+  - change:
+    - lock that:
+      - `tests/run_winssl_tests.ps1` derives callback markers from `test_winssl_unit_comprehensive.lpi`
+      - the runtime script emits `callback_surface` markers
+      - `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md` documents the new marker and its meaning
+
+- update `tests/run_winssl_tests.ps1`
+  - change:
+    - add `Write-CallbackSurfaceMarkers`
+    - extract:
+      - `Verify callback set`
+      - `Password callback unsupported as expected`
+      - `Info callback set`
+      from the captured unit-comprehensive output
+    - emit:
+      - `[WINSSL-RUNTIME] callback_surface verify=... password=... info=...`
+
+- update `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md`
+  - change:
+    - add the `callback_surface` runtime marker to the WinSSL transcript marker checklist
+    - explain that it maps directly to the callback granularity truth in `tests/unit/test_winssl_comprehensive.pas`
+
+- `bash -n tests/scripts/test_winssl_runtime_callback_markers_contract.sh`
+  - result: PASS
+  - summary:
+    - new WinSSL callback runtime marker contract syntax is valid
+
+- `bash tests/scripts/test_winssl_runtime_callback_markers_contract.sh`
+  - result: PASS
+  - summary:
+    - broader-suite script and Windows checklist now lock the new callback proof marker path
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current WinSSL callback runtime marker batch is whitespace-clean before commit/push
+
 ### WinSSL FIPS Capability Truth Tightening
 
 - add `docs/plans/2026-05-19-winssl-fips-capability-truth-tightening.md`

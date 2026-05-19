@@ -140,12 +140,14 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\tests\run_winssl_tests.ps1 *>&1 
 
 ```text
 [WINSSL-RUNTIME] suite_start total=...
+[WINSSL-RUNTIME] callback_surface verify=pass password=unsupported info=pass
 [WINSSL-RUNTIME] session_resumption summary host=... attempts=... observed_reuse=...
 [WINSSL-RUNTIME] suite_summary passed=... failed=... total=... success_rate=...
 [WINSSL-RUNTIME] suite_end status=PASS|FAIL
 ```
 
 其中 `test_winssl_session_resumption.lpi` 会额外输出 `[WINSSL-SESSION-RESUME] ...` 细粒度行；`tests/run_winssl_tests.ps1` 会把它们二次汇总成 `[WINSSL-RUNTIME] session_resumption ...` marker，方便后续直接在 artifact 里检索是否真的观测到 resumed handshake。
+这条 marker 直接对应 `tests/unit/test_winssl_comprehensive.pas` 里的 WinSSL callback 粒度 truth：verify/info 已发布，password 仍 unsupported。
 
 ## 高风险区域要单独盯
 

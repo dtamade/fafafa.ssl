@@ -98,6 +98,35 @@ function Write-EvidenceMarker {
     Write-Host ("[WINSSL-RUNTIME] " + $Marker) -ForegroundColor DarkCyan
 }
 
+function Write-CallbackSurfaceMarkers {
+    param(
+        [hashtable]$Test,
+        [object[]]$Output
+    )
+
+    if ($null -eq $Test -or $Test.Lpi -ne "test_winssl_unit_comprehensive.lpi") {
+        return
+    }
+
+    $lines = @($Output | ForEach-Object { [string]$_ })
+    $verifySeen = ($lines | Select-String -SimpleMatch "Verify callback set" | Measure-Object).Count -gt 0
+    $passwordUnsupported = ($lines | Select-String -SimpleMatch "Password callback unsupported as expected" | Measure-Object).Count -gt 0
+    $passwordUnexpectedPass = ($lines | Select-String -SimpleMatch "Expected unsupported semantics for WinSSL password callback" | Measure-Object).Count -gt 0
+    $infoSeen = ($lines | Select-String -SimpleMatch "Info callback set" | Measure-Object).Count -gt 0
+
+    $verifyState = if ($verifySeen) { "pass" } else { "missing" }
+    if ($passwordUnsupported) {
+        $passwordState = "unsupported"
+    } elseif ($passwordUnexpectedPass) {
+        $passwordState = "unexpected-pass"
+    } else {
+        $passwordState = "missing"
+    }
+    $infoState = if ($infoSeen) { "pass" } else { "missing" }
+
+    Write-EvidenceMarker ("callback_surface verify=" + $verifyState + " password=" + $passwordState + " info=" + $infoState)
+}
+
 Write-EvidenceMarker ("suite_start total=" + $totalTests)
 
 # 编译测试
@@ -200,6 +229,8 @@ foreach ($test in $tests) {
                 }
             }
         }
+
+        Write-CallbackSurfaceMarkers -Test $test -Output $output
 
         # 检查结果
         if ($exitCode -eq 0) {

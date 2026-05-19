@@ -10,6 +10,36 @@
 
 ## Current Status
 
+- [in_progress] WinSSL callback runtime proof markers 正在收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-winssl-callback-runtime-proof-markers.md`
+  - 当前已确认的 proof gap：
+    - `tests/unit/test_winssl_comprehensive.pas`
+      已经有稳定 callback 断言输出：
+      - `Verify callback set`
+      - `Password callback unsupported as expected`
+      - `Info callback set`
+    - 但 `tests/run_winssl_tests.ps1`
+      在 broader suite 成功时默认不会把这些单项输出写成 artifact 内可 grep 的稳定 marker
+    - 这会让 WinSSL callback granularity 继续停留在：
+      - Linux 静态契约已绿
+      - Windows runtime transcript 仍缺 direct proof
+  - 当前已落地的本地收口：
+    - `tests/run_winssl_tests.ps1`
+      新增 `callback_surface` runtime marker 汇总逻辑
+    - `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md`
+      已补 callback marker 检索口径
+    - 新增 focused shell contract：
+      - `tests/scripts/test_winssl_runtime_callback_markers_contract.sh`
+  - 当前本地验证已通过：
+    - `bash -n tests/scripts/test_winssl_runtime_callback_markers_contract.sh`
+    - `bash tests/scripts/test_winssl_runtime_callback_markers_contract.sh`
+    - `git diff --check`
+  - 当前下一步：
+    - 提交推送本批 marker 收口
+    - dispatch `Wave B B2 Manual Gate (Template)`
+    - 下载 Windows transcript，确认：
+      - `[WINSSL-RUNTIME] callback_surface verify=pass password=unsupported info=pass`
 - [completed] WinSSL FIPS capability truth tightening 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-winssl-fips-capability-truth-tightening.md`
