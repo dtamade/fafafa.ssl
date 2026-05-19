@@ -38,7 +38,24 @@ TLS 1.3 signer 专项门禁（按路径触发 + `workflow_dispatch`）
 - 入口：`bash scripts/run_tls13_signer_gate_bundle.sh --strict`
 - 产物：`test-reports/` + `artifacts/ci/`
 
-### 5) `wave-b-b2-manual.yml`
+### 5) `winssl-tests.yml`
+
+WinSSL 自动 Windows runtime gate（push / PR 按路径触发 + `workflow_dispatch`）
+
+- 用途：当改动触及 `WinSSL` backend / `tests/winssl` / 相关 Windows runtime scripts 时，自动拉起 Windows runner
+- 证据链：
+  - `tests/quick_winssl_validation.ps1`
+  - `scripts/run_wave_b_windows_gate.ps1`
+  - `tests/run_winssl_tests.ps1`
+- 产物：
+  - `test-reports/winssl_quick_smoke_*`
+  - `test-reports/wave_b_windows_gate_summary_*`
+  - `test-reports/winssl_runtime_suite_*`
+- 使用边界：
+  - 这是当前 WinSSL 的自动 Windows lane
+  - 但 host override / risky native probe / cross-platform handoff 仍应转去 `wave-b-b2-manual.yml`
+
+### 6) `wave-b-b2-manual.yml`
 
 Wave B/B2 跨平台手动门禁（`workflow_dispatch`）
 
@@ -73,6 +90,7 @@ git add .github/workflows/<file>.yml
 
 - 日常开发：依赖 `ci.yml`（Minimal Gate）
 - 触及 pure Pascal TLS 1.3 主线：同时关注 `ci.yml` 里的 FreePascal focused gate
+- 触及 `WinSSL` backend / Windows runtime path：额外关注 `winssl-tests.yml`
 - 查看已发布 `v1.5.0` 的 release truth：先看 `docs/test_reports/RELEASE_READINESS_V1.5.0.md`，再看 `release.yml`
 - 触及 TLS13 signer：额外关注 `tls13-signer-gate.yml`
 - 需要新的跨平台证据：只在当前 head 尚无 fresh green proof，或本批改动可能影响跨平台运行时时，再手动触发 `wave-b-b2-manual.yml`

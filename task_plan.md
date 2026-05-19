@@ -10,6 +10,85 @@
 
 ## Current Status
 
+- [completed] `winssl auto runtime gate activation`
+  当前 focused 目标：
+  - 把
+    WinSSL 的
+    Windows runtime 证据链
+    从
+    `workflow_dispatch`
+    为主
+    提升成
+    会在相关改动上自动触发的
+    GitHub Actions lane
+  当前 batch 范围：
+  - 新增活跃 workflow：
+    - `.github/workflows/winssl-tests.yml`
+  - 同步 dormant template：
+    - `.github/workflows/winssl-tests.yml.disabled`
+  - 更新 focused contract：
+    - `tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+  - 更新说明：
+    - `.github/README.md`
+  - 新增计划：
+    - `docs/plans/2026-05-20-winssl-auto-runtime-gate-activation.md`
+  当前预判：
+  - 当前缺口不是
+    “没有 Windows runtime 证据链”
+  - 而是：
+    - 活跃 push / PR CI
+      没有自动 Windows lane
+    - 真正的 Windows runtime proof
+      主要仍藏在
+      `wave-b-b2-manual.yml`
+      这条手动 lane 里
+  - 所以高价值修复
+    不该是继续静态审文档，
+    而该是把
+    已验证过的 Windows checklist
+    提升成自动 gate
+  当前验证策略：
+  - 新自动 workflow
+    直接复用：
+    - quick smoke
+    - Windows Wave B gate
+    - broader WinSSL suite
+  - 用 focused workflow contract
+    冻结：
+    - active + disabled
+      `winssl-tests`
+      都要保留真实 runtime chain
+    - 不允许退回旧的“production ready”模板词
+  当前最终收口证据：
+  - 新 `winssl-tests` workflow truth contract
+    GREEN
+  - `wave-b-b2` Windows workflow contract
+    继续 GREEN
+  - Node24 checkout / upload-artifact
+    全局 workflow contracts
+    继续 GREEN
+  - 这说明：
+    - 新自动 Windows lane
+      没有绕开现有 runtime checklist
+    - 也没有破坏仓库当前 workflow hygiene
+  focused verification 已通过：
+  - `bash tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+  - `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh`
+  - `bash tests/scripts/test_workflow_checkout_node24_contract.sh`
+  - `bash tests/scripts/test_workflow_upload_artifact_node24_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - 这批收掉的是
+    “WinSSL 自动验证缺口”，
+    不是 WinSSL 新实现问题
+  当前下一条真实工作：
+  - 观察新自动 Windows workflow
+    的真实 GitHub run
+  - 然后继续回到
+    backend capability residual drift
+    或
+    WinSSL shared-path runtime truth
+    的剩余缺口
 - [completed] `winssl tls13 capability consistency alignment`
   当前 focused 目标：
   - 收掉

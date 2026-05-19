@@ -2,6 +2,54 @@
 
 ## 2026-05-20
 
+- `WinSSL`
+  这次最高价值缺口
+  已经从
+  “某一行文档写错”
+  转成了
+  “自动验证控制面缺一条 Windows lane”
+
+- 也就是说，
+  当仓库已经有：
+  - quick smoke
+  - Windows Wave B gate
+  - broader WinSSL suite
+  这些真实 runtime 脚本时，
+  下一条正确路线
+  就不该继续把它们
+  只留在
+  `workflow_dispatch`
+  手动链路里
+
+- 否则会持续出现一种误导：
+  - `ci.yml`
+    全绿
+  - 但 WinSSL
+    实际并没有自动 runner 证明
+  这会让“测试完整性”
+  看起来比真实情况更高
+
+- 所以 workflow 本身也属于
+  “接口 / 实现 / 测试 / 文档”
+  这条总路线的一部分：
+  - 如果能力真值只能靠人手工点 workflow 才会被验证，
+    那么 testing completeness
+    仍然是不完整的
+
+- 这批也说明，
+  自动化 lane
+  最好不要重新发明新脚本。
+  更稳的做法是：
+  - 把已经在 manual lane
+    多次跑过的真实证据链
+    原样提到自动 workflow
+  - 再用 focused contract
+    锁住它
+  这样比重新设计一条“更轻”的 Windows workflow
+  更不容易把 runtime proof 稀释成
+  “仅文件存在”或
+  “仅摘要存在”
+
 - `WinSSL TLS 1.3`
   这次暴露的不是 docs drift，
   而是

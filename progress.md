@@ -4,6 +4,71 @@
 
 ## 2026-05-20
 
+### WinSSL Auto Runtime Gate Activation
+
+- `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py /home/dtamade/projects/fafafa.ssl`
+  - result: PASS
+  - summary:
+    - no catchup output surfaced
+    - current batch could proceed from the live worktree without session-recovery repair
+
+- `mcp__ace_tool__.search_context(...)`
+- `sed -n '1,260p' .github/workflows/ci.yml`
+- `sed -n '1,260p' .github/workflows/wave-b-b2-manual.yml`
+- `sed -n '1,220p' tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh`
+- `sed -n '1,240p' .github/workflows/winssl-tests.yml.disabled`
+- `sed -n '1,220p' .github/README.md`
+- `rg -n "windows-latest|WinSSL|wave-b-b2|workflow_dispatch|push:" .github/workflows /home/dtamade/.codex/memories/MEMORY.md -S`
+  - result: PASS
+  - summary:
+    - confirmed the real gap was control-plane, not missing scripts:
+      - the active Windows runtime chain already existed in `wave-b-b2-manual.yml`
+      - but ordinary push/PR CI still had no automatic Windows lane
+      - `.github/workflows/winssl-tests.yml.disabled`
+        still held an older, weaker two-step template
+
+- add workflow/docs/contracts:
+  - `.github/workflows/winssl-tests.yml`
+  - `.github/workflows/winssl-tests.yml.disabled`
+  - `tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+  - `.github/README.md`
+  - `docs/plans/2026-05-20-winssl-auto-runtime-gate-activation.md`
+  - change:
+    - activated a path-scoped automatic Windows workflow for WinSSL-related changes
+    - upgraded the workflow chain to reuse:
+      - quick smoke
+      - Windows Wave B gate
+      - broader WinSSL runtime suite
+    - aligned the dormant template and README to the same truth
+
+- `bash tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - active + disabled `winssl-tests` workflows both keep the truthful Windows runtime chain
+    - old template-only / overclaim wording is gone
+
+- `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh`
+  - result: PASS
+  - summary:
+    - the neighboring manual Windows workflow contract remained green
+    - new auto lane did not force a regression into the existing runtime checklist
+
+- `bash tests/scripts/test_workflow_checkout_node24_contract.sh`
+  - result: PASS
+  - summary:
+    - new active workflow did not reintroduce old checkout action pins
+
+- `bash tests/scripts/test_workflow_upload_artifact_node24_contract.sh`
+  - result: PASS
+  - summary:
+    - new active workflow did not reintroduce old upload-artifact pins
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - fixed two trailing-blank-line patch-hygiene issues
+    - no whitespace or patch-format issues remain after the WinSSL auto workflow activation batch
+
 ### WinSSL TLS 1.3 Capability Consistency Alignment
 
 - `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py /home/dtamade/projects/fafafa.ssl`

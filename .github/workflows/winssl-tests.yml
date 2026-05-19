@@ -188,7 +188,7 @@ jobs:
 
           - Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
           - Platform: Windows $([System.Environment]::OSVersion.Version)
-          - Workflow file: .github/workflows/winssl-tests.yml.disabled
+          - Workflow file: .github/workflows/winssl-tests.yml
           - run_id: ${{ env.WINSSL_RUN_ID }}
 
           | Lane | Outcome | Evidence |
@@ -216,3 +216,4 @@ jobs:
             test-reports/validate_all_modules_compile_${{ env.WINSSL_RUN_ID }}.log
             test-reports/winssl_runtime_suite_${{ env.WINSSL_RUN_ID }}.log
           if-no-files-found: warn
+
