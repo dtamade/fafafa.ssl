@@ -9100,3 +9100,41 @@
   - result: PASS
   - summary:
     - current OpenSSL PKCS#11 capability runtime-truth batch has no whitespace or patch-format issues
+
+### Hardware-Key Contract Runtime Truth Resync
+
+- add `docs/plans/2026-05-19-hardware-key-contract-runtime-truth-resync.md`
+  - purpose:
+    - record the bounded batch that resynchronizes the stale hardware-key shell contract to the current OpenSSL runtime-aware PKCS#11 truth
+
+- `bash -n tests/scripts/test_hardware_key_capability_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - existing hardware-key shell contract syntax stayed valid before the truth resync
+
+- `bash tests/scripts/test_hardware_key_capability_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `OpenSSL capability truth no longer records the shipped PKCS#11 public path`
+    - root cause:
+      - the shell contract still required the stale line `Result.SupportsPKCS11 := True;`
+      - source truth had already moved to runtime-aware `LPKCS11Ready`
+    - GREEN after fix:
+      - static contract now matches the shipped OpenSSL PKCS#11 public path plus runtime-readiness capability truth
+
+- update `tests/scripts/test_hardware_key_capability_truth_contract.sh`
+  - change:
+    - keep guarding the shipped OpenSSL PKCS#11 public loader path
+    - require:
+      - `LPKCS11Ready := TPKCS11BackendFactory.IsBackendAvailable(btAuto);`
+      - `Result.SupportsPKCS11 := LPKCS11Ready;`
+    - forbid the stale unconditional line:
+      - `Result.SupportsPKCS11 := True;`
+    - add OpenSSL backend-capability doc checks for runtime-readiness wording
+    - keep WinSSL non-published PKCS11/TPM truth checks intact
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current hardware-key contract truth-resync batch has no whitespace or patch-format issues

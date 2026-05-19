@@ -2861,3 +2861,26 @@
    - 当前批收口后默认下一步应为：
      - 继续找下一条“低层 binding/helper readiness 被误抬成 public capability truth”的 backend drift
      - 优先看其它 backend / feature rows 是否还存在“helper exists => capability true”的残余点
+71. `hardware-key shell contract runtime truth` 已完成 focused 收口，并应作为当前 tests/docs completeness 的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-hardware-key-contract-runtime-truth-resync.md`
+   - 当前已确认的工作流偏差：
+     - `tests/scripts/test_hardware_key_capability_truth_contract.sh`
+       在上一批源码 truth 已收紧后，仍要求：
+       - `Result.SupportsPKCS11 := True;`
+     - 这会把旧的静态 capability 口径重新当成正确答案，导致合同自己落后于当前实现
+   - 当前最小正确修法已落地：
+     - 保留 OpenSSL shipped `LoadPrivateKeyFromPKCS11(...)` / backend-factory path 守护
+     - 改为要求：
+       - `LPKCS11Ready := TPKCS11BackendFactory.IsBackendAvailable(btAuto);`
+       - `Result.SupportsPKCS11 := LPKCS11Ready;`
+     - 明确禁止旧的：
+       - `Result.SupportsPKCS11 := True;`
+     - 同步把 OpenSSL active capability doc 的 runtime-readiness wording 纳入合同守护
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_hardware_key_capability_truth_contract.sh`
+     - `bash tests/scripts/test_hardware_key_capability_truth_contract.sh`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 继续找其它“合同/文档仍锚在旧 capability truth，但源码已切到 runtime-aware truth”的残余点
+     - 再决定是否继续深挖新的 backend capability drift

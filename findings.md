@@ -4273,3 +4273,29 @@
   - 但 `SupportsPKCS11` 不再是 unconditional `True`
   - 当前 public capability truth 必须跟随 `TPKCS11BackendFactory.IsBackendAvailable(btAuto)`
   - 后续若继续深审 capability rows，应优先继续找其它“helper/binding exists 就被误抬成 capability true”的残余点，而不是重开已关闭的 TPM / WinSSL 路线
+
+- 顺着这条线继续回头看测试闭环，又压实了一条 workflow 层面的真问题：
+  - 我们刚把 OpenSSL `SupportsPKCS11` 收紧成 runtime truth
+  - 但 `tests/scripts/test_hardware_key_capability_truth_contract.sh`
+    仍要求源码里出现：
+    - `Result.SupportsPKCS11 := True;`
+
+- 这类问题虽然不改生产行为，但风险并不小：
+  - 它会让 focused contract 自己落后于当前实现 truth
+  - 后续一旦 rerun，这条合同会持续报红
+  - 更糟的是，它会把“把源码改回旧的 unconditional capability”重新塑造成看起来像正确修法
+
+- 这次确认到的最小正确修法也很清楚：
+  - 不改生产源码
+  - 不重开 `OpenSSL PKCS#11` runtime 逻辑
+  - 只把静态合同改成守护当前 truth：
+    - 继续保留 shipped `LoadPrivateKeyFromPKCS11(...)` 路径
+    - 要求 `LPKCS11Ready := TPKCS11BackendFactory.IsBackendAvailable(btAuto)`
+    - 要求 `Result.SupportsPKCS11 := LPKCS11Ready`
+    - 明确禁止旧的 `Result.SupportsPKCS11 := True;`
+  - 同时把 `docs/BACKEND_CAPABILITY_MATRIX.md` 的 OpenSSL runtime-readiness 说明也纳入合同守护
+
+- 因而当前 `hardware-key` 这条线的稳定结论要再补一层：
+  - 不只是源码和 active docs 要对齐
+  - focused shell contracts 也必须同步到同一套 capability truth
+  - 后续若继续推进 capability/completeness 审查，应优先警惕这类“源码已收口，但静态合同还卡在旧 truth”的回漂点
