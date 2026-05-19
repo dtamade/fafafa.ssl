@@ -124,6 +124,8 @@ Conn := Ctx.CreateConnection(Socket);
 Conn.Connect;
 ```
 
+这里故意保留 direct `CreateConnection(...)` 对比，是为了把“没设 SNI 会怎样、设了 SNI 又会怎样”写成最短 pitfall 对照；如果你只是普通客户端接入，仍然可以优先使用 `TSSLConnector.ConnectSocket(..., host)`。
+
 ### 坑：Hostname 验证被绕过
 
 **症状**：

@@ -607,6 +607,8 @@ begin
 end;
 ```
 
+这里使用 direct `CreateConnection(...)`，是因为示例正在讨论 URL 解析后的 socket ownership、连接异常，以及 Result/exception 的边界；如果你不需要这层低层控制，可以把握手入口收回到 `TSSLConnector`。
+
 ### 示例 2: 证书管理工具
 
 ```pascal

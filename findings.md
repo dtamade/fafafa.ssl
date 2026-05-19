@@ -6587,3 +6587,26 @@
    - 现在新的稳定基线应记为：
      - diagnostics/backends 页面不会再把 connection-level override
        误教成普通主路径配置建议
+
+109. 高频专题页里剩下的 direct `CreateConnection(...)` 也有一类更细但真实的残口：
+   - `COMMON_PITFALLS`、`security-best-practices`、`ERROR_HANDLING_BEST_PRACTICES`
+     里的示例本身都没错
+   - 但它们此前都还缺一句：
+     - 为什么这里要直接下到 `ISSLConnection`
+     - 以及如果不需要这层 low-level control，普通代码应回到什么入口
+   - 当前最小正确修法已经压实为：
+     - `COMMON_PITFALLS`
+       把 direct path 明确标成 SNI pitfall 对照用法
+     - `security-best-practices`
+       把 direct path 明确标成 hostname/SNI 连接级责任展开
+     - `ERROR_HANDLING_BEST_PRACTICES`
+       把 direct path 明确标成 URL->socket ownership 与 exception/result
+       边界示例
+   - 这批顺手也证明：
+     - active TLS guidance
+     - selected secondary guides SNI drift
+     - error-handling URL-driven SNI
+     - security pinning helper truth
+     这些既有 contract 在新增说明后都仍保持绿色
+   - 现在新的稳定基线应记为：
+     - 高频专题页也不会再把场景化 direct path 示例误教成 generic main entry

@@ -10,6 +10,51 @@
 
 ## Current Status
 
+- [completed] `high-frequency guides direct-path reasoning`
+  当前 focused 目标：
+  - 把几份高频 active 页面里 direct `CreateConnection(...)` 的使用原因讲清楚，
+    避免读者把场景化示例误解成 generic facade 主路径
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-high-frequency-guides-direct-path-reasoning.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_high_frequency_guides_direct_path_reasoning_contract.sh`
+  - 同步更新：
+    - `docs/guides/COMMON_PITFALLS.md`
+    - `docs/guides/security-best-practices.md`
+    - `docs/guides/ERROR_HANDLING_BEST_PRACTICES.md`
+  当前最终收口证据：
+  - `COMMON_PITFALLS.md` 现在明确：
+    - direct `CreateConnection(...)` 对比是为了把
+      “没设 SNI vs 正确设 SNI”写成最短 pitfall 对照
+    - 普通客户端仍可优先 `TSSLConnector.ConnectSocket(..., host)`
+  - `security-best-practices.md` 现在明确：
+    - direct `ISSLConnection` 示例是为了把 hostname/SNI 的连接级责任显式展开
+    - 不需要这层低层控制时，继续使用 connector 也同样正确
+  - `ERROR_HANDLING_BEST_PRACTICES.md` 现在明确：
+    - direct `CreateConnection(...)` 是因为示例正在讨论
+      URL 解析后的 socket ownership、连接异常、以及 Result/exception 边界
+    - 不需要这层低层控制时可把握手入口收回 `TSSLConnector`
+  focused verification 已通过：
+  - `bash -n tests/scripts/test_high_frequency_guides_direct_path_reasoning_contract.sh`
+  - `bash tests/scripts/test_high_frequency_guides_direct_path_reasoning_contract.sh`
+  - `bash tests/scripts/test_active_tls_guidance_contract.sh`
+  - `bash tests/scripts/test_secondary_guides_connection_level_sni_api_drift_contract.sh`
+  - `bash tests/scripts/test_error_handling_best_practices_url_driven_sni_guidance_contract.sh`
+  - `bash tests/scripts/test_security_best_practices_pinning_helper_truth_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - 这批暴露的不是 direct `CreateConnection(...)` 不该存在，
+    而是高频页面也要明确说明“为什么这里要下到 low-level path”。
+  - 现在 generic guides、landing、backend quickstarts、diagnostics、
+    以及这组三个高频专题页的 direct-path 语义都开始统一起来了。
+  当前下一条真实工作：
+  - 继续扫尚未纳入 focused contract 的 specialized owner-surface guides：
+    - `OCSP_USAGE_GUIDE`
+    - `CT_IMPLEMENTATION_GUIDE`
+    - 以及其它通过连接对象暴露 optional interface 的页面
+    - 优先判断是否还缺“为什么这里要走 connection owner path”的说明
+
 - [completed] `diagnostics connection override classification`
   当前 focused 目标：
   - 把 active diagnostics / backend guide 里的 `SetTimeout(...)` / `SetBlocking(...)`

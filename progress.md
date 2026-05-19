@@ -13840,3 +13840,68 @@
   - result: PASS
   - summary:
     - current diagnostics-override batch has no whitespace or patch-format issues
+
+### High-Frequency Guides Direct-Path Reasoning
+
+- add `docs/plans/2026-05-20-high-frequency-guides-direct-path-reasoning.md`
+  - change:
+    - define the bounded high-frequency-doc batch for explaining why selected guides intentionally use direct `CreateConnection(...)`
+
+- add `tests/scripts/test_high_frequency_guides_direct_path_reasoning_contract.sh`
+  - change:
+    - lock that selected high-frequency guides must explain why their direct `ISSLConnection` usage is intentional and scenario-specific
+
+- `bash -n tests/scripts/test_high_frequency_guides_direct_path_reasoning_contract.sh`
+  - result: PASS
+  - summary:
+    - new high-frequency direct-path reasoning contract syntax is valid
+
+- `bash tests/scripts/test_high_frequency_guides_direct_path_reasoning_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `COMMON_PITFALLS` still kept the direct `CreateConnection(...)` SNI contrast without explicitly explaining why the page intentionally uses the low-level path
+    - GREEN after fix:
+      - `COMMON_PITFALLS` now explains the direct path as a pitfall contrast
+      - `security-best-practices` now explains the direct path as explicit hostname/SNI responsibility expansion
+      - `ERROR_HANDLING_BEST_PRACTICES` now explains the direct path as URL/socket ownership and exception/result-boundary guidance
+
+- update `docs/guides/COMMON_PITFALLS.md`
+  - change:
+    - explain that the direct `CreateConnection(...)` snippet is intentionally retained as the shortest SNI pitfall contrast
+    - point ordinary clients back to `TSSLConnector.ConnectSocket(..., host)`
+
+- update `docs/guides/security-best-practices.md`
+  - change:
+    - explain that the direct `ISSLConnection` sample is used to make hostname/SNI connection ownership explicit
+    - keep connector as the equally-correct higher-level path when low-level control is unnecessary
+
+- update `docs/guides/ERROR_HANDLING_BEST_PRACTICES.md`
+  - change:
+    - explain that the direct `CreateConnection(...)` sample is focused on URL-driven socket ownership and exception/result boundaries
+    - point simpler handshake entry back to `TSSLConnector`
+
+- `bash tests/scripts/test_active_tls_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - active TLS guidance stayed aligned after explaining the direct-path scenarios
+
+- `bash tests/scripts/test_secondary_guides_connection_level_sni_api_drift_contract.sh`
+  - result: PASS
+  - summary:
+    - secondary guide SNI guidance remained aligned after the scenario reasoning batch
+
+- `bash tests/scripts/test_error_handling_best_practices_url_driven_sni_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - error-handling guide kept its URL-driven connection-level SNI truth
+
+- `bash tests/scripts/test_security_best_practices_pinning_helper_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - security guide pinning/helper truth remained aligned after the direct-path reasoning note
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current high-frequency direct-path reasoning batch has no whitespace or patch-format issues

@@ -440,6 +440,7 @@ end;
 ```
 
 也可以使用 `TSSLConnector.ConnectSocket(..., 'example.com')`，其本质同样是把 hostname/SNI 放到连接上，而不是 context 上。
+这里展开 direct `ISSLConnection`，是为了把 hostname/SNI 的连接级责任显式写出来；如果你不需要这层低层控制，继续使用 `TSSLConnector.ConnectSocket(..., host)` 也同样正确。
 
 ### 3. 配置 OCSP Stapling
 
