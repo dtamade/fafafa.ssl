@@ -4,6 +4,52 @@
 
 ## 2026-05-20
 
+### Server-Side Optional Surface Active-Docs Truth Contract
+
+- `rg -n "ISSLServerOCSPStaplingContext|ISSLEarlyDataContext|ISSLEarlyDataConnection|OCSPStaplingSupport=sslSupportNone|EarlyDataSupport=sslSupportNone|当前 backend 不暴露|当前 capability 不发布|public surface" docs/BACKEND_CAPABILITY_MATRIX.md docs/reference/*.md docs/guides/*.md README.md -S`
+- `sed -n '1,120p' docs/guides/EARLY_DATA_GUIDE.md`
+- `sed -n '1,220p' docs/guides/OCSP_USAGE_GUIDE.md`
+- `sed -n '418,460p' docs/reference/API_REFERENCE.md`
+  - result: PASS
+  - summary:
+    - confirmed the next gap was verification coverage, not another live implementation drift:
+      - active docs already held the current cross-backend truth for
+        `ISSLServerOCSPStaplingContext` /
+        `ISSLEarlyDataContext` /
+        `ISSLEarlyDataConnection`
+      - but no focused contract yet froze these truths together across
+        API reference, top-level matrix, dedicated backend pages, and active guides
+
+- add `docs/plans/2026-05-20-server-side-optional-surface-active-doc-truth-contract.md`
+- add `tests/scripts/test_server_side_optional_surface_active_docs_truth_contract.sh`
+  - change:
+    - recorded a bounded verification-gap batch
+    - added a focused contract freezing:
+      - current no-`ISSLServerConnection` truth
+      - top-level early-data / server-OCSP backend summaries
+      - WinSSL / MbedTLS dedicated-page truth
+      - `EARLY_DATA_GUIDE` / `OCSP_USAGE_GUIDE` active guidance truth
+
+- `bash -n tests/scripts/test_server_side_optional_surface_active_docs_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - first failure was contract-side, not product-side:
+      - unmatched backtick in the new FreePascal early-data guide pattern
+    - after fixing the quoting,
+      the contract syntax became valid
+
+- `bash tests/scripts/test_server_side_optional_surface_active_docs_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - current active docs truth is now frozen for:
+      - `API_REFERENCE`
+      - `BACKEND_CAPABILITY_MATRIX`
+      - `WINSSL_BACKEND_CAPABILITY_MATRIX`
+      - `MBEDTLS_BACKEND_CAPABILITY_MATRIX`
+      - `EARLY_DATA_GUIDE`
+      - `OCSP_USAGE_GUIDE`
+    - no new live drift surfaced in this batch after the contract itself was fixed
+
 ### WinSSL None-Capability Surface Doc Alignment
 
 - `rg -n "EarlyDataSupport :=|OCSPStaplingSupport :=|KnownIssues :=" src/fafafa.ssl.*lib.pas src/fafafa.ssl.*backed.pas`

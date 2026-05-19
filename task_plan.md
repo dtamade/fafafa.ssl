@@ -10,6 +10,75 @@
 
 ## Current Status
 
+- [completed] `server-side optional surface active-doc truth contract`
+  当前 focused 目标：
+  - 给
+    `ISSLServerOCSPStaplingContext` /
+    `ISSLEarlyDataContext` /
+    `ISSLEarlyDataConnection`
+    这条 cross-backend active-doc truth
+    补一条 focused shell contract
+  - 避免以后 source / runtime capability
+    已经一致，
+    但：
+    - `API_REFERENCE`
+    - `BACKEND_CAPABILITY_MATRIX`
+    - dedicated backend pages
+    - active guides
+    之间重新漂开
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-server-side-optional-surface-active-doc-truth-contract.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_server_side_optional_surface_active_docs_truth_contract.sh`
+  当前预判：
+  - 刚刚两批 closeout
+    已经说明：
+    - WinSSL dedicated page
+      可能独自漂离 source / top-level matrix
+    - FreePascal durable-default replay truth
+      可能在 active docs / old contract
+      中残留旧表述
+  - 当前缺的不是再补实现，
+    而是一条专门冻结
+    server-side optional surface active-doc truth
+    的 focused contract
+  当前验证策略：
+  - 新增 shell contract，
+    同时覆盖：
+    - `API_REFERENCE`
+    - top-level `BACKEND_CAPABILITY_MATRIX`
+    - `WINSSL_BACKEND_CAPABILITY_MATRIX`
+    - `MBEDTLS_BACKEND_CAPABILITY_MATRIX`
+    - `EARLY_DATA_GUIDE`
+    - `OCSP_USAGE_GUIDE`
+  - 跑：
+    - `bash -n ...`
+    - `bash ...`
+    - `git diff --check`
+  当前最终收口证据：
+  - 首次运行时暴露的不是产品 drift，
+    而是新 contract 自己的反引号语法错误
+  - 修正 shell quoting 后，
+    contract 全绿
+  focused verification 已通过：
+  - `bash -n tests/scripts/test_server_side_optional_surface_active_docs_truth_contract.sh`
+  - `bash tests/scripts/test_server_side_optional_surface_active_docs_truth_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - 这批没有发现新的 live active-doc drift
+  - 但把原来无人冻结的一组
+    cross-backend server-side optional surface truth
+    真正变成了自动校验
+  当前下一条真实工作：
+  - 继续围绕 backend capability truth
+    做 completeness 审计
+  - 优先再找：
+    - dedicated backend docs
+    - active guides
+    - builder/factory/public-surface 语义
+    之间是否还有“当前 capability truth 已变，
+    但 active docs 没被 focused contract 守住”的残留
 - [completed] `winssl none-capability surface doc alignment`
   当前 focused 目标：
   - 把 WinSSL backend 专页中

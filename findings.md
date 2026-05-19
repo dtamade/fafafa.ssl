@@ -2,6 +2,44 @@
 
 ## 2026-05-20
 
+- 这次补出来的不是新的实现问题，
+  而是一类“验证空洞”：
+  - server-side optional surface
+    的 active docs
+    之前并没有一条统一 focused contract
+    去同时盯：
+    - `API_REFERENCE`
+    - top-level matrix
+    - dedicated backend pages
+    - `EARLY_DATA_GUIDE`
+    - `OCSP_USAGE_GUIDE`
+
+- 这意味着即使 source / runtime truth 现在看起来一致，
+  后面也很容易再次发生：
+  - 某个 dedicated backend page 漂了
+  - 某个 guide 沿用旧的 capability 叙事
+  - 但因为没有一条 cross-file focused contract，
+    漂移要等到人工复查时才会再次出现
+
+- 这批之后我们多了一条更适合当前阶段的审查策略：
+  - 对已经连续出现过 doc drift 的能力族，
+    不要只修当前那一个文件
+  - 要补一条能跨：
+    - main reference
+    - matrix
+    - dedicated backend pages
+    - active guides
+    的 focused contract
+  - 这样后续再漂时，
+    可以第一时间知道是“某个入口又单独跑偏了”
+
+- 新 contract 第一次报红也提醒了一点 workflow 经验：
+  - 有时候新批次的第一处红灯，
+    不是产品 drift，
+    而是 contract 自己的 quoting / pattern 写错
+  - 这时候先修 contract 让它稳定跑完，
+    才能知道真实审查结果到底是什么
+
 - WinSSL 这次又验证了一条很重要的能力矩阵审查规则：
   - top-level matrix 说对了
   - source capability 也说对了
