@@ -5759,3 +5759,32 @@
   - 高入口 quickstart 仍然可能拖着旧阶段心智
   - 所以后续“接口设计完整 / 各 backend 实现完整 / 测试和文档完整”的推进，不能只盯 capability rows
   - 还要继续清理这些最容易被复制粘贴的入口示例页
+
+- 顺着 quickstart 入口继续往 specialized guide 扫时，又确认了一类比“待实现措辞”更危险的 drift：
+  - 指南直接示范了不存在的接口
+  - `SECURITY_GUIDE.md` 的 HSM 段落就是这种情况
+
+- 这类问题之所以优先级高，是因为它不是口径宽一点，而是会把调用方直接带去写根本不存在的代码：
+  - `LoadPKCS11Engine(...)`
+  - `LoadKeyFromHSM(...)`
+  - `LContext.SetPrivateKey(...)`
+  - 这些都不是当前 fafafa.ssl 的 public API
+
+- 同时这页还混入了另一层 generic-truth drift：
+  - 直接把 `LContext.LoadPrivateKey('server.key', 'strong-password')` 当作通用密码私钥示例
+  - 但当前真实情况是：
+    - 传 non-empty `APassword` 前必须先看 `SupportsPasswordProtectedKeys`
+    - `WinSSL` 只有 PFX/P12 password path
+    - `FreePascal` / `WolfSSL` 当前 non-empty password 会 fail-closed
+
+- 这次收口后，这条线的稳定结论也更清晰了：
+  - 安全指南如果讲密钥管理，不应该再跳过 capability gate
+  - 也不应该把 backend-specific HSM path 伪装成 generic helper API
+  - 当前 public truth 只有：
+    - password-protected private key 先看 `SupportsPasswordProtectedKeys`
+    - HSM / PKCS#11 path 只在 `OpenSSL` backend，且仍受 runtime-ready `SupportsPKCS11` 约束
+
+- 这对总体路线图也有帮助：
+  - 我们现在不只是清理“字段真值”和“入口页措辞”
+  - 还在清理“会让用户直接写错代码”的 guide 示例层
+  - 后续继续推进文档完整性时，优先级应继续放在这类 executable examples，而不是先去美化统计数字

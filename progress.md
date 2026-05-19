@@ -11865,3 +11865,63 @@
   - result: PASS
   - summary:
     - current WinSSL quickstart runtime-truth batch has no whitespace or patch-format issues
+
+### Security Guide HSM/Password-Key Truth
+
+- `rg -n "LoadPKCS11Engine|LoadKeyFromHSM|SetPrivateKey\\(|LoadPrivateKey\\('server\\.key', 'strong-password'\\)|SupportsPasswordProtectedKeys|UsePKCS11|WithPKCS11PIN|LoadPrivateKeyFromPKCS11|PKCS#11|密码保护私钥|HSM" docs/guides/SECURITY_GUIDE.md docs/guides/PKCS11_USER_GUIDE.md docs/reference/API_REFERENCE.md docs/BACKEND_CAPABILITY_MATRIX.md src/fafafa.ssl.base.pas`
+  - result: PASS
+  - summary:
+    - static audit confirmed `SECURITY_GUIDE.md` still demonstrated nonexistent HSM helper APIs and overly generic password-protected-key guidance
+    - current truth sources were already available in:
+      - `API_REFERENCE`
+      - `BACKEND_CAPABILITY_MATRIX`
+      - `PKCS11_USER_GUIDE`
+      - source capability comments in `fafafa.ssl.base.pas`
+
+- add `docs/plans/2026-05-19-security-guide-hsm-password-truth.md`
+  - change:
+    - recorded the bounded docs-only plan for security-guide HSM / password-key truth cleanup
+
+- add `tests/scripts/test_security_guide_hsm_password_truth_contract.sh`
+  - change:
+    - added a focused shell contract that guards:
+      - password-protected-key capability gate wording
+      - WinSSL password-path boundary wording
+      - OpenSSL-only PKCS#11 published-path wording
+      - runtime-aware `SupportsPKCS11` gate in the HSM example
+      - absence of nonexistent HSM helper APIs
+
+- update docs:
+  - `docs/guides/SECURITY_GUIDE.md`
+  - change:
+    - rewrote the password-protected private-key example to gate on `SupportsPasswordProtectedKeys`
+    - documented current WinSSL / FreePascal / WolfSSL password-path boundaries
+    - replaced nonexistent HSM helper calls with the current `LoadPrivateKey('pkcs11:...')` public path
+    - documented the OpenSSL-only PKCS#11 published path and linked to `PKCS11_USER_GUIDE`
+
+- `bash -n tests/scripts/test_security_guide_hsm_password_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new security-guide HSM/password-key contract syntax is valid
+
+- `bash tests/scripts/test_security_guide_hsm_password_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed a shell quoting self-injury caused by backticks inside double-quoted fixed strings
+    - GREEN after converting the affected contract strings to single-quoted fixed patterns:
+      - security-guide HSM/password-key guidance now matches current source truth
+
+- `bash tests/scripts/test_api_inventory_pkcs11_high_entry_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - earlier PKCS#11 high-entry doc truth remained green after the security-guide cleanup
+
+- `npx prettier --write docs/guides/SECURITY_GUIDE.md`
+  - result: PASS
+  - summary:
+    - security guide formatting remains stable
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current security-guide HSM/password-key batch has no whitespace or patch-format issues

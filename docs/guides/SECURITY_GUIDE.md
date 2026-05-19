@@ -45,12 +45,14 @@
 ### 推荐的协议版本
 
 ✅ **推荐**:
+
 ```pascal
 // 仅使用现代安全协议
 LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
 ```
 
 ❌ **禁止**:
+
 ```pascal
 // 不要使用已废弃的协议
 LContext.SetProtocolVersions([
@@ -64,6 +66,7 @@ LContext.SetProtocolVersions([
 ### 密码套件配置
 
 **Mozilla 现代配置**（推荐）:
+
 ```pascal
 // 仅支持 TLS 1.3 密码套件
 LContext.SetCipherSuites(
@@ -84,6 +87,7 @@ LContext.SetCipherList(
 ```
 
 **禁用的密码套件**:
+
 ```pascal
 // 不要使用这些不安全的密码套件
 // - NULL cipher (无加密)
@@ -110,7 +114,7 @@ LContext.LoadDHParams('dhparam.pem');  // 至少 2048 位
 // 在 HTTP 响应中添加 HSTS 头
 procedure AddSecurityHeaders(aResponse: THTTPResponse);
 begin
-  aResponse.SetHeader('Strict-Transport-Security', 
+  aResponse.SetHeader('Strict-Transport-Security',
     'max-age=31536000; includeSubDomains; preload');
   aResponse.SetHeader('X-Content-Type-Options', 'nosniff');
   aResponse.SetHeader('X-Frame-Options', 'DENY');
@@ -125,11 +129,13 @@ end;
 ### 证书获取
 
 **推荐方式**:
+
 1. **Let's Encrypt**（免费、自动化）
 2. **商业 CA**（Extended Validation）
 3. **企业 CA**（内部使用）
 
 ❌ **避免**:
+
 - 自签名证书（生产环境）
 - 过期证书
 - 弱签名算法（MD5、SHA-1）
@@ -137,6 +143,7 @@ end;
 ### 证书验证
 
 **客户端验证**:
+
 ```pascal
 // 严格验证服务器证书
 LContext.SetVerifyMode([sslVerifyPeer]);
@@ -158,6 +165,7 @@ if not LCert.VerifyEx(LStore, [
 ```
 
 **服务器验证**（双向TLS）:
+
 ```pascal
 // 要求客户端证书
 LContext.SetVerifyMode([
@@ -179,7 +187,7 @@ if not LClientCert.IsValid then
 ```pascal
 // 固定证书指纹（高安全场景）
 const
-  EXPECTED_SHA256_FINGERPRINT = 
+  EXPECTED_SHA256_FINGERPRINT =
     'E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855';
 
 procedure VerifyCertificatePinning(aCert: ISSLCertificate);
@@ -201,19 +209,19 @@ begin
   // 1. 检查证书有效期
   var LCert := LoadCertificate('server.crt');
   var LExpiryDate := LCert.GetNotAfter;
-  
+
   // 2. 提前 30 天更新
   if DaysBetween(Now, LExpiryDate) < 30 then
   begin
     // 3. 申请新证书
     RequestNewCertificate;
-    
+
     // 4. 验证新证书
     if ValidateNewCertificate then
     begin
       // 5. 重新加载配置
       ReloadSSLConfig;
-      
+
       // 6. 记录日志
       LogInfo('Certificate renewed successfully');
     end;
@@ -241,6 +249,7 @@ openssl genpkey -algorithm Ed25519 -out server.key
 ### 密钥保护
 
 **文件权限**:
+
 ```bash
 # 私钥应设置为最严格权限
 chmod 400 server.key
@@ -251,31 +260,35 @@ chmod 700 /path/to/certs/
 ```
 
 **加密存储**:
+
 ```pascal
-// 使用密码保护私钥
-procedure GenerateEncryptedKey;
+// 使用密码保护私钥（先检查 backend capability）
+procedure LoadEncryptedPrivateKey(LLib: ISSLLibrary; LContext: ISSLContext);
 begin
-  // 生成加密的私钥
-  ExecuteCommand('openssl genrsa -aes256 -out server.key 4096');
-  
-  // 解密时需要密码
+  if not LLib.GetCapabilities.SupportsPasswordProtectedKeys then
+    raise Exception.Create('Current backend does not publish password-protected private-key loading');
+
+  // OpenSSL PEM 路径示例：传入 non-empty password 前先确认 capability
   LContext.LoadPrivateKey('server.key', 'strong-password');
 end;
 ```
 
+在向 `LoadPrivateKey(..., APassword)` / `LoadPrivateKeyPEM(..., APassword)` 传入非空密码前，先检查 `ISSLLibrary.GetCapabilities.SupportsPasswordProtectedKeys`。当前 `WinSSL` 只有 password-protected PFX/P12 import path；PEM private-key password path 仍为 unsupported。`FreePascal` / `WolfSSL` 当前在 non-empty `APassword` 下会 fail-closed `unsupported`。
+
 **硬件安全模块 (HSM)**:
+
 ```pascal
-// 使用 HSM 存储私钥（企业级）
-procedure UseHSM;
+// 使用 HSM / PKCS#11 存储私钥（当前 published path = OpenSSL backend）
+procedure UseHSM(LLib: ISSLLibrary; LContext: ISSLContext);
 begin
-  // 配置 PKCS#11 引擎
-  LoadPKCS11Engine('/usr/lib/libpkcs11.so');
-  
-  // 从 HSM 加载密钥
-  LPrivKey := LoadKeyFromHSM('slot-0', 'key-id', 'pin');
-  LContext.SetPrivateKey(LPrivKey);
+  if not LLib.GetCapabilities.SupportsPKCS11 then
+    raise Exception.Create('Current runtime does not publish PKCS#11 capability');
+
+  LContext.LoadPrivateKey('pkcs11:token=ProdToken;object=ServerKey;type=private?module-path=/usr/lib/softhsm/libsofthsm2.so', 'pin');
 end;
 ```
+
+当前 published HSM / PKCS#11 private-key path 只在 `OpenSSL` backend 暴露。`SupportsPKCS11=True` 也不代表“仓库里有 PKCS#11 代码就算支持”，而是当前 runtime 至少有一条可工作的 Provider / ENGINE path。更完整的 builder / PIN / URI 用法请继续看 [PKCS#11 用户指南](PKCS11_USER_GUIDE.md)。
 
 ### 密钥轮换
 
@@ -285,19 +298,19 @@ procedure RotateKeys;
 begin
   // 1. 生成新密钥对
   GenerateNewKeyPair;
-  
+
   // 2. 获取新证书
   RequestCertificateWithNewKey;
-  
+
   // 3. 测试新配置
   if TestNewConfiguration then
   begin
     // 4. 部署新密钥和证书
     DeployNewKeyAndCert;
-    
+
     // 5. 撤销旧证书
     RevokePreviousCertificate;
-    
+
     // 6. 安全删除旧密钥
     SecureDeleteOldKey;
   end;
@@ -321,18 +334,18 @@ begin
   LClientCert := aConn.GetPeerCertificate;
   if LClientCert = nil then
     raise EAuthenticationFailed.Create('No client certificate');
-  
+
   // 验证证书
   if not LClientCert.Verify(FCAStore) then
     raise EAuthenticationFailed.Create('Certificate verification failed');
-  
+
   // 提取身份信息
   LCommonName := ExtractCommonName(LClientCert.GetSubject);
-  
+
   // 授权检查
   if not IsAuthorized(LCommonName) then
     raise EAuthorizationFailed.Create('Access denied');
-  
+
   // 创建会话
   CreateAuthenticatedSession(LCommonName);
 end;
@@ -350,19 +363,19 @@ begin
   // 1. 验证格式
   if not IsValidAPIKeyFormat(aAPIKey) then
     raise EInvalidAPIKey.Create('Invalid API key format');
-  
+
   // 2. 查询数据库
   if not LookupAPIKey(aAPIKey, LHash, LExpiry) then
     raise EInvalidAPIKey.Create('Unknown API key');
-  
+
   // 3. 检查过期
   if LExpiry < Now then
     raise EInvalidAPIKey.Create('API key expired');
-  
+
   // 4. 验证哈希
   if not VerifyHash(aAPIKey, LHash) then
     raise EInvalidAPIKey.Create('Invalid API key');
-  
+
   // 5. 速率限制
   if ExceedsRateLimit(aAPIKey) then
     raise ERateLimitExceeded.Create('Rate limit exceeded');
@@ -382,10 +395,10 @@ begin
   // 验证连接是否加密
   if not aConn.IsConnected then
     raise Exception.Create('Not connected');
-  
+
   if aConn.GetProtocolVersion < sslProtocolTLS12 then
     raise Exception.Create('Insecure protocol version');
-  
+
   // 发送数据
   aConn.WriteString(aData);
 end;
@@ -443,10 +456,10 @@ begin
     LLogEntry.Add('level', SecurityLevelToString(aLevel));
     LLogEntry.Add('source_ip', GetClientIP);
     LLogEntry.Add('user', GetCurrentUser);
-    
+
     // 写入审计日志
     AppendToAuditLog(LLogEntry);
-    
+
     // 高危事件发送告警
     if aLevel >= sslSecurityCritical then
       SendSecurityAlert(aEvent);
@@ -472,11 +485,11 @@ begin
   // 1. 短时间内大量失败连接
   if GetFailedConnectionsPerMinute > 10 then
     BlockIPAddress(GetClientIP, 3600);  // 封禁 1 小时
-  
+
   // 2. 非法证书访问
   if DetectInvalidCertificate then
     LogSecurityEvent('Invalid certificate detected', sslSecurityWarning);
-  
+
   // 3. 协议降级攻击
   if DetectProtocolDowngrade then
     LogSecurityEvent('Protocol downgrade attack detected', sslSecurityCritical);
@@ -605,6 +618,7 @@ openssl s_client -connect example.com:443 -tls1_3
 4. 等待回复（通常 48 小时内）
 
 我们承诺：
+
 - 及时响应
 - 负责任地披露
 - 致谢贡献者
@@ -612,4 +626,3 @@ openssl s_client -connect example.com:443 -tls1_3
 ---
 
 **保持安全！** 🔒
-

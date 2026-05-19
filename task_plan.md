@@ -4152,3 +4152,43 @@
      - 继续审查：
        - 其它 backend quickstart / high-entry guide 是否也残留“已实现能力仍写待实现”或旧接口语法
        - 尤其优先看还保留 phase snapshot / 总测试数 / 完成度口径的 specialized guides
+89. `Security guide HSM/password-key truth` 已完成 focused 收口，并应作为当前安全指南密钥管理段落的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-security-guide-hsm-password-truth.md`
+   - 当前已确认的真实 drift：
+     - `docs/guides/SECURITY_GUIDE.md`
+       - 仍示范不存在的：
+         - `LoadPKCS11Engine(...)`
+         - `LoadKeyFromHSM(...)`
+         - `LContext.SetPrivateKey(...)`
+       - 仍把：
+         - `LContext.LoadPrivateKey('server.key', 'strong-password')`
+         当作 generic truth
+       - 但没有交代：
+         - 先检查 `SupportsPasswordProtectedKeys`
+         - `WinSSL` 当前只有 password-protected PFX/P12 path
+         - `FreePascal` / `WolfSSL` 当前 non-empty `APassword` 会 fail-closed
+       - 也没有交代：
+         - 当前 published HSM / PKCS#11 path 只在 `OpenSSL` backend 暴露
+         - `SupportsPKCS11=True` 依赖 runtime-ready Provider / ENGINE path
+   - 当前最小正确修法已落地：
+     - 不改生产实现
+     - 只把 `SECURITY_GUIDE` 重新锚回当前 public API / capability truth：
+       - 密码保护私钥示例改成先检查 `SupportsPasswordProtectedKeys`
+       - 明确 `WinSSL` / `FreePascal` / `WolfSSL` 的边界
+       - HSM 示例改成当前真实 published path：
+         - `OpenSSL` backend
+         - `LLib.GetCapabilities.SupportsPKCS11`
+         - `LoadPrivateKey('pkcs11:...')`
+       - 同步链接到专门的 `PKCS11_USER_GUIDE`
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_security_guide_hsm_password_truth_contract.sh`
+     - `bash tests/scripts/test_security_guide_hsm_password_truth_contract.sh`
+     - `bash tests/scripts/test_api_inventory_pkcs11_high_entry_truth_contract.sh`
+     - `npx prettier --write docs/guides/SECURITY_GUIDE.md`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 不再让 `SECURITY_GUIDE` 把不存在的 HSM helper 当作 public API
+     - 继续审查：
+       - 其它 specialized guides 是否还把 backend-specific helper/API 冒充成 generic public path
+       - 以及哪些指南仍保留“总测试数 / 通过率 / Phase 完成度”式快照内容
