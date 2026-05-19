@@ -10,6 +10,64 @@
 
 ## Current Status
 
+- [completed] `auto-backend system-cert-store capability truth`
+  当前 focused 目标：
+  - 给 `RequireSystemCertStore` / auto-backend selection
+    补一条 runtime-aware focused contract，
+    证明 selector / builder 的下游结果
+    确实跟随当前已发布的 `SupportsSystemCertStore` capability truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-auto-backend-system-cert-store-capability-truth-contract.md`
+  - 新增 focused contract：
+    - `tests/test_auto_backend_system_cert_store_capability_truth_contract.pas`
+  当前预判：
+  - `SupportsSystemCertStore` 的 source truth
+    与 selector/builder 消费路径本身并没有先验证出新的实现漂移，
+    真正缺的是一条 runtime-aware downstream proof
+  当前最终收口证据：
+  - focused contract 会先遍历当前已注册且可用 backend，
+    推导是否存在任一 backend 发布
+    `SupportsSystemCertStore=True`
+  - 若存在：
+    - `SelectBestBackend(...)` 必须成功
+    - 选中的 backend 也必须发布
+      `SupportsSystemCertStore=True`
+    - `TSSLContextBuilder.Create.WithAutoBackendSelection(...).TryBuildClient(...)`
+      必须成功
+  - 若不存在：
+    - selector 必须失败
+    - builder 必须失败，并返回
+      `No suitable SSL backend found for requirements`
+  - focused contract 已在本机编译并运行通过
+  当前关键排障结论：
+  - 第一版 RED 不是生产 bug，
+    而是 focused proof 自己把
+    `CreateDefaultRequirements(optBalanced)` 的默认评分阈值
+    混进了 `RequireSystemCertStore` requirement truth
+  - 把：
+    - `MinSecurityScore := 0`
+    - `MinPerformanceScore := 0`
+    - `MinCompatibilityLevel := 0`
+    显式清零后，
+    这条合同就只验证 `RequireSystemCertStore`，
+    不再被 balanced 默认阈值噪音误伤
+  focused verification 已通过：
+  - `mkdir -p tmp/test_auto_backend_system_cert_store_truth_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_auto_backend_system_cert_store_truth_units -FEtmp/test_auto_backend_system_cert_store_truth_units -otmp/test_auto_backend_system_cert_store_truth_units/test_auto_backend_system_cert_store_capability_truth_contract tests/test_auto_backend_system_cert_store_capability_truth_contract.pas && ./tmp/test_auto_backend_system_cert_store_truth_units/test_auto_backend_system_cert_store_capability_truth_contract`
+  当前结论：
+  - 当前 selector / builder 与
+    `SupportsSystemCertStore` published capability truth
+    已经对齐
+  - 这批收掉的是 downstream proof gap，
+    不是新的 backend implementation bug
+  当前下一条真实工作：
+  - 继续沿 selector / builder 主线，
+    找其它 runtime-aware requirement / preference
+    还缺 focused downstream proof 的残口
+  - 优先再看：
+    - `PreferOSNative`
+    - `PreferHardwareAccel`
+    - 或其它 capability-aware requirement / preference
 - [completed] `backend feature capability parity runtime proof`
   当前 focused 目标：
   - 给 `ISSLLibrary.IsFeatureSupported(...)` 与

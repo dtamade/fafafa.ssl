@@ -14317,3 +14317,52 @@
   - `progress.md`
   - change:
     - recorded this batch as a proof-gap closeout rather than a backend implementation fix
+
+### Auto-Backend System Cert Store Capability Truth
+
+- add `docs/plans/2026-05-20-auto-backend-system-cert-store-capability-truth-contract.md`
+  - change:
+    - define the bounded runtime-aware downstream contract batch for
+      `RequireSystemCertStore` / auto-backend selection truth
+
+- add `tests/test_auto_backend_system_cert_store_capability_truth_contract.pas`
+  - change:
+    - add a focused Pascal contract that derives the expected result from
+      currently registered and available backends
+    - verify both:
+      - `SelectBestBackend(...)`
+      - `TSSLContextBuilder.WithAutoBackendSelection(...).TryBuildClient(...)`
+    - require success only when some available backend publishes
+      `SupportsSystemCertStore=True`
+    - otherwise require selector/builder failure with
+      `No suitable SSL backend found for requirements`
+
+- `mkdir -p tmp/test_auto_backend_system_cert_store_truth_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_auto_backend_system_cert_store_truth_units -FEtmp/test_auto_backend_system_cert_store_truth_units -otmp/test_auto_backend_system_cert_store_truth_units/test_auto_backend_system_cert_store_capability_truth_contract tests/test_auto_backend_system_cert_store_capability_truth_contract.pas && ./tmp/test_auto_backend_system_cert_store_truth_units/test_auto_backend_system_cert_store_capability_truth_contract`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed a proof-design bug, not a production implementation bug
+    - the initial contract accidentally mixed
+      `CreateDefaultRequirements(optBalanced)` default score thresholds into the
+      `RequireSystemCertStore` requirement proof
+    - after explicitly zeroing:
+      - `MinSecurityScore`
+      - `MinPerformanceScore`
+      - `MinCompatibilityLevel`
+      the contract isolated the single requirement truth and turned green
+    - current runtime proof now shows:
+      - selector/builder succeed when some available backend publishes
+        `SupportsSystemCertStore=True`
+      - selector/builder fail when none do
+
+- update `tests/test_auto_backend_system_cert_store_capability_truth_contract.pas`
+  - change:
+    - zero the default balanced score thresholds so the contract verifies only
+      `RequireSystemCertStore` truth instead of a mixed score + capability filter
+
+- update planning files:
+  - `task_plan.md`
+  - `findings.md`
+  - `progress.md`
+  - change:
+    - recorded this batch as a downstream proof-gap closeout rather than a
+      backend implementation fix

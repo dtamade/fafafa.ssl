@@ -6852,3 +6852,46 @@
      - capability dual-truth 这条线以后不必再为
        `IsFeatureSupported(...)` vs `GetCapabilities`
        反复从头拉起
+
+119. `RequireSystemCertStore` 这批再次说明，
+   selector / builder 的 runtime-aware requirement 审查里，
+   最容易反复误判的不是 source truth，
+   而是 proof 自己有没有把额外筛选条件混进去：
+   - 当前更值钱的真实残口并不是
+     `SupportsSystemCertStore` producer 又写错了
+   - 而是此前还没有一条 focused downstream contract，
+     直接证明：
+     - `SelectBestBackend(...)`
+     - `TSSLContextBuilder.WithAutoBackendSelection(...).TryBuildClient(...)`
+       的结果
+       确实跟随当前 published capability truth
+   - 这次第一版 RED 的根因也很典型：
+     - 合同起点用了 `CreateDefaultRequirements(optBalanced)`
+     - 但没有把：
+       - `MinSecurityScore`
+       - `MinPerformanceScore`
+       - `MinCompatibilityLevel`
+         清零
+     - 于是 `RequireSystemCertStore` 的 proof
+       被默认 balanced 评分阈值污染，
+       误看成 selector / builder 行为异常
+   - 把三项最低分数门槛显式清零后，
+     合同才真正回到它该验证的单一问题：
+     - 是否存在任一已注册且可用 backend
+       发布 `SupportsSystemCertStore=True`
+     - 若存在，则 selector / builder 必须成功，
+       且选中的 backend 也必须发布该 capability
+     - 若不存在，则 selector / builder 都必须失败，
+       且 builder 要给出
+       `No suitable SSL backend found for requirements`
+   - 所以这批应沉淀成一个更稳的路线规则：
+     - 对 selector / builder 的 requirement proof，
+       必须先隔离掉默认 score threshold / preference 噪音
+     - 不然很容易把“多条件筛选结果”误判成
+       “单条 capability truth 漂移”
+   - 当前最重要的 durable 结论是：
+     - `RequireSystemCertStore` 的 downstream proof gap
+       已经闭环
+     - 当前 selector / builder 行为与
+       `SupportsSystemCertStore` published truth 对齐，
+       不必再为这条线反复从头拉起
