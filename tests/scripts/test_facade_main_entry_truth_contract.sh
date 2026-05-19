@@ -10,7 +10,7 @@ cd "$PROJECT_ROOT"
 readme_file="docs/README.md"
 facade_file="src/fafafa.ssl.pas"
 factory_file="src/fafafa.ssl.factory.pas"
-integration_file="docs/guides/INTEGRATION_GUIDE.md"
+integration_file="docs/INTEGRATION_GUIDE.md"
 
 for file in "$readme_file" "$facade_file" "$factory_file" "$integration_file"; do
   if rg -n --quiet '\bsslClient\b|\bsslServer\b' "$file"; then

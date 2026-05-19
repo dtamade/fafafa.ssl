@@ -2,6 +2,75 @@
 
 ## 2026-05-19
 
+## 2026-05-20
+
+### Integration Guide Canonical Path Truth
+
+- `ls -l docs/INTEGRATION_GUIDE.md docs/guides/INTEGRATION_GUIDE.md`
+- `diff -u docs/INTEGRATION_GUIDE.md docs/guides/INTEGRATION_GUIDE.md`
+- `rg -n "INTEGRATION_GUIDE\\.md" docs tests/scripts src`
+  - result: PASS
+  - summary:
+    - confirmed the repo carried two divergent active integration-guide paths:
+      - canonical root `docs/INTEGRATION_GUIDE.md`
+      - stale shadow copy `docs/guides/INTEGRATION_GUIDE.md`
+    - README / documentation index / most owner-path contracts already treated the root file
+      as canonical, while a smaller set of facade/SNI contracts still targeted the shadow copy
+
+- add `docs/plans/2026-05-20-integration-guide-canonical-path-truth.md`
+  - change:
+    - recorded the bounded docs+contract batch for collapsing integration-guide truth
+      onto a single canonical path
+
+- add `tests/scripts/test_integration_guide_canonical_path_truth_contract.sh`
+  - change:
+    - added a focused shell contract that freezes:
+      - root `docs/INTEGRATION_GUIDE.md` as the canonical path
+      - absence of `docs/guides/INTEGRATION_GUIDE.md`
+      - active facade/SNI/import contracts pointing at the canonical root file
+
+- `bash -n tests/scripts/test_integration_guide_canonical_path_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new canonical-path contract syntax is valid
+
+- `bash tests/scripts/test_integration_guide_canonical_path_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first proved the real problem was not hypothetical:
+      - `stale shadow integration guide still exists at docs/guides/INTEGRATION_GUIDE.md`
+    - GREEN after deleting the shadow copy and retargeting active contracts proves:
+      - the repo now has one active integration-guide truth source
+      - active contracts no longer split between root and guides paths
+
+- update docs/tests:
+  - `docs/INTEGRATION_GUIDE.md`
+  - `tests/scripts/test_facade_main_entry_truth_contract.sh`
+  - `tests/scripts/test_landing_docs_connection_level_sni_guidance_contract.sh`
+  - `tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - remove `docs/guides/INTEGRATION_GUIDE.md`
+  - change:
+    - normalized canonical integration-guide examples to public facade imports
+    - removed direct `fafafa.ssl.base` / `fafafa.ssl.tls` active-example teaching
+    - retargeted facade/SNI/import contracts to the canonical root path
+
+- `bash tests/scripts/test_facade_main_entry_truth_contract.sh`
+- `bash tests/scripts/test_landing_docs_connection_level_sni_guidance_contract.sh`
+- `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+- `bash tests/scripts/test_isslconnectioninfo_active_guidance_contract.sh`
+- `bash tests/scripts/test_isslsessionresumption_active_guidance_contract.sh`
+- `bash tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+- `bash tests/scripts/test_docs_readme_integration_guide_exists_contract.sh`
+  - result: PASS
+  - summary:
+    - all focused and dependent root-guide contracts stayed green after the canonical-path collapse
+    - connection-info / session-resumption / cert-verification owner-path truth remained intact
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - the integration-guide canonical-path batch is whitespace-clean
+
 ### macOS Batch Loader Regression Closure
 
 - `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`

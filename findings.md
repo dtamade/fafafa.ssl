@@ -260,6 +260,31 @@
 
 ## 2026-05-20
 
+- `INTEGRATION_GUIDE` 这次证明了一个很典型的文档/工作流问题：
+  - 漂移不一定来自“同一页内部有错”
+  - 也可能来自“同一个主题有两份 active 文件，同时被不同 contract 当真”
+  - 这种双路径真相比单页措辞错误更危险，因为它会让不同批次各自修自己的那一份，
+    最后越修越分叉
+
+- 对当前 repo 来说，`docs/INTEGRATION_GUIDE.md` 才是权威入口：
+  - `docs/README.md`
+  - `docs/DOCUMENTATION_INDEX.md`
+  - 多条 owner-path active-guidance contract
+  都已经把根目录版本当作 canonical source
+  - `docs/guides/INTEGRATION_GUIDE.md` 更像后来长出的漂移副本
+
+- 所以这次最值钱的修法不是“把两份都修一遍”，而是：
+  - 删除 shadow copy
+  - 把 active contracts 统一收回到 root canonical path
+  - 顺手把 canonical guide 的 import truth 也收回 `uses fafafa.ssl;`
+  这样后续再修 connection-info / cert-verify / session-resumption guidance 时，
+  就不会再出现“只修到另一份文档”的假收口
+
+- 这条经验也直接反推到整体路线图：
+  - 对 `fafafa.ssl` 这类接口/文档并行演进项目，
+  - “唯一权威路径”本身就是 correctness 要件，不是文档整理偏好
+  - 以后只要出现同主题双路径 active docs，就应优先把它当 correctness bug 收口
+
 - `26110676557` 的最终结果把这条 macOS 线彻底钉死了：
   - 不是“本地修了，CI 未必真好”
   - 而是 GitHub 三平台 gate 已经一起全绿：

@@ -25,7 +25,7 @@
 
 ```pascal
 uses
-  fafafa.ssl.base,
+  fafafa.ssl,
   fafafa.ssl.context.builder;
 
 // 你的网络框架实现这两个回调（示例签名）
@@ -140,7 +140,7 @@ end;
 ```pascal
 uses
   SysUtils,
-  fafafa.ssl.base;
+  fafafa.ssl;
 
 var
   State: TSSLHandshakeState;
@@ -220,8 +220,7 @@ end;
 ```pascal
 uses
   SysUtils,
-  fafafa.ssl,
-  fafafa.ssl.tls;
+  fafafa.ssl;
 
 var
   TLS: TSSLConnector;
@@ -243,8 +242,7 @@ end;
 uses
   SysUtils, Classes,
   fafafa.ssl,
-  fafafa.ssl.context.builder,
-  fafafa.ssl.tls;
+  fafafa.ssl.context.builder;
 
 var
   Ctx: ISSLContext;

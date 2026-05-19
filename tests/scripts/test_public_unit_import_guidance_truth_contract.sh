@@ -28,6 +28,7 @@ require_absent() {
 }
 
 user_guide="docs/guides/USER_GUIDE.md"
+integration_guide="docs/INTEGRATION_GUIDE.md"
 winssl_quickstart="docs/guides/WINSSL_QUICKSTART.md"
 winssl_guide="docs/guides/WINSSL_USER_GUIDE.md"
 mbedtls_guide="docs/guides/MBEDTLS_USER_GUIDE.md"
@@ -40,6 +41,11 @@ require_fixed "$user_guide" "SysUtils, fafafa.ssl;" \
   "USER_GUIDE must use the current public facade unit in active examples"
 require_fixed "$user_guide" "LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);" \
   "USER_GUIDE must use TSSLFactory.GetLibraryInstance for OpenSSL-focused examples"
+
+require_fixed "$integration_guide" "fafafa.ssl.context.builder;" \
+  "INTEGRATION_GUIDE must keep the current builder unit in hook/client setup examples"
+require_fixed "$integration_guide" "  fafafa.ssl;" \
+  "INTEGRATION_GUIDE must use the current public facade unit in active examples"
 
 require_fixed "$winssl_quickstart" "fafafa.ssl;" \
   "WINSSL_QUICKSTART must use the current public facade unit"
@@ -73,6 +79,7 @@ require_fixed "$api_reference" "LLib := TSSLFactory.GetLibraryInstance(sslOpenSS
   "API_REFERENCE examples must use the current public library-entrypoint truth"
 
 for file in \
+  "$integration_guide" \
   "$user_guide" \
   "$winssl_quickstart" \
   "$winssl_guide" \
@@ -85,6 +92,10 @@ for file in \
     "$file must stop using removed abstract.types"
 done
 
+require_absent "$integration_guide" "fafafa.ssl.base," \
+  "INTEGRATION_GUIDE must stop teaching direct base-unit imports in active examples"
+require_absent "$integration_guide" "fafafa.ssl.tls;" \
+  "INTEGRATION_GUIDE must stop teaching direct tls-unit imports in active examples"
 require_absent "$user_guide" "fafafa.ssl.openssl" \
   "USER_GUIDE must stop teaching nonexistent fafafa.ssl.openssl facade unit"
 require_absent "$troubleshooting" "fafafa.ssl.openssl;" \
@@ -93,6 +104,7 @@ require_absent "$api_reference" "fafafa.ssl.openssl," \
   "API_REFERENCE examples must stop using nonexistent fafafa.ssl.openssl facade unit"
 
 for file in \
+  "$integration_guide" \
   "$winssl_quickstart" \
   "$winssl_guide" \
   "$mbedtls_guide" \

@@ -10,6 +10,51 @@
 
 ## Current Status
 
+- [completed] `integration guide canonical path truth`
+  当前 focused 目标：
+  - 把 active integration guide truth 收回到唯一权威路径
+    `docs/INTEGRATION_GUIDE.md`
+  - 消除 `docs/guides/INTEGRATION_GUIDE.md` 继续制造双真相
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-integration-guide-canonical-path-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_integration_guide_canonical_path_truth_contract.sh`
+  - 同步更新：
+    - `tests/scripts/test_facade_main_entry_truth_contract.sh`
+    - `tests/scripts/test_landing_docs_connection_level_sni_guidance_contract.sh`
+    - `tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+    - `docs/INTEGRATION_GUIDE.md`
+  当前最终收口证据：
+  - `docs/guides/INTEGRATION_GUIDE.md` 已删除
+  - active docs 索引 / README / focused contracts 现在统一指向
+    `docs/INTEGRATION_GUIDE.md`
+  - canonical integration guide 的 active snippets 已收回到：
+    - `uses fafafa.ssl;`
+    - `fafafa.ssl.context.builder`
+    - 不再继续教学 `fafafa.ssl.base` / `fafafa.ssl.tls` 直引
+  focused verification 已通过：
+  - `bash tests/scripts/test_integration_guide_canonical_path_truth_contract.sh`
+  - `bash tests/scripts/test_facade_main_entry_truth_contract.sh`
+  - `bash tests/scripts/test_landing_docs_connection_level_sni_guidance_contract.sh`
+  - `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - `bash tests/scripts/test_isslconnectioninfo_active_guidance_contract.sh`
+  - `bash tests/scripts/test_isslsessionresumption_active_guidance_contract.sh`
+  - `bash tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+  - `bash tests/scripts/test_docs_readme_integration_guide_exists_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - 这次暴露的不是单页文档过期，而是 active docs/contract 自己把
+    integration guide 分成了两条路径。
+  - 现在根目录 `docs/INTEGRATION_GUIDE.md` 已重新成为唯一权威入口。
+  当前下一条真实工作：
+  - 继续回到 facade helper / compatibility 路线审查：
+    - `TSSLHelper`
+    - `QuickServer`
+    - `CreateOCSPClient` / `CreateCRLManager`
+  - 判断这些 shipped helper 目前是否已经在 active docs 里被明确分成
+    `推荐入口` 与 `兼容/便捷入口`
+
 - [completed] `macOS batch-loader regression closure`
   当前 focused 目标：
   - 不再把这次 macOS 新失败重判成旧的 loader/path 问题
