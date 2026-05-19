@@ -17,7 +17,7 @@
     - 已下载 Windows artifact：
       - workflow `26092105397`
       - artifact `wave-b-windows-winssl_callback_markers_20260519_184245`
-    - 当前已确认的失败事实不是 marker 缺失，而是：
+  - 当前已确认的失败事实不是 marker 缺失，而是：
       - `[WINSSL-RUNTIME] callback_surface verify=missing password=missing info=missing`
     - 当前 root cause 已锁定：
       - `test_winssl_unit_comprehensive.lpi`
@@ -26,9 +26,21 @@
         里，但 broader suite 并不会运行那份源文件
       - 所以 `tests/run_winssl_tests.ps1`
         的提取逻辑之前从一开始就在抓错 truth source
+    - 第二轮 Windows CI (`26092828923`) 已进一步证明：
+      - callback marker 本身已经修正为：
+        - `[WINSSL-RUNTIME] callback_surface verify=pass password=unsupported info=pass`
+      - 但 broader suite 仍失败在：
+        - `WinSSL Unit Tests (Comprehensive)`
+      - 当前新 root cause 不是 library 语义错误，而是：
+        - `tests/winssl/test_winssl_unit_comprehensive.pas`
+          把 password callback 的 fail-closed 提示文案判断得过窄
+        - 实际 runtime 抛出的 message 为：
+          - `Password callback is not published by the current WinSSL backend runtime...`
+        - 这与当前已发布 truth 一致，但没有被测试接受为 unsupported 同义证据
   - 当前已落地的本地收口：
     - `tests/winssl/test_winssl_unit_comprehensive.pas`
       已补实际 Windows callback configuration tests
+      并已放宽 password callback 断言以接受当前真实 fail-closed 文案
     - `tests/run_winssl_tests.ps1`
       新增 `callback_surface` runtime marker 汇总逻辑
     - `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md`
@@ -40,10 +52,11 @@
     - `bash tests/scripts/test_winssl_runtime_callback_markers_contract.sh`
     - `git diff --check`
   - 当前下一步：
-    - 提交推送本批 root-cause fix
+    - 提交推送 password fail-closed assertion fix
     - 重新 dispatch `Wave B B2 Manual Gate (Template)`
     - 再次下载 Windows transcript，确认：
       - `[WINSSL-RUNTIME] callback_surface verify=pass password=unsupported info=pass`
+    - 同时确认 broader runtime suite 回到全绿
 - [completed] WinSSL FIPS capability truth tightening 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-winssl-fips-capability-truth-tightening.md`

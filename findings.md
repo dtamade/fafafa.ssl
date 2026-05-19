@@ -2,6 +2,35 @@
 
 ## 2026-05-19
 
+- 第二轮 Windows CI (`26092828923`) 把这条链又往前推了一步：
+  - artifact 里已经明确出现了：
+    - `[WINSSL-RUNTIME] callback_surface verify=pass password=unsupported info=pass`
+  - 这说明我们上一轮修的核心目标其实已经达成：
+    - callback marker 不再是 `missing/missing/missing`
+    - Windows runtime transcript 现在能直接写出 callback granularity truth
+
+- 当前剩下的失败也因此被准确缩小成了测试断言问题，而不是 library 实现问题：
+  - `WinSSL Unit Tests (Comprehensive)` 失败点是：
+    - `[Callback Configuration] Password callback unsupported as expected: FAIL`
+  - 真实异常文案是：
+    - `Password callback is not published by the current WinSSL backend runtime. The current WinSSL callback surface only publishes verify/info paths.`
+  - 这条 message 本质上就是当前已发布 truth 的 fail-closed 表述：
+    - password callback 未发布
+    - verify/info 才是 published path
+  - 但我们刚加到 `tests/winssl/test_winssl_unit_comprehensive.pas`
+    的 Windows callback 测试只把包含：
+    - `unsupported`
+    的 message 视作成功
+
+- 所以下一步的最小正确修法不是再碰 callback marker，也不是再改 WinSSL context：
+  - 只需要把 Windows comprehensive 测试的 password callback 断言放宽到接受当前真实 fail-closed message
+  - 这类 message 至少应接受：
+    - `unsupported`
+    - 或
+    - `not published`
+  - 因为后者已经明确表达了同一条 public truth：
+    - password callback 不是当前已发布的 WinSSL runtime path
+
 - 继续往 WinSSL runtime completeness 收口时，先用 GitHub Windows artifact 把 callback proof gap 反证实了：
   - workflow `26092105397`
     的 `winssl_runtime_suite_winssl_callback_markers_20260519_184245.log`

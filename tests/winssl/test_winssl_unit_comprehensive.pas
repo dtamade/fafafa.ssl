@@ -431,6 +431,7 @@ var
   LLib: ISSLLibrary;
   LContext: ISSLContext;
   LCallbacks: TCallbackProbe;
+  LPasswordError: string;
 begin
   BeginSection('Callback Configuration');
 
@@ -469,8 +470,12 @@ begin
         'Expected unsupported semantics for WinSSL password callback');
     except
       on E: Exception do
+      begin
+        LPasswordError := LowerCase(E.Message);
         Test('Password callback unsupported as expected',
-          Pos('unsupported', LowerCase(E.Message)) > 0, E.Message);
+          (Pos('unsupported', LPasswordError) > 0) or
+          (Pos('not published', LPasswordError) > 0), E.Message);
+      end;
     end;
 
     try

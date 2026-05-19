@@ -89,6 +89,54 @@
   - summary:
     - current WinSSL callback runtime marker root-cause fix batch is whitespace-clean before commit/push
 
+- `git commit -m "test(winssl): bind callback markers to real windows suite"`
+  - result: PASS
+  - summary:
+    - recorded the real-Windows-suite callback truth fix in commit `12e62a2`
+
+- `git push origin master`
+  - result: PASS
+  - summary:
+    - pushed `12e62a2` to `origin/master`
+
+- `gh workflow run "Wave B B2 Manual Gate (Template)" --ref master -f run_id=winssl_callback_markers_fix_20260519_185808`
+  - result: PASS
+  - summary:
+    - dispatched a fresh Windows-proof run against `12e62a2`
+
+- `gh run watch 26092828923`
+  - result: FAIL in `windows-gate`
+  - summary:
+    - `linux-gate` and `macos-gate` completed
+    - `windows-gate` failed specifically at:
+      - `Run broader WinSSL runtime suite`
+
+- `gh run view 26092828923 --job 76722715903 --log`
+  - result: PASS with failure diagnosis
+  - summary:
+    - the new Windows run proved the callback marker itself is now correct:
+      - `[WINSSL-RUNTIME] callback_surface verify=pass password=unsupported info=pass`
+    - broader suite still failed because the newly added Windows callback test treated the current fail-closed message
+      - `Password callback is not published by the current WinSSL backend runtime...`
+      as a test failure instead of as supported unsupported/not-published truth
+
+- update `tests/winssl/test_winssl_unit_comprehensive.pas`
+  - change:
+    - relax password callback failure-text acceptance so the Windows comprehensive test treats both:
+      - `unsupported`
+      - `not published`
+      as valid fail-closed evidence for the current WinSSL password callback path
+
+- `bash tests/scripts/test_winssl_runtime_callback_markers_contract.sh`
+  - result: PASS
+  - summary:
+    - marker contract still holds after relaxing the Windows password callback assertion text
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - follow-up Windows password assertion fix is whitespace-clean before the next commit/push
+
 ### WinSSL FIPS Capability Truth Tightening
 
 - add `docs/plans/2026-05-19-winssl-fips-capability-truth-tightening.md`
