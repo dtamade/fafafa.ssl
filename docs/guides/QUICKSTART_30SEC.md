@@ -2,6 +2,8 @@
 
 > **目标**：让开发者在 30 秒内找到并运行第一个示例
 
+这些命令是当前可执行 quickstart 入口，但不要把固定输出文本、OpenSSL 版本字符串或某次 TLS 协商结果当成长期文档 truth。
+
 ## 最快入门路径
 
 ### 1. 验证环境（5秒）
@@ -11,13 +13,11 @@
 fpc -Mobjfpc -Sh -Fu./src examples/hello_ssl.pas && ./hello_ssl
 ```
 
-预期输出：
-```
-[Step 1] Loading OpenSSL library...
-         SUCCESS
-[Step 2] Get version info...
-         Version: OpenSSL 3.x.x ...
-```
+成功标准：
+
+- 示例程序成功编译并运行
+- OpenSSL 库加载成功，并打印当前本机的版本信息
+- 如果输出文本或版本字符串与历史截图不同，以当前运行结果为准
 
 ### 2. 第一个 HTTPS 请求（10秒）
 
@@ -26,13 +26,11 @@ fpc -Mobjfpc -Sh -Fu./src examples/hello_ssl.pas && ./hello_ssl
 fpc -Mobjfpc -Sh -Fu./src examples/https_simple_get.pas && ./https_simple_get
 ```
 
-预期输出：
-```
-步骤 4: 执行TLS握手...
-  ✓ 握手成功
-    协议: TLS 1.3
-    密码套件: TLS_AES_256_GCM_SHA384
-```
+成功标准：
+
+- 示例程序成功编译并运行
+- TLS 握手成功，并输出当前目标站点协商得到的协议/密码套件信息
+- 如果当前站点协商结果与旧截图不同，以当前运行结果为准
 
 ### 3. 密码学工具（10秒）
 
@@ -48,38 +46,38 @@ end.
 
 ### 入门级（⭐）
 
-| 示例 | 功能 | 编译命令 |
-|------|------|----------|
-| `hello_ssl.pas` | 验证 OpenSSL 加载 | `fpc -Fu./src examples/hello_ssl.pas` |
-| `https_simple_get.pas` | 最简 HTTPS GET | `fpc -Fu./src examples/https_simple_get.pas` |
-| `hash_calculator.pas` | SHA256/MD5 计算 | `fpc -Fu./src examples/hash_calculator.pas` |
+| 示例                   | 功能              | 编译命令                                     |
+| ---------------------- | ----------------- | -------------------------------------------- |
+| `hello_ssl.pas`        | 验证 OpenSSL 加载 | `fpc -Fu./src examples/hello_ssl.pas`        |
+| `https_simple_get.pas` | 最简 HTTPS GET    | `fpc -Fu./src examples/https_simple_get.pas` |
+| `hash_calculator.pas`  | SHA256/MD5 计算   | `fpc -Fu./src examples/hash_calculator.pas`  |
 
 ### 基础级（⭐⭐）
 
-| 示例 | 功能 | 说明 |
-|------|------|------|
-| `01_tls_client.pas` | TLS 客户端完整流程 | 含证书验证 |
-| `02_generate_certificate.pas` | 自签名证书生成 | 含私钥生成 |
-| `03_file_encryption.pas` | 文件加密解密 | AES-256-GCM |
-| `04_https_rest_client.pas` | REST API 客户端 | JSON 请求/响应 |
+| 示例                          | 功能               | 说明           |
+| ----------------------------- | ------------------ | -------------- |
+| `01_tls_client.pas`           | TLS 客户端完整流程 | 含证书验证     |
+| `02_generate_certificate.pas` | 自签名证书生成     | 含私钥生成     |
+| `03_file_encryption.pas`      | 文件加密解密       | AES-256-GCM    |
+| `04_https_rest_client.pas`    | REST API 客户端    | JSON 请求/响应 |
 
 ### 进阶级（⭐⭐⭐）
 
-| 示例 | 功能 | 说明 |
-|------|------|------|
-| `05_https_server.pas` | HTTPS 服务器 | 含证书配置 |
-| `06_digital_signature.pas` | 数字签名 | RSA/ECDSA |
-| `07_certificate_chain.pas` | 证书链验证 | 含中间证书 |
-| `08_mutual_tls.pas` | 双向 TLS | 客户端证书 |
+| 示例                       | 功能         | 说明       |
+| -------------------------- | ------------ | ---------- |
+| `05_https_server.pas`      | HTTPS 服务器 | 含证书配置 |
+| `06_digital_signature.pas` | 数字签名     | RSA/ECDSA  |
+| `07_certificate_chain.pas` | 证书链验证   | 含中间证书 |
+| `08_mutual_tls.pas`        | 双向 TLS     | 客户端证书 |
 
 ### 生产级（⭐⭐⭐⭐）
 
-| 示例 | 功能 | 说明 |
-|------|------|------|
+| 示例                                 | 功能         | 说明       |
+| ------------------------------------ | ------------ | ---------- |
 | `production/https_client_simple.pas` | 生产级客户端 | 含错误处理 |
-| `production/https_server_simple.pas` | 生产级服务器 | 含日志 |
-| `session_resumption_example.pas` | Session 复用 | 性能优化 |
-| `example_cert_pinning.pas` | 证书固定 | 安全增强 |
+| `production/https_server_simple.pas` | 生产级服务器 | 含日志     |
+| `session_resumption_example.pas`     | Session 复用 | 性能优化   |
+| `example_cert_pinning.pas`           | 证书固定     | 安全增强   |
 
 ## 按场景选择
 
@@ -160,6 +158,7 @@ fpc -Mobjfpc -Sh -Fu./src -Fi./src examples/YOUR_EXAMPLE.pas
 ### Q: Windows 上不想装 OpenSSL？
 
 使用 WinSSL 后端，无需额外 DLL：
+
 ```pascal
 Ctx := TSSLContextBuilder.Create
   .WithBackend(sslWinSSL)  // 使用 Windows 原生 TLS
@@ -190,6 +189,7 @@ bash scripts/summarize_wave_c_local_guard_history.sh --strict
 ```
 
 出现异常时：
+
 - 先看 `docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
 - 需要回看历史故障定位顺序时，再看 `docs/test_reports/WAVE_C_B127_LOCAL_GUARD_TROUBLESHOOTING_2026-02-09.md`
 - 再按 current-chain 页面的顺序重跑对应守护脚本

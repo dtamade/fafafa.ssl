@@ -12217,3 +12217,62 @@
       - `docs/guides/5_MINUTE_QUICKSTART.md`
       - `docs/reference/ARCHITECTURE.md`
     - `WINSSL_QUICKSTART.md` is now aligned to the same bounded truth chain as the WinSSL user/deployment docs
+
+### High Entry Quickstarts Captured Output Truth
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - batch started from a clean `master...origin/master` worktree
+
+- `rg -n "your-org|预期输出|OpenSSL 3\\.0\\.2|OpenSSL 3\\.x\\.x|HTTP/1\\.1 200 OK|TLS 1\\.3|TLS_AES_256_GCM_SHA384" docs/guides/QUICKSTART_30SEC.md docs/guides/5_MINUTE_QUICKSTART.md`
+  - result: PASS
+  - summary:
+    - static scan confirmed the next high-entry drift family had become captured output snapshots in general quickstart docs
+    - `5_MINUTE_QUICKSTART.md` also still used a placeholder clone URL
+
+- add `docs/plans/2026-05-19-high-entry-quickstarts-captured-output-truth.md`
+  - change:
+    - recorded the bounded docs-only plan for quickstart captured-output and clone-url truth cleanup
+
+- add `tests/scripts/test_high_entry_quickstarts_captured_output_truth_contract.sh`
+  - change:
+    - added a focused shell contract that guards:
+      - presence of current quickstart success-criteria wording
+      - presence of the current public clone URL
+      - absence of captured `预期输出`, fixed OpenSSL/TLS/HTTP snapshots, and the placeholder repo URL
+
+- update docs:
+  - `docs/guides/QUICKSTART_30SEC.md`
+  - `docs/guides/5_MINUTE_QUICKSTART.md`
+  - change:
+    - replaced captured expected-output blocks with success criteria
+    - demoted fixed OpenSSL/TLS/HTTP output text to “current run decides”
+    - corrected the 5-minute quickstart clone URL to the live public repo
+
+- `bash -n tests/scripts/test_high_entry_quickstarts_captured_output_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new high-entry quickstarts captured-output contract syntax is valid
+
+- `bash tests/scripts/test_high_entry_quickstarts_captured_output_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - both high-entry quickstarts no longer present captured runtime output as current truth
+
+- `npx prettier --write docs/guides/QUICKSTART_30SEC.md docs/guides/5_MINUTE_QUICKSTART.md`
+  - result: PASS
+  - summary:
+    - quickstart formatting remains stable
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current high-entry quickstarts truth batch has no whitespace or patch-format issues
+
+- `rg -n "预期输出|your-org|100% 完成|生产就绪|完成度|当前权威入口|WinSSL.*100% 完成" docs/guides/QUICKSTART_30SEC.md docs/guides/5_MINUTE_QUICKSTART.md docs/reference/ARCHITECTURE.md`
+  - result: PASS
+  - summary:
+    - current obvious high-entry truth drift is now mainly concentrated in:
+      - `docs/reference/ARCHITECTURE.md`
+    - the two general quickstart entry pages have been pulled back to command-and-success-criteria truth

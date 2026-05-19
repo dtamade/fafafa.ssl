@@ -5936,3 +5936,27 @@
 - 这对后续路线图帮助很大：
   - WinSSL 第一接触页现在已经和用户指南、零依赖部署指南、状态报告形成同一条 truth chain
   - 下一步再清 `QUICKSTART_30SEC` / `5_MINUTE_QUICKSTART` / `ARCHITECTURE`，就可以继续把“高入口 captured snapshot / 完成度口径”这条线彻底打穿
+
+- 顺着 WinSSL quickstart 线继续向下收时，又确认了另一类“通用入口漂移”：
+  - 不一定是后端能力判断错误
+  - 但会把某次历史运行的输出文本直接塞进 quickstart 正文
+  - `QUICKSTART_30SEC.md` / `5_MINUTE_QUICKSTART.md` 就是这一类代表
+
+- 这类问题的危险性在于：
+  - 开发者会把 quickstart 当成“复制命令后应该看到的精确文本”
+  - 一旦本机 OpenSSL 版本、目标站点、TLS 协商结果不同，
+  - 就会误以为自己的环境出错，实际上只是文档把历史输出当成了 current truth
+
+- 这批收口后，又补强了一条通用 quickstart 原则：
+  - quickstart 应保留：
+    - 当前命令
+    - 当前示例入口
+    - 当前成功标准
+  - 但不该保留：
+    - 固定 OpenSSL 版本字符串
+    - 固定 TLS/cipher/HTTP 响应文本
+    - placeholder clone URL
+
+- 这也让高入口路线图继续收敛：
+  - `QUICKSTART_30SEC` / `5_MINUTE_QUICKSTART` 已经和前面的 WinSSL quickstart / user guide 一样回到“命令 + 证据入口 + 成功标准”的文档角色
+  - 当前明显残余的高入口 truth drift 已经主要收敛到 `ARCHITECTURE.md`

@@ -4353,3 +4353,36 @@
        - `docs/reference/ARCHITECTURE.md`
          - 仍保留 `WinSSL ... 100% 完成`
      - 性能类文档仍排在这些高入口页之后
+94. `high-entry quickstarts captured-output truth` 已完成 focused 收口，并应作为当前通用 quickstart 入口文档的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-high-entry-quickstarts-captured-output-truth.md`
+   - 当前已确认的真实 drift：
+     - `docs/guides/QUICKSTART_30SEC.md`
+       - 仍把固定 `预期输出`
+       - 固定 OpenSSL 版本字符串
+       - 固定 TLS 版本/密码套件示例
+       直接写成 quickstart 正文 truth
+     - `docs/guides/5_MINUTE_QUICKSTART.md`
+       - 仍把多段 captured `预期输出`
+       - 固定 OpenSSL 版本 / backend 版本
+       - 固定 HTTP 响应预览
+       直接写成 quickstart 正文 truth
+       - 还保留错误 clone 地址：
+         - `https://github.com/your-org/fafafa.ssl.git`
+   - 当前最小正确修法已落地：
+     - 不改生产实现
+     - 只把两份 quickstart 重新锚回当前可执行入口 truth：
+       - 保留当前编译/运行命令
+       - 用“成功标准 + 以当前运行结果为准”替代 captured output
+       - 把 5 分钟 quickstart 的 clone URL 改成当前仓库地址
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_high_entry_quickstarts_captured_output_truth_contract.sh`
+     - `bash tests/scripts/test_high_entry_quickstarts_captured_output_truth_contract.sh`
+     - `npx prettier --write docs/guides/QUICKSTART_30SEC.md docs/guides/5_MINUTE_QUICKSTART.md`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 优先继续审查：
+       - `docs/reference/ARCHITECTURE.md`
+         - 仍保留 `WinSSL ... 100% 完成`
+         - 还保留 `OpenSSL ... 生产就绪` 这类阶段化 status wording
+     - 性能类文档继续排在这条高入口参考页之后

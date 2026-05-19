@@ -2,6 +2,8 @@
 
 **目标**: 在 5 分钟内完成 fafafa.ssl 的安装、验证和第一个示例运行。
 
+这些命令是当前可执行 quickstart 入口，但不要把固定 OpenSSL 版本、TLS 版本、密码套件或 HTTP 响应预览文本当成长期文档 truth。
+
 ## 前置要求
 
 - FreePascal 3.2.0+
@@ -25,7 +27,7 @@ openssl version
 ## 第 2 步：克隆项目（1 分钟）
 
 ```bash
-git clone https://github.com/your-org/fafafa.ssl.git
+git clone https://github.com/dtamade/fafafa.ssl.git
 cd fafafa.ssl
 ```
 
@@ -41,27 +43,11 @@ fpc -Mobjfpc -Sh -Fu./src -Fu./src/openssl examples/hello_ssl.pas
 ./hello_ssl
 ```
 
-**预期输出**:
-```
-=============================================================================
-  fafafa.ssl - OpenSSL Pascal Bindings
-  Quick Start Example
-=============================================================================
+成功标准：
 
-[Step 1] Loading OpenSSL library...
-         SUCCESS
-
-[Step 2] Get version info...
-         Version: OpenSSL 3.0.2 15 Mar 2022
-
-[Step 3] Check backend support...
-         - OpenSSL:  Available
-
-=============================================================================
-  Test Result: PASSED
-  Your environment is correctly configured!
-=============================================================================
-```
+- 示例程序成功编译并运行
+- OpenSSL 库加载成功，并输出当前本机可用的 backend/version 信息
+- 如果当前输出文本或版本字符串与历史截图不同，以当前运行结果为准
 
 ### 示例 2: 计算 SHA-256 哈希
 
@@ -73,10 +59,10 @@ fpc -Mobjfpc -Sh -Fu./src examples/hash_calculator.pas
 ./hash_calculator "Hello, fafafa.ssl!"
 ```
 
-**预期输出**:
-```
-SHA-256: a1b2c3d4e5f6...
-```
+成功标准：
+
+- 示例程序成功编译并运行
+- 程序输出输入字符串的当前 SHA-256 哈希结果
 
 ### 示例 3: HTTPS 客户端（需要网络）
 
@@ -88,37 +74,11 @@ fpc -Mobjfpc -Sh -Fu./src -Fu./src/openssl -Fu./examples examples/01_tls_client.
 ./01_tls_client https://www.example.com/
 ```
 
-**预期输出**:
-```
-================================================================================
-示例 1: TLS 客户端连接
-URL: https://www.example.com/
-================================================================================
+成功标准：
 
-Backend: OpenSSL / OpenSSL 3.0.2 15 Mar 2022
-连接 TCP: www.example.com:443 ...
-执行 TLS 握手 (SNI=www.example.com) ...
-TLS 版本: TLS 1.3
-密码套件: TLS_AES_256_GCM_SHA384
-证书验证: ok
-
-服务器证书:
-  主题: CN=www.example.com
-  颁发者: CN=DigiCert TLS RSA SHA256 2020 CA1
-  有效期至: 2026-03-15 23:59:59
-
-发送 HTTP/1.1 请求: GET /
-收到响应: 1256 bytes
-响应体大小(粗略): 648 bytes
-
-响应头预览(前 10 行)：
---------------------------------------------------------------------------------
-  HTTP/1.1 200 OK
-  Content-Type: text/html; charset=UTF-8
-  Content-Length: 648
-  ...
---------------------------------------------------------------------------------
-```
+- 示例程序成功编译并运行
+- 程序完成 TCP 连接、TLS 握手、证书验证和 HTTP 请求
+- 当前 backend/version、TLS 版本、密码套件、证书信息和响应头预览都以当前目标站点的真实输出为准
 
 ## 第 4 步：探索更多示例（1 分钟）
 
@@ -139,16 +99,19 @@ chmod +x examples/compile_all.sh
 ### Q: 编译失败，提示找不到 OpenSSL
 
 **Linux (Ubuntu/Debian)**:
+
 ```bash
 sudo apt-get install libssl-dev
 ```
 
 **Linux (Fedora/RHEL)**:
+
 ```bash
 sudo dnf install openssl-devel
 ```
 
 **macOS**:
+
 ```bash
 brew install openssl@3
 
@@ -160,8 +123,10 @@ fpc -Mobjfpc -Sh -Fu./src -Fu./src/openssl \
 ```
 
 **Windows**:
+
 - 下载 OpenSSL: https://slproweb.com/products/Win32OpenSSL.html
 - 或使用 WinSSL（零依赖）:
+
 ```powershell
 fpc -Mobjfpc -Sh -Fu.\src -Fu.\src\winssl examples\09_winssl_fips.pas
 ```
@@ -169,6 +134,7 @@ fpc -Mobjfpc -Sh -Fu.\src -Fu.\src\winssl examples\09_winssl_fips.pas
 ### Q: 运行时提示找不到 libssl.so
 
 **Linux**:
+
 ```bash
 # 检查 OpenSSL 安装
 ldconfig -p | grep libssl
@@ -179,6 +145,7 @@ sudo dnf install openssl-libs  # Fedora/RHEL
 ```
 
 **macOS**:
+
 ```bash
 # 设置库路径
 export DYLD_LIBRARY_PATH=$(brew --prefix openssl@3)/lib:$DYLD_LIBRARY_PATH
@@ -187,17 +154,20 @@ export DYLD_LIBRARY_PATH=$(brew --prefix openssl@3)/lib:$DYLD_LIBRARY_PATH
 ### Q: HTTPS 示例连接失败
 
 1. **检查网络连接**:
+
 ```bash
 ping www.example.com
 ```
 
 2. **检查证书验证**:
+
 ```bash
 # 测试 OpenSSL 连接
 openssl s_client -connect www.example.com:443
 ```
 
 3. **使用其他测试站点**:
+
 ```bash
 ./01_tls_client https://httpbin.org/get
 ```
@@ -223,16 +193,16 @@ openssl s_client -connect www.example.com:443
 
 ### 常用示例
 
-| 场景 | 示例文件 | 说明 |
-|------|---------|------|
-| 验证环境 | `hello_ssl.pas` | 检查 OpenSSL 安装 |
-| 哈希计算 | `hash_calculator.pas` | SHA-256/512 哈希 |
-| 文件加密 | `03_file_encryption.pas` | AES-256-GCM 加密 |
-| TLS 客户端 | `01_tls_client.pas` | HTTPS 连接 |
-| 证书生成 | `02_generate_certificate.pas` | 自签名证书 |
-| 数字签名 | `06_digital_signature.pas` | RSA 签名验证 |
-| HTTPS 服务器 | `05_https_server.pas` | 简单 HTTPS 服务器 |
-| 双向 TLS | `08_mutual_tls.pas` | mTLS 认证 |
+| 场景         | 示例文件                      | 说明              |
+| ------------ | ----------------------------- | ----------------- |
+| 验证环境     | `hello_ssl.pas`               | 检查 OpenSSL 安装 |
+| 哈希计算     | `hash_calculator.pas`         | SHA-256/512 哈希  |
+| 文件加密     | `03_file_encryption.pas`      | AES-256-GCM 加密  |
+| TLS 客户端   | `01_tls_client.pas`           | HTTPS 连接        |
+| 证书生成     | `02_generate_certificate.pas` | 自签名证书        |
+| 数字签名     | `06_digital_signature.pas`    | RSA 签名验证      |
+| HTTPS 服务器 | `05_https_server.pas`         | 简单 HTTPS 服务器 |
+| 双向 TLS     | `08_mutual_tls.pas`           | mTLS 认证         |
 
 ### 获取帮助
 
@@ -256,6 +226,7 @@ fpc -Mobjfpc -Sh -O3 -Xs -XX -Fu./src your_app.pas
 ### 运行时优化
 
 1. **启用会话复用**:
+
 ```pascal
 // 使用 TSSLContextBuilder 创建共享上下文
 Ctx := TSSLContextBuilder.Create
@@ -275,6 +246,7 @@ end;
 ```
 
 2. **使用连接池**:
+
 ```pascal
 // 参考 examples/production/https_client_session.pas
 ```
@@ -283,25 +255,26 @@ end;
 
 ### 编译错误
 
-| 错误 | 原因 | 解决方案 |
-|------|------|---------|
-| `Fatal: Can't find unit fafafa.ssl` | 未指定源码路径 | 添加 `-Fu./src` |
-| `Fatal: Can't find unit OpenSSL` | 未指定 OpenSSL 单元路径 | 添加 `-Fu./src/openssl` |
-| `Error: Identifier not found "SSL_CTX_new"` | OpenSSL 库未加载 | 检查 OpenSSL 安装 |
+| 错误                                        | 原因                    | 解决方案                |
+| ------------------------------------------- | ----------------------- | ----------------------- |
+| `Fatal: Can't find unit fafafa.ssl`         | 未指定源码路径          | 添加 `-Fu./src`         |
+| `Fatal: Can't find unit OpenSSL`            | 未指定 OpenSSL 单元路径 | 添加 `-Fu./src/openssl` |
+| `Error: Identifier not found "SSL_CTX_new"` | OpenSSL 库未加载        | 检查 OpenSSL 安装       |
 
 ### 运行时错误
 
-| 错误 | 原因 | 解决方案 |
-|------|------|---------|
+| 错误                          | 原因                     | 解决方案                            |
+| ----------------------------- | ------------------------ | ----------------------------------- |
 | `Cannot load OpenSSL library` | OpenSSL 未安装或路径错误 | 安装 OpenSSL 或设置 LD_LIBRARY_PATH |
-| `Certificate verify failed` | 证书验证失败 | 检查系统根证书或禁用验证（仅测试） |
-| `Connection refused` | 目标服务器不可达 | 检查网络连接和防火墙 |
+| `Certificate verify failed`   | 证书验证失败             | 检查系统根证书或禁用验证（仅测试）  |
+| `Connection refused`          | 目标服务器不可达         | 检查网络连接和防火墙                |
 
 ## 总结
 
 恭喜！你已经完成了 fafafa.ssl 的快速开始。
 
 **你已经学会了**:
+
 - ✅ 验证 OpenSSL 环境
 - ✅ 编译和运行示例程序
 - ✅ 计算哈希值
@@ -309,12 +282,14 @@ end;
 - ✅ 解决常见问题
 
 **下一步建议**:
+
 1. 浏览 [examples/EXAMPLES_INDEX.md](../examples/EXAMPLES_INDEX.md) 查看所有示例
 2. 阅读 [GETTING_STARTED.md](GETTING_STARTED.md) 深入学习
 3. 查看 [API_REFERENCE.md](API_REFERENCE.md) 了解完整 API
 4. 尝试编写自己的第一个 SSL/TLS 应用
 
 **需要帮助？**
+
 - 查看 [FAQ.md](FAQ.md) 常见问题
 - 阅读 [TROUBLESHOOTING.md](TROUBLESHOOTING.md) 故障排查
 - 提交 GitHub Issue 获取支持
