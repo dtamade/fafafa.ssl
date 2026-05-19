@@ -419,9 +419,8 @@ end;
 
 ```pascal
 // 加载客户端证书（双向 TLS）
-// ⏳ 待实现
-Ctx.LoadCertificate('client.crt');
-Ctx.LoadPrivateKey('client.key');
+// WinSSL 当前应使用 PFX/P12 bundle 导入证书和私钥
+Ctx.LoadPrivateKey('client.pfx', 'pfx-password');
 
 // 加载自定义 CA 证书
 // ⏳ 待实现

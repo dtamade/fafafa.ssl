@@ -1477,6 +1477,7 @@ function CreateSSLLibrary(aType: TSSLLibraryType = sslOpenSSL): ISSLLibrary;
 
 在向 LoadPrivateKey(..., APassword) / LoadPrivateKeyPEM(..., APassword) 传入非空密码前，先检查 `ISSLLibrary.GetCapabilities.SupportsPasswordProtectedKeys`；对 `SupportsPasswordProtectedKeys=False` 的 backend，non-empty `APassword` 应抛出 unsupported，而不是 silent ignore。
 当前 WinSSL 仅发布 password-protected PFX/P12 import path；PEM private-key password path 仍为 unsupported。
+当前 WinSSL 不发布 bare DER / PKCS#8 private-key load surface；如需这类输入，请改用 PFX/P12 或切换 OpenSSL backend。
 
 ---
 

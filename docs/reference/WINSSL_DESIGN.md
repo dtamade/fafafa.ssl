@@ -535,6 +535,7 @@ end;
 - 支持 info/state callback
 - 当前 published callback surface = verify/info；password callback 仍未接入 WinSSL runtime，non-nil assignment 应 fail-closed 为 unsupported
 - 当前 password-protected private key surface = PFX/P12 import；PEM private-key password path 仍未发布
+- 当前 bare DER / PKCS#8 private-key load surface 仍未发布；如需裸私钥导入，请改用 OpenSSL backend 或先封装为 PFX/P12
 - 企业证书策略集成
 
 ## 7. 平台兼容性

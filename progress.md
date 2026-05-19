@@ -10081,3 +10081,90 @@
   - result: PASS
   - summary:
     - current password-protected-key capability batch has no whitespace or patch-format issues
+
+### WinSSL Private-Key Format Truth
+
+- `rg -n "SupportsDERPrivateKey|SupportsPKCS8PrivateKey|LoadPrivateKey\\(|PFX/P12|client.key|server.key" src docs tests`
+  - result: PASS
+  - summary:
+    - static audit exposed a new WinSSL-specific drift family:
+      - `SupportsDERPrivateKey=True` / `SupportsPKCS8PrivateKey=True` were still published
+      - runtime load path only consumed `PFX/P12`
+      - WinSSL-specific guides still showed bare `client.key` / `server.key` examples
+
+- add `docs/plans/2026-05-19-winssl-private-key-format-truth.md`
+  - change:
+    - record the bounded plan for WinSSL key-format capability truth + non-PFX fail-closed remediation
+
+- add `tests/scripts/test_winssl_private_key_format_truth_contract.sh`
+  - change:
+    - add a focused shell contract that guards:
+      - `SupportsDERPrivateKey=False`
+      - `SupportsPKCS8PrivateKey=False`
+      - `SupportsPKCS12=True`
+      - non-PFX fail-closed semantics in `TWinSSLContext.LoadPrivateKey(AStream, APassword)`
+      - WinSSL-specific active docs / guide examples
+
+- add `tests/test_winssl_private_key_format_truth_contract.pas`
+  - change:
+    - add a focused runtime contract that checks:
+      - WinSSL capability truth on Windows
+      - non-PFX file/stream private-key inputs fail-closed as unsupported
+      - Linux host continues to compile and skip cleanly
+
+- `bash -n tests/scripts/test_winssl_private_key_format_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new WinSSL private-key-format shell contract syntax is valid
+
+- `bash tests/scripts/test_winssl_private_key_format_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed that `WinSSL` still published `SupportsDERPrivateKey=True`
+    - GREEN after shrinking capability truth, fixing non-PFX fail-closed semantics, and updating WinSSL-specific docs
+
+- update source:
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `src/fafafa.ssl.winssl.context.pas`
+  - change:
+    - set `SupportsDERPrivateKey=False`
+    - set `SupportsPKCS8PrivateKey=False`
+    - keep `SupportsPKCS12=True` as the current published private-key path
+    - fix `LoadPrivateKey(AStream, APassword)` so:
+      - nil stream -> invalid param
+      - non-PFX input -> fail-closed `unsupported`
+    - remove stale comment implying callers can “先转换为 DER 格式” and still stay on current WinSSL public path
+
+- update docs:
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  - `docs/reference/WINSSL_DESIGN.md`
+  - `docs/guides/WINSSL_QUICKSTART.md`
+  - `docs/guides/WINSSL_BEST_PRACTICES.md`
+  - `docs/guides/WINSSL_USER_GUIDE.md`
+  - change:
+    - record that WinSSL does not currently publish bare DER / PKCS#8 private-key loading
+    - keep `PFX/P12` as the only shipped private-key import path
+    - replace misleading bare key-file examples with `PFX/P12` bundle examples
+
+- `mkdir -p tmp/test_winssl_private_key_format_truth && fpc -B -Fu./src -Fu./tests -FUtmp/test_winssl_private_key_format_truth -FEtmp/test_winssl_private_key_format_truth -otmp/test_winssl_private_key_format_truth/test_winssl_private_key_format_truth_contract tests/test_winssl_private_key_format_truth_contract.pas && ./tmp/test_winssl_private_key_format_truth/test_winssl_private_key_format_truth_contract`
+  - result: PASS
+  - summary:
+    - local Linux host compiles the new contract cleanly
+    - runtime correctly skips WinSSL execution on non-Windows host
+    - the contract is now ready for GitHub Windows lanes to exercise the real WinSSL path
+
+- `bash tests/scripts/test_password_protected_key_capability_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - previous password-protected-key capability truth remains aligned after the WinSSL DER/PKCS#8 refinement
+
+- `bash tests/scripts/test_winssl_capability_source_contract.sh`
+  - result: PASS
+  - summary:
+    - existing WinSSL capability/source truth contract remains green after the key-format adjustments
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current WinSSL private-key-format batch has no whitespace or patch-format issues

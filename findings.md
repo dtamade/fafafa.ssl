@@ -4778,3 +4778,54 @@
 - 这样收口之后，这条能力线也和 callback 线统一了治理规则：
   - 没有 published runtime path 的 capability，不再继续发布为 `True`
   - 没有 published runtime path 的非空输入参数，不再 silent-ignore，而是 fail-closed
+
+- 继续顺着 private-key capability 往下审时，又在 `WinSSL` 上挖到一条更危险的残余：
+  - 这次不只是 capability 说宽了
+  - 还有真实 runtime path 在 unsupported 输入上 silent-success
+
+- 静态证据已经很明确：
+  - `src/fafafa.ssl.winssl.lib.pas`
+    - 之前仍把 `SupportsDERPrivateKey=True`
+    - 之前仍把 `SupportsPKCS8PrivateKey=True`
+  - 但 `src/fafafa.ssl.winssl.context.pas`
+    - `LoadPrivateKey(file/stream, password)` 实际只走 `PFXImportCertStore`
+    - `LoadPrivateKeyPEM` 明确直接 `unsupported`
+  - 也就是说 WinSSL 当前 published private-key path 本质上只有：
+    - `PFX/P12` bundle import
+  - bare DER / PKCS#8 private-key import 并没有 shipped runtime path
+
+- 更严重的是 `LoadPrivateKey(AStream, APassword)` 的旧实现：
+  - 在 `PFXImportCertStore(...) = nil` 的 else 分支里，错误地写成了：
+    - `if AStream = nil then raise ...`
+  - 由于进入该分支时 `AStream` 本来就是 non-nil
+  - 所以普通 PEM/DER 私钥流在 WinSSL 上可能直接：
+    - 不抛错
+    - 不加载
+    - 悄悄返回
+  - 这属于比单纯 capability 假阳性更危险的 fail-open / silent-success 语义
+
+- 这一批因此保持最小但强约束的修法：
+  - 不补做 WinSSL 的 bare DER / PKCS#8 runtime
+  - 只把 capability 收回到真值：
+    - `SupportsDERPrivateKey=False`
+    - `SupportsPKCS8PrivateKey=False`
+    - `SupportsPKCS12=True`
+  - 并把 non-PFX private-key 输入统一收紧为：
+    - `nil` stream -> invalid param
+    - non-PFX input -> `unsupported`
+
+- 这批还顺手暴露了另一类容易反复误导人的 active docs drift：
+  - `WINSSL_USER_GUIDE` 已经承认 `LoadPrivateKey` 是 `PFX`
+  - 但 `WINSSL_QUICKSTART` / `WINSSL_BEST_PRACTICES` 仍然举：
+    - `client.key`
+    - `server.key`
+    这种 bare key file 例子
+  - 这会让调用方直接照着写出当前 WinSSL 不支持的调用
+
+- 收口后，WinSSL 这条 private-key 路线现在才重新和源码真相一致：
+  - password-protected path：
+    - 仍只发布 `PFX/P12`
+  - bare key format path：
+    - `DER` / `PKCS#8` 当前都不发布
+  - docs / guide 示例：
+    - 也不再继续暗示 `client.key` / `server.key` 是 WinSSL 当前推荐路径

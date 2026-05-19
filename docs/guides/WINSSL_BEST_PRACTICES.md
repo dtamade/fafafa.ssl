@@ -101,8 +101,8 @@ LKey := '-----BEGIN PRIVATE KEY-----...';
 
 **✅ 正确做法**:
 ```pascal
-// 使用加密的私钥文件
-LContext.LoadPrivateKey('server.key', 'password');
+// WinSSL 当前使用 PFX/P12 bundle 导入证书和私钥
+LContext.LoadPrivateKey('server.pfx', 'pfx-password');
 
 // 或使用 Windows 证书存储
 LStore := LLib.CreateCertificateStore;

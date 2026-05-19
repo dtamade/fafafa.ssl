@@ -537,8 +537,8 @@ begin
   // ChaCha20-Poly1305 需要 Windows 10 版本 1903+
   Result.SupportsChaChaPoly := (FWindowsVersion.Major >= 10) and (FWindowsVersion.Build >= 18362);
 
-  // WinSSL/Schannel 不支持直接加载 PEM 格式私钥
-  // 需要使用 PKCS#12/PFX 格式，或先转换为 DER 格式
+  // WinSSL/Schannel 当前只发布 PKCS#12/PFX bundle import path；
+  // bare PEM/DER private-key loading is not a shipped public capability.
   Result.SupportsPEMPrivateKey := False;
 
   // 支持的协议版本范围
@@ -609,9 +609,9 @@ begin
   Result.HasSecureMemoryWipe := True;        // CNG 提供
 
   // 证书和密钥格式支持（WinSSL 偏好 Windows 格式）
-  Result.SupportsDERPrivateKey := True;
-  Result.SupportsPKCS8PrivateKey := True;
-  Result.SupportsPKCS12 := True;   // WinSSL 的首选格式
+  Result.SupportsDERPrivateKey := False;     // no shipped bare DER private-key load path
+  Result.SupportsPKCS8PrivateKey := False;   // no shipped bare PKCS#8 private-key load path
+  Result.SupportsPKCS12 := True;             // current published private-key path is PKCS#12/PFX import
   Result.SupportsPasswordProtectedKeys := True;  // current published path is password-protected PFX/P12 import; PEM private-key password path remains unsupported
 
   // 扩展性

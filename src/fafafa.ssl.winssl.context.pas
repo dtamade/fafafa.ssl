@@ -719,6 +719,15 @@ var
 begin
   // WinSSL/Schannel 通常将证书和私钥一起加载（如PFX格式）
   // 如果是 PFX，我们尝试加载并提取证书和私钥
+
+  if AStream = nil then
+    raise ESSLInvalidArgument.CreateWithContext(
+      'Private key stream is nil',
+      sslErrInvalidParam,
+      'TWinSSLContext.LoadPrivateKey',
+      0,
+      sslWinSSL
+    );
   
   LSize := AStream.Size - AStream.Position;
   SetLength(LCertData, LSize);
@@ -759,13 +768,9 @@ begin
   end
   else
   begin
-    // 如果不是 PFX，可能是 PEM 格式的私钥
-    // WinSSL 不直接支持加载 PEM 私钥并关联到现有证书上下文
-    // 除非使用 CryptImportKey 等复杂操作
-    // 这里抛出异常或记录警告
-    if AStream = nil then
     raise ESSLConfigurationException.CreateWithContext(
-      'WinSSL backend only supports PFX/P12 format for private key loading. Please merge certificate and key into a PFX file.',
+      'WinSSL backend only supports PFX/P12 format for private key loading. ' +
+      'Bare PEM/DER/PKCS#8 private keys are unsupported; please merge certificate and key into a PFX file.',
       sslErrUnsupported,
       'TWinSSLContext.LoadPrivateKey'
     );

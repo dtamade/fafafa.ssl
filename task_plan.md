@@ -3321,3 +3321,47 @@
      - 继续审查：
        - 是否还有其它 coarse-grained capability 在某个 backend 上只发布了 partial surface，却在 active docs / source comments 里说得过宽
        - 或是否需要把 `SupportsPasswordProtectedKeys` 最终细化成更明确的 per-format / per-path capability
+84. `WinSSL private-key format truth` 已完成 focused 收口，并应作为当前 WinSSL key-format capability 的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-winssl-private-key-format-truth.md`
+   - 当前已确认的真实 drift：
+     - `WinSSL` 之前仍把：
+       - `SupportsDERPrivateKey`
+       - `SupportsPKCS8PrivateKey`
+       发布为 `True`
+     - 但现有 `LoadPrivateKey*` 实际只发布 `PFX/P12` bundle import path
+     - 同时 `TWinSSLContext.LoadPrivateKey(AStream, APassword)` 在 non-PFX 输入上还存在 silent-success 漏口：
+       - else 分支错误写成 `if AStream = nil then raise ...`
+       - 结果是普通 PEM/DER 私钥流可能既不加载，也不 fail-fast
+   - 当前最小正确修法已落地：
+     - 不补做 WinSSL 的 bare DER / PKCS#8 private-key import
+     - 只把：
+       - `src/fafafa.ssl.winssl.lib.pas`
+       的 `SupportsDERPrivateKey` / `SupportsPKCS8PrivateKey` 收回到 `False`
+     - 保留：
+       - `SupportsPKCS12=True`
+       - `SupportsPasswordProtectedKeys=True`
+       但明确它们只代表当前 `PFX/P12` import path
+     - 并把 `TWinSSLContext.LoadPrivateKey(AStream, APassword)` 修成：
+       - `nil` stream -> invalid param
+       - non-PFX input -> fail-closed `unsupported`
+     - 同时同步：
+       - `docs/reference/API_REFERENCE.md`
+       - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+       - `docs/reference/WINSSL_DESIGN.md`
+       - `docs/guides/WINSSL_QUICKSTART.md`
+       - `docs/guides/WINSSL_BEST_PRACTICES.md`
+       - `docs/guides/WINSSL_USER_GUIDE.md`
+       把 WinSSL 专属示例和说明收回到真实 `PFX/P12` 路径
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_winssl_private_key_format_truth_contract.sh`
+     - `bash tests/scripts/test_winssl_private_key_format_truth_contract.sh`
+     - `mkdir -p tmp/test_winssl_private_key_format_truth && fpc -B -Fu./src -Fu./tests -FUtmp/test_winssl_private_key_format_truth -FEtmp/test_winssl_private_key_format_truth -otmp/test_winssl_private_key_format_truth/test_winssl_private_key_format_truth_contract tests/test_winssl_private_key_format_truth_contract.pas && ./tmp/test_winssl_private_key_format_truth/test_winssl_private_key_format_truth_contract`
+     - `bash tests/scripts/test_password_protected_key_capability_truth_contract.sh`
+     - `bash tests/scripts/test_winssl_capability_source_contract.sh`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 不再把 WinSSL 的 bare DER / PKCS#8 private-key path 当作已发布 capability
+     - 继续审查：
+       - 是否还有其它 backend 在 `SupportsDERPrivateKey` / `SupportsPKCS8PrivateKey` / `SupportsPKCS12` 上也存在 partial-publication truth
+       - 以及 active global docs 是否需要把 key-format capability matrix 系统化写清

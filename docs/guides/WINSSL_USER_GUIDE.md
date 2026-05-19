@@ -245,7 +245,8 @@ end;
 **Phase 2: 证书文件加载**
 
 - ✅ LoadCertificate（支持 PFX、DER、PEM 格式）
-- ✅ LoadPrivateKey（支持密码保护的 PFX）
+- ✅ LoadPrivateKey（支持密码保护的 PFX/P12）
+- ❌ bare DER / PKCS#8 private key loading（当前 capability 不发布）
 - ✅ LoadCAFile（CA 证书内存存储）
 
 **Phase 3: 客户端证书（双向 TLS）**
