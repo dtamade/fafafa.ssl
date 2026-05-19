@@ -2,6 +2,52 @@
 
 ## 2026-05-19
 
+- 最新一轮 WinSSL native-probe worker 隔离 run `26070488337` 暴露的最高价值 residual，不再是 WinSSL 实现本身，而是 Wave B/B2 顶层 report chain 里 `closure_readiness` 的 truth 漂移：
+  - `cross summary` 已能把
+    - `windows summary overall=PASS`
+    - `winssl_runtime_suite_<run_id>.log suite_end_status=FAIL`
+    综合成 `windows | FAIL`
+  - `handoff bundle` 也已落到 `NEEDS_GATE_REPAIR`
+  - 但同一批 `closure_readiness` 之前仍写成 `windows | PASS`
+
+- 这说明当前 repo 内部对同一条 Windows evidence 已出现“三层认为失败、一层仍声称通过”的裂缝：
+  - 它不会掩盖 handoff 最终状态
+  - 但会继续误导后续人工阅读 artifact，以为 closure 层已经闭环
+  - 所以下一步最小正确动作不是继续深挖 WinSSL probe 实现，而是先把 closure 这层 truth 补齐
+
+- 这批最小修法也因此非常窄：
+  - 不改 `src/fafafa.ssl.winssl.connection.pas`
+  - 不继续扩 native-probe body markers
+  - 只让 `check_wave_b_b2_closure_readiness.sh` 接受 Windows runtime transcript，并在 `suite_end_status=FAIL` 时把 Windows state 降成 `FAIL`
+  - 同时让 `prepare_wave_b_b2_handoff_bundle.sh` 显式透传 sibling transcript，避免 closure 层再次靠隐式路径漂移
+
+- focused 结果说明这条流程裂缝已经被稳定锁住：
+  - 新增 closure-focused RED 合同先直接命中：
+    - `check_wave_b_b2_closure_readiness.sh`
+    - `prepare_wave_b_b2_handoff_bundle.sh` 生成出来的 closure report
+  - 修复后两条新合同转 GREEN
+  - 既有：
+    - `handoff bundle windows companion path`
+    - `gate repair state`
+    - `closure next actions`
+    - `consistency explicit windows runtime logs`
+    - `consistency runtime substantive`
+    这些邻近合同也继续 GREEN
+
+- 用真实 artifacts 复算 run `26070488337` 后，当前 canonical truth 已经明确：
+  - `closure readiness`
+    - `windows | FAIL | summary parsed; runtime_transcript: ... suite_end_status=FAIL`
+    - `closure_status: IN_PROGRESS`
+  - `handoff bundle`
+    - `handoff_state: NEEDS_GATE_REPAIR`
+    - `consistency_status: CONSISTENT`
+  - 因而这批之后，四层报告终于不再彼此打架
+
+- 这也让接下来的优先级重新收敛：
+  - Wave B/B2 workflow truth 这一刀现在可以暂时视为闭环
+  - 下一个真正值得继续深挖的技术批次，才是 WinSSL native-probe child 内部更细的 crash markers
+  - 另外，run `26070488337` 的 macOS `FAIL` 仍是独立 residual，不应拿来解释 Windows native-probe worker 的 `-1073741819`
+
 - host-override lane live 证明 `www.google.com` 仍然是 `observed_reuse=false / session_configured=true` 之后，下一步最值钱的就不再是继续改 workflow plumbing，而是把已有的 native-probe evidence 能力提升成 manual workflow 的显式 opt-in 调查入口。
 
 - 这个缺口的现状也已经确认清楚：

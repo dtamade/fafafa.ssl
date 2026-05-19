@@ -10,6 +10,40 @@
 
 ## Current Status
 
+- [completed] Wave B/B2 closure Windows runtime truth 已完成 focused 收口：
+  - 新增计划：`docs/plans/2026-05-19-wave-b-b2-closure-windows-runtime-truth.md`
+  - 新增 focused contracts：
+    - `tests/scripts/test_wave_b_b2_closure_windows_runtime_fail_contract.sh`
+    - `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_closure_windows_runtime_fail_contract.sh`
+  - `scripts/check_wave_b_b2_closure_readiness.sh`
+    - 当前已新增可选 `--windows-runtime-transcript`
+    - 若未显式传入且已提供 `--windows-summary`
+      - 会默认跟随 sibling `winssl_runtime_suite_<run_id>.log`
+    - runtime transcript 现在只负责在 `suite_end_status=FAIL` 时把 Windows closure state 降成 `FAIL`
+    - 不会反向把缺 summary 的场景抬成 `PASS`
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - 现在会把 Windows sibling runtime transcript 显式透传给 closure checker
+  - focused verification 已通过：
+    - `bash -n scripts/check_wave_b_b2_closure_readiness.sh`
+    - `bash tests/scripts/test_wave_b_b2_closure_windows_runtime_fail_contract.sh`
+    - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_closure_windows_runtime_fail_contract.sh`
+    - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`
+    - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_gate_repair_state_contract.sh`
+    - `bash tests/scripts/test_wave_b_b2_closure_next_actions_contract.sh`
+    - `bash tests/scripts/test_wave_b_b2_consistency_explicit_windows_runtime_logs_required_contract.sh`
+    - `bash tests/scripts/test_wave_b_b2_consistency_windows_runtime_substantive_contract.sh`
+  - real artifact re-check 已通过：
+    - downloaded run `26070488337` platform artifacts
+    - 用 `scripts/prepare_wave_b_b2_handoff_bundle.sh` 重新生成四层报告后，`closure readiness` 已改为：
+      - `windows | FAIL | ... suite_end_status=FAIL`
+      - `closure_status: IN_PROGRESS`
+    - `handoff bundle` 继续保持：
+      - `handoff_state: NEEDS_GATE_REPAIR`
+      - `consistency_status: CONSISTENT`
+  - 当前结论：
+    - `cross summary` / `closure readiness` / `evidence consistency` / `handoff bundle`
+      对 run `26070488337` 的 Windows runtime failure 已重新对齐
+    - macOS failure 仍是同批独立问题，不应与 WinSSL native-probe worker 崩溃混为一条线
 - [completed] WinSSL native-probe manual investigation lane 已完成本地收口：
   - 新增计划：`docs/plans/2026-05-19-winssl-native-probe-manual-investigation-lane.md`
   - 新增 focused workflow/source contract：`tests/scripts/test_wave_b_b2_winssl_native_probe_input_contract.sh`

@@ -304,6 +304,7 @@ MACOS_CONSISTENCY_ARGS=()
 WINDOWS_SUMMARY_ARGS=()
 WINDOWS_EVIDENCE_ARGS=()
 WINDOWS_CROSS_ARGS=()
+WINDOWS_CLOSURE_ARGS=()
 macos_summary_exists=false
 if [[ -f "$(resolve_path "$MACOS_SUMMARY")" ]]; then
   macos_summary_exists=true
@@ -342,6 +343,7 @@ if [[ "$WINDOWS_SUMMARY_EXPLICIT" == "true" || "$windows_summary_exists" == "tru
     --windows-quick-log "$(derive_sibling_artifact_path "$WINDOWS_SUMMARY" "winssl_quick_smoke_${RUN_ID}.log")"
     --windows-runtime-transcript "$(derive_sibling_artifact_path "$WINDOWS_SUMMARY" "winssl_runtime_suite_${RUN_ID}.log")"
   )
+  WINDOWS_CLOSURE_ARGS=(--windows-runtime-transcript "${WINDOWS_EVIDENCE_ARGS[3]}")
   WINDOWS_CROSS_ARGS+=(--windows-runtime-transcript "${WINDOWS_EVIDENCE_ARGS[3]}")
 fi
 
@@ -375,6 +377,7 @@ bash "$PROJECT_ROOT/scripts/check_wave_b_b2_closure_readiness.sh" \
   --linux-summary "$LINUX_SUMMARY" \
   "${MACOS_SUMMARY_ARGS[@]}" \
   "${WINDOWS_SUMMARY_ARGS[@]}" \
+  "${WINDOWS_CLOSURE_ARGS[@]}" \
   --output "$CLOSURE_REPORT"
 
 bash "$PROJECT_ROOT/scripts/check_wave_b_b2_evidence_consistency.sh" \

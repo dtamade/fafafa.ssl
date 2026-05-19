@@ -10,6 +10,7 @@ RUN_ID_EXPLICIT=false
 LINUX_SUMMARY=""
 MACOS_SUMMARY=""
 WINDOWS_SUMMARY=""
+WINDOWS_RUNTIME_TRANSCRIPT=""
 OUTPUT_FILE=""
 STRICT=false
 DRY_RUN=false
@@ -29,6 +30,8 @@ Wave B / B2 Closure Readiness Checker
   --linux-summary FILE      Linux summary（默认自动选最新 wave_b_ci_gate_summary_*.md）
   --macos-summary FILE      macOS summary（可选）
   --windows-summary FILE    Windows summary（可选）
+  --windows-runtime-transcript FILE
+                           Windows runtime transcript（可选；默认跟随 windows summary 的 sibling `winssl_runtime_suite_<run_id>.log`）
   --output FILE             输出 markdown（默认 test-reports/wave_b_b2_closure_readiness_<run_id>.md）
   --strict                  若未闭环则返回非 0
   --dry-run                 仅打印判定，不写文件
@@ -53,6 +56,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --windows-summary)
       WINDOWS_SUMMARY="$2"
+      shift 2
+      ;;
+    --windows-runtime-transcript)
+      WINDOWS_RUNTIME_TRANSCRIPT="$2"
       shift 2
       ;;
     --output)
@@ -118,6 +125,18 @@ infer_run_id_from_linux_summary() {
   parse_run_id_md "$abs_file"
 }
 
+derive_sibling_artifact_path() {
+  local anchor_path="$1"
+  local filename="$2"
+  local anchor_dir
+  anchor_dir="$(dirname "$anchor_path")"
+  if [[ "$anchor_dir" == "." ]]; then
+    echo "$filename"
+  else
+    echo "$anchor_dir/$filename"
+  fi
+}
+
 if [[ -z "$LINUX_SUMMARY" ]]; then
   LINUX_SUMMARY="$(cd "$PROJECT_ROOT" && ls -1t test-reports/wave_b_ci_gate_summary_*.md 2>/dev/null | head -1 || true)"
 fi
@@ -137,6 +156,10 @@ if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="test-reports/wave_b_b2_closure_readiness_${RUN_ID}.md"
 fi
 
+if [[ -z "$WINDOWS_RUNTIME_TRANSCRIPT" && -n "$WINDOWS_SUMMARY" ]]; then
+  WINDOWS_RUNTIME_TRANSCRIPT="$(derive_sibling_artifact_path "$WINDOWS_SUMMARY" "winssl_runtime_suite_${RUN_ID}.log")"
+fi
+
 normalize_status() {
   local value="$1"
   local upper="$(echo "$value" | tr '[:lower:]' '[:upper:]')"
@@ -148,6 +171,13 @@ normalize_status() {
       echo "UNKNOWN"
       ;;
   esac
+}
+
+read_windows_runtime_suite_end_status() {
+  local file="$1"
+  grep -aE "\\[WINSSL-RUNTIME\\] suite_end status=(PASS|FAIL)" "$file" \
+    | tail -1 \
+    | sed -E 's/.*status=([A-Z]+).*/\1/' || true
 }
 
 read_overall_field() {
@@ -187,9 +217,43 @@ evaluate_platform() {
   fi
 }
 
+evaluate_windows_platform() {
+  local summary_file="$1"
+  local runtime_file="$2"
+
+  local base_info
+  base_info="$(evaluate_platform "windows" "$summary_file")"
+
+  local state note summary_path
+  state="$(echo "$base_info" | cut -d'|' -f2)"
+  note="$(echo "$base_info" | cut -d'|' -f3)"
+  summary_path="$(echo "$base_info" | cut -d'|' -f4)"
+
+  if [[ -n "$runtime_file" ]]; then
+    local runtime_abs
+    runtime_abs="$(resolve_path "$runtime_file")"
+    if [[ -f "$runtime_abs" ]]; then
+      local suite_end_status
+      suite_end_status="$(read_windows_runtime_suite_end_status "$runtime_abs")"
+      if [[ "$suite_end_status" == "FAIL" ]]; then
+        state="FAIL"
+        if [[ "$note" == "summary parsed" ]]; then
+          note="summary parsed; runtime_transcript: $runtime_file (suite_end_status=FAIL)"
+        elif [[ "$note" == "missing file" || "$note" == "no evidence" ]]; then
+          note="runtime_transcript: $runtime_file (suite_end_status=FAIL)"
+        else
+          note="$note; runtime_transcript: $runtime_file (suite_end_status=FAIL)"
+        fi
+      fi
+    fi
+  fi
+
+  echo "windows|$state|$note|$summary_path"
+}
+
 linux_info="$(evaluate_platform "linux" "$LINUX_SUMMARY")"
 macos_info="$(evaluate_platform "macos" "$MACOS_SUMMARY")"
-windows_info="$(evaluate_platform "windows" "$WINDOWS_SUMMARY")"
+windows_info="$(evaluate_windows_platform "$WINDOWS_SUMMARY" "$WINDOWS_RUNTIME_TRANSCRIPT")"
 
 linux_state="$(echo "$linux_info" | cut -d'|' -f2)"
 linux_note="$(echo "$linux_info" | cut -d'|' -f3)"

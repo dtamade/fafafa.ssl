@@ -2,6 +2,133 @@
 
 ## 2026-05-19
 
+### Wave B/B2 Closure Windows Runtime Truth
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - confirmed the working tree was clean before starting the closure-runtime-truth batch
+
+- `gh api repos/dtamade/fafafa.ssl/actions/runs/26070488337/jobs`
+  - result: PASS
+  - summary:
+    - confirmed run `26070488337` head=`1aaf71b`
+    - `windows-gate` failed specifically in `Run broader WinSSL runtime suite`
+    - `summary` job itself still succeeded, which kept the report-chain review lane relevant
+
+- `gh run download 26070488337 -n wave-b-summary-winssl_native_probe_worker_drain_20260519_google -D tmp/gh-run-26070488337/summary`
+  - result: PASS
+  - summary:
+    - downloaded the summary artifact bundle for the worker-drain run
+
+- `sed -n '1,220p' tmp/gh-run-26070488337/summary/wave_b_cross_platform_summary_winssl_native_probe_worker_drain_20260519_google.md`
+  - result: PASS
+  - summary:
+    - confirmed cross summary already promoted Windows to `FAIL` using `suite_end_status=FAIL`
+
+- `sed -n '1,220p' tmp/gh-run-26070488337/summary/wave_b_b2_handoff_bundle_winssl_native_probe_worker_drain_20260519_google.md`
+  - result: PASS
+  - summary:
+    - confirmed handoff bundle already reported `handoff_state: NEEDS_GATE_REPAIR`
+
+- `sed -n '1,220p' tmp/gh-run-26070488337/summary/wave_b_b2_closure_readiness_winssl_native_probe_worker_drain_20260519_google.md`
+  - result: PASS
+  - summary:
+    - confirmed the remaining drift: closure readiness still showed `windows | PASS`
+
+- add `docs/plans/2026-05-19-wave-b-b2-closure-windows-runtime-truth.md`
+  - change:
+    - define the bounded closure-truth batch that only repairs Windows runtime failure propagation into closure readiness
+
+- add `tests/scripts/test_wave_b_b2_closure_windows_runtime_fail_contract.sh`
+  - change:
+    - lock direct closure checker behavior when Windows summary is `PASS` but sibling runtime transcript ends with `suite_end_status=FAIL`
+
+- add `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_closure_windows_runtime_fail_contract.sh`
+  - change:
+    - lock handoff-bundle regeneration so the produced closure report inherits the same Windows runtime failure truth
+
+- `bash tests/scripts/test_wave_b_b2_closure_windows_runtime_fail_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED:
+      - closure readiness still treated Windows as `PASS`
+    - GREEN:
+      - closure readiness now demotes Windows to `FAIL` when the runtime transcript ends with `suite_end_status=FAIL`
+
+- `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_closure_windows_runtime_fail_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED:
+      - handoff bundle still generated a stale closure report that showed Windows as `PASS`
+    - GREEN:
+      - handoff bundle now regenerates closure readiness with the same Windows runtime failure truth
+
+- update workflow truth scripts:
+  - `scripts/check_wave_b_b2_closure_readiness.sh`
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+  - change:
+    - add optional `--windows-runtime-transcript` to the closure checker
+    - default to sibling `winssl_runtime_suite_<run_id>.log` when a Windows summary is present
+    - only use runtime transcript to demote Windows to `FAIL`, never to promote a missing summary to `PASS`
+    - explicitly pass the sibling runtime transcript from handoff-bundle prepare into closure readiness
+
+- `bash -n scripts/check_wave_b_b2_closure_readiness.sh`
+  - result: PASS
+  - summary:
+    - closure checker syntax stayed valid after the runtime-transcript changes
+
+- `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`
+  - result: PASS
+  - summary:
+    - sibling Windows companion-path behavior stayed aligned
+
+- `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_gate_repair_state_contract.sh`
+  - result: PASS
+  - summary:
+    - handoff gate-repair semantics stayed aligned after closure truth propagation changed
+
+- `bash tests/scripts/test_wave_b_b2_closure_next_actions_contract.sh`
+  - result: PASS
+  - summary:
+    - closure next-actions wording remained aligned with the current handoff entrypoint
+
+- `bash tests/scripts/test_wave_b_b2_consistency_explicit_windows_runtime_logs_required_contract.sh`
+  - result: PASS
+  - summary:
+    - explicit missing Windows runtime evidence still forces consistency to `INCONSISTENT`
+
+- `bash tests/scripts/test_wave_b_b2_consistency_windows_runtime_substantive_contract.sh`
+  - result: PASS
+  - summary:
+    - presence-only Windows runtime logs are still rejected as non-substantive evidence
+
+- `gh run download 26070488337 -n wave-b-linux-winssl_native_probe_worker_drain_20260519_google -D tmp/gh-run-26070488337/linux`
+  - result: PASS
+  - summary:
+    - downloaded Linux platform evidence for real-artifact regeneration
+
+- `gh run download 26070488337 -n wave-b-macos-winssl_native_probe_worker_drain_20260519_google -D tmp/gh-run-26070488337/macos`
+  - result: PASS
+  - summary:
+    - downloaded macOS platform evidence for real-artifact regeneration
+
+- `gh run download 26070488337 -n wave-b-windows-winssl_native_probe_worker_drain_20260519_google -D tmp/gh-run-26070488337/windows`
+  - result: PASS
+  - summary:
+    - downloaded Windows platform evidence including `winssl_runtime_suite_*.log`
+
+- `bash scripts/prepare_wave_b_b2_handoff_bundle.sh --run-id winssl_native_probe_worker_drain_20260519_google --linux-summary tmp/gh-run-26070488337/linux/wave_b_ci_gate_summary_winssl_native_probe_worker_drain_20260519_google.md --linux-examples tmp/gh-run-26070488337/linux/examples_compile_ci_gate_winssl_native_probe_worker_drain_20260519_google.json --macos-summary tmp/gh-run-26070488337/macos/wave_b_macos_gate_summary_winssl_native_probe_worker_drain_20260519_google.md --windows-summary tmp/gh-run-26070488337/windows/wave_b_windows_gate_summary_winssl_native_probe_worker_drain_20260519_google.md --output-dir tmp/gh-run-26070488337/regen`
+  - result: PASS
+  - summary:
+    - regenerated cross summary / closure readiness / consistency / handoff bundle from the real worker-drain artifacts
+    - regenerated closure report now shows:
+      - `windows | FAIL | ... suite_end_status=FAIL`
+      - `closure_status: IN_PROGRESS`
+    - regenerated handoff bundle still shows:
+      - `handoff_state: NEEDS_GATE_REPAIR`
+      - `consistency_status: CONSISTENT`
+
 ### WinSSL Native-Probe Manual Investigation Lane
 
 - `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
