@@ -1,7 +1,7 @@
 # fafafa.ssl 故障排除指南
 
-> **版本**: v0.8  
-> **最后更新**: 2025-10-24
+> **版本**: rolling
+> **最后更新**: 2026-05-19
 
 本指南帮助你快速诊断和解决 fafafa.ssl 使用中的常见问题。
 
@@ -91,13 +91,13 @@ openssl version
 
 **错误信息**:
 ```
-Fatal: Can't find unit fafafa.ssl.openssl
+Fatal: Can't find unit fafafa.ssl
 ```
 
 **解决方案**:
 ```bash
 # 确保使用 -Fu 指定源码路径
-fpc -Fusrc -Fusrc/openssl your_program.pas
+fpc -Fusrc your_program.pas
 
 # 或使用绝对路径
 fpc -FuD:\projects\Pascal\lazarus\My\libs\fafafa.ssl\src your_program.pas
@@ -114,13 +114,7 @@ Error: Identifier not found "ISSLLibrary"
 ```pascal
 // 确保引入正确的单元
 uses
-  fafafa.ssl.abstract.intf,    // 抽象接口
-  fafafa.ssl.abstract.types,   // 类型定义
-  fafafa.ssl.openssl;          // OpenSSL 实现
-
-// 或者只引入主单元（它会自动引入依赖）
-uses
-  fafafa.ssl.openssl;
+  fafafa.ssl;
 ```
 
 ### 问题: Compilation mode mismatch
@@ -150,26 +144,30 @@ Failed to initialize SSL library
 **诊断步骤**:
 ```pascal
 // 1. 检查库是否可用
-if not OpenSSLAvailable then
+if not TSSLFactory.IsLibraryAvailable(sslOpenSSL) then
 begin
   WriteLn('OpenSSL not available');
-  WriteLn('Error: ', GetOpenSSLErrorString);
   Exit;
 end;
 
-// 2. 尝试加载库
-if not LoadOpenSSL then
+// 2. 获取库实例并初始化
+var
+  LLib: ISSLLibrary;
 begin
-  WriteLn('Failed to load OpenSSL');
-  WriteLn('Library path: ', GetOpenSSLLibraryPath);
-  Exit;
-end;
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
+  if not LLib.Initialize then
+  begin
+    WriteLn('Failed to initialize OpenSSL backend');
+    WriteLn('Error: ', LLib.GetLastErrorString);
+    Exit;
+  end;
 
-// 3. 检查版本
-WriteLn('OpenSSL version: ', GetOpenSSLVersion);
-if GetOpenSSLVersionNumber < $1010100F then  // 1.1.1
-  WriteLn('Warning: OpenSSL version too old');
+  // 3. 检查版本
+  WriteLn('Backend version: ', LLib.GetVersionString);
+end;
 ```
+
+> 说明：普通应用入口不需要先手动调用底层 OpenSSL loader。如果系统动态库路径有问题，请先修复系统安装或搜索路径，再通过 `TSSLFactory` 走统一入口。
 
 ### 问题: Access violation
 
@@ -182,7 +180,7 @@ EAccessViolation: Access violation
 **常见原因**:
 1. 使用未初始化的对象
 2. 释放已释放的内存
-3. OpenSSL 函数指针为 nil
+3. 在底层对象尚未就绪时直接访问连接/证书状态
 
 **解决方案**:
 ```pascal
@@ -193,11 +191,10 @@ begin
   Exit;
 end;
 
-// 2. 检查 OpenSSL 函数是否加载
-if not Assigned(X509_new) then
+// 2. 检查统一入口是否可用
+if not TSSLFactory.IsLibraryAvailable(sslOpenSSL) then
 begin
-  WriteLn('X509_new function not loaded');
-  WriteLn('Call LoadOpenSSL first');
+  WriteLn('OpenSSL backend is not available on this machine');
   Exit;
 end;
 
@@ -205,7 +202,7 @@ end;
 var
   LLib: ISSLLibrary;
 begin
-  LLib := CreateOpenSSLLibrary;
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   try
     LLib.Initialize;
     // ... 使用库 ...
@@ -561,7 +558,7 @@ if TOSVersion.Major < 7 then
 var LConfig := TSSLEnterpriseConfig.Create;
 try
   LConfig.LoadFromSystem;
-  if LConfig.IsFipsModeEnabled then
+  if LConfig.IsFIPSEnabled then
     WriteLn('FIPS mode enabled')
   else
     WriteLn('FIPS mode not enabled');
@@ -605,12 +602,12 @@ end;
 // 错误示例：每次创建新 Context
 for i := 1 to 10 do
 begin
-  LCtx := CreateWinSSLLibrary.CreateContext(sslCtxClient);  // ✗ 错误
+  LCtx := TSSLFactory.GetLibraryInstance(sslWinSSL).CreateContext(sslCtxClient);  // ✗ 错误
   LConn := LCtx.CreateConnection(Socket);
 end;
 
 // 正确示例：复用 Context
-LCtx := CreateWinSSLLibrary.CreateContext(sslCtxClient);  // ✓ 正确
+LCtx := TSSLFactory.GetLibraryInstance(sslWinSSL).CreateContext(sslCtxClient);  // ✓ 正确
 for i := 1 to 10 do
 begin
   LConn := LCtx.CreateConnection(Socket);
@@ -926,9 +923,6 @@ brew install openssl@3
 
 # 设置库路径
 export DYLD_LIBRARY_PATH=/usr/local/opt/openssl@3/lib
-
-# 或在代码中指定路径
-LoadOpenSSL('/usr/local/opt/openssl@3/lib');
 ```
 
 ---

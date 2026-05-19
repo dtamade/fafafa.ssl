@@ -35,7 +35,7 @@
 
 ```pascal
 uses
-  fafafa.ssl.factory, fafafa.ssl.abstract.intf;
+  fafafa.ssl;
 
 var
   Lib: ISSLLibrary;
@@ -43,9 +43,9 @@ var
   Conn: ISSLConnection;
   Response: string;
 begin
-  Lib := CreateSSLLibrary(sslLibraryWinSSL);  // 1. 创建 WinSSL 库
-  Lib.Initialize;                              // 2. 初始化
-  Ctx := Lib.CreateContext(sslContextClient);  // 3. 创建客户端上下文
+  Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);  // 1. 创建 WinSSL 库
+  Lib.Initialize;                                    // 2. 初始化
+  Ctx := Lib.CreateContext(sslCtxClient);            // 3. 创建客户端上下文
   // 4. 创建连接后，在连接级设置 SNI 主机名（需要 Socket）
   // Conn := Ctx.CreateConnection(Socket);
   // (Conn as ISSLClientConnection).SetServerName('www.example.com');
@@ -85,9 +85,7 @@ uses
   Windows, WinSock2,
   {$ENDIF}
   SysUtils, Classes,
-  fafafa.ssl.factory,
-  fafafa.ssl.abstract.intf,
-  fafafa.ssl.abstract.types;
+  fafafa.ssl;
 
 function HttpsGet(const aHost: string; const aPath: string = '/'): string;
 var
@@ -111,14 +109,14 @@ begin
 
   try
     // 2. 创建并初始化 WinSSL 库
-    LLib := CreateSSLLibrary(sslLibraryWinSSL);
+    LLib := TSSLFactory.GetLibraryInstance(sslWinSSL);
     if not LLib.Initialize then
       raise Exception.Create('SSL library initialization failed');
 
-    WriteLn('Using: ', LLib.GetLibraryName);  // "Windows Schannel"
+    WriteLn('Using backend: ', LibraryTypeToString(LLib.GetLibraryType));
 
     // 3. 创建客户端上下文
-    LCtx := LLib.CreateContext(sslContextClient);
+    LCtx := LLib.CreateContext(sslCtxClient);
     LCtx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
 
     // 4. 建立 TCP 连接
@@ -442,12 +440,12 @@ Ctx.LoadCAFile('custom-ca.crt');
 var
   LLib: ISSLLibrary;
 begin
-  LLib := CreateSSLLibrary(sslLibraryWinSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslWinSSL);
   if not LLib.Initialize then
   begin
     WriteLn('WinSSL requires Windows Vista or later');
     WriteLn('Please use OpenSSL backend instead:');
-    WriteLn('  Lib := CreateSSLLibrary(sslLibraryOpenSSL);');
+    WriteLn('  Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);');
     Halt(1);
   end;
 end;
@@ -518,10 +516,10 @@ var
   LCtx: ISSLContext;
   LConn: ISSLConnection;
 begin
-  LLib := CreateSSLLibrary(sslLibraryWinSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslWinSSL);
   LLib.Initialize;
 
-  LCtx := LLib.CreateContext(sslContextClient);  // 持有 Lib 引用
+  LCtx := LLib.CreateContext(sslCtxClient);  // 持有 Lib 引用
   LConn := LCtx.CreateConnection(Socket);        // 持有 Ctx 引用
 
   // 在 Conn 使用完之前不要释放 Ctx 或 Lib
@@ -631,10 +629,10 @@ _注：性能数据为参考值，实际结果取决于硬件、网络和系统�
 
 ```pascal
 // Before (OpenSSL)
-Lib := CreateSSLLibrary(sslLibraryOpenSSL);
+Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
 
 // After (WinSSL)
-Lib := CreateSSLLibrary(sslLibraryWinSSL);
+Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);
 
 // 其他代码保持不变（接口兼容）
 ```
@@ -643,11 +641,11 @@ Lib := CreateSSLLibrary(sslLibraryWinSSL);
 
 ```pascal
 // 最佳实践：让工厂自动选择
-Lib := CreateSSLLibrary(sslLibraryAutoDetect);
+Lib := TSSLFactory.GetLibraryInstance(sslAutoDetect);
 // Windows: 优先 WinSSL，回退 OpenSSL
 // Linux/macOS: 使用 OpenSSL
 
-WriteLn('Using: ', Lib.GetLibraryName);
+WriteLn('Using backend: ', LibraryTypeToString(Lib.GetLibraryType));
 ```
 
 ---
@@ -665,10 +663,10 @@ var
   LAddr: TSockAddrIn;
 begin
   // 1. 创建 SSL 库和上下文
-  LLib := CreateSSLLibrary(sslLibraryWinSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslWinSSL);
   LLib.Initialize;
 
-  LCtx := LLib.CreateContext(sslContextClient);
+  LCtx := LLib.CreateContext(sslCtxClient);
   LCtx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
 
   // 2. 自定义 Socket 选项
@@ -826,8 +824,8 @@ my_https_client/
 ├── lib/
 │   └── fafafa.ssl/           # fafafa.ssl 源代码（子模块或复制）
 │       ├── src/
-│       │   ├── fafafa.ssl.abstract.intf.pas
-│       │   ├── fafafa.ssl.abstract.types.pas
+│       │   ├── fafafa.ssl.base.pas
+│       │   ├── fafafa.ssl.pas
 │       │   ├── fafafa.ssl.factory.pas
 │       │   ├── fafafa.ssl.winssl.*.pas
 │       │   └── ...
@@ -884,9 +882,9 @@ my_https_client/
 
 ```pascal
 // 从这个
-Lib := CreateSSLLibrary(sslLibraryOpenSSL);
+Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
 // 改为这个
-Lib := CreateSSLLibrary(sslLibraryWinSSL);
+Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);
 ```
 
 其他代码保持不变。

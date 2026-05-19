@@ -271,7 +271,7 @@ end;
 var
   LLib: ISSLLibrary;
 begin
-  LLib := CreateOpenSSLLibrary;
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if LLib.Initialize then
   begin
     WriteLn('版本: ', LLib.GetVersionString);
@@ -797,7 +797,7 @@ var
   LSession: ISSLSession;
 begin
   // 创建 WinSSL 库
-  LLib := CreateWinSSLLibrary;
+  LLib := TSSLFactory.GetLibraryInstance(sslWinSSL);
   LLib.Initialize;
 
   LContext := LLib.CreateContext(sslCtxClient);
@@ -1068,7 +1068,7 @@ var
   LLib: ISSLLibrary;
   LStats: TSSLStatistics;
 begin
-  LLib := CreateWinSSLLibrary;
+  LLib := TSSLFactory.GetLibraryInstance(sslWinSSL);
   LLib.Initialize;
 
   // ... 执行多个连接 ...
@@ -1109,7 +1109,7 @@ var
   LStats: TSSLStatistics;
   LHealth: TSSLHealthStatus;
 begin
-  LLib := CreateWinSSLLibrary;
+  LLib := TSSLFactory.GetLibraryInstance(sslWinSSL);
   LLib.Initialize;
 
   // 定期监控循环
@@ -1417,41 +1417,34 @@ function ClassifyOpenSSLError(aError: Cardinal): TSSLErrorCode;
 function GetFriendlyErrorMessage(aError: Cardinal): string;
 
 // WinSSL
-function GetWinSSLErrorMessageCN(aErrorCode: DWORD): string;
-function GetWinSSLErrorMessageEN(aErrorCode: DWORD): string;
+function GetFriendlyErrorMessageCN(aErrorCode: DWORD): string;
+function GetFriendlyErrorMessageEN(aErrorCode: DWORD): string;
 ```
 
 ---
 
 ## 工具函数
 
-### OpenSSL 工具
+### 高入口工厂与诊断工具
 
 ```pascal
-// 库管理
-function OpenSSLAvailable: Boolean;
-function LoadOpenSSL(const aLibraryPath: string = ''): Boolean;
-procedure UnloadOpenSSL;
+class function TSSLFactory.IsLibraryAvailable(ALibType: TSSLLibraryType): Boolean;
+class function TSSLFactory.GetLibraryInstance(ALibType: TSSLLibraryType = sslAutoDetect): ISSLLibrary;
+class function TSSLFactory.CreateContext(
+  AContextType: TSSLContextType;
+  ALibType: TSSLLibraryType = sslAutoDetect
+): ISSLContext;
 function GetOpenSSLVersion: string;
-function GetOpenSSLVersionNumber: Cardinal;
-
-// 证书工具
-function LoadCertificateFromFile(const aFileName: string): PX509;
-function LoadPrivateKeyFromFile(const aFileName: string; const aPassword: string = ''): PEVP_PKEY;
-function VerifyCertificate(aCert: PX509; aCAStore: PX509_STORE): Boolean;
-
-// 协议工具
-function ProtocolToOpenSSL(aProtocol: TSSLProtocolVersion): Integer;
-function GetProtocolName(aProtocol: TSSLProtocolVersion): string;
 ```
 
-### WinSSL 工具
+高入口普通文档不再把手动 OpenSSL loader 当成应用入口步骤。
+如需直接处理 OpenSSL API loader、`PX509` 或 `PEVP_PKEY`，请转到 backend-specific low-level units。
+
+### WinSSL 企业工具
 
 ```pascal
-// 企业功能
-function IsFipsModeEnabled: Boolean;
-function GetEnterpriseTrustedRoots: TStringList;
-function GetGroupPolicies: TStringList;
+function IsFIPSModeEnabled: Boolean;
+function GetEnterpriseTrustedRoots: TStringArray;
 ```
 
 ---
@@ -1461,15 +1454,11 @@ function GetGroupPolicies: TStringList;
 ### 创建后端实例
 
 ```pascal
-// OpenSSL
-function CreateOpenSSLLibrary: ISSLLibrary;
-
-// WinSSL
-function CreateWinSSLLibrary: ISSLLibrary;
-
-// 自动选择
-function CreateSSLLibrary(aType: TSSLLibraryType = sslOpenSSL): ISSLLibrary;
+class function TSSLFactory.GetLibraryInstance(ALibType: TSSLLibraryType = sslAutoDetect): ISSLLibrary;
 ```
+
+`TSSLFactory.GetLibraryInstance(...)` 是当前高入口 public library-entrypoint。
+`CreateOpenSSLLibrary` / `CreateWinSSLLibrary` 仍存在，但它们属于 backend-specific low-level creators，不应再作为普通 guide/reference 的默认入口。
 
 ---
 
@@ -1553,8 +1542,7 @@ CERT_CHAIN_REVOCATION_CHECK_CHAIN = $20000000;
 program ssl_client;
 
 uses
-  fafafa.ssl.openssl,
-  fafafa.ssl.abstract.intf;
+  fafafa.ssl;
 
 var
   LLib: ISSLLibrary;
@@ -1565,7 +1553,7 @@ var
   LReply: string;
 begin
   // 创建并初始化库
-  LLib := CreateOpenSSLLibrary;
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if not LLib.Initialize then
   begin
     WriteLn('初始化失败');
@@ -1689,7 +1677,7 @@ var
   Lib: ISSLLibrary;
   Caps: TSSLBackendCapabilities;
 begin
-  Lib := TSSLFactory.GetLibrary(sslOpenSSL);
+  Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   Caps := Lib.GetCapabilities;
 
   WriteLn('Backend: ', SSL_LIBRARY_NAMES[Caps.BackendType]);

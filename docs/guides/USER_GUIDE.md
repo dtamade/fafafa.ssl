@@ -1,7 +1,7 @@
 # fafafa.ssl 用户指南
 
-> **版本**: v0.8  
-> **最后更新**: 2025-10-24
+> **版本**: rolling
+> **最后更新**: 2026-05-19
 
 本指南详细介绍如何使用 fafafa.ssl 库构建安全的 SSL/TLS 应用程序。
 
@@ -61,8 +61,7 @@ brew install openssl@3
 program myapp;
 
 uses
-  fafafa.ssl.openssl,
-  fafafa.ssl.abstract.intf;
+  fafafa.ssl;
 
 begin
   // 你的代码...
@@ -71,7 +70,7 @@ end.
 
 **编译**:
 ```bash
-fpc -Fusrc -Fusrc/openssl myapp.pas
+fpc -Fusrc myapp.pas
 ```
 
 **方法 2: 使用 Lazarus 包**
@@ -140,7 +139,7 @@ fpc -Fusrc -Fusrc/openssl myapp.pas
 program https_client;
 
 uses
-  SysUtils, fafafa.ssl.openssl, fafafa.ssl.abstract.intf;
+  SysUtils, fafafa.ssl;
 
 var
   LLib: ISSLLibrary;
@@ -150,7 +149,7 @@ var
   LResponse: string;
 begin
   // 1. 初始化库
-  LLib := CreateOpenSSLLibrary;
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if not LLib.Initialize then
     raise Exception.Create('Failed to initialize SSL');
   
@@ -202,7 +201,7 @@ end.
 program https_server;
 
 uses
-  SysUtils, fafafa.ssl.openssl, fafafa.ssl.abstract.intf;
+  SysUtils, fafafa.ssl;
 
 var
   LLib: ISSLLibrary;
@@ -210,7 +209,7 @@ var
   LConn: ISSLConnection;
   LRequest: string;
 begin
-  LLib := CreateOpenSSLLibrary;
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   LLib.Initialize;
   
   try
@@ -256,16 +255,16 @@ end.
 program cert_verify;
 
 uses
-  SysUtils, fafafa.ssl.openssl, fafafa.ssl.abstract.intf;
+  SysUtils, fafafa.ssl;
 
 var
   LLib: ISSLLibrary;
   LCert: ISSLCertificate;
   LStore: ISSLCertificateStore;
   LResult: TSSLCertVerifyResult;
-  LAltNames: TStringList;
+  LAltNames: TSSLStringArray;
 begin
-  LLib := CreateOpenSSLLibrary;
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   LLib.Initialize;
   
   try
@@ -285,9 +284,8 @@ begin
     // 显示扩展
     LAltNames := LCert.GetSubjectAltNames;
     WriteLn('主题备用名称:');
-    for var i := 0 to LAltNames.Count - 1 do
+    for var i := 0 to High(LAltNames) do
       WriteLn('  ', LAltNames[i]);
-    LAltNames.Free;
     
     // 基础验证
     LStore := LLib.CreateCertificateStore;
@@ -329,14 +327,14 @@ program winssl_enterprise;
 
 {$IFDEF WINDOWS}
 uses
-  SysUtils, fafafa.ssl.winssl.factory, fafafa.ssl.winssl.enterprise;
+  SysUtils, fafafa.ssl, fafafa.ssl.winssl.enterprise;
 
 var
   LLib: ISSLLibrary;
   LConfig: TSSLEnterpriseConfig;
   LRoots: TStringList;
 begin
-  LLib := CreateWinSSLLibrary;
+  LLib := TSSLFactory.GetLibraryInstance(sslWinSSL);
   LLib.Initialize;
   
   try
@@ -346,19 +344,19 @@ begin
       LConfig.LoadFromSystem;
       
       // 检测 FIPS 模式
-      if LConfig.IsFipsModeEnabled then
+      if LConfig.IsFIPSEnabled then
         WriteLn('✓ FIPS 模式已启用')
       else
         WriteLn('ℹ FIPS 模式未启用');
       
       // 获取企业受信任根证书
-      LRoots := LConfig.GetEnterpriseTrustedRoots;
-      WriteLn('企业受信任根证书数量: ', LRoots.Count);
-      for var i := 0 to LRoots.Count - 1 do
+      LRoots := LConfig.GetTrustedRoots;
+      WriteLn('企业受信任根证书数量: ', Length(LRoots));
+      for var i := 0 to High(LRoots) do
         WriteLn('  ', LRoots[i]);
       
       // 读取组策略
-      var LPolicies := LConfig.GetGroupPolicies;
+      var LPolicies := LConfig.GetAllPolicies;
       WriteLn('组策略:');
       for var i := 0 to LPolicies.Count - 1 do
         WriteLn('  ', LPolicies[i]);
@@ -429,19 +427,8 @@ LContext.SetCipherList('ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNU
 try
   if not LConn.Connect then
   begin
-    var LErrorMsg := LLib.GetLastErrorString;
-    var LErrorCode := ClassifyOpenSSLError(LLib.GetLastError);
-    
-    case LErrorCode of
-      sslErrCertificateVerifyFailed:
-        WriteLn('证书验证失败: ', LErrorMsg);
-      sslErrHandshakeFailed:
-        WriteLn('握手失败: ', LErrorMsg);
-      sslErrTimeout:
-        WriteLn('连接超时: ', LErrorMsg);
-    else
-      WriteLn('连接失败: ', LErrorMsg);
-    end;
+    WriteLn('连接失败，错误码: ', LLib.GetLastError);
+    WriteLn('错误信息: ', LLib.GetLastErrorString);
   end;
 finally
   LLib.ClearError;
@@ -455,7 +442,7 @@ end;
 var
   LLib: ISSLLibrary;
 begin
-  LLib := CreateOpenSSLLibrary;
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   LLib.Initialize;
   
   try

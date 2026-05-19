@@ -2,6 +2,100 @@
 
 ## 2026-05-19
 
+### Public Unit Import Guidance Truth
+
+- add `docs/plans/2026-05-19-public-unit-import-guidance-truth.md`
+  - change:
+    - define the bounded active-doc truth batch for stale public unit imports, creator entrypoints, and enum-name drift
+
+- add `tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - change:
+    - lock that high-entry docs now use:
+      - `fafafa.ssl`
+      - `TSSLFactory.GetLibraryInstance(...)`
+      - `sslCtxClient`
+      - `LibraryTypeToString(Lib.GetLibraryType)`
+    - lock that stale `abstract.*` imports, `CreateSSLLibrary(...)`, stale enum names, and manual `LoadOpenSSL` guidance do not come back
+
+- read-only evidence triage
+  - summary:
+    - six high-entry docs still mixed removed imports, nonexistent facade units, nonexistent creators, and stale enum names
+    - current source truth was re-confirmed in:
+      - `src/fafafa.ssl.pas`
+      - `src/fafafa.ssl.base.pas`
+      - `src/fafafa.ssl.factory.pas`
+    - during the same sweep, adjacent source-truth issues were also confirmed:
+      - `TSSLEnterpriseConfig` class helpers are `IsFIPSEnabled` / `GetTrustedRoots` / `GetAllPolicies`
+      - SAN collections use `TSSLStringArray`
+      - WinSSL error helpers are `GetFriendlyErrorMessageCN/EN`
+
+- update `docs/guides/USER_GUIDE.md`
+  - change:
+    - switch active examples from `fafafa.ssl.openssl` / `abstract.intf` to `fafafa.ssl`
+    - replace `CreateOpenSSLLibrary` with `TSSLFactory.GetLibraryInstance(sslOpenSSL)`
+    - narrow compile guidance back to `-Fusrc`
+    - fix same-file example drift for SAN arrays and WinSSL enterprise helper names
+
+- update `docs/guides/WINSSL_QUICKSTART.md`
+  - change:
+    - replace stale `CreateSSLLibrary(...)`, `sslLibrary*`, `sslContextClient`, and `GetLibraryName`
+    - move examples and migration snippets to:
+      - `TSSLFactory.GetLibraryInstance(...)`
+      - `sslCtxClient`
+      - `LibraryTypeToString(Lib.GetLibraryType)`
+    - replace removed `abstract.*` units in project-tree guidance
+
+- update `docs/guides/WINSSL_USER_GUIDE.md`
+  - change:
+    - replace stale `CreateSSLLibrary(...)` path in core parity snippet and migration snippet
+    - move minimal example imports to `fafafa.ssl`
+
+- update `docs/guides/MBEDTLS_USER_GUIDE.md`
+  - change:
+    - replace stale `CreateSSLLibrary(...)` path with `TSSLFactory.GetLibraryInstance(...)`
+    - remove `abstract.intf` from active examples
+    - update API-reference mini-section to publish current factory entrypoint
+
+- update `docs/guides/TROUBLESHOOTING.md`
+  - change:
+    - replace stale `fafafa.ssl.openssl` / `abstract.*` troubleshooting guidance with `fafafa.ssl`
+    - replace manual OpenSSL-loader troubleshooting steps with:
+      - `TSSLFactory.IsLibraryAvailable(sslOpenSSL)`
+      - `TSSLFactory.GetLibraryInstance(sslOpenSSL)`
+    - align same-file WinSSL enterprise and context-lifetime snippets to current names
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - publish `TSSLFactory.GetLibraryInstance(...)` as the current public library-entrypoint
+    - classify `CreateOpenSSLLibrary` / `CreateWinSSLLibrary` as backend-specific low-level creators
+    - remove stale `LoadOpenSSL` / `CreateSSLLibrary(...)` high-entry guidance
+    - move high-entry examples to `fafafa.ssl` + `TSSLFactory.GetLibraryInstance(...)`
+
+- update `tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - change:
+    - remove a multiline `rg` pattern that emitted noisy warnings during repeated verification
+
+- `bash -n tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - current public-unit import guidance contract syntax is valid
+
+- `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `USER_GUIDE` still used stale facade/import guidance
+      - the remaining docs still taught nonexistent creators, stale enum names, and manual loader steps
+    - GREEN after fix:
+      - all six high-entry docs now align to current facade/factory/import truth
+      - the contract itself no longer emits repeated multiline `rg` noise
+
+- `git diff --check`
+  - result: FAIL -> PASS
+  - summary:
+    - initial FAIL was limited to two trailing spaces on markdown version lines
+    - PASS after cleanup confirms the batch is whitespace-clean
+
 ### Migration Guide Active Truth
 
 - add `docs/plans/2026-05-19-migration-guide-active-truth.md`

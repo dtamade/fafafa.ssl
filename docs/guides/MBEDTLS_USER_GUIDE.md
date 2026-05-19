@@ -70,9 +70,9 @@ MbedTLS 与其它 backend 共享统一核心接口，但具体 published capabil
 ```pascal
 // 核心调用形状相近，但 capability 需要按 backend 重新核对
 {$IFDEF EMBEDDED}
-Lib := CreateSSLLibrary(sslMbedTLS);   // 嵌入式: 轻量级
+Lib := TSSLFactory.GetLibraryInstance(sslMbedTLS);   // 嵌入式: 轻量级
 {$ELSE}
-Lib := CreateSSLLibrary(sslOpenSSL);   // 桌面: 功能完整
+Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);   // 桌面: 功能完整
 {$ENDIF}
 
 Context := Lib.CreateContext(sslCtxClient);
@@ -151,8 +151,7 @@ ldconfig -p | grep mbedtls
 program simple_https_mbedtls;
 
 uses
-  fafafa.ssl,
-  fafafa.ssl.abstract.intf;
+  fafafa.ssl;
 
 var
   Lib: ISSLLibrary;
@@ -163,7 +162,7 @@ var
   Socket: THandle;
 begin
   // 1. 初始化 MbedTLS 库
-  Lib := CreateSSLLibrary(sslMbedTLS);
+  Lib := TSSLFactory.GetLibraryInstance(sslMbedTLS);
   
   // 2. 创建上下文
   Context := Lib.CreateContext(sslCtxClient);
@@ -204,7 +203,7 @@ end.
 
 **编译**:
 ```bash
-fpc -Fusrc -Fusrc/openssl simple_https_mbedtls.pas
+fpc -Fusrc simple_https_mbedtls.pas
 ```
 
 **运行**:
@@ -220,8 +219,7 @@ fpc -Fusrc -Fusrc/openssl simple_https_mbedtls.pas
 program secure_https_mbedtls;
 
 uses
-  fafafa.ssl,
-  fafafa.ssl.abstract.intf;
+  fafafa.ssl;
 
 var
   Lib: ISSLLibrary;
@@ -230,7 +228,7 @@ var
   ClientConn: ISSLClientConnection;
   Socket: THandle;
 begin
-  Lib := CreateSSLLibrary(sslMbedTLS);
+  Lib := TSSLFactory.GetLibraryInstance(sslMbedTLS);
   Context := Lib.CreateContext(sslCtxClient);
   
   // 加载 CA 证书
@@ -265,8 +263,7 @@ end.
 program client_cert_mbedtls;
 
 uses
-  fafafa.ssl,
-  fafafa.ssl.abstract.intf;
+  fafafa.ssl;
 
 var
   Lib: ISSLLibrary;
@@ -275,7 +272,7 @@ var
   ClientConn: ISSLClientConnection;
   Socket: THandle;
 begin
-  Lib := CreateSSLLibrary(sslMbedTLS);
+  Lib := TSSLFactory.GetLibraryInstance(sslMbedTLS);
   Context := Lib.CreateContext(sslCtxClient);
   
   // 加载客户端证书和私钥
@@ -497,8 +494,10 @@ Memory allocation failed
 ### 库初始化
 
 ```pascal
-function CreateSSLLibrary(LibType: TSSLLibraryType): ISSLLibrary;
-// LibType: sslMbedTLS
+class function TSSLFactory.GetLibraryInstance(
+  ALibType: TSSLLibraryType = sslAutoDetect
+): ISSLLibrary;
+// MbedTLS 指南中显式使用 sslMbedTLS
 ```
 
 ### 上下文管理

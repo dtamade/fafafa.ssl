@@ -10,6 +10,44 @@
 
 ## Current Status
 
+- [completed] Public unit/import guidance truth 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-public-unit-import-guidance-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - 当前已修正的高入口活跃文档：
+    - `docs/guides/USER_GUIDE.md`
+    - `docs/guides/WINSSL_QUICKSTART.md`
+    - `docs/guides/WINSSL_USER_GUIDE.md`
+    - `docs/guides/MBEDTLS_USER_GUIDE.md`
+    - `docs/guides/TROUBLESHOOTING.md`
+    - `docs/reference/API_REFERENCE.md`
+  - 当前已收掉的真问题：
+    - 高入口 docs 不再继续教授：
+      - `fafafa.ssl.abstract.intf`
+      - `fafafa.ssl.abstract.types`
+      - 不存在的 `fafafa.ssl.openssl` facade unit
+      - 不存在的 `CreateSSLLibrary(...)`
+      - 旧枚举名 `sslLibraryWinSSL` / `sslLibraryOpenSSL` / `sslLibraryAutoDetect`
+      - 旧上下文枚举名 `sslContextClient`
+      - 不存在的 `GetLibraryName`
+      - 手动 `LoadOpenSSL` 作为普通应用入口步骤
+    - 高入口创建/导入心智现在统一回到：
+      - `fafafa.ssl`
+      - `TSSLFactory.GetLibraryInstance(...)`
+      - `TSSLFactory.IsLibraryAvailable(...)`
+      - `sslCtxClient`
+      - `LibraryTypeToString(Lib.GetLibraryType)`
+    - `API_REFERENCE` 现在明确区分：
+      - 高入口 public library-entrypoint
+      - backend-specific low-level creators
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+    - `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+    - `git diff --check`
+  - 当前结论：
+    - 这批修掉的是最前排 onboarding/reference 文档把用户带回已删除单元、旧 creator 和错误枚举名的问题
+    - 后续如果继续扫 onboarding / troubleshooting / backend guides，不应再把这些 public import / factory 路径当成 current source truth
 - [completed] Migration guide active truth 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-migration-guide-active-truth.md`

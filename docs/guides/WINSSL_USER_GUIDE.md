@@ -105,13 +105,13 @@ WinSSL 与 OpenSSL/WolfSSL/MbedTLS 共享统一的核心 public interface，但�
 ```pascal
 // 核心创建路径保持一致，只需改变库类型
 {$IFDEF WINDOWS}
-Lib := CreateSSLLibrary(sslWinSSL);   // Windows: 零依赖
+Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);   // Windows: 零依赖
 {$ELSE}
-Lib := CreateSSLLibrary(sslOpenSSL);  // Linux/macOS: OpenSSL
+Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);  // Linux/macOS: OpenSSL
 {$ENDIF}
 
 // 或者让工厂自动选择
-Lib := CreateSSLLibrary(sslAutoDetect);
+Lib := TSSLFactory.GetLibraryInstance(sslAutoDetect);
 
 // 后续核心连接/握手路径一致；可选能力仍需按 capability 判断
 Ctx := Lib.CreateContext(sslCtxClient);
@@ -181,14 +181,14 @@ Conn.Connect;
 
 ```pascal
 uses
-  fafafa.ssl.factory, fafafa.ssl.abstract.intf;
+  fafafa.ssl;
 
 var
   Lib: ISSLLibrary;
   Ctx: ISSLContext;
   Conn: ISSLConnection;
 begin
-  Lib := CreateSSLLibrary(sslWinSSL);      // 1. 创建 WinSSL 库
+  Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);  // 1. 创建 WinSSL 库
   Lib.Initialize;                          // 2. 初始化
 
   Ctx := Lib.CreateContext(sslCtxClient);  // 3. 创建客户端上下文
@@ -403,10 +403,10 @@ Windows 7/8/10 早期版本仅支持 TLS 1.0/1.1/1.2
 
 ```pascal
 // Before
-Lib := CreateSSLLibrary(sslOpenSSL);
+Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
 
 // After
-Lib := CreateSSLLibrary(sslWinSSL);
+Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);
 
 // 其他代码保持不变
 ```

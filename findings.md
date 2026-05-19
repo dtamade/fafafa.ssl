@@ -2,6 +2,54 @@
 
 ## 2026-05-19
 
+- 继续沿着“高入口文档是否还在教授旧 public entrypoint”往下压时，这次压实的是另一组更前排、也更容易让用户第一步就走错的导入/创建路径漂移：
+  - `docs/guides/USER_GUIDE.md`
+  - `docs/guides/WINSSL_QUICKSTART.md`
+  - `docs/guides/WINSSL_USER_GUIDE.md`
+  - `docs/guides/MBEDTLS_USER_GUIDE.md`
+  - `docs/guides/TROUBLESHOOTING.md`
+  - `docs/reference/API_REFERENCE.md`
+  仍在混用：
+  - `fafafa.ssl.abstract.intf`
+  - `fafafa.ssl.abstract.types`
+  - 不存在的 `fafafa.ssl.openssl` facade unit
+  - 不存在的 `CreateSSLLibrary(...)`
+  - 旧枚举名 `sslLibraryWinSSL` / `sslLibraryOpenSSL` / `sslLibraryAutoDetect`
+  - 旧上下文枚举名 `sslContextClient`
+  - 不存在的 `GetLibraryName`
+  - 手动 `LoadOpenSSL` 作为普通应用入口
+
+- 这类问题的风险不是“文档有点旧”，而是会直接把新用户送进编译失败或错误心智：
+  - 直接复制 `uses fafafa.ssl.abstract.intf` / `fafafa.ssl.openssl` 会命中已删除或不存在的单元
+  - 复制 `CreateSSLLibrary(...)` / `sslLibraryWinSSL` 会命中当前 shipped source 不存在的 creator/枚举
+  - 把 `LoadOpenSSL` 当成通用入口又会把高入口用户带进不该先碰的底层 loader 语境
+
+- 这条线当前最小正确修法也很明确：
+  - 高入口示例统一回到：
+    - `fafafa.ssl`
+    - `TSSLFactory.GetLibraryInstance(...)`
+    - `TSSLFactory.IsLibraryAvailable(...)`
+    - `sslCtxClient`
+    - `LibraryTypeToString(Lib.GetLibraryType)`
+  - `API_REFERENCE` 明确区分：
+    - 当前 public library-entrypoint
+    - backend-specific low-level creators
+  - `TROUBLESHOOTING` 只保留统一工厂入口排障，不再继续教授手动底层 loader
+
+- 在这批 source-backed sweep 里，还顺手压实了几处与本批同文件相邻、会让示例本身失真的 drift：
+  - `USER_GUIDE` 的证书 SAN 示例当前应使用 `TSSLStringArray`，不是 `TStringList`
+  - `USER_GUIDE` / `TROUBLESHOOTING` 中 `TSSLEnterpriseConfig` 的类方法当前是：
+    - `IsFIPSEnabled`
+    - `GetTrustedRoots`
+    - `GetAllPolicies`
+  - `API_REFERENCE` 的 WinSSL 错误辅助函数当前是：
+    - `GetFriendlyErrorMessageCN`
+    - `GetFriendlyErrorMessageEN`
+
+- 当前这批收口后的新基线应明确保留：
+  - 高入口导入/creator/path 已重新锚回当前 facade/factory truth
+  - 新增 contract 还顺手修掉了自身的跨行 `rg` 噪音，后续重复验证不会再反复吐 multiline 警告
+  - 后续如果继续扫 API/reference completeness，应优先信源码和当前 facade，而不是更早一轮的说明性笔记
 - 继续沿着“高入口文档是否仍在教授旧 public entrypoint”这条线往下压时，`MIGRATION_GUIDE` 暴露的是另一类更重的漂移：
   - 它不只是某几个代码片段旧，而是整份迁移主线仍停在 `v0.7 / v0.8`
   - 顶部版本、迁移叙事、helper 命名、单元引用一起落在旧时期心智上
