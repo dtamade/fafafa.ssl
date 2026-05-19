@@ -1525,7 +1525,7 @@ begin
   Result.SupportsPasswordProtectedKeys := True;
 
   Result.SupportsCustomCipherSuites := True;
-  Result.SupportsCallbacks := True;
+  Result.SupportsCallbacks := False;  // verify/password/info setters are storage-only today; no runtime callback wiring is published
 
   Result.CompatibilityLevel := 64;
   Result.KnownIssues :=

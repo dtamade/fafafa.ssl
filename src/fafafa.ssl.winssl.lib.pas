@@ -614,6 +614,9 @@ begin
   Result.SupportsPKCS12 := True;   // WinSSL 的首选格式
   Result.SupportsPasswordProtectedKeys := True;
 
+  // 扩展性
+  Result.SupportsCallbacks := True;  // verify/info callback runtime paths are consumed by the WinSSL connection layer
+
   // 兼容性（WinSSL 行为依赖 Windows 版本）
   Result.CompatibilityLevel := 90;  // 90% 兼容性
   Result.KnownIssues :=

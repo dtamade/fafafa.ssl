@@ -3137,3 +3137,41 @@
    - 当前批收口后默认下一步应为：
      - 不再重复拉起 client-side OCSP optional-interface matrix drift
      - 继续切回更大的 backend implementation-completeness 审查
+79. `SupportsCallbacks capability truth audit` 已完成 focused 收口，并应作为当前 callback capability/source truth 的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-supportscallbacks-capability-truth-audit.md`
+   - 当前已确认的 callback capability truth：
+     - `OpenSSL`
+       - `SupportsCallbacks=True`
+       - verify/password/info callback 都有真实 runtime wiring
+     - `WinSSL`
+       - verify/info callback 在 connection/runtime path 被真实消费
+       - capability 之前未显式发布，属于 source truth drift
+     - `FreePascal`
+       - verify/password/info 目前只有 setter / field 存储
+       - 没有真实 runtime use-site
+       - 之前 `SupportsCallbacks=True` 属于误发布
+     - `WolfSSL` / `MbedTLS`
+       - 当前也属于 setter-only / storage-only
+       - 在没有真实 runtime wiring 前不应发布 `SupportsCallbacks=True`
+   - 当前最小正确修法已落地：
+     - 不改 callback API 设计
+     - 不重写 runtime callback 行为
+     - 只做 capability truth 对齐：
+       - `WinSSL` 显式发布 `SupportsCallbacks=True`
+       - `FreePascal` 改回 `SupportsCallbacks=False`
+       - `WolfSSL` / `MbedTLS` 显式固定 `SupportsCallbacks=False`
+       - `TSSLBackendCapabilities.SupportsCallbacks` 注释补充为“至少一条 callback 具备真实 runtime wiring”
+     - 并新增：
+       - source-truth shell contract
+       - backend capability runtime truth contract
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_callback_capability_truth_contract.sh`
+     - `bash tests/scripts/test_callback_capability_truth_contract.sh`
+     - `mkdir -p tmp/test_callback_capability_truth && fpc -B -Fu./src -Fu./tests -FUtmp/test_callback_capability_truth -FEtmp/test_callback_capability_truth -otmp/test_callback_capability_truth/test_backend_callback_capability_truth_contract tests/test_backend_callback_capability_truth_contract.pas && ./tmp/test_callback_capability_truth/test_backend_callback_capability_truth_contract`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 不再重复拉起 `SupportsCallbacks` capability 真值本身
+     - 继续审查：
+       - `SupportsCallbacks=False` 的 backend 是否应该对 `SetVerifyCallback` / `SetPasswordCallback` / `SetInfoCallback` fail-closed
+       - 或至少补齐 active docs / API reference，对 setter-only compatibility surface 给出明确 guidance

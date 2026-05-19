@@ -687,7 +687,7 @@ type
 
     // ----- 扩展性 -----
     SupportsCustomCipherSuites: Boolean; // 是否支持自定义密码套件
-    SupportsCallbacks: Boolean;          // 是否支持回调函数
+    SupportsCallbacks: Boolean;          // 是否发布上下文回调能力（至少一条 callback 具备真实 runtime wiring）
 
     // ----- 兼容性和质量 -----
     CompatibilityLevel: Integer;         // 兼容性级别（0-100，100=完全兼容）

@@ -9680,3 +9680,80 @@
   - result: PASS
   - summary:
     - current client-side OCSP optional-interface alignment batch has no whitespace or patch-format issues
+
+### SupportsCallbacks Capability Truth Audit
+
+- `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
+  - result: PASS
+  - summary:
+    - no unsynced session catch-up actions were required before starting this batch
+
+- `rg -n "SupportsCallbacks|SetVerifyCallback|SetPasswordCallback|SetInfoCallback|FVerifyCallback|FPasswordCallback|FInfoCallback" src tests docs/plans task_plan.md findings.md progress.md`
+  - result: PASS
+  - summary:
+    - static audit isolated the callback capability seam:
+      - `OpenSSL` published `SupportsCallbacks=True`
+      - `FreePascal` also published `SupportsCallbacks=True`
+      - `WinSSL` runtime consumed verify/info callbacks but had no published `SupportsCallbacks=True`
+      - `WolfSSL` / `MbedTLS` showed setter/field storage but no published callback capability
+
+- `rg -n "VerifyCallback|InfoCallback|PasswordCallback" src/fafafa.ssl.freepascal.connection.pas src/fafafa.ssl.wolfssl.connection.pas src/fafafa.ssl.mbedtls.connection.pas src/fafafa.ssl.freepascal.handshake.pas src/fafafa.ssl.wolfssl.handshake.pas src/fafafa.ssl.mbedtls.handshake.pas`
+  - result: FAIL
+  - summary:
+    - `src/fafafa.ssl.*.handshake.pas` files do not exist in the current tree
+    - audit path was immediately narrowed back to the real `*.connection.pas` runtime surfaces instead of repeating the failed lookup
+
+- add `docs/plans/2026-05-19-supportscallbacks-capability-truth-audit.md`
+  - change:
+    - record the bounded batch that freezes current callback capability truth and the exact backend classification
+
+- add `tests/scripts/test_callback_capability_truth_contract.sh`
+  - change:
+    - add a focused source-truth contract that ties callback capability publication to actual runtime/source classification across OpenSSL, WinSSL, FreePascal, WolfSSL, and MbedTLS
+
+- add `tests/test_backend_callback_capability_truth_contract.pas`
+  - change:
+    - add a small cross-platform runtime capability contract that checks `SupportsCallbacks` truth for every available backend and naturally skips `WinSSL` on Linux
+
+- `bash -n tests/scripts/test_callback_capability_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new callback capability source contract syntax is valid
+
+- `bash tests/scripts/test_callback_capability_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `WinSSL capability truth must publish SupportsCallbacks while runtime callback wiring exists`
+    - GREEN after fix:
+      - published/source truth now matches the current callback runtime classification for all audited backends
+
+- `mkdir -p tmp/test_callback_capability_truth && fpc -B -Fu./src -Fu./tests -FUtmp/test_callback_capability_truth -FEtmp/test_callback_capability_truth -otmp/test_callback_capability_truth/test_backend_callback_capability_truth_contract tests/test_backend_callback_capability_truth_contract.pas && ./tmp/test_callback_capability_truth/test_backend_callback_capability_truth_contract`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `FreePascal Native SupportsCallbacks mismatch: expected=False actual=True`
+    - GREEN after fix:
+      - `OpenSSL SupportsCallbacks = True`
+      - `FreePascal Native SupportsCallbacks = False`
+      - `WolfSSL SupportsCallbacks = False`
+      - `MbedTLS SupportsCallbacks = False`
+      - `WinSSL` is skipped on Linux and remains intended for Windows CI/runtime validation
+    - compile emitted existing unrelated warnings only
+
+- update callback capability truth sources:
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - change:
+    - clarify the semantic baseline for `SupportsCallbacks`
+    - publish `WinSSL` callback capability
+    - retract `FreePascal` callback mispublication
+    - explicitly freeze `WolfSSL` / `MbedTLS` callback capability at `False`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current callback capability truth batch has no whitespace or patch-format issues

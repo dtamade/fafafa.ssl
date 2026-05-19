@@ -515,6 +515,9 @@ begin
   Result.SupportsPKCS12 := True;
   Result.SupportsPasswordProtectedKeys := True;
 
+  // 扩展性
+  Result.SupportsCallbacks := False;  // verify/password/info setters are not wired into WolfSSL runtime paths yet
+
   // 兼容性（WolfSSL 与 OpenSSL 兼容性较好）
   Result.CompatibilityLevel := 85;  // 85% 兼容性
   Result.KnownIssues :=

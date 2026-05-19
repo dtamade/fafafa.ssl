@@ -4587,3 +4587,48 @@
 - 因而这条 `client-side ISSLOCSPStapling` optional-interface drift 现在也已经进入关闭状态：
   - 后续不应再把 `OpenSSL` / `WolfSSL` client OCSP optional interface 当成未分类结构风险反复拉起
   - 默认主线应继续回到更大的 backend implementation-completeness 审查
+
+- 顺着 backend completeness 继续往 capability/source truth 收时，又确认了一条真实而且之前没有冻住的漂移：
+  - `SupportsCallbacks` 不是一个抽象文案问题
+  - 它已经在各 backend 上出现了“runtime 存在但 capability 未发布”和“setter-only placeholder 却提前发布 capability”两种相反方向的偏差
+
+- 这次把 `SupportsCallbacks` 的当前判定基线压实成了一个更可执行的定义：
+  - 不是“接口上有 setter 就算支持”
+  - 而是“至少一条 context callback path 具备真实 runtime wiring，才算 published callback capability”
+
+- 在这个基线下，5 个 backend 的分类已经足够清楚：
+  - `OpenSSL`
+    - 已发布 `SupportsCallbacks=True`
+    - verify/password/info callback 都有真实 thunk/runtime wiring
+  - `WinSSL`
+    - verify/info callback 在 connection/runtime path 被真实消费
+    - 当前应发布 `SupportsCallbacks=True`
+  - `FreePascal`
+    - verify/password/info 当前只有 setter / field 存储
+    - 未看到 runtime use-site
+    - 因而 `SupportsCallbacks=True` 是误发布
+  - `WolfSSL` / `MbedTLS`
+    - 同样更接近 setter-only / storage-only
+    - 在没有 runtime wiring 前不应发布 `SupportsCallbacks=True`
+
+- 这次 RED 也给了很干净的双重证据：
+  - source contract 先抓到了：
+    - `WinSSL` capability 没有显式发布 `SupportsCallbacks=True`
+  - 新增的 backend capability runtime truth contract 又在 Linux 上直接抓到了：
+    - `FreePascal Native SupportsCallbacks mismatch: expected=False actual=True`
+
+- 因而这批最小正确修法没有去提前重构 callback API，而是先把 capability 真相统一回来：
+  - `WinSSL`
+    - 补上 `Result.SupportsCallbacks := True`
+  - `FreePascal`
+    - 改回 `Result.SupportsCallbacks := False`
+  - `WolfSSL` / `MbedTLS`
+    - 显式固定 `Result.SupportsCallbacks := False`
+  - `TSSLBackendCapabilities.SupportsCallbacks`
+    - 源码注释补成“至少一条 callback 具备真实 runtime wiring”
+
+- 这样做的价值不只是修两行 bool：
+  - 它把 selector / capability audit / future docs 的判断基线统一了
+  - 也把 callback 这条线从“到底算不算支持”的反复争论，推进到了下一个真正有价值的问题：
+    - 对 `SupportsCallbacks=False` 的 backend，setter-only compatibility surface 是否应该 fail-closed
+    - 还是至少要在 active docs / API reference 中明确标出 compatibility-only truth
