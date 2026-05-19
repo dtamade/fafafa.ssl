@@ -2704,3 +2704,33 @@
 - 至少完成一轮“公共接口 + 各 backend capability/实现”的横向验证。
 - 若发现高价值且边界清晰的问题，则完成最小修复与 focused 验证。
 - 给出可复用结论：哪些是已确认问题，哪些是设计债，哪些是下一批应继续推进的最优路径。
+
+68. `OpenSSL CT capability truth` 回漂已完成 focused 收口，并应作为当前 capability/public-surface 审查的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-openssl-ct-capability-truth-retightening.md`
+   - 当前已确认的 route truth：
+     - 默认 `OpenSSL` backend 没有发布 `ISSLCertificateTransparency` / `ISSLCertificateTransparencyValidation` connection surface
+     - 之前的真实漂移不是“默认初始化就报错”，而是：
+       - 只要 `osmCT` 被其他路径标记成 loaded
+       - `src/fafafa.ssl.openssl.backed.pas` 就会把低层 CT binding readiness 错当成 public capability / feature truth
+     - 这会直接误导：
+       - `IsFeatureSupported(sslFeatCertificateTransparency)`
+       - `SupportsCertificateTransparency`
+       - `CertTransparencySupport`
+       - 以及依赖这些字段的 selector / caller 判断
+   - 当前最小正确修法已落地：
+     - 不扩写 `TOpenSSLConnection`
+     - 不新增 OpenSSL CT optional interface
+     - 只把 OpenSSL CT public capability 收紧回：
+       - `sslFeatCertificateTransparency = False`
+       - `SupportsCertificateTransparency = False`
+       - `CertTransparencySupport = sslSupportNone`
+     - 并把 `docs/reference/P2_MINIMUM_API_CAPABILITY_MATRIX.md` 的 CT 行改成“底层 API 可用性”而非“默认 capability 直接映射”
+   - 当前 focused proof 已覆盖：
+     - `mkdir -p tmp/test_openssl_features_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_openssl_features_units -FEtmp/test_openssl_features_units -otmp/test_openssl_features_units/test_openssl_features tests/openssl/test_openssl_features.pas && ./tmp/test_openssl_features_units/test_openssl_features`
+     - `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+     - `python3 scripts/compile_all_modules.py`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 继续找下一条“低层 binding readiness 被误抬成 public capability truth”的 backend drift
+     - 不再把 OpenSSL CT 这条线按“默认 capability 看起来没问题所以无需处理”重新拉起

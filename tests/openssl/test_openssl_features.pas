@@ -781,6 +781,72 @@ begin
   end;
 end;
 
+procedure TestCertificateTransparencyPublicSurfaceTruthContract;
+var
+  SSLLib: ISSLLibrary;
+  LProbeLib: ISSLLibrary;
+  LCaps: TSSLBackendCapabilities;
+  LCtx: ISSLContext;
+  LConn: ISSLConnection;
+  LProbeStream: TMemoryStream;
+  LCT: ISSLCertificateTransparency;
+  LCTValidation: ISSLCertificateTransparencyValidation;
+  LOrigCTLoaded: Boolean;
+begin
+  WriteLn;
+  WriteLn('Testing Certificate Transparency Public Surface Truth Contract');
+  WriteLn('==============================================================');
+
+  LProbeLib := TOpenSSLLibrary.Create as ISSLLibrary;
+  Require(LProbeLib <> nil, 'OpenSSL probe library instance is nil');
+  if not LProbeLib.Initialize then
+  begin
+    WriteLn('Failed to initialize OpenSSL');
+    Exit;
+  end;
+
+  LProbeStream := TMemoryStream.Create;
+  try
+    LCtx := LProbeLib.CreateContext(sslCtxClient);
+    LConn := LCtx.CreateConnection(LProbeStream);
+
+    Require(not Supports(LConn, ISSLCertificateTransparency, LCT),
+      'OpenSSL connection must not expose ISSLCertificateTransparency by default');
+    Require(not Supports(LConn, ISSLCertificateTransparencyValidation, LCTValidation),
+      'OpenSSL connection must not expose ISSLCertificateTransparencyValidation by default');
+  finally
+    LProbeStream.Free;
+  end;
+
+  LConn := nil;
+  LCtx := nil;
+  LProbeLib := nil;
+
+  SSLLib := TOpenSSLLibrary.Create as ISSLLibrary;
+  Require(SSLLib <> nil, 'OpenSSL library instance is nil');
+  LOrigCTLoaded := TOpenSSLLoader.IsModuleLoaded(osmCT);
+  try
+    if not SSLLib.Initialize then
+    begin
+      WriteLn('Failed to initialize OpenSSL');
+      Exit;
+    end;
+
+    TOpenSSLLoader.SetModuleLoaded(osmCT, True);
+    LCaps := SSLLib.GetCapabilities;
+    Require(not SSLLib.IsFeatureSupported(sslFeatCertificateTransparency),
+      'OpenSSL must not publish CT feature support merely because low-level CT bindings are marked loaded');
+    Require(not LCaps.SupportsCertificateTransparency,
+      'OpenSSL capability must not claim CT support merely because low-level CT bindings are marked loaded');
+    Require(LCaps.CertTransparencySupport = sslSupportNone,
+      'OpenSSL CT support level must remain none until a real connection CT surface exists');
+  finally
+    TOpenSSLLoader.SetModuleLoaded(osmCT, LOrigCTLoaded);
+  end;
+
+  WriteLn('✅ Certificate-transparency public surface truth contract verified');
+end;
+
 procedure TestChaChaPolyCapabilityMatrixRuntimeDriftContract;
 var
   SSLLib: TOpenSSLLibrary;
@@ -1439,6 +1505,7 @@ begin
     TestSessionCacheCapabilityMatrixRuntimeDriftContract;
     TestRenegotiationCapabilityMatrixRuntimeDriftContract;
     TestCertificateTransparencyCapabilityMatrixRuntimeDriftContract;
+    TestCertificateTransparencyPublicSurfaceTruthContract;
     TestChaChaPolyCapabilityMatrixRuntimeDriftContract;
     TestPKCS12CapabilityMatrixRuntimeDriftContract;
     TestTLS13CapabilityMatrixPolicyAwareContract;

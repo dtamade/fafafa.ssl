@@ -8817,3 +8817,53 @@
   - result: PASS
   - summary:
     - current Wave B/B2 opt-in runtime failure truth batch has no whitespace or patch-format issues
+
+### OpenSSL CT Capability Truth Re-Tightening
+
+- add `docs/plans/2026-05-19-openssl-ct-capability-truth-retightening.md`
+  - purpose:
+    - record the bounded batch that re-tightens OpenSSL CT capability truth back to the real public-surface boundary
+
+- update `tests/openssl/test_openssl_features.pas`
+  - change:
+    - add `TestCertificateTransparencyPublicSurfaceTruthContract`
+    - prove that OpenSSL connection surface stays CT-free by default
+    - prove that merely marking `osmCT` as loaded must not lift OpenSSL public capability truth
+
+- `mkdir -p tmp/test_openssl_features_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_openssl_features_units -FEtmp/test_openssl_features_units -otmp/test_openssl_features_units/test_openssl_features tests/openssl/test_openssl_features.pas && ./tmp/test_openssl_features_units/test_openssl_features`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `OpenSSL must not publish CT feature support merely because low-level CT bindings are marked loaded`
+    - GREEN after fix:
+      - focused OpenSSL feature suite returned `All tests passed`
+      - new CT public-surface truth contract stayed green
+
+- update `src/fafafa.ssl.openssl.backed.pas`
+  - change:
+    - stop using low-level CT module readiness as `sslFeatCertificateTransparency`
+    - pin `SupportsCertificateTransparency` back to `False`
+    - pin `CertTransparencySupport` back to `sslSupportNone`
+    - keep CT binding availability as non-public implementation detail instead of backend capability truth
+
+- update `docs/reference/P2_MINIMUM_API_CAPABILITY_MATRIX.md`
+  - change:
+    - CT row no longer claims direct mapping to `SupportsCertificateTransparency` / `CertTransparencySupport`
+    - add note that OpenSSL CT API readiness does not imply published backend connection-level CT surface
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+  - result: PASS
+  - summary:
+    - `135 total / 111 passed / 0 failed / 24 skipped`
+    - cross-backend CT optional-interface contract remained green after the OpenSSL capability truth tightening
+
+- `python3 scripts/compile_all_modules.py`
+  - result: PASS
+  - summary:
+    - `187/187` core modules compiled successfully
+
+- `git diff --check`
+  - result: FAIL -> PASS
+  - summary:
+    - first caught trailing whitespace in the new CT capability note
+    - rerun passed after cleanup

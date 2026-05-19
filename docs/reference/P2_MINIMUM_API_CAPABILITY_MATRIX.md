@@ -35,7 +35,7 @@
 | CMS | `LoadOpenSSLCMS` + `CMSSignData` + `CMSVerifySignature` + `CMSEncryptData` + `CMSDecryptData` | 无直接字段（用模块加载状态 `osmCMS` + 测试结果） | ✅ 支持 |
 | PKCS12 | `LoadPKCS12Module` + `PKCS12_create` + `PKCS12_parse` + `d2i_PKCS12_bio` + `i2d_PKCS12_bio` | `SupportsPKCS12`（直接字段） | ✅ 支持 |
 | OCSP | `LoadOpenSSLOCSP` + `CheckCertificateStatus` + `CreateOCSPRequest` + `SendOCSPRequest` + `VerifyOCSPResponse` | `SupportsOCSPStapling` / `OCSPStaplingSupport`（仅装订能力，非完整 OCSP 客户端语义） | ✅ 支持（字段部分映射） |
-| CT | `LoadCTFunctions` + `EnableCertificateTransparency` + `ValidateSCTList` + `LoadCTLogStore` + `X509_get_SCT_LIST` | `SupportsCertificateTransparency` / `CertTransparencySupport`（直接映射） | ✅ 支持 |
+| CT | `LoadCTFunctions` + `EnableCertificateTransparency` + `ValidateSCTList` + `LoadCTLogStore` + `X509_get_SCT_LIST` | 无默认直接字段映射；当前只代表底层 OpenSSL CT binding 可用性，不等于 OpenSSL backend 已发布 connection-level CT public surface | ✅ 底层 API 可用 |
 | TS | `LoadTSFunctions` + `CreateTimestampRequest` + `VerifyTimestampResponse` + `GetTimestampTime` | 无直接字段（用函数可用性 + 测试结果） | ✅ 支持 |
 | Store | `LoadSTOREFunctions` + `LoadCertificateFromStore` + `LoadPrivateKeyFromStore` + `LoadCertificateChainFromStore` + `SearchCertificateByAlias` | `SupportsSystemCertStore` / `RequiresExternalLibrary`（部分映射） | ✅ 支持（字段部分映射） |
 
@@ -63,6 +63,13 @@
 `SupportsOCSPStapling` 和 `OCSPStaplingSupport` 只直接表示 TLS OCSP stapling 能力。  
 完整 OCSP 请求/响应处理能力仍需结合模块 API 可用性与测试结果确认。
 
+### CT 模块可用性不等于 OpenSSL backend public capability
+
+OpenSSL CT 行当前只表示底层 `api.ct` / validator 绑定是否可用。
+默认 `OpenSSL` backend 并没有发布 `ISSLCertificateTransparency` /
+`ISSLCertificateTransparencyValidation` connection surface，因此
+`SupportsCertificateTransparency` / `CertTransparencySupport` 不应再被当成这组底层 API 的直接映射。
+
 ### 无直接字段模块的显式策略
 
 PKCS7 / CMS / TS 当前无一对一 capability 字段，采用以下显式规则：
@@ -89,4 +96,3 @@ python3 scripts/compile_all_modules.py
 ```bash
 cat docs/test_reports/P2_MODULES_TEST_REPORT.md
 ```
-

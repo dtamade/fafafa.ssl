@@ -4068,3 +4068,34 @@
   - `check_wave_b_b2_evidence_consistency.sh` 的 `CONSISTENT` 语义这批没有改
   - 也就是说，`CONSISTENT` 目前仍代表 evidence chain 自洽，不等于 Windows gate 已通过
   - 如果后续还要补 workflow truth，下一刀应单独收 `consistency` / `next actions` wording，而不是把实现调查、报告链修复、语义重写混成一批
+
+- OpenSSL CT 这条线这次终于把真正的漂移边界钉实了：
+  - 默认初始化下，`OpenSSL` capability 看起来仍是 `False/None`
+  - 但这不是因为 public truth 设计正确，而只是因为 `osmCT` 默认没有被加载
+  - 一旦其他代码路径把 `osmCT` 标记成 loaded，`src/fafafa.ssl.openssl.backed.pas` 就会把：
+    - `sslFeatCertificateTransparency`
+    - `SupportsCertificateTransparency`
+    - `CertTransparencySupport`
+    全部抬成可用
+  - 与此同时，`TOpenSSLConnection` 仍然没有公开：
+    - `ISSLCertificateTransparency`
+    - `ISSLCertificateTransparencyValidation`
+
+- 这说明之前的问题本质不是“默认 runtime 立即失真”，而是“低层 binding readiness 被误当成默认 backend public capability truth”：
+  - 这类漂移更危险，因为平时不一定红
+  - 但只要另一路代码加载了 CT binding，全仓 capability / selector / caller 判断就会被带偏
+
+- 当前最小正确修法已经明确并落地：
+  - 不扩到 OpenSSL CT connection surface
+  - 不重开 FreePascal CT 主线
+  - 只把 OpenSSL 默认 capability truth 固定回：
+    - `sslFeatCertificateTransparency = False`
+    - `SupportsCertificateTransparency = False`
+    - `CertTransparencySupport = sslSupportNone`
+  - 同时把 `docs/reference/P2_MINIMUM_API_CAPABILITY_MATRIX.md` 的 CT 行改成“底层 API 可用性”而不是“默认 capability 直接映射”
+
+- focused RED/ GREEN 证据也很干净：
+  - 新增 `tests/openssl/test_openssl_features.pas` 的 public-surface truth contract
+  - RED 首先报出：
+    - `OpenSSL must not publish CT feature support merely because low-level CT bindings are marked loaded`
+  - GREEN 后同一合同转绿，并且 `tests/contract/test_backend_contract.pas` 继续保持 `0 failed`

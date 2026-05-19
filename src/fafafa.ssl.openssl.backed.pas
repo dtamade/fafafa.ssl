@@ -553,12 +553,6 @@ begin
     OpenSSLDERSEC1ECPrivateKeySurfaceReady;
 end;
 
-function OpenSSLCertificateTransparencySurfaceReady(AVersionNumber: Cardinal): Boolean;
-begin
-  Result := (AVersionNumber >= $1010000F) and
-    TOpenSSLLoader.IsModuleLoaded(osmCT);
-end;
-
 // ============================================================================
 // ISSLLibrary - 初始化和清理
 // ============================================================================
@@ -910,8 +904,7 @@ begin
         Assigned(SSL_CTX_set_tlsext_status_cb);
 
     sslFeatCertificateTransparency:
-      Result := (FVersionNumber >= $1010000F) and
-        TOpenSSLLoader.IsModuleLoaded(osmCT);
+      Result := False;
   else
     Result := False;
   end;
@@ -932,7 +925,6 @@ var
   LOCSPStaplingReady: Boolean;
   LChaChaPolyReady: Boolean;
   LPKCS12Ready: Boolean;
-  LCertificateTransparencyReady: Boolean;
   LPrivateKeyFileReady: Boolean;
   LPrivateKeyReadReady: Boolean;
   LPEMPrivateKeyReady: Boolean;
@@ -964,7 +956,6 @@ begin
   LOCSPStaplingReady := OpenSSLOCSPStaplingSurfaceReady;
   LChaChaPolyReady := OpenSSLChaChaPolySurfaceReady;
   LPKCS12Ready := OpenSSLPKCS12SurfaceReady;
-  LCertificateTransparencyReady := OpenSSLCertificateTransparencySurfaceReady(FVersionNumber);
   LPrivateKeyFileReady := OpenSSLPrivateKeyFileSurfaceReady;
   LPrivateKeyReadReady := OpenSSLPrivateKeyReadSurfaceReady;
   LPEMPrivateKeyReady := LPrivateKeyFileReady or LPrivateKeyReadReady;
@@ -994,8 +985,8 @@ begin
   // OCSP 装订支持
   Result.SupportsOCSPStapling := LOCSPStaplingReady;
 
-  // Certificate Transparency 需要 OpenSSL 1.1.0+
-  Result.SupportsCertificateTransparency := LCertificateTransparencyReady;
+  // 当前默认 OpenSSL backend 还没有发布 connection-level CT public surface
+  Result.SupportsCertificateTransparency := False;
 
   // ChaCha20-Poly1305 需要真实 ciphersuite parser ready
   Result.SupportsChaChaPoly := LChaChaPolyReady;
@@ -1036,15 +1027,8 @@ begin
   else
     Result.OCSPStaplingSupport := sslSupportNone;
 
-  // Certificate Transparency: OpenSSL 1.1.0+ 为实验性，3.0+ 为稳定
-  if not LCertificateTransparencyReady then
-    Result.CertTransparencySupport := sslSupportNone
-  else if FVersionNumber >= $30000000 then
-    Result.CertTransparencySupport := sslSupportStable
-  else if FVersionNumber >= $1010000F then
-    Result.CertTransparencySupport := sslSupportExperimental
-  else
-    Result.CertTransparencySupport := sslSupportNone;
+  // 当前默认 OpenSSL backend 还没有发布 connection-level CT / validation public surface
+  Result.CertTransparencySupport := sslSupportNone;
 
   if OpenSSLSessionTicketSurfaceReady then
     Result.SessionTicketsSupport := sslSupportStable
