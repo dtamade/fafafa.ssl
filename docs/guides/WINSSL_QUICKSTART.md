@@ -15,6 +15,8 @@
 - Windows 7+ (TLS 1.0/1.1/1.2)
 - Windows 10/11 (TLS 1.3)
 
+> 当前口径：WinSSL 的零依赖客户端 baseline 已验证；更细 server runtime 场景继续按 [WinSSL 后端状态报告](../test_reports/WINSSL_BACKEND_STATUS_REPORT.md) 区分；如果你要判断 session resumption / Session Ticket 的当前真相，请同时查看 [WinSSL 后端能力矩阵](../reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md)。这部分能力目前仍按实验性 public surface 理解。
+
 ---
 
 ## 目录
@@ -576,18 +578,18 @@ WSACleanup;
 
 ### 功能对比
 
-| 特性             | WinSSL         | OpenSSL         | 说明              |
-| ---------------- | -------------- | --------------- | ----------------- |
-| **部署依赖**     | ✅ 零依赖      | ❌ 需要 DLL     | WinSSL 的核心优势 |
-| **Windows 平台** | ✅ 原生支持    | ⚠️ 第三方库     | WinSSL 更稳定     |
-| **Linux/macOS**  | ❌ 不支持      | ✅ 完全支持     | OpenSSL 跨平台    |
-| **协议支持**     | TLS 1.0-1.3    | SSL 2.0-TLS 1.3 | OpenSSL 更全面    |
-| **算法控制**     | ⚠️ 系统决定    | ✅ 完全控制     | OpenSSL 更灵活    |
-| **证书存储**     | ✅ 系统存储    | 📁 文件/内存    | 各有优势          |
-| **性能**         | ✅ 硬件加速    | ✅ 优化良好     | 相当              |
-| **维护**         | Windows Update | 手动更新        | WinSSL 自动       |
-| **API 复杂度**   | 高 (SSPI)      | 中 (EVP)        | OpenSSL 更易用    |
-| **文档**         | MSDN           | 丰富社区        | OpenSSL 更好      |
+| 特性             | WinSSL         | OpenSSL         | 说明               |
+| ---------------- | -------------- | --------------- | ------------------ |
+| **部署依赖**     | ✅ 零依赖      | ❌ 需要 DLL     | WinSSL 的核心优势  |
+| **Windows 平台** | ✅ 原生支持    | ⚠️ 第三方库     | WinSSL 更稳定      |
+| **Linux/macOS**  | ❌ 不支持      | ✅ 完全支持     | OpenSSL 跨平台     |
+| **协议支持**     | TLS 1.0-1.3    | SSL 2.0-TLS 1.3 | OpenSSL 更全面     |
+| **算法控制**     | ⚠️ 系统决定    | ✅ 完全控制     | OpenSSL 更灵活     |
+| **证书存储**     | ✅ 系统存储    | 📁 文件/内存    | 各有优势           |
+| **性能**         | ✅ 硬件加速    | ✅ 优化良好     | 取决于当前运行环境 |
+| **维护**         | Windows Update | 手动更新        | WinSSL 自动        |
+| **API 复杂度**   | 高 (SSPI)      | 中 (EVP)        | OpenSSL 更易用     |
+| **文档**         | MSDN           | 丰富社区        | OpenSSL 更好       |
 
 ### 使用建议
 
@@ -604,22 +606,24 @@ WSACleanup;
 - ✅ 跨平台应用
 - ✅ 需要完整协议控制
 - ✅ 传统算法支持（Blowfish 等）
-- ✅ 需要服务器模式（当前）
-- ✅ 需要完整证书验证（当前）
+- ✅ 需要完整跨平台 server/runtime 路径
+- ✅ 需要 caller-provided server OCSP stapling / 更深 session runtime 证明
 
-### 性能对比
+### 性能与运行时验证
 
-**测试场景**: HTTPS GET 请求到 www.google.com
+WinSSL 与 OpenSSL 的实际性能取决于当前 Windows 版本、Schannel、runner/主机、网络路径和目标站点，不应该把某次历史 benchmark snapshot 当成长期 truth。
 
-| 指标          | WinSSL   | OpenSSL  |
-| ------------- | -------- | -------- |
-| TLS 握手时间  | ~150ms   | ~160ms   |
-| 首字节时间    | ~180ms   | ~190ms   |
-| 吞吐量 (加密) | ~80 MB/s | ~85 MB/s |
-| 内存占用      | ~2 MB    | ~3 MB    |
-| DLL 大小      | 0 (系统) | ~7 MB    |
+如果你需要当前可复现的 WinSSL runtime baseline，请优先查看：
 
-_注：性能数据为参考值，实际结果取决于硬件、网络和系统配置_
+- [WinSSL 用户指南](WINSSL_USER_GUIDE.md)
+- [WinSSL 后端状态报告](../test_reports/WINSSL_BACKEND_STATUS_REPORT.md)
+- [WinSSL 性能调优说明](../reference/WINSSL_PERFORMANCE_TUNING.md)
+
+更合适的比较方式是：
+
+1. 在同一台主机、同一网络路径、同一目标站点下分别跑 WinSSL 和 OpenSSL。
+2. 把 latency / throughput / stability 数字留在当前 run artifact 里。
+3. 不要把单次跑数回写成长期 quickstart truth。
 
 ### 代码迁移
 
@@ -864,15 +868,15 @@ my_https_client/
 
 ### Q3: WinSSL 是否支持服务器模式？
 
-**A**: 是的，WinSSL 已完整实现服务器模式（Phase 5 完成）。支持完整的服务器 TLS 握手，包括客户端证书请求和双向 TLS。
+**A**: WinSSL 当前已经发布服务器 TLS 握手 public surface；更细 server runtime 场景继续按 [WinSSL 后端状态报告](../test_reports/WINSSL_BACKEND_STATUS_REPORT.md) 区分。
 
 ### Q4: 如何验证服务器证书？
 
-**A**: WinSSL 已实现完整的自动证书验证（Phase 1 完成），包括证书链验证和主机名验证。生产环境推荐使用 `Ctx.SetVerifyMode([sslVerifyPeer])`。
+**A**: WinSSL 当前已经发布自动证书验证 public surface，基础证书链验证和主机名校验已接通。生产环境推荐使用 `Ctx.SetVerifyMode([sslVerifyPeer])`。
 
 ### Q5: WinSSL 的性能如何？
 
-**A**: WinSSL 性能与 OpenSSL 相当，甚至在某些场景下更快（得益于 Windows 硬件加速）。参见 [性能对比](#性能对比) 部分。
+**A**: WinSSL 的实际性能取决于当前 Windows 版本、Schannel、runner/主机、网络路径和目标站点。不要把某次历史 benchmark snapshot 当成长期 truth；请参见 [性能与运行时验证](#性能与运行时验证) 与 [WinSSL 用户指南](WINSSL_USER_GUIDE.md)。
 
 ### Q6: 如何从 OpenSSL 迁移？
 
@@ -933,9 +937,10 @@ Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);
 
 ---
 
-**版本**: 2.0
-**最后更新**: 2026-01-19
-**状态**: ✅ WinSSL 后端 100% 完成（所有 6 个阶段）
+**版本**: 2.1
+**最后更新**: 2026-05-19
+**状态**: ✅ WinSSL 零依赖客户端基线已验证；会话复用 / Session Ticket 仍按实验性 public surface 理解
+**当前权威入口**: [WinSSL 用户指南](WINSSL_USER_GUIDE.md) · [WinSSL 后端状态报告](../test_reports/WINSSL_BACKEND_STATUS_REPORT.md) · [WinSSL 后端能力矩阵](../reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md)
 **作者**: fafafa.ssl 开发团队
 
 **许可**: 与 fafafa.ssl 项目相同

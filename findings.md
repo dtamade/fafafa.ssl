@@ -5898,3 +5898,41 @@
     - FAQ 里的 `Phase 5 完成`
     - 以及若干阶段性完成口径
   - 这比一般 `预期输出` 更危险，因为它会直接影响第一次接触 WinSSL 的调用方心智
+
+- 顺着 WinSSL first-contact quickstart 往下收时，又确认了一个很典型的“第一页心智漂移”模式：
+  - 一页文档里同时混着：
+    - 当前 verify/SNI/mTLS 语法已经是真实的
+    - 但 FAQ / 比较段 / 页尾仍保留老阶段总结
+  - 这会让用户在复制示例时得到正确代码，
+  - 却在阅读解释时又被带回过时认知
+
+- `WINSSL_QUICKSTART` 这次收口后，更清楚的一点是：
+  - quickstart 不应承担“阶段完成度公告牌”的角色
+  - 它更适合：
+    - 告诉用户如何最快跑通零依赖客户端
+    - 明确哪些能力已经是 current public surface
+    - 明确哪些 runtime 结论仍要看状态报告/能力矩阵
+
+- 这批也顺手修掉了一个很重要的内部矛盾：
+  - 旧 quickstart 一边说：
+    - server mode 已 Phase 5 完成
+    - 自动证书验证已 Phase 1 完成
+  - 另一边又在“选择 OpenSSL”里写：
+    - 需要服务器模式（当前）
+    - 需要完整证书验证（当前）
+  - 这种“同页自相矛盾”比单点错句更伤路线图，因为它会让人误判后端实际边界
+
+- 收口之后，这页的稳定原则也更明确了：
+  - first-contact quickstart 可以保留：
+    - 当前客户端 baseline
+    - 当前 verify/SNI 配置
+    - 当前权威入口
+  - 但不应该再保留：
+    - `100% 完成`
+    - `Phase 1/5 完成`
+    - 固定 benchmark 表
+    - 把当前已发布 public surface 重新讲成“不如 OpenSSL 才能做”
+
+- 这对后续路线图帮助很大：
+  - WinSSL 第一接触页现在已经和用户指南、零依赖部署指南、状态报告形成同一条 truth chain
+  - 下一步再清 `QUICKSTART_30SEC` / `5_MINUTE_QUICKSTART` / `ARCHITECTURE`，就可以继续把“高入口 captured snapshot / 完成度口径”这条线彻底打穿

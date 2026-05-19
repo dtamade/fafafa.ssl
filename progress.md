@@ -12140,3 +12140,80 @@
       - `docs/guides/5_MINUTE_QUICKSTART.md`
       - `docs/reference/ARCHITECTURE.md`
     - `WINSSL_QUICKSTART.md` was promoted in priority because it still embeds `100% 完成` and phase-completion language in a first-contact guide
+
+### WinSSL Quickstart Status/Phase Truth
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - batch started from a clean `master...origin/master` worktree
+
+- `rg -n "100% 完成|Phase 5 完成|Phase 1 完成|完整实现服务器模式|自动证书验证|项目状态|状态\\*\\*|所有 6 个阶段" docs/guides/WINSSL_QUICKSTART.md`
+  - result: PASS
+  - summary:
+    - static scan confirmed `WINSSL_QUICKSTART.md` still embedded phase-completion / 100-percent wording in FAQ and footer
+
+- `rg -n "性能对比|更快|相当|需要服务器模式|需要完整证书验证|~150ms|~160ms|~80 MB/s|~85 MB/s" docs/guides/WINSSL_QUICKSTART.md`
+  - result: PASS
+  - summary:
+    - the same first-contact page also still embedded fixed benchmark snapshots and outdated OpenSSL-choice guidance that conflicted with current WinSSL public truth
+
+- add `docs/plans/2026-05-19-winssl-quickstart-status-phase-truth.md`
+  - change:
+    - recorded the bounded docs-only plan for WinSSL quickstart phase/status/performance truth cleanup
+
+- add `tests/scripts/test_winssl_quickstart_status_phase_truth_contract.sh`
+  - change:
+    - added a focused shell contract that guards:
+      - presence of bounded top-level WinSSL truth wording
+      - presence of bounded server/verify FAQ wording
+      - presence of bounded footer status / authority links
+      - absence of `100% 完成`, `Phase 1/5 完成`, fixed benchmark snapshots, and stale OpenSSL-choice bullets
+
+- update docs:
+  - `docs/guides/WINSSL_QUICKSTART.md`
+  - change:
+    - added a current-truth note near the top
+    - rewrote FAQ answers for server mode / certificate verification / performance
+    - rewrote the performance section into runtime-baseline guidance
+    - tightened the OpenSSL-choice bullets to current cross-platform/runtime-sensitive cases
+    - replaced the stale `100% 完成` footer with current bounded status and truth-source links
+
+- `bash -n tests/scripts/test_winssl_quickstart_status_phase_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new WinSSL quickstart status/phase truth contract syntax is valid
+
+- `bash tests/scripts/test_winssl_quickstart_status_phase_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - WinSSL quickstart no longer presents historical phase/benchmark snapshots as current truth
+
+- `bash tests/scripts/test_winssl_quickstart_runtime_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - previously fixed verify/mTLS/SNI runtime truth remained green after the quickstart status cleanup
+
+- `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - current public facade / entrypoint truth in the quickstart remained green
+
+- `npx prettier --write docs/guides/WINSSL_QUICKSTART.md`
+  - result: PASS
+  - summary:
+    - WinSSL quickstart formatting remains stable
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current WinSSL quickstart truth batch has no whitespace or patch-format issues
+
+- `rg -n "预期输出|100% 完成|生产就绪|完成度|Phase 5|Phase 1|~150ms|~160ms|~80 MB/s|~85 MB/s|状态\\*\\*|当前权威入口" docs/guides/QUICKSTART_30SEC.md docs/guides/5_MINUTE_QUICKSTART.md docs/reference/ARCHITECTURE.md docs/guides/WINSSL_QUICKSTART.md`
+  - result: PASS
+  - summary:
+    - next residual high-entry truth drift has been narrowed to:
+      - `docs/guides/QUICKSTART_30SEC.md`
+      - `docs/guides/5_MINUTE_QUICKSTART.md`
+      - `docs/reference/ARCHITECTURE.md`
+    - `WINSSL_QUICKSTART.md` is now aligned to the same bounded truth chain as the WinSSL user/deployment docs

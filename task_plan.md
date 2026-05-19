@@ -4308,3 +4308,48 @@
        - `docs/guides/5_MINUTE_QUICKSTART.md`
        - `docs/reference/ARCHITECTURE.md`
      - 性能类文档仍排在这些高入口页之后
+93. `WinSSL quickstart status/phase truth` 已完成 focused 收口，并应作为当前 WinSSL first-contact quickstart 的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-winssl-quickstart-status-phase-truth.md`
+   - 当前已确认的真实 drift：
+     - `docs/guides/WINSSL_QUICKSTART.md`
+       - FAQ 仍把：
+         - `WinSSL 已完整实现服务器模式（Phase 5 完成）`
+         - `WinSSL 已实现完整的自动证书验证（Phase 1 完成）`
+         直接写成当前结论
+       - 性能段仍把：
+         - `~150ms`
+         - `~160ms`
+         - `~80 MB/s`
+         - `~85 MB/s`
+         写成 quickstart 参考表
+       - 使用建议里仍把：
+         - `需要服务器模式（当前）`
+         - `需要完整证书验证（当前）`
+         推给 OpenSSL
+       - 页尾仍保留：
+         - `WinSSL 后端 100% 完成（所有 6 个阶段）`
+   - 当前最小正确修法已落地：
+     - 不改生产实现
+     - 只把 `WINSSL_QUICKSTART` 重新锚回当前 public/runtime truth：
+       - 顶部增加当前口径说明
+       - FAQ 的 server/verify 回到当前 public surface + 状态报告边界
+       - 性能段改成 runtime baseline / benchmark 说明，不再保留固定跑数
+       - 使用建议改成“跨平台 server/runtime 路径 / caller-provided server OCSP stapling / 更深 session runtime 证明”
+       - 页尾状态改成当前零依赖客户端 baseline + experimental session truth
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_winssl_quickstart_status_phase_truth_contract.sh`
+     - `bash tests/scripts/test_winssl_quickstart_status_phase_truth_contract.sh`
+     - `bash tests/scripts/test_winssl_quickstart_runtime_truth_contract.sh`
+     - `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+     - `npx prettier --write docs/guides/WINSSL_QUICKSTART.md`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 优先继续审查：
+       - `docs/guides/QUICKSTART_30SEC.md`
+         - 仍保留 captured `预期输出`
+       - `docs/guides/5_MINUTE_QUICKSTART.md`
+         - 仍保留多处 captured `预期输出`
+       - `docs/reference/ARCHITECTURE.md`
+         - 仍保留 `WinSSL ... 100% 完成`
+     - 性能类文档仍排在这些高入口页之后
