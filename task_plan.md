@@ -4859,3 +4859,43 @@
      - 如果全部失败，再把问题继续收窄到：
        - runner 平台缺少导出
        - 或 API 名字/模块 reality 与文档不一致
+103. `WinSSL native probe control query boundary` 现在应作为 `ExW 已成功解析但调用仍 crash` 之后的下一条最小调查批次：
+   - 新 plan：
+     - `docs/plans/2026-05-19-winssl-native-probe-control-query-boundary.md`
+   - 当前 fresh runtime evidence：
+     - run `26107307586`
+       已经明确不是 resolver miss，而是：
+       - `stage=query_resolver module=sspicli.dll symbol=QueryContextAttributesExW resolved=true`
+       - `stage=query_api api=query_context_attributes_exw`
+       - `native_probe_worker exit_code=-1073741819`
+   - 当前最小正确修法应先做对照控制，而不是继续盲改 `ExW`：
+     - 在相同 extracted native handle 上先跑
+       - `QueryContextAttributesW(..., SECPKG_ATTR_CONNECTION_INFO, ...)`
+     - 新增 marker：
+       - `stage=before_control_query`
+       - `stage=after_control_query`
+       - `stage=control_query_failed`
+   - 这批的调查价值：
+     - 若 control query 也崩：
+       - 更偏向 handle path / context lifetime 问题
+     - 若 control query 先过而 session-info probe 仍崩：
+       - 更偏向 `SECPKG_ATTR_SESSION_INFO` 的 attribute-specific provider/runtime boundary
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_winssl_native_probe_control_query_contract.sh`
+     - `bash tests/scripts/test_winssl_native_probe_control_query_contract.sh`
+     - `bash tests/scripts/test_winssl_native_probe_resolver_diagnostics_contract.sh`
+     - `bash tests/scripts/test_winssl_native_probe_safe_query_contract.sh`
+     - `bash tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+     - `bash tests/scripts/test_winssl_native_probe_stage_markers_contract.sh`
+     - `bash tests/scripts/test_winssl_native_probe_handle_metadata_contract.sh`
+     - `bash tests/scripts/test_winssl_session_info_probe_allowlist_contract.sh`
+     - `mkdir -p tmp/winssl_native_probe_control_query_win64 && fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/winssl_native_probe_control_query_win64 -FEtmp/winssl_native_probe_control_query_win64 -otmp/winssl_native_probe_control_query_win64/test_winssl_session_resumption.exe tests/winssl/test_winssl_session_resumption.pas`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 推送后重新发起 native-probe Windows manual lane
+     - 优先看 control-query marker：
+       - 是否到达 `after_control_query`
+       - 是否停在 `before_control_query`
+       - 或返回 `control_query_failed`
+     - 若 control query 先过，再继续看 session-info probe 是否仍停在：
+       - `stage=query_api api=query_context_attributes_exw`

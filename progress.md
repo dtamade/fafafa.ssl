@@ -13143,3 +13143,98 @@
   - result: PASS
   - summary:
     - native-handle metadata markers remained intact after the resolver-diagnostics changes
+
+- `git push origin master`
+  - result: PASS
+  - summary:
+    - pushed resolver-diagnostics batch as commit `e6738bf`
+
+- `gh workflow run "Wave B B2 Manual Gate (Template)" --ref master -f run_id=winssl_native_probe_resolver_diag_20260519_232811 -f strict_closure=false -f winssl_enable_native_probe=true`
+  - result: PASS
+  - summary:
+    - launched fresh Windows/manual investigation lane against commit `e6738bf`
+
+- `gh run watch 26107307586 --exit-status`
+  - result: FAIL
+  - summary:
+    - linux gate passed
+    - windows quick smoke passed
+    - windows Wave B gate passed
+    - broader WinSSL runtime suite still failed
+    - macOS gate also failed independently
+
+- `gh run download 26107307586 --dir tmp/gh-run-26107307586`
+  - result: PASS
+  - summary:
+    - downloaded fresh artifacts for the resolver-diagnostics verification run
+
+- `rg -n "session_resumption|evidence_model|query_resolver|query_api|query_context_attributes_exw|query_context_attributesw|native_probe_worker exit_code|before_query_context_attributes|after_query_context_attributes|query_failed|native_observed_reuse|native_probe_succeeded|suite_end|test_result index=5" tmp/gh-run-26107307586/wave-b-windows-winssl_native_probe_resolver_diag_20260519_232811/winssl_runtime_suite_winssl_native_probe_resolver_diag_20260519_232811.log`
+  - result: PASS
+  - summary:
+    - fresh runtime transcript proved:
+      - `QueryContextAttributesExW` successfully resolved from `sspicli.dll`
+      - native probe actually entered the `query_context_attributes_exw` path
+      - crash still remained `native_probe_worker exit_code=-1073741819`
+    - main unresolved issue moved from resolver selection to the real ExW/session-info call boundary
+
+- add `docs/plans/2026-05-19-winssl-native-probe-control-query-boundary.md`
+  - change:
+    - recorded the next bounded batch to distinguish handle-path instability from attribute-specific session-info instability
+
+- add `tests/scripts/test_winssl_native_probe_control_query_contract.sh`
+  - change:
+    - added a focused shell contract that guards the control-query helper and its before/after/failure markers
+
+- update `tests/winssl/test_winssl_session_resumption.pas`
+  - change:
+    - added a dedicated `SECPKG_ATTR_CONNECTION_INFO` control-query helper before the risky session-info probe
+    - emitted:
+      - `stage=before_control_query`
+      - `stage=after_control_query`
+      - `stage=control_query_failed`
+    - preserved the existing resolver and safe-query evidence path after the control query
+
+- `bash -n tests/scripts/test_winssl_native_probe_control_query_contract.sh && bash tests/scripts/test_winssl_native_probe_control_query_contract.sh`
+  - result: PASS
+  - summary:
+    - control-query helper and before/after/failure markers are present in source
+
+- `bash tests/scripts/test_winssl_native_probe_resolver_diagnostics_contract.sh`
+  - result: PASS
+  - summary:
+    - resolver candidate traversal and resolver diagnostic markers stayed green after the control-query batch
+
+- `bash tests/scripts/test_winssl_native_probe_safe_query_contract.sh`
+  - result: PASS
+  - summary:
+    - Ex-first sized-buffer helper and W fallback stayed green after inserting the control query
+
+- `mkdir -p tmp/winssl_native_probe_control_query_win64 && fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/winssl_native_probe_control_query_win64 -FEtmp/winssl_native_probe_control_query_win64 -otmp/winssl_native_probe_control_query_win64/test_winssl_session_resumption.exe tests/winssl/test_winssl_session_resumption.pas`
+  - result: PASS
+  - summary:
+    - Win64 focused cross-target compile accepted the control-query boundary changes
+
+- `bash tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - broader runtime-truth contract remained green after the control-query batch
+
+- `bash tests/scripts/test_winssl_native_probe_stage_markers_contract.sh`
+  - result: PASS
+  - summary:
+    - pre-existing native-probe stage markers remained intact alongside the new control-query markers
+
+- `bash tests/scripts/test_winssl_native_probe_handle_metadata_contract.sh`
+  - result: PASS
+  - summary:
+    - native-handle metadata markers remained intact after the control-query changes
+
+- `bash tests/scripts/test_winssl_session_info_probe_allowlist_contract.sh`
+  - result: PASS
+  - summary:
+    - control-query addition did not broaden the session-info probe allowlist
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current control-query boundary batch has no whitespace or patch-format issues

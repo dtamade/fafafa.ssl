@@ -6312,3 +6312,23 @@
     - native-probe stage markers
     - native-probe handle metadata
   - 所以下一轮如果 Windows runtime 仍失败，优先应该继续收窄到真实 runner/export/provider 边界，而不是回头怀疑这批 repo-side 收口把公共语义打坏了
+
+- 最新 Windows run `26107307586` 已经进一步排除了一个关键错误假设：
+  - 不是 `QueryContextAttributesEx*` 没解析到
+  - 实际 fresh marker 已经明确显示：
+    - `module=sspicli.dll`
+    - `symbol=QueryContextAttributesExW`
+    - `resolved=true`
+  - 但 worker 仍在：
+    - `stage=query_api api=query_context_attributes_exw`
+    之后以 `-1073741819` 退出
+
+- 这说明当前最值钱的下一步不是再改 resolver，也不是急着引入 `SecurityFunctionTableW`：
+  - 本地 `mingw-w64` 头和当前 Pascal 声明已经一致
+  - 进一步查阅官方 SSPI surface 后，`SecurityFunctionTableW` 上的 `QueryContextAttributesEx*` 字段也不是一个可以直接依赖的稳定下一跳
+  - 所以下一条最小调查批次应该先做 control query，对 extracted native handle 做 attribute 对照：
+    - 先查 `SECPKG_ATTR_CONNECTION_INFO`
+    - 再查 `SECPKG_ATTR_SESSION_INFO`
+  - 这样下一轮 Windows run 才能把问题继续分成：
+    - handle path / lifetime
+    - 或 attribute-specific provider/runtime boundary

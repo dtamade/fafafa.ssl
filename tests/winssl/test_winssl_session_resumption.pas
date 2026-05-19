@@ -192,6 +192,18 @@ begin
   Result := IsSuccess(AStatus);
 end;
 
+function TryQueryConnectionInfoControl(
+  ACtxtHandle: PCtxtHandle;
+  out AConnectionInfo: TSecPkgContext_ConnectionInfo;
+  out AStatus: SECURITY_STATUS
+): Boolean;
+begin
+  FillChar(AConnectionInfo, SizeOf(AConnectionInfo), 0);
+  AStatus := QueryContextAttributesW(ACtxtHandle, SECPKG_ATTR_CONNECTION_INFO,
+    @AConnectionInfo);
+  Result := IsSuccess(AStatus);
+end;
+
 function QueryResolverModuleText: string;
 begin
   if QueryContextAttributesExResolvedModuleName <> '' then
@@ -401,6 +413,8 @@ function TryQueryNativeSessionReuse(const AConn: ISSLConnection;
 var
   LNativeAccess: ISSLNativeHandleAccess;
   LCtxtHandle: PCtxtHandle;
+  LConnectionInfo: TSecPkgContext_ConnectionInfo;
+  LControlStatus: SECURITY_STATUS;
   LSessionInfo: SecPkgContext_SessionInfo;
   LStatus: SECURITY_STATUS;
   LQueryAPI: string;
@@ -445,6 +459,22 @@ begin
     EmitResumeMarker(Format(
       'native_probe label=%s stage=before_query_context_attributes',
       [ALabel]));
+    EmitResumeMarker(Format(
+      'native_probe label=%s stage=before_control_query attribute=connection_info',
+      [ALabel]));
+    if not TryQueryConnectionInfoControl(LCtxtHandle, LConnectionInfo,
+      LControlStatus) then
+    begin
+      EmitResumeMarker(Format(
+        'native_probe label=%s stage=control_query_failed status=0x%x',
+        [ALabel, LControlStatus]));
+      ADetails := Format('control_status=0x%x', [LControlStatus]);
+      Exit;
+    end;
+    EmitResumeMarker(Format(
+      'native_probe label=%s stage=after_control_query status=0x%x protocol=0x%x cipher=0x%x',
+      [ALabel, LControlStatus, LConnectionInfo.dwProtocol,
+       LConnectionInfo.aiCipher]));
     LUsedQueryEx := Assigned(ResolveQueryContextAttributesExW);
     if LUsedQueryEx then
       LQueryAPI := 'query_context_attributes_exw'
