@@ -2,6 +2,44 @@
 
 ## 2026-05-19
 
+- 继续按“活跃 canonical docs / 活跃 generic tests / source truth”这条线往下审时，又压实了一条很适合当前阶段收口的高入口 drift：
+  - `docs/reference/API_REFERENCE.md` 的 `ISSLLibrary` / `ISSLContext` 主代码块
+  - 还停留在旧的精简接口面
+  - 漏掉了一批当前 `src/fafafa.ssl.base.pas` 已经明确 shipping 的 public methods
+
+- 这类问题虽然不碰 runtime，但风险一点都不轻：
+  - `API_REFERENCE` 本来就是当前最容易被当作权威入口打开的 active canonical doc
+  - 一旦它把代码块写得比源码更窄，调用方就会学到错误的 surface boundary
+  - 后续会把真实的 mixed-scope / compatibility 设计债误判成“源码里根本没有这些入口”
+
+- 当前压实的缺口很具体，不是泛泛的“文档有点旧”：
+  - `ISSLLibrary` 代码块之前遗漏：
+    - `SetDefaultConfig`
+    - `GetDefaultConfig`
+    - `GetStatistics`
+    - `ResetStatistics`
+  - `ISSLContext` 代码块之前遗漏：
+    - `SetPreferredVersion` / `GetPreferredVersion`
+    - `LoadCertificatePEM` / `LoadPrivateKeyPEM`
+    - `SetSessionCacheSize` / `GetSessionCacheSize`
+    - `SetOptions` / `GetOptions`
+    - `SetServerName` / `GetServerName`
+    - `SetALPNProtocols` / `GetALPNProtocols`
+    - `SetCertVerifyFlags` / `GetCertVerifyFlags`
+    - `SetPasswordCallback` / `SetInfoCallback`
+    - certificate pinning helpers
+
+- 这条线的最小正确修法也很清楚：
+  - 不改 public Pascal source
+  - 不重开 broader `TSSLConfig` slimming / `ISSLConnection` surgery
+  - 只把 `API_REFERENCE` 的两段代码块恢复成 current source-truth view
+  - 再用 focused contract 守住以后别回漂成“旧精简子集”
+
+- 当前这批收口后的新基线应明确保留：
+  - `API_REFERENCE` 的 `ISSLLibrary` / `ISSLContext` 代码块不再只是演示性子集
+  - 它们现在应被当作当前 shipped public surface 的高入口视图
+  - 后续若继续做 interface-design 审查，可以把这两块视为已收口，不必重复拉起
+
 - 继续做 backend interface/completeness 静态审查时，挖出了一条比 capability wording 更深的结构性问题：
   - `tests/contract/test_backend_contract.pas` 的公共心智已经明确要求：
     - `EarlyDataSupport = none` 时，不应暴露 `ISSLEarlyDataContext / ISSLEarlyDataConnection`

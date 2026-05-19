@@ -10,6 +10,36 @@
 
 ## Current Status
 
+- [completed] API reference library/context surface truth 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-api-reference-library-context-surface-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_api_reference_library_context_surface_truth_contract.sh`
+  - 当前已修正的 active canonical doc：
+    - `docs/reference/API_REFERENCE.md`
+  - 当前已收掉的真问题：
+    - `ISSLLibrary` 代码块不再遗漏：
+      - `SetDefaultConfig`
+      - `GetDefaultConfig`
+      - `GetStatistics`
+      - `ResetStatistics`
+    - `ISSLContext` 代码块不再遗漏：
+      - `SetPreferredVersion` / `GetPreferredVersion`
+      - `LoadCertificatePEM` / `LoadPrivateKeyPEM`
+      - `SetSessionCacheSize` / `GetSessionCacheSize`
+      - `SetOptions` / `GetOptions`
+      - `SetServerName` / `GetServerName`
+      - `SetALPNProtocols` / `GetALPNProtocols`
+      - `SetCertVerifyFlags` / `GetCertVerifyFlags`
+      - `SetPasswordCallback` / `SetInfoCallback`
+      - certificate pinning helpers
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_api_reference_library_context_surface_truth_contract.sh`
+    - `bash tests/scripts/test_api_reference_library_context_surface_truth_contract.sh`
+    - `git diff --check`
+  - 当前结论：
+    - `API_REFERENCE` 的高入口 `ISSLLibrary` / `ISSLContext` 代码块现在重新回到 shipped source truth
+    - 后续不应再把这两块旧的精简 code listing 当成当前公开接口面
 - [completed] Optional interface capability alignment 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-optional-interface-capability-alignment.md`

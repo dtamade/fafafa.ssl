@@ -219,6 +219,8 @@ Ctx := TSSLContextBuilder.Create
 
 SSL/TLS 库的主接口，提供库管理和实例创建功能。
 
+当前 `v1.5.0` 活跃文档以 `src/fafafa.ssl.base.pas` 为准。下面代码块列的是当前 shipped source truth，而不是早期文档里保留下来的精简子集。
+
 ```pascal
 ISSLLibrary = interface
   // 初始化与配置
@@ -238,10 +240,18 @@ ISSLLibrary = interface
   function IsFeatureSupported(aFeature: TSSLFeature): Boolean;
   function GetCapabilities: TSSLBackendCapabilities;
 
+  // 默认配置
+  procedure SetDefaultConfig(const aConfig: TSSLConfig);
+  function GetDefaultConfig: TSSLConfig;
+
   // 错误处理
   function GetLastError: Integer;
   function GetLastErrorString: string;
   procedure ClearError;
+
+  // 统计信息
+  function GetStatistics: TSSLStatistics;
+  procedure ResetStatistics;
 
   // 日志
   procedure SetLogCallback(aCallback: TSSLLogCallback);
@@ -276,6 +286,8 @@ end;
 
 SSL/TLS 上下文接口，管理连接配置。
 
+当前 `v1.5.0` 活跃文档以 `src/fafafa.ssl.base.pas` 为准。下面代码块列的是当前 shipped source truth，而不是早期文档里保留下来的最小演示面。
+
 ```pascal
 ISSLContext = interface
   // 上下文类型
@@ -284,6 +296,8 @@ ISSLContext = interface
   // 协议版本
   procedure SetProtocolVersions(aVersions: TSSLProtocolVersions);
   function GetProtocolVersions: TSSLProtocolVersions;
+  procedure SetPreferredVersion(aVersion: TSSLProtocolVersion);
+  function GetPreferredVersion: TSSLProtocolVersion;
 
   // 证书与密钥
   procedure LoadCertificate(const aFileName: string); overload;
@@ -291,6 +305,8 @@ ISSLContext = interface
   procedure LoadCertificate(aCert: ISSLCertificate); overload;
   procedure LoadPrivateKey(const aFileName: string; const aPassword: string = ''); overload;
   procedure LoadPrivateKey(aStream: TStream; const aPassword: string = ''); overload;
+  procedure LoadCertificatePEM(const aPEM: string);
+  procedure LoadPrivateKeyPEM(const aPEM: string; const aPassword: string = '');
 
   // CA 证书
   procedure LoadCAFile(const aFileName: string);
@@ -315,6 +331,29 @@ ISSLContext = interface
   function GetSessionCacheMode: Boolean;
   procedure SetSessionTimeout(aTimeout: Integer);
   function GetSessionTimeout: Integer;
+  procedure SetSessionCacheSize(aSize: Integer);
+  function GetSessionCacheSize: Integer;
+
+  // 选项与兼容字段
+  procedure SetOptions(const aOptions: TSSLOptions);
+  function GetOptions: TSSLOptions;
+  procedure SetServerName(const aServerName: string);
+  function GetServerName: string;
+  procedure SetALPNProtocols(const aProtocols: string);
+  function GetALPNProtocols: string;
+  procedure SetCertVerifyFlags(aFlags: TSSLCertVerifyFlags);
+  function GetCertVerifyFlags: TSSLCertVerifyFlags;
+  procedure SetPasswordCallback(aCallback: TSSLPasswordCallback);
+  procedure SetInfoCallback(aCallback: TSSLInfoCallback);
+
+  // 证书固定
+  procedure AddCertificatePin(const aHash: TBytes; aPinType: Integer;
+    const aDescription: string; aIsBackup: Boolean = False);
+  procedure AddCertificatePinBase64(const aBase64Hash: string; aPinType: Integer;
+    const aDescription: string; aIsBackup: Boolean = False);
+  procedure SetCertificatePinningEnabled(aEnabled: Boolean);
+  function GetCertificatePinningEnabled: Boolean;
+  procedure ClearCertificatePins;
 
   // 连接创建
   function CreateConnection(aSocket: THandle): ISSLConnection; overload;

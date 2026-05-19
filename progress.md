@@ -2,6 +2,55 @@
 
 ## 2026-05-19
 
+### API Reference Library / Context Surface Truth
+
+- add `docs/plans/2026-05-19-api-reference-library-context-surface-truth.md`
+  - change:
+    - define the bounded active-doc truth batch for `ISSLLibrary` / `ISSLContext` code-block drift in `API_REFERENCE`
+
+- add `tests/scripts/test_api_reference_library_context_surface_truth_contract.sh`
+  - change:
+    - lock that the active `ISSLLibrary` / `ISSLContext` code blocks in `docs/reference/API_REFERENCE.md`
+      include the current shipped source surface from `src/fafafa.ssl.base.pas`
+
+- `bash -n tests/scripts/test_api_reference_library_context_surface_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new focused API-reference surface-truth contract syntax is valid
+
+- `bash tests/scripts/test_api_reference_library_context_surface_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `ISSLLibrary` code block still missed `SetDefaultConfig`
+      - the same active doc also still omitted a broader `ISSLContext` method set already shipped in source
+    - intermediate housekeeping:
+      - fixed one contract string quoting issue for `LoadPrivateKeyPEM`
+      - removed one trailing-space formatting issue from `API_REFERENCE`
+    - GREEN after fix:
+      - `ISSLLibrary` / `ISSLContext` code blocks now reflect current shipped source truth instead of the older narrowed subset
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - `ISSLLibrary` code block now includes:
+      - `SetDefaultConfig`
+      - `GetDefaultConfig`
+      - `GetStatistics`
+      - `ResetStatistics`
+    - `ISSLContext` code block now includes:
+      - preferred-version methods
+      - PEM direct-load helpers
+      - session-cache size methods
+      - options / SNI / ALPN / cert-verify-flag surfaces
+      - password/info callbacks
+      - certificate pinning helpers
+    - added explicit wording that these two code blocks are current source-truth views, not older minimal subsets
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current API-reference surface-truth batch has no whitespace or patch-format issues
+
 ### Optional Interface Capability Alignment
 
 - add `docs/plans/2026-05-19-optional-interface-capability-alignment.md`
