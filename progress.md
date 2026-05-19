@@ -14048,3 +14048,56 @@
   - result: PASS
   - summary:
     - current WinSSL user-guide direct-path batch has no whitespace or patch-format issues
+
+### WinSSL Best-Practices Session Truth
+
+- add `docs/plans/2026-05-20-winssl-best-practices-session-truth.md`
+  - change:
+    - define the bounded WinSSL best-practices batch for classifying direct connection/session paths and tightening current session truth
+
+- add `tests/scripts/test_winssl_best_practices_session_truth_contract.sh`
+  - change:
+    - lock that `WINSSL_BEST_PRACTICES` must stop teaching WinSSL session public surface as a default optimization path
+
+- `bash -n tests/scripts/test_winssl_best_practices_session_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new WinSSL best-practices session-truth contract syntax is valid
+
+- `bash tests/scripts/test_winssl_best_practices_session_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `WINSSL_BEST_PRACTICES` still presented WinSSL session public surface as a default best-practice optimization path
+    - GREEN after fix:
+      - `WINSSL_BEST_PRACTICES` now classifies direct connection/session examples as WinSSL-specific backend-facing paths
+      - `WINSSL_BEST_PRACTICES` now explains the current conservative WinSSL session truth
+      - `WINSSL_BEST_PRACTICES` checklist no longer treats Session public surface as a default checkbox
+
+- update `docs/guides/WINSSL_BEST_PRACTICES.md`
+  - change:
+    - explain that the page is a WinSSL-specific best-practices guide and therefore intentionally shows backend-facing direct connection/session paths
+    - explain that WinSSL session public surface remains experimental under
+      `observed_reuse=false` / `session_configured=true`
+    - keep `ISSLSessionResumption` on the connection owner path without promising stable resumed-handshake gains
+    - demote the checklist item so Session public surface is only considered after dedicated Windows / target-specific validation
+
+- `bash tests/scripts/test_active_owner_path_docs_alignment_contract.sh`
+  - result: PASS
+  - summary:
+    - active owner-path doc alignment remained intact after tightening WinSSL best-practices session wording
+
+- `bash tests/scripts/test_secondary_guides_connection_level_sni_api_drift_contract.sh`
+  - result: PASS
+  - summary:
+    - secondary guide SNI guidance remained aligned after the WinSSL best-practices batch
+
+- `bash tests/scripts/test_winssl_session_resumption_docs_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - broader WinSSL session-resumption docs truth remained aligned after tightening the best-practices page
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current WinSSL best-practices batch has no whitespace or patch-format issues

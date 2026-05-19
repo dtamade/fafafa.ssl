@@ -10,6 +10,45 @@
 
 ## Current Status
 
+- [completed] `winssl best-practices session truth`
+  当前 focused 目标：
+  - 把 `WINSSL_BEST_PRACTICES` 里的 WinSSL session public surface
+    真相写清楚，并补 page-level direct-path 分类，
+    避免高入口最佳实践页继续把实验性 session surface 误教成默认优化路径
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-winssl-best-practices-session-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_winssl_best_practices_session_truth_contract.sh`
+  - 同步更新：
+    - `docs/guides/WINSSL_BEST_PRACTICES.md`
+  当前预判：
+  - 这页当前 owner path / capability 行本身不一定错，
+    真正的缺口是还把 WinSSL session public surface 讲成默认最佳实践
+  当前最终收口证据：
+  - `WINSSL_BEST_PRACTICES.md` 明确：
+    - direct connection/session path 属于 WinSSL-specific / backend-facing path
+    - session public surface 当前仍是实验性 public surface
+    - checklist 不再把 Session public surface 当默认最佳实践
+  focused verification 已通过：
+  - `bash -n tests/scripts/test_winssl_best_practices_session_truth_contract.sh`
+  - `bash tests/scripts/test_winssl_best_practices_session_truth_contract.sh`
+  - `bash tests/scripts/test_active_owner_path_docs_alignment_contract.sh`
+  - `bash tests/scripts/test_secondary_guides_connection_level_sni_api_drift_contract.sh`
+  - `bash tests/scripts/test_winssl_session_resumption_docs_truth_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - `WINSSL_BEST_PRACTICES` 当前并不是 owner-path 接口名或 WinSSL capability 行写错，
+    而是高入口最佳实践页还把实验性 session public surface 讲成了默认优化路径。
+  - 现在 WinSSL quickstart / user guide / best-practices 这三层已经回到了同一套
+    WinSSL-specific path 与 conservative session truth。
+  当前下一条真实工作：
+  - 继续扫 remaining active performance / best-practice pages：
+    - 例如 `PERFORMANCE_PROFILING_GUIDE`
+      是否也还把 session / performance 叙事写成过强 current truth
+    - 同时继续找 direct `CreateConnection(...)` 已是 intentional path、
+      但原因还没写透的 residual
+
 - [completed] `winssl user guide direct-path classification`
   当前 focused 目标：
   - 把 `WINSSL_USER_GUIDE` 中 direct `ISSLConnection` /

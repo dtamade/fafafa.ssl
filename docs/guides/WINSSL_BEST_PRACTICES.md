@@ -4,6 +4,7 @@
 > **最后更新**: 2026-01-18
 
 本指南提供 fafafa.ssl WinSSL 后端的最佳实践建议，帮助你构建安全、高性能、可维护的 TLS/SSL 应用程序。
+这页作为 WinSSL-specific 最佳实践页，会直接展示 `ISSLConnection` / `CreateConnection(...)` / `ISSLSessionResumption` 这类 backend-facing path；如果你只是普通跨后端 HTTPS 客户端，优先使用通用的 `TSSLContextBuilder` + `TSSLConnector` + `TSSLStream`。
 
 ## 目录
 
@@ -181,7 +182,9 @@ begin
 end;
 ```
 
-### 2. 启用 Session 复用
+### 2. 理解 Session public surface（实验性）
+
+当前 dedicated Windows runtime truth 仍是 `observed_reuse=false` / `session_configured=true`，因此这组 session public surface 只能按实验性 public surface 理解；不要把它直接当成默认已命中的性能优化。
 
 **❌ 错误做法**:
 
@@ -216,10 +219,12 @@ begin
   LConn := LContext.CreateConnection(Socket);
   if Assigned(LSession) and Supports(LConn, ISSLSessionResumption, LResumption) then
     LResumption.SetSession(LSession);
-  LConn.Connect;  // 快速握手
+  LConn.Connect;
   LConn.Shutdown;
 end;
 ```
+
+这段示例保留 `ISSLSessionResumption`，是因为 WinSSL 的 session published surface 挂在连接对象上；没有 dedicated Windows / target-specific validation 证明目标路径真的复用成功前，不要把 `LResumption.SetSession(...)` + `LConn.Connect` 直接读成已稳定命中的 resumed-handshake 收益。
 
 ### 3. 使用合适的缓冲区大小
 
@@ -885,7 +890,7 @@ end;
 ### 性能检查清单
 
 - [ ] 复用 Context 对象
-- [ ] 启用 Session 复用
+- [ ] 仅在 dedicated Windows / target-specific validation 已证明命中时，再考虑 Session public surface
 - [ ] 使用合适的缓冲区大小
 - [ ] 批量读写数据
 - [ ] 使用连接池

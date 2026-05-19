@@ -6678,3 +6678,32 @@
      在新增 direct-path 解释之后仍保持绿色
    - 现在新的稳定基线应记为：
      - `WINSSL_USER_GUIDE` 不会再把 WinSSL backend-facing 示例误读成 generic facade 主入口
+
+113. `WINSSL_BEST_PRACTICES` 暴露的是 WinSSL 文档里另一种更危险的 residual：
+   - 不只是 direct `CreateConnection(...)` 解释层没写透
+   - 它还把 WinSSL session public surface 讲成了默认性能优化路径：
+     - `### 2. 启用 Session 复用`
+     - `LConn.Connect;  // 快速握手`
+     - checklist 里的 `启用 Session 复用`
+   - 这与当前 WinSSL 权威 truth 冲突：
+     - `observed_reuse=false`
+     - `session_configured=true`
+     - session resumption / tickets 仍只按实验性 public surface 理解
+   - 当前最小正确修法已经压实为：
+     - 在页首明确：
+       - 这页作为 WinSSL-specific 最佳实践页，会直接展示 backend-facing path
+       - 普通跨后端 HTTPS 客户端仍优先
+         `TSSLContextBuilder` + `TSSLConnector` + `TSSLStream`
+     - 把 session 小节改成实验性边界说明：
+       - 当前 dedicated Windows runtime truth 仍是
+         `observed_reuse=false` / `session_configured=true`
+       - `ISSLSessionResumption` 示例继续保留，
+         但只应按 connection owner path / 实验性 public surface 理解
+       - checklist 不再把 Session public surface 当默认最佳实践
+   - 这批也顺手证明：
+     - `test_active_owner_path_docs_alignment_contract.sh`
+     - `test_secondary_guides_connection_level_sni_api_drift_contract.sh`
+     - `test_winssl_session_resumption_docs_truth_contract.sh`
+     在新增 WinSSL session truth 说明之后仍保持绿色
+   - 现在新的稳定基线应记为：
+     - `WINSSL_BEST_PRACTICES` 不会再把 WinSSL session public surface 误读成默认性能优化路径
