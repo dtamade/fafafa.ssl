@@ -2,6 +2,46 @@
 
 ## 2026-05-20
 
+- `API_REFERENCE.md` 这次暴露的是另一类比“错误文案”更隐蔽的 completeness gap：
+  - 活跃 guide / `API_DOCUMENTATION.md` 已经在教学
+    `ISSLConnectionInfo` / `ISSLDiagnostics` /
+    `ISSLSessionResumption` / `ISSLCertificateVerification` /
+    `ISSLOCSPStapling`
+  - source / facade 也已经公开了
+    `ISSLHttpHooksAccess` /
+    `ISSLServerOCSPStaplingContext` /
+    `ISSLEarlyDataContext` /
+    `ISSLEarlyDataConnection`
+  - 但 canonical `API_REFERENCE.md`
+    却主要只把 `ISSLNativeHandleAccess`
+    显式列出来
+
+- 这种缺口的危险不在于“用户完全看不到功能”，
+  而在于：
+  - 用户会从主参考拿到一张不完整的 API 地图
+  - 然后被迫去 secondary docs 或源码里猜
+    哪些 interface 是真实 shipped surface，
+    哪些只是设计讨论
+
+- 对 server-side 叙事尤其如此：
+  - `ARCHITECTURE` / `INTERFACE_DESIGN_V2`
+    已经说明当前没有
+    `ISSLServerConnection`
+  - 但如果 canonical API reference
+    不同时写出
+    `ISSLServerOCSPStaplingContext`
+    和
+    `ISSLEarlyDataContext`
+    这类 server-side context surfaces，
+    读者还是很难形成“当前 server 能力到底挂在哪”的完整心智
+
+- 所以这批最重要的不是“再补几段接口代码块”本身，
+  而是把三层真相重新对齐：
+  - source / facade 已导出的 optional interfaces
+  - active guides 已在教学的 owner surfaces
+  - canonical `API_REFERENCE.md`
+    的 shipped API 地图
+
 - `GetPeerCertificateChain` 之前正好卡在一个比
   `GetVerifyResult*`
   更容易让人误判的半收口状态：

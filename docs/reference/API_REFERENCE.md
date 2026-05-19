@@ -393,6 +393,109 @@ begin
 end;
 ```
 
+#### 其他可选 public interfaces
+
+`ISSLNativeHandleAccess` 之外，当前 shipped source 还公开了多组 optional public interfaces，分别承载：
+
+- transport / HTTP hooks 注入
+- server-side context 专属能力
+- early-data context / connection owner surface
+- `ISSLConnection` 上各组 compatibility-core mirror 的默认 owner surface
+
+当前 public Pascal source 尚未声明 `ISSLServerConnection`；服务端特有能力主要通过可选 context 扩展接口暴露。
+
+HTTP transport hooks 通过可选接口暴露：
+
+```pascal
+ISSLHttpHooksAccess = interface
+  procedure SetHTTPGetCallback(ACallback: TSSLHTTPGetCallback);
+  function GetHTTPGetCallback: TSSLHTTPGetCallback;
+  procedure SetHTTPPostCallback(ACallback: TSSLHTTPPostCallback);
+  function GetHTTPPostCallback: TSSLHTTPPostCallback;
+end;
+```
+
+- `fafafa.ssl` 不实现网络通信；任何依赖 HTTP 的功能（例如 OCSP 在线检查、CT log list 下载）都需要调用方通过这个接口注入回调。
+
+服务端 stapled OCSP response material 通过可选 context 接口暴露：
+
+```pascal
+ISSLServerOCSPStaplingContext = interface
+  procedure ClearServerStapledOCSPResponse;
+  procedure SetServerStapledOCSPResponse(const AResponseDER: TBytes);
+  procedure LoadServerStapledOCSPResponseFile(const AFileName: string);
+  function HasServerStapledOCSPResponse: Boolean;
+  function GetServerStapledOCSPResponse: TBytes;
+end;
+```
+
+- 这条 public surface 只负责 caller-provided DER bytes / file material，不负责 online fetch / refresh / responder 调度。
+
+TLS 1.3 early-data public surface 分别挂在 context / connection 上：
+
+```pascal
+ISSLEarlyDataContext = interface
+  procedure SetClientEarlyDataEnabled(AEnabled: Boolean);
+  function GetClientEarlyDataEnabled: Boolean;
+  procedure SetServerEarlyDataPolicy(APolicy: TSSLEarlyDataServerPolicy);
+  function GetServerEarlyDataPolicy: TSSLEarlyDataServerPolicy;
+  procedure SetServerMaxEarlyDataSize(ASize: Cardinal);
+  function GetServerMaxEarlyDataSize: Cardinal;
+end;
+
+ISSLEarlyDataConnection = interface
+  function SetEarlyData(const AData: TBytes): TSSLOperationResult;
+  function GetEarlyDataStatus: TSSLEarlyDataStatus;
+  function GetEarlyDataLimit: Cardinal;
+end;
+```
+
+- `ISSLEarlyDataContext` 负责 context 级策略。
+- `ISSLEarlyDataConnection` 负责客户端排队 early data 与连接级状态查询。
+
+连接侧 owner surfaces 通过这几组可选接口暴露：
+
+```pascal
+ISSLConnectionInfo = interface
+  function GetConnectionInfo: TSSLConnectionInfo;
+  function GetContext: ISSLContext;
+  function GetSelectedALPNProtocol: string;
+  function GetStateString: string;
+end;
+
+ISSLDiagnostics = interface
+  function GetHealthStatus: TSSLHealthStatus;
+  function IsHealthy: Boolean;
+  function GetPerformanceMetrics: TSSLPerformanceMetrics;
+  function GetDiagnosticInfo: TSSLDiagnosticInfo;
+end;
+
+ISSLSessionResumption = interface
+  function GetSession: ISSLSession;
+  procedure SetSession(ASession: ISSLSession);
+  function IsSessionReused: Boolean;
+end;
+
+ISSLCertificateVerification = interface
+  function GetPeerCertificateChain: TSSLCertificateArray;
+  function GetVerifyResult: Integer;
+  function GetVerifyResultString: string;
+end;
+
+ISSLOCSPStapling = interface
+  function GetOCSPStaplingEnabled: Boolean;
+  function GetOCSPResponse: TBytes;
+  function IsOCSPResponseVerified: Boolean;
+  function GetOCSPResponseStatus: string;
+end;
+```
+
+- 对 `GetConnectionInfo` / `GetContext` / `GetSelectedALPNProtocol` / `GetStateString` 这组连接信息 mirrors，新代码优先通过 `ISSLConnectionInfo` 获取。
+- 对健康、性能、诊断信息，新代码优先通过 `ISSLDiagnostics` 获取。
+- 对会话保存 / 注入 / 复用命中状态，新代码优先通过 `ISSLSessionResumption` 获取。
+- 对证书链和验证结果，新代码优先通过 `ISSLCertificateVerification` 获取。
+- 对 OCSP stapling runtime state，新代码优先通过 `ISSLOCSPStapling` 获取。
+
 ---
 
 ### ISSLCertificate

@@ -10,6 +10,95 @@
 
 ## Current Status
 
+- [completed] `API reference optional public interface coverage`
+  当前 focused 目标：
+  - 补齐 `docs/reference/API_REFERENCE.md`
+    对当前 shipped optional public interfaces 的 canonical 覆盖，
+    尤其是：
+    - `ISSLHttpHooksAccess`
+    - `ISSLServerOCSPStaplingContext`
+    - `ISSLEarlyDataContext`
+    - `ISSLEarlyDataConnection`
+    - `ISSLConnectionInfo`
+    - `ISSLDiagnostics`
+    - `ISSLSessionResumption`
+    - `ISSLCertificateVerification`
+    - `ISSLOCSPStapling`
+  - 同时把
+    “当前 public Pascal source 尚未声明 `ISSLServerConnection`，
+    server-side 特有能力主要通过 context optional surfaces 暴露”
+    提升进 canonical API reference
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-api-reference-optional-interface-coverage.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_api_reference_optional_interface_coverage_contract.sh`
+  - 收口文档：
+    - `docs/reference/API_REFERENCE.md`
+  当前预判：
+  - 当前活跃指南 / `API_DOCUMENTATION.md`
+    已经在使用这些 optional public interfaces，
+    但 canonical `API_REFERENCE.md`
+    仍主要只列了 `ISSLNativeHandleAccess`
+  - 这会让：
+    - source / facade 已导出的 public surface
+    - secondary docs 已教学的 owner surface
+    - canonical reference 的“完整 API 面”
+    三者出现文档层 completeness gap
+  当前验证策略：
+  - 先补一条 focused shell contract，
+    钉住 canonical API reference 必须覆盖的 optional public interfaces
+  - 然后只做：
+    - 新 contract
+    - `git diff --check`
+  - 不拉起大编译
+  当前最终收口证据：
+  - focused shell contract 先红后绿：
+    - 初始 RED：
+      `API_REFERENCE.md`
+      还没有记录
+      `ISSLServerConnection`
+      当前缺位与 server-side context surface 真相
+    - GREEN 后：
+      - canonical API reference
+        已补齐：
+        `ISSLHttpHooksAccess`
+        `ISSLServerOCSPStaplingContext`
+        `ISSLEarlyDataContext`
+        `ISSLEarlyDataConnection`
+        `ISSLConnectionInfo`
+        `ISSLDiagnostics`
+        `ISSLSessionResumption`
+        `ISSLCertificateVerification`
+        `ISSLOCSPStapling`
+      - 主参考已明确：
+        当前 public Pascal source 尚未声明
+        `ISSLServerConnection`
+      - server-side 特有能力当前主要通过
+        context optional surfaces
+        暴露
+  focused verification 已通过：
+  - `bash tests/scripts/test_api_reference_optional_interface_coverage_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - 这批收掉的是 canonical docs completeness gap，
+    不是新的 runtime / backend bug
+  - 之前这些 interface
+    虽然在源码、二级文档和一部分指南里都已经是 live surface，
+    但主参考没有把它们拼成完整地图
+  - 现在查“当前 shipped API 全貌”，
+    不再需要在
+    `API_REFERENCE`
+    和二级文档之间来回跳
+  当前下一条真实工作：
+  - 继续 server-side symmetry 主线，
+    但下一刀更值钱的已经不是“主参考是否记得这些接口”，
+    而是：
+    - server-side optional surface
+      在各 backend 上的 capability / exposure / docs 是否完全一致
+    - 以及是否存在值得单独抽象成
+      `ISSLServerConnection`
+      的稳定最小公共面
 - [completed] `GetPeerCertificateChain compiler deprecation alignment`
   当前 focused 目标：
   - 把 `ISSLConnection.GetPeerCertificateChain`

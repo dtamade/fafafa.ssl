@@ -4,6 +4,64 @@
 
 ## 2026-05-20
 
+### API Reference Optional Public Interface Coverage
+
+- `rg -n "^ISSL(NativeHandleAccess|HttpHooksAccess|ConnectionInfo|Diagnostics|SessionResumption|CertificateVerification|OCSPStapling|ServerOCSPStaplingContext|EarlyDataContext|EarlyDataConnection)\\s*=\\s*interface" docs/reference/API_REFERENCE.md docs/reference/API_DOCUMENTATION.md`
+- `rg -n "ISSLHttpHooksAccess|ISSLEarlyDataContext|ISSLEarlyDataConnection|ISSLServerOCSPStaplingContext" src/fafafa.ssl.pas src/fafafa.ssl.base.pas`
+  - result: PASS
+  - summary:
+    - confirmed a real canonical-doc completeness gap:
+      - source / facade already exposed multiple optional public interfaces
+      - secondary docs already taught several of them
+      - but `API_REFERENCE.md` still only explicitly declared `ISSLNativeHandleAccess`
+
+- add `docs/plans/2026-05-20-api-reference-optional-interface-coverage.md`
+- add `tests/scripts/test_api_reference_optional_interface_coverage_contract.sh`
+  - change:
+    - recorded a bounded canonical-reference batch
+    - added a focused shell contract freezing:
+      - server-side current-truth note
+      - optional public interface declaration coverage in `API_REFERENCE.md`
+
+- `bash -n tests/scripts/test_api_reference_optional_interface_coverage_contract.sh`
+  - result: PASS
+  - summary:
+    - new focused contract syntax is valid
+
+- `bash tests/scripts/test_api_reference_optional_interface_coverage_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first proved the main reference still lacked the server-side current-truth note:
+      - `API_REFERENCE.md`
+        did not yet record that public Pascal source still has no
+        `ISSLServerConnection`
+    - GREEN after the doc update proves:
+      - canonical API reference now covers
+        `ISSLHttpHooksAccess`
+        `ISSLServerOCSPStaplingContext`
+        `ISSLEarlyDataContext`
+        `ISSLEarlyDataConnection`
+        `ISSLConnectionInfo`
+        `ISSLDiagnostics`
+        `ISSLSessionResumption`
+        `ISSLCertificateVerification`
+        `ISSLOCSPStapling`
+      - canonical reference now also records that server-side capability is currently carried by optional context surfaces, not a dedicated `ISSLServerConnection`
+
+- update docs:
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - added the missing optional public interface map to the canonical reference
+    - added the current server-side truth note:
+      - no public `ISSLServerConnection`
+      - server-side capability currently hangs off optional context surfaces
+    - grouped transport hooks, server stapled OCSP, early-data, and connection owner surfaces into one readable canonical section
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - the API-reference optional-interface coverage batch is whitespace-clean
+
 ### GetPeerCertificateChain Compiler Deprecation Alignment
 
 - `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
