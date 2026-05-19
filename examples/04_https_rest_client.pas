@@ -310,7 +310,8 @@ begin
     WriteLn('     Connection.Connect;');
     WriteLn('  4. 发送/接收数据:');
     WriteLn('     Connection.WriteString(Request);');
-    WriteLn('     Response := Connection.ReadString;');
+    WriteLn('     if Connection.ReadString(Response) then');
+    WriteLn('       HandleResponse(Response);');
     WriteLn;
     WriteLn('📚 下一步：');
     WriteLn('  - 查看示例 1: TLS 客户端 (01_tls_client.pas) - 包含完整网络代码');

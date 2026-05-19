@@ -2,6 +2,35 @@
 
 ## 2026-05-19
 
+- 在 `ISSLConnection` convenience surface 路线真相收口之后，继续扫活跃 guide/reference/example 时，又压实了一条更具体的用法级漂移：
+  - 多份活跃入口还在把 `ReadString` 当成“直接返回字符串”的旧签名
+  - 但当前 shipped source 真相一直是：
+    - `function ReadString(out AStr: string): Boolean;`
+
+- 这条问题不是轻微文案差异，而是会直接把调用方带到错误 API 形状：
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/guides/USER_GUIDE.md`
+  - `docs/guides/MIGRATION_GUIDE.md`
+  - `examples/04_https_rest_client.pas`
+  都存在同类旧用法残留
+
+- 这类漂移的风险非常实际：
+  - 它会让用户照抄后得到与当前 public signature 不匹配的代码
+  - 也会让前面刚收口的 `ISSLConnection` convenience truth 看起来仍然“不稳定”
+  - 因为问题发生在高入口 reference/guide/example，上手用户最容易先踩到
+
+- 当前这批最小正确修法很明确：
+  - 不改 `ReadString` runtime 实现
+  - 不改 `ISSLConnection` public signature
+  - 只把活跃入口统一回 source truth：
+    - `if Conn.ReadString(LData) then ...`
+  - 再用 focused contract 守住不要回流旧签名示例
+
+- 这批收口后的新基线应明确保留：
+  - `ReadString` 当前仍是 `out` 参数 + `Boolean` 返回值的 convenience-core 文本 helper
+  - 活跃 docs/examples 不再应把它教成“直接返回字符串”的函数
+  - 后续若继续做 `ISSLConnection` / docs completeness 审查，可以把这类 `ReadString` 签名误导视为已收口问题
+
 - 继续沿着最早的 `ISSLConnection 太胖` 设计审计往下压时，这次真正暴露出来的不是“马上要拆接口”的实现 bug，而是路线真相已经分叉：
   - `src/fafafa.ssl.base.pas` 仍正式保留：
     - `ReadString` / `WriteString`

@@ -2,6 +2,73 @@
 
 ## 2026-05-19
 
+### ReadString Active Example Signature Truth
+
+- add `docs/plans/2026-05-19-readstring-active-example-signature-truth.md`
+  - change:
+    - define the bounded active-doc/example truth batch for `ISSLConnection.ReadString` signature drift
+
+- add `tests/scripts/test_readstring_active_example_signature_truth_contract.sh`
+  - change:
+    - lock that active guides/reference/example no longer teach `ReadString` as a direct string-returning call
+
+- read-only evidence triage
+  - summary:
+    - active stale hits were confirmed in:
+      - `docs/reference/API_REFERENCE.md`
+      - `docs/guides/USER_GUIDE.md`
+      - `docs/guides/MIGRATION_GUIDE.md`
+      - `examples/04_https_rest_client.pas`
+    - all four still taught `ReadString` as if it returned `string`, while `src/fafafa.ssl.base.pas` still declared:
+      - `function ReadString(out AStr: string): Boolean;`
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - add `LReply: string` to the HTTPS example
+    - replace direct `LConn.ReadString` printing with:
+      - `if LConn.ReadString(LReply) then`
+      - `WriteLn('收到: ', LReply);`
+
+- update `docs/guides/USER_GUIDE.md`
+  - change:
+    - client example now uses:
+      - `if LConn.ReadString(LResponse) then`
+    - server example now uses:
+      - `if LConn.ReadString(LRequest) then`
+
+- update `docs/guides/MIGRATION_GUIDE.md`
+  - change:
+    - migration snippet now uses:
+      - `if LConn.ReadString(LResponse) then`
+      - `WriteLn(LResponse);`
+
+- update `examples/04_https_rest_client.pas`
+  - change:
+    - printed guidance now shows:
+      - `if Connection.ReadString(Response) then`
+      - `HandleResponse(Response);`
+
+- `bash -n tests/scripts/test_readstring_active_example_signature_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new ReadString example-signature contract syntax is valid
+
+- `bash tests/scripts/test_readstring_active_example_signature_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - active ReadString examples now all match the current out-parameter source truth
+
+- `mkdir -p tmp/example_04_https_rest_client && fpc -B -Fu./src -Fu./examples -FUtmp/example_04_https_rest_client -FEtmp/example_04_https_rest_client -otmp/example_04_https_rest_client/example_04_https_rest_client examples/04_https_rest_client.pas`
+  - result: PASS
+  - summary:
+    - the updated REST client example still compiles after changing the printed guidance text
+    - compile emitted existing unrelated warnings only
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current ReadString example-signature batch has no whitespace or patch-format issues
+
 ### ISSLConnection Convenience Surface Classification
 
 - add `docs/plans/2026-05-19-isslconnection-convenience-surface-classification.md`

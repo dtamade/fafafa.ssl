@@ -183,8 +183,8 @@ begin
                           'Connection: close'#13#10#13#10);
         
         // 9. 接收响应
-        LResponse := LConn.ReadString;
-        WriteLn('Response:', LResponse);
+        if LConn.ReadString(LResponse) then
+          WriteLn('Response:', LResponse);
       end;
       
       // 10. 优雅关闭
@@ -232,8 +232,8 @@ begin
       if LConn.Accept then
       begin
         // 读取请求
-        LRequest := LConn.ReadString;
-        WriteLn('Request: ', LRequest);
+        if LConn.ReadString(LRequest) then
+          WriteLn('Request: ', LRequest);
         
         // 发送响应
         LConn.WriteString('HTTP/1.1 200 OK'#13#10 +

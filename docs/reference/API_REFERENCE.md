@@ -1545,6 +1545,7 @@ var
   LConn: ISSLConnection;
   LCert: ISSLCertificate;
   LServerName: string;
+  LReply: string;
 begin
   // 创建并初始化库
   LLib := CreateOpenSSLLibrary;
@@ -1573,7 +1574,8 @@ begin
       begin
         // 发送和接收数据
         LConn.WriteString('Hello, SSL!');
-        WriteLn('收到: ', LConn.ReadString);
+        if LConn.ReadString(LReply) then
+          WriteLn('收到: ', LReply);
       end;
 
       LConn.Shutdown;

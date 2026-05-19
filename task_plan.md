@@ -10,6 +10,30 @@
 
 ## Current Status
 
+- [completed] `ReadString` 活跃示例签名真相 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-readstring-active-example-signature-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_readstring_active_example_signature_truth_contract.sh`
+  - 当前已修正的活跃入口：
+    - `docs/reference/API_REFERENCE.md`
+    - `docs/guides/USER_GUIDE.md`
+    - `docs/guides/MIGRATION_GUIDE.md`
+    - `examples/04_https_rest_client.pas`
+  - 当前已收掉的真问题：
+    - 多份活跃 guide / reference / example 之前还把 `ReadString` 教成“直接返回字符串”的旧签名
+    - 当前 shipped source 真相一直是：
+      - `function ReadString(out AStr: string): Boolean;`
+    - 活跃入口现在统一改成：
+      - `if Conn.ReadString(LData) then ...`
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_readstring_active_example_signature_truth_contract.sh`
+    - `bash tests/scripts/test_readstring_active_example_signature_truth_contract.sh`
+    - `fpc -B -Fu./src -Fu./examples -FUtmp/example_04_https_rest_client -FEtmp/example_04_https_rest_client -otmp/example_04_https_rest_client/example_04_https_rest_client examples/04_https_rest_client.pas`
+    - `git diff --check`
+  - 当前结论：
+    - 这批修掉的是高入口用法签名漂移，而不是 runtime bug
+    - 后续如果继续扫 `ISSLConnection` / guide completeness，不应再把 `ReadString` 的旧“string-return”用法当成现状
 - [completed] `ISSLConnection` convenience surface classification 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-isslconnection-convenience-surface-classification.md`

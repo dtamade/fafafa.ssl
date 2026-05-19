@@ -211,7 +211,8 @@ begin
     begin
       LConn.WriteString('GET / HTTP/1.1'#13#10 +
                         'Host: example.com'#13#10#13#10);
-      LResponse := LConn.ReadString;
+      if LConn.ReadString(LResponse) then
+        WriteLn(LResponse);
       LConn.Shutdown;
     end;
   finally
