@@ -397,24 +397,31 @@ end;
 
 X.509 证书接口。
 
+当前 `v1.5.0` 活跃文档以 `src/fafafa.ssl.base.pas` 为准。下面代码块列的是当前 shipped source truth，而不是早期文档里保留下来的窄化证书子集。
+
 ```pascal
 ISSLCertificate = interface
   // 加载与保存
   function LoadFromFile(const aFileName: string): Boolean;
   function LoadFromStream(aStream: TStream): Boolean;
+  function LoadFromMemory(const aData: Pointer; aSize: Integer): Boolean;
   function LoadFromPEM(const aPEM: string): Boolean;
   function LoadFromDER(const aDER: TBytes): Boolean;
   function SaveToFile(const aFileName: string): Boolean;
+  function SaveToStream(aStream: TStream): Boolean;
   function SaveToPEM: string;
   function SaveToDER: TBytes;
 
   // 证书信息
+  function GetInfo: TSSLCertificateInfo;
   function GetSubject: string;
   function GetIssuer: string;
   function GetSerialNumber: string;
   function GetNotBefore: TDateTime;
   function GetNotAfter: TDateTime;
   function GetPublicKey: string;
+  function GetPublicKeyAlgorithm: string;
+  function GetSignatureAlgorithm: string;
   function GetVersion: Integer;
 
   // 验证
@@ -426,14 +433,25 @@ ISSLCertificate = interface
   function IsSelfSigned: Boolean;
   function IsCA: Boolean;
 
+  // 便利方法
+  function GetDaysUntilExpiry: Integer;
+  function GetSubjectCN: string;
+
   // 扩展
-  function GetSubjectAltNames: TStringList;
-  function GetKeyUsage: TStringList;
-  function GetExtendedKeyUsage: TStringList;
+  function GetExtension(const aOID: string): string;
+  function GetSubjectAltNames: TSSLStringArray;
+  function GetKeyUsage: TSSLStringArray;
+  function GetExtendedKeyUsage: TSSLStringArray;
 
   // 指纹
+  function GetFingerprint(aHashType: TSSLHash): string;
   function GetFingerprintSHA1: string;
   function GetFingerprintSHA256: string;
+
+  // 证书链 / 对象管理
+  procedure SetIssuerCertificate(aCert: ISSLCertificate);
+  function GetIssuerCertificate: ISSLCertificate;
+  function Clone: ISSLCertificate;
 end;
 ```
 
@@ -456,6 +474,55 @@ begin
     else
       WriteLn('验证失败: ', LResult.ErrorMessage);
   end;
+end;
+```
+
+---
+
+### ISSLCertificateStore
+
+证书存储接口，用于加载、查找和验证根证书/中间证书集合。
+
+当前 `v1.5.0` 活跃文档以 `src/fafafa.ssl.base.pas` 为准。下面代码块列的是当前 shipped source truth。
+
+```pascal
+ISSLCertificateStore = interface
+  // 证书管理
+  function AddCertificate(aCert: ISSLCertificate): Boolean;
+  function RemoveCertificate(aCert: ISSLCertificate): Boolean;
+  function Contains(aCert: ISSLCertificate): Boolean;
+  procedure Clear;
+  function GetCount: Integer;
+  function GetCertificate(aIndex: Integer): ISSLCertificate;
+
+  // 加载证书
+  function LoadFromFile(const aFileName: string): Boolean;
+  function LoadFromPath(const aPath: string): Boolean;
+  function LoadSystemStore: Boolean;
+
+  // 查找证书
+  function FindBySubject(const aSubject: string): ISSLCertificate;
+  function FindByIssuer(const aIssuer: string): ISSLCertificate;
+  function FindBySerialNumber(const aSerialNumber: string): ISSLCertificate;
+  function FindByFingerprint(const aFingerprint: string): ISSLCertificate;
+
+  // 验证
+  function VerifyCertificate(aCert: ISSLCertificate): Boolean;
+  function BuildCertificateChain(aCert: ISSLCertificate): TSSLCertificateArray;
+end;
+```
+
+最小用法可直接参考 [STORE_USAGE_GUIDE.md](../guides/STORE_USAGE_GUIDE.md)。
+
+**使用示例**:
+
+```pascal
+var
+  LStore: ISSLCertificateStore;
+begin
+  LStore := TSSLFactory.CreateCertificateStore;
+  if not LStore.LoadSystemStore then
+    WriteLn('加载系统证书库失败');
 end;
 ```
 

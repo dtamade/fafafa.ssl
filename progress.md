@@ -2,6 +2,55 @@
 
 ## 2026-05-19
 
+### API Reference Certificate Surfaces Truth
+
+- add `docs/plans/2026-05-19-api-reference-certificate-surfaces-truth.md`
+  - change:
+    - define the bounded active-doc truth batch for `ISSLCertificate` / `ISSLCertificateStore` high-entry surface drift in `API_REFERENCE`
+
+- add `tests/scripts/test_api_reference_certificate_surfaces_truth_contract.sh`
+  - change:
+    - lock that the active certificate/store sections in `docs/reference/API_REFERENCE.md`
+      match the current shipped source surface from `src/fafafa.ssl.base.pas`
+
+- `bash -n tests/scripts/test_api_reference_certificate_surfaces_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new focused certificate-surface API-reference contract syntax is valid
+
+- `bash tests/scripts/test_api_reference_certificate_surfaces_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `API_REFERENCE` still lacked a dedicated `ISSLCertificateStore` section
+      - `ISSLCertificate` code block still omitted a broader current method set from source
+    - GREEN after fix:
+      - `ISSLCertificate` code block now reflects current shipped source truth
+      - `ISSLCertificateStore` now has a dedicated high-entry section in the canonical API reference
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - `ISSLCertificate` code block now includes:
+      - `LoadFromMemory`
+      - `SaveToStream`
+      - `GetInfo`
+      - `GetPublicKeyAlgorithm`
+      - `GetSignatureAlgorithm`
+      - `GetDaysUntilExpiry`
+      - `GetSubjectCN`
+      - `GetExtension`
+      - `GetFingerprint(...)`
+      - issuer-link / clone helpers
+    - `ISSLCertificate` extension collection types now match source truth:
+      - `TSSLStringArray`
+    - added a dedicated `ISSLCertificateStore` section and code block
+    - linked the new store section to the live `STORE_USAGE_GUIDE`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current certificate-surface API-reference batch has no whitespace or patch-format issues
+
 ### API Reference Library / Context Surface Truth
 
 - add `docs/plans/2026-05-19-api-reference-library-context-surface-truth.md`

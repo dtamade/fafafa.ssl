@@ -10,6 +10,37 @@
 
 ## Current Status
 
+- [completed] API reference certificate surfaces truth 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-api-reference-certificate-surfaces-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_api_reference_certificate_surfaces_truth_contract.sh`
+  - 当前已修正的 active canonical doc：
+    - `docs/reference/API_REFERENCE.md`
+  - 当前已收掉的真问题：
+    - `ISSLCertificate` 代码块不再遗漏：
+      - `LoadFromMemory`
+      - `SaveToStream`
+      - `GetInfo`
+      - `GetPublicKeyAlgorithm`
+      - `GetSignatureAlgorithm`
+      - `GetDaysUntilExpiry`
+      - `GetSubjectCN`
+      - `GetExtension`
+      - `GetFingerprint(...)`
+      - issuer-link / clone helpers
+    - `ISSLCertificate` 的扩展集合类型不再错误写成：
+      - `TStringList`
+      现在已回到源码真相：
+      - `TSSLStringArray`
+    - `ISSLCertificateStore` 不再缺失高入口独立小节
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_api_reference_certificate_surfaces_truth_contract.sh`
+    - `bash tests/scripts/test_api_reference_certificate_surfaces_truth_contract.sh`
+    - `git diff --check`
+  - 当前结论：
+    - `API_REFERENCE` 的证书/证书库高入口 surface 现在重新回到 shipped source truth
+    - 后续不应再把证书面 canonical API doc 当成“只有窄化子集”的旧状态
 - [completed] API reference library/context surface truth 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-api-reference-library-context-surface-truth.md`

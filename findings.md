@@ -2,6 +2,49 @@
 
 ## 2026-05-19
 
+- 沿着刚收口的 `API_REFERENCE` high-entry surface 继续往下审时，又压实了同类但更严重的一条缺口：
+  - `ISSLCertificate` 主代码块不只是缺少零星方法，而是仍停留在旧的窄化证书 surface
+  - `ISSLCertificateStore` 甚至连独立高入口小节都没有
+
+- 这条问题的风险非常直接：
+  - 证书 / 证书库本来就是 SSL 公共接口里最基础的一组对象
+  - 如果 canonical API 文档把这组 surface 讲得比源码更小，调用方会误以为：
+    - 没有 `LoadFromMemory` / `SaveToStream`
+    - 没有 `GetInfo` / `GetFingerprint(...)`
+    - 没有 issuer-link / clone
+    - 甚至没有一套明确的 `ISSLCertificateStore` API 入口
+
+- 当前压实的具体 drift 包括：
+  - `ISSLCertificate` 代码块之前遗漏：
+    - `LoadFromMemory`
+    - `SaveToStream`
+    - `GetInfo`
+    - `GetPublicKeyAlgorithm`
+    - `GetSignatureAlgorithm`
+    - `GetDaysUntilExpiry`
+    - `GetSubjectCN`
+    - `GetExtension`
+    - `GetFingerprint(AHashType: TSSLHash)`
+    - `SetIssuerCertificate`
+    - `GetIssuerCertificate`
+    - `Clone`
+  - 扩展集合类型也还停在旧心智：
+    - `TStringList`
+    - 而当前源码真相已经是：
+      - `TSSLStringArray`
+  - `ISSLCertificateStore` 当前在 `API_REFERENCE` 里缺少独立 section
+
+- 这条线的最小正确修法同样很明确：
+  - 不改 public Pascal source
+  - 不把 scope 扩到 runtime certificate verification / backend implementation
+  - 只把 `API_REFERENCE` 的证书相关高入口 surface 拉回 current source truth
+  - 再用 focused contract 守住以后不要重新回漂成“窄化子集 + 缺失小节”
+
+- 当前这批收口后的新基线应明确保留：
+  - `ISSLCertificate` 已不再被 active canonical doc 写小
+  - `ISSLCertificateStore` 已拥有正式高入口 section
+  - 后续若继续做 interface-design 审查，不需要再怀疑 `API_REFERENCE` 的 certificate/store surface 是否还是旧状态
+
 - 继续按“活跃 canonical docs / 活跃 generic tests / source truth”这条线往下审时，又压实了一条很适合当前阶段收口的高入口 drift：
   - `docs/reference/API_REFERENCE.md` 的 `ISSLLibrary` / `ISSLContext` 主代码块
   - 还停留在旧的精简接口面
