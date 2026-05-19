@@ -85,7 +85,7 @@ if Supports(Ctx, ISSLEarlyDataContext, EarlyDataCtx) then
 ### v1.2.0 新增功能 🆕
 
 - **能力矩阵扩展**: 从 11 字段扩展到 40+ 字段，14 个类型安全的辅助查询函数
-- **极致性能**: 能力矩阵缓存，10,000x+ 性能提升（>10M ops/s）
+- **能力矩阵缓存**: 具体性能收益请以 fresh benchmark 为准；当前 benchmark/baseline 入口见 `docs/guides/PERFORMANCE_GUIDE.md`、`scripts/run_phase2_performance_baseline.sh` 与 `tests/benchmarks/run_all_benchmarks.sh`。
 - **数据互操作**: JSON/XML 序列化支持，标准化数据交换
 - **开发工具**: Web 可视化工具，一键对比后端能力
 - **统一 API**: `fafafa.ssl.native_handle` 统一原生句柄访问（v1.1.1）
@@ -104,7 +104,7 @@ if Supports(Ctx, ISSLEarlyDataContext, EarlyDataCtx) then
 - **TLS 协议**: TLS 1.2/1.3，自动协议协商
 - **加密算法**: AES-256-GCM, SHA-256/512, RSA-2048+, ECDSA
 - **证书管理**: X.509 解析/验证/生成，CRL/OCSP 吊销检查
-- **会话复用**: 70-90% 握手性能提升
+- **会话复用 / Session Ticket**: 属于 backend-specific truth；尤其 WinSSL 当前仍按 experimental public surface 理解，不应在首页直接承诺固定握手收益。
 
 ### 开发体验
 

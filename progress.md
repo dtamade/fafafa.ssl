@@ -14154,3 +14154,52 @@
   - result: PASS
   - summary:
     - current profiling-guide batch has no whitespace or patch-format issues
+
+### README Performance + Session Truth
+
+- add `docs/plans/2026-05-20-readme-performance-session-truth.md`
+  - change:
+    - define the bounded root-README batch for tightening high-entry performance and session truth
+
+- add `tests/scripts/test_readme_performance_session_truth_contract.sh`
+  - change:
+    - lock that the root README must stop teaching fixed performance/session gains as current truth
+
+- `bash -n tests/scripts/test_readme_performance_session_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new README performance/session truth contract syntax is valid
+
+- `bash tests/scripts/test_readme_performance_session_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - root `README.md` still lacked an explicit routing of performance claims back to fresh benchmark truth
+    - GREEN after fix:
+      - root `README.md` now routes performance claims back to benchmark/baseline entrypoints
+      - root `README.md` now demotes session/ticket claims to backend-specific truth
+
+- update `README.md`
+  - change:
+    - replace the fixed capability-matrix speedup claim with a benchmark/baseline truth handoff
+    - replace the fixed session-resumption gain claim with backend-specific session truth wording
+
+- `bash tests/scripts/test_landing_quickstarts_direct_path_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - landing quickstarts stayed aligned after tightening root README performance/session wording
+
+- `bash tests/scripts/test_performance_guides_benchmark_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - performance-guide benchmark truth remained aligned after tightening root README claims
+
+- `bash tests/scripts/test_winssl_session_resumption_docs_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - broader WinSSL session-resumption docs truth remained aligned after tightening root README claims
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current root-README performance/session batch has no whitespace or patch-format issues

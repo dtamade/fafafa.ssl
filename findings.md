@@ -6742,3 +6742,26 @@
      在新增 profiling/runtime truth 说明之后仍保持绿色
    - 现在新的稳定基线应记为：
      - `PERFORMANCE_PROFILING_GUIDE` 不会再把固定性能 snapshot 和 WinSSL session public surface 误读成 current truth
+
+115. 根 `README.md` 也存在一类更高优先级的首页 truth 漂移：
+   - 问题不是 landing direct-path 分层出错
+   - 而是首页仍在用固定性能/会话收益直接改写第一印象：
+     - `能力矩阵缓存，10,000x+ 性能提升（>10M ops/s）`
+     - `会话复用: 70-90% 握手性能提升`
+   - 这与当前更 durable 的 truth 冲突：
+     - 性能相关结论应回到 fresh benchmark / baseline 入口
+     - `会话复用 / Session Ticket` 应按 backend-specific truth 理解
+     - 尤其 WinSSL 当前仍要按 experimental public surface 理解
+   - 当前最小正确修法已经压实为：
+     - 首页性能 bullet 改成：
+       - 具体收益请以 `PERFORMANCE_GUIDE` 与 benchmark/baseline 入口为准
+     - 首页 session bullet 改成：
+       - `Session Ticket` / `会话复用` 属于 backend-specific truth
+       - WinSSL 当前不再被首页写成固定握手收益
+   - 这批也顺手证明：
+     - `test_landing_quickstarts_direct_path_classification_contract.sh`
+     - `test_performance_guides_benchmark_truth_contract.sh`
+     - `test_winssl_session_resumption_docs_truth_contract.sh`
+     在新增 README truth 收口之后仍保持绿色
+   - 现在新的稳定基线应记为：
+     - 根 `README.md` 不会再把固定性能快照和固定 session 收益误读成 current truth

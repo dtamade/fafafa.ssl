@@ -10,6 +10,44 @@
 
 ## Current Status
 
+- [completed] `readme performance + session truth`
+  当前 focused 目标：
+  - 把根 `README.md` 里的高入口性能/会话口径收回当前 truth，
+    避免仓库首页继续把固定性能数字和 session public surface 写成长期结论
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-readme-performance-session-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_readme_performance_session_truth_contract.sh`
+  - 同步更新：
+    - `README.md`
+  当前预判：
+  - 根问题不是 README 接口名错了，
+    而是首页还在用固定性能快照和固定 session 收益改写当前第一印象
+  当前最终收口证据：
+  - `README.md` 明确：
+    - 性能相关结论回到 benchmark/baseline 入口
+    - session public surface 是 backend-specific truth
+    - 不再保留固定 `10,000x+` / `70-90%` current-truth 口径
+  focused verification 已通过：
+  - `bash -n tests/scripts/test_readme_performance_session_truth_contract.sh`
+  - `bash tests/scripts/test_readme_performance_session_truth_contract.sh`
+  - `bash tests/scripts/test_landing_quickstarts_direct_path_classification_contract.sh`
+  - `bash tests/scripts/test_performance_guides_benchmark_truth_contract.sh`
+  - `bash tests/scripts/test_winssl_session_resumption_docs_truth_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - 根 README 当前并不是 landing direct-path 分层出错，
+    而是首页还在用固定性能收益和固定 session 收益改写当前项目第一印象。
+  - 现在 README / landing quickstarts / WinSSL guides / profiling guides
+    这几层高入口文档已经开始统一回到同一套 benchmark/session truth。
+  当前下一条真实工作：
+  - 继续扫 remaining high-entry / reference pages：
+    - 看还有没有固定 benchmark snapshot / blanket recommendation
+      被写成 current truth
+    - 同时继续找 direct `CreateConnection(...)` 已是 intentional path、
+      但原因还没写透的 residual
+
 - [completed] `performance profiling guide truth`
   当前 focused 目标：
   - 把 `PERFORMANCE_PROFILING_GUIDE` 里的过强 session/performance truth 收回当前口径，
