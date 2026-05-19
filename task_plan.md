@@ -4772,3 +4772,43 @@
        - isolated worker / `SECPKG_ATTR_SESSION_INFO` probe 的 ABI / lifetime / buffer safety 边界
      - 若能定位 Pascal 绑定或调用约束缺口，就开下一批 source-side 修复
      - 若仍无安全修法，再考虑把 native probe lane 明确降级成更强的 quarantined investigation path
+101. `WinSSL native probe safe query path` 已完成 repo-side focused 收口，并应作为当前 isolated native-probe lane 的最新 source-side 基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-winssl-native-probe-safe-query-path.md`
+   - 当前已确认的真实缺口：
+     - 最新 Windows native-probe run `26104446972`
+       已经把 fresh crash boundary 收窄到：
+       - `native_probe label=initial_handshake stage=before_query_context_attributes`
+       - `native_probe_worker exit_code=-1073741819`
+     - 当前 repo source 在 dedicated proof 程序里仍然直接调用：
+       - `QueryContextAttributesW(LCtxtHandle, SECPKG_ATTR_SESSION_INFO, @LSessionInfo)`
+     - 这意味着 isolated worker 还没有利用官方可选的：
+       - `QueryContextAttributesExW(..., cbBuffer)`
+       这条更明确的 sized-buffer 查询路径
+   - 当前最小正确修法已落地：
+     - 不改 canonical shared/public path
+     - 只把 `tests/winssl/test_winssl_session_resumption.pas`
+       的 native probe 收紧到：
+       - 优先动态解析并调用
+         - `QueryContextAttributesExW(..., SizeOf(SecPkgContext_SessionInfo))`
+       - 若入口不存在，再回退：
+         - `QueryContextAttributesW(...)`
+       - 同时新增：
+         - `stage=query_api api=query_context_attributes_exw|query_context_attributesw`
+         evidence marker
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_winssl_native_probe_safe_query_contract.sh`
+     - `bash tests/scripts/test_winssl_native_probe_safe_query_contract.sh`
+     - `bash tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+     - `bash tests/scripts/test_winssl_session_info_probe_allowlist_contract.sh`
+     - `bash tests/scripts/test_winssl_native_probe_stage_markers_contract.sh`
+     - `bash tests/scripts/test_winssl_native_probe_handle_metadata_contract.sh`
+     - `mkdir -p tmp/winssl_native_probe_safe_query_win64 && fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/winssl_native_probe_safe_query_win64 -FEtmp/winssl_native_probe_safe_query_win64 -otmp/winssl_native_probe_safe_query_win64/test_winssl_session_resumption.exe tests/winssl/test_winssl_session_resumption.pas`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 推送后重新发起一条 `winssl_enable_native_probe=true` 的 Windows manual lane
+     - 优先验证这次 `ExW 优先 + W 回退` 是否能把：
+       - `native_probe_worker exit_code=-1073741819`
+       从 `before_query_context_attributes` 这条边界上拉开
+     - 若仍 crash，再继续追：
+       - `SECPKG_ATTR_SESSION_INFO` 的 attribute binding / lifetime / provider behavior

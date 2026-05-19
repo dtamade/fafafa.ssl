@@ -6247,3 +6247,30 @@
       附近 crash
   - 这让下一步 source-side 审查方向非常明确：
     - 优先审 ABI / buffer / lifetime / attribute-binding 安全边界
+
+- 顺着这条 fresh crash boundary 继续静态审查之后，又确认了一件更具体的事情：
+  - 当前 isolated native probe 并不是“完全没有安全缓冲”
+  - 但它确实还停在最直接的三参调用：
+    - `QueryContextAttributesW(LCtxtHandle, SECPKG_ATTR_SESSION_INFO, @LSessionInfo)`
+  - 对这种结构查询来说，官方同时还提供了：
+    - `QueryContextAttributesExW(..., cbBuffer)`
+  - 这给了我们一个比“继续猜 Windows 黑盒行为”更值钱的最小 source-side tightening 点
+
+- 这批修完之后，probe-side source truth 应该这样理解：
+  - canonical shared/public path：
+    - 仍然保持 conservative truth，不重新碰 live session-info probe
+  - isolated native probe path：
+    - 现在会优先尝试
+      - `QueryContextAttributesExW(..., SizeOf(SecPkgContext_SessionInfo))`
+    - 只有在拿不到 ExW 入口时才回退到：
+      - `QueryContextAttributesW(...)`
+  - 同时 log 会多一条：
+    - `stage=query_api api=query_context_attributes_exw|query_context_attributesw`
+    方便直接看本次 probe 实际走了哪条 API 路径
+
+- 这条 source-side tightening 的意义，不是宣称问题已经解决，而是把下一轮 Windows 调查的价值提高了：
+  - 如果 crash 消失，说明之前很可能就是 probe 调用约束/size 路径不够收紧
+  - 如果 crash 仍在，就可以把问题继续从“调用方式”缩到：
+    - provider behavior
+    - handle lifetime
+    - `SECPKG_ATTR_SESSION_INFO` 本身的 runtime boundary

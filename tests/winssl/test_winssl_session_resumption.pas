@@ -22,6 +22,18 @@ const
   ResumeMarkerPrefix = '[WINSSL-SESSION-RESUME] ';
   NativeProbeChildEnv = 'FAFAFA_WINSSL_NATIVE_PROBE_CHILD';
 
+type
+  TQueryContextAttributesExWFunc = function(
+    phContext: PCtxtHandle;
+    ulAttribute: ULONG;
+    pBuffer: Pointer;
+    cbBuffer: ULONG
+  ): SECURITY_STATUS; stdcall;
+
+var
+  QueryContextAttributesExWResolved: Boolean = False;
+  QueryContextAttributesExWProc: TQueryContextAttributesExWFunc = nil;
+
 function ResolveSessionHost: string;
 begin
   Result := Trim(GetEnvironmentVariable('FAFAFA_WINSSL_SESSION_HOST'));
@@ -98,6 +110,50 @@ end;
 function IsNativeProbeChildMode: Boolean;
 begin
   Result := EnvEnabled(NativeProbeChildEnv);
+end;
+
+function ResolveQueryContextAttributesExW: TQueryContextAttributesExWFunc;
+var
+  LModule: HMODULE;
+begin
+  if not QueryContextAttributesExWResolved then
+  begin
+    QueryContextAttributesExWResolved := True;
+    LModule := GetModuleHandle(PChar(SECUR32_DLL));
+    if LModule = 0 then
+      LModule := LoadLibrary(PChar(SECUR32_DLL));
+    if LModule <> 0 then
+      Pointer(QueryContextAttributesExWProc) :=
+        GetProcAddress(LModule, PChar('QueryContextAttributesExW'));
+  end;
+
+  Result := QueryContextAttributesExWProc;
+end;
+
+function TryQueryCurrentSessionInfoWithSizedBuffer(
+  ACtxtHandle: PCtxtHandle;
+  out ASessionInfo: SecPkgContext_SessionInfo;
+  out AStatus: SECURITY_STATUS;
+  out AUsedQueryEx: Boolean
+): Boolean;
+var
+  LQueryEx: TQueryContextAttributesExWFunc;
+begin
+  FillChar(ASessionInfo, SizeOf(ASessionInfo), 0);
+  AUsedQueryEx := False;
+
+  LQueryEx := ResolveQueryContextAttributesExW;
+  if Assigned(LQueryEx) then
+  begin
+    AUsedQueryEx := True;
+    AStatus := LQueryEx(ACtxtHandle, SECPKG_ATTR_SESSION_INFO, @ASessionInfo,
+      SizeOf(ASessionInfo));
+  end
+  else
+    AStatus := QueryContextAttributesW(ACtxtHandle, SECPKG_ATTR_SESSION_INFO,
+      @ASessionInfo);
+
+  Result := IsSuccess(AStatus);
 end;
 
 procedure SetProcessEnvironment(const AName, AValue: string);
@@ -295,6 +351,8 @@ var
   LCtxtHandle: PCtxtHandle;
   LSessionInfo: SecPkgContext_SessionInfo;
   LStatus: SECURITY_STATUS;
+  LQueryAPI: string;
+  LUsedQueryEx: Boolean;
 begin
   Result := False;
   AReused := False;
@@ -335,9 +393,16 @@ begin
     EmitResumeMarker(Format(
       'native_probe label=%s stage=before_query_context_attributes',
       [ALabel]));
-    LStatus := QueryContextAttributesW(LCtxtHandle, SECPKG_ATTR_SESSION_INFO,
-      @LSessionInfo);
-    if not IsSuccess(LStatus) then
+    LUsedQueryEx := Assigned(ResolveQueryContextAttributesExW);
+    if LUsedQueryEx then
+      LQueryAPI := 'query_context_attributes_exw'
+    else
+      LQueryAPI := 'query_context_attributesw';
+    EmitResumeMarker(Format(
+      'native_probe label=%s stage=query_api api=%s',
+      [ALabel, LQueryAPI]));
+    if not TryQueryCurrentSessionInfoWithSizedBuffer(LCtxtHandle, LSessionInfo,
+      LStatus, LUsedQueryEx) then
     begin
       EmitResumeMarker(Format(
         'native_probe label=%s stage=query_failed status=0x%x',

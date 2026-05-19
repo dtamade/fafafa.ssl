@@ -12963,3 +12963,79 @@
       - `native_probe_succeeded=false`
       - `session_configured=true`
     - this tightened the real unresolved issue to the isolated-worker `SECPKG_ATTR_SESSION_INFO` probe itself
+
+### WinSSL Native Probe Safe Query Path
+
+- `rg -n "QueryContextAttributesW\\(LCtxtHandle|TryQueryNativeSessionReuse|SECPKG_ATTR_SESSION_INFO" tests/scripts tests/winssl/test_winssl_session_resumption.pas docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md`
+  - result: PASS
+  - summary:
+    - static source audit confirmed the current isolated native probe still called `QueryContextAttributesW(...)` directly
+    - this matched the fresh Windows crash boundary from run `26104446972`
+
+- add `docs/plans/2026-05-19-winssl-native-probe-safe-query-path.md`
+  - change:
+    - recorded the bounded probe-side plan for preferring `QueryContextAttributesExW(..., cbBuffer)` over the raw three-argument query path
+
+- add `tests/scripts/test_winssl_native_probe_safe_query_contract.sh`
+  - change:
+    - added a focused shell contract that guards:
+      - dynamic resolution of `QueryContextAttributesExW`
+      - an explicit sized-buffer helper
+      - `ExW`-first / `W`-fallback behavior
+      - a stable `stage=query_api api=...` evidence marker
+
+- update source/contracts:
+  - `tests/winssl/test_winssl_session_resumption.pas`
+  - `tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+  - `tests/scripts/test_winssl_session_info_probe_allowlist_contract.sh`
+  - change:
+    - introduced a cached `QueryContextAttributesExW` resolver
+    - added `TryQueryCurrentSessionInfoWithSizedBuffer(...)`
+    - moved native probe off the direct `QueryContextAttributesW(...)` call site and onto the sized-buffer helper
+    - kept the canonical connection helper/session-info allowlist intact while narrowing the dedicated probe site
+
+- `bash -n tests/scripts/test_winssl_native_probe_safe_query_contract.sh`
+  - result: PASS
+  - summary:
+    - new native-probe safe-query contract syntax is valid
+
+- `bash tests/scripts/test_winssl_native_probe_safe_query_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed contract brittleness rather than a source bug:
+      - the initial regex was too strict about multiline helper formatting
+      - the second pass also switched the helper assertions to smaller, more stable fragments
+    - GREEN after tightening the contract itself:
+      - source now clearly prefers `QueryContextAttributesExW(..., SizeOf(...))`
+      - fallback to `QueryContextAttributesW(...)` stays explicit
+
+- `bash tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - the broader runtime-truth guard still stays green after the probe-side source tightening
+
+- `bash tests/scripts/test_winssl_session_info_probe_allowlist_contract.sh`
+  - result: PASS
+  - summary:
+    - session-info probing remains confined to the explicit allowlist sites after the helper refactor
+
+- `bash tests/scripts/test_winssl_native_probe_stage_markers_contract.sh`
+  - result: PASS
+  - summary:
+    - existing stage-level probe evidence markers remain intact after the safe-query patch
+
+- `bash tests/scripts/test_winssl_native_probe_handle_metadata_contract.sh`
+  - result: PASS
+  - summary:
+    - backend/handle metadata markers remain intact after the safe-query patch
+
+- `mkdir -p tmp/winssl_native_probe_safe_query_win64 && fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/winssl_native_probe_safe_query_win64 -FEtmp/winssl_native_probe_safe_query_win64 -otmp/winssl_native_probe_safe_query_win64/test_winssl_session_resumption.exe tests/winssl/test_winssl_session_resumption.pas`
+  - result: PASS
+  - summary:
+    - Win64 focused cross-target compile accepted the new probe-side resolver/helper path
+    - no new compile blocker was introduced by the `QueryContextAttributesExW` preference
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current native-probe safe-query batch has no whitespace or patch-format issues

@@ -89,7 +89,7 @@ require_match "$proof_file" \
   'WinSSL session-resumption proof program emits stable session-resume markers'
 
 require_match "$proof_file" \
-  'function TryQueryNativeSessionReuse\(const AConn: ISSLConnection;.*?ISSLNativeHandleAccess.*?GetNativeHandle.*?QueryContextAttributesW\(LCtxtHandle,\s*SECPKG_ATTR_SESSION_INFO,\s*@LSessionInfo\).*?SSL_SESSION_RECONNECT' \
+  'function TryQueryNativeSessionReuse\(const AConn: ISSLConnection;.*?ISSLNativeHandleAccess.*?GetNativeHandle.*?TryQueryCurrentSessionInfoWithSizedBuffer\(LCtxtHandle,\s*LSessionInfo,\s*LStatus,\s*LUsedQueryEx\).*?SSL_SESSION_RECONNECT' \
   'WinSSL session-resumption proof owns a dedicated native session-reuse probe'
 
 require_match "$proof_file" \

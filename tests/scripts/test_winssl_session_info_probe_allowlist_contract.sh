@@ -49,7 +49,7 @@ require_match "$connection_file" \
   'canonical WinSSL connection helper remains an explicit controlled session-info probe site'
 
 require_match "$proof_file" \
-  'QueryContextAttributesW\(LCtxtHandle,\s*SECPKG_ATTR_SESSION_INFO,\s*@LSessionInfo\)' \
+  'TryQueryCurrentSessionInfoWithSizedBuffer\(LCtxtHandle,\s*LSessionInfo,\s*LStatus,\s*LUsedQueryEx\)' \
   'dedicated WinSSL native-probe proof remains an explicit controlled session-info probe site'
 
 require_absent "$shim_file" \
