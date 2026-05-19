@@ -23,6 +23,11 @@ const
   NativeProbeChildEnv = 'FAFAFA_WINSSL_NATIVE_PROBE_CHILD';
 
 type
+  TQueryContextAttributesExCandidate = record
+    ModuleName: string;
+    SymbolName: AnsiString;
+  end;
+
   TQueryContextAttributesExWFunc = function(
     phContext: PCtxtHandle;
     ulAttribute: ULONG;
@@ -33,6 +38,8 @@ type
 var
   QueryContextAttributesExWResolved: Boolean = False;
   QueryContextAttributesExWProc: TQueryContextAttributesExWFunc = nil;
+  QueryContextAttributesExResolvedModuleName: string = '';
+  QueryContextAttributesExResolvedSymbolName: string = '';
 
 function ResolveSessionHost: string;
 begin
@@ -114,17 +121,46 @@ end;
 
 function ResolveQueryContextAttributesExW: TQueryContextAttributesExWFunc;
 var
+  LCandidates: array[0..5] of TQueryContextAttributesExCandidate;
   LModule: HMODULE;
+  I: Integer;
 begin
   if not QueryContextAttributesExWResolved then
   begin
     QueryContextAttributesExWResolved := True;
-    LModule := GetModuleHandle(PChar(SECUR32_DLL));
-    if LModule = 0 then
-      LModule := LoadLibrary(PChar(SECUR32_DLL));
-    if LModule <> 0 then
+    QueryContextAttributesExResolvedModuleName := '';
+    QueryContextAttributesExResolvedSymbolName := '';
+
+    LCandidates[0].ModuleName := SECUR32_DLL;
+    LCandidates[0].SymbolName := 'QueryContextAttributesExW';
+    LCandidates[1].ModuleName := SECUR32_DLL;
+    LCandidates[1].SymbolName := 'QueryContextAttributesExA';
+    LCandidates[2].ModuleName := SECUR32_DLL;
+    LCandidates[2].SymbolName := 'QueryContextAttributesEx';
+    LCandidates[3].ModuleName := 'sspicli.dll';
+    LCandidates[3].SymbolName := 'QueryContextAttributesExW';
+    LCandidates[4].ModuleName := 'sspicli.dll';
+    LCandidates[4].SymbolName := 'QueryContextAttributesExA';
+    LCandidates[5].ModuleName := 'sspicli.dll';
+    LCandidates[5].SymbolName := 'QueryContextAttributesEx';
+
+    for I := Low(LCandidates) to High(LCandidates) do
+    begin
+      LModule := GetModuleHandle(PChar(LCandidates[I].ModuleName));
+      if LModule = 0 then
+        LModule := LoadLibrary(PChar(LCandidates[I].ModuleName));
+      if LModule = 0 then
+        Continue;
+
       Pointer(QueryContextAttributesExWProc) :=
-        GetProcAddress(LModule, PChar('QueryContextAttributesExW'));
+        GetProcAddress(LModule, PAnsiChar(LCandidates[I].SymbolName));
+      if Assigned(QueryContextAttributesExWProc) then
+      begin
+        QueryContextAttributesExResolvedModuleName := LCandidates[I].ModuleName;
+        QueryContextAttributesExResolvedSymbolName := string(LCandidates[I].SymbolName);
+        Break;
+      end;
+    end;
   end;
 
   Result := QueryContextAttributesExWProc;
@@ -154,6 +190,22 @@ begin
       @ASessionInfo);
 
   Result := IsSuccess(AStatus);
+end;
+
+function QueryResolverModuleText: string;
+begin
+  if QueryContextAttributesExResolvedModuleName <> '' then
+    Result := QueryContextAttributesExResolvedModuleName
+  else
+    Result := 'none';
+end;
+
+function QueryResolverSymbolText: string;
+begin
+  if QueryContextAttributesExResolvedSymbolName <> '' then
+    Result := QueryContextAttributesExResolvedSymbolName
+  else
+    Result := 'none';
 end;
 
 procedure SetProcessEnvironment(const AName, AValue: string);
@@ -398,6 +450,10 @@ begin
       LQueryAPI := 'query_context_attributes_exw'
     else
       LQueryAPI := 'query_context_attributesw';
+    EmitResumeMarker(Format(
+      'native_probe label=%s stage=query_resolver module=%s symbol=%s resolved=%s',
+      [ALabel, QueryResolverModuleText, QueryResolverSymbolText,
+       BoolText(LUsedQueryEx)]));
     EmitResumeMarker(Format(
       'native_probe label=%s stage=query_api api=%s',
       [ALabel, LQueryAPI]));

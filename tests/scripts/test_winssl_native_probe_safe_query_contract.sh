@@ -32,12 +32,12 @@ proof_file="tests/winssl/test_winssl_session_resumption.pas"
 printf '[TEST] WinSSL native-probe safe-query contract\n'
 
 require_match "$proof_file" \
-  'type\s+TQueryContextAttributesExWFunc = function\(\s*phContext: PCtxtHandle;\s*ulAttribute: ULONG;\s*pBuffer: Pointer;\s*cbBuffer: ULONG\s*\): SECURITY_STATUS; stdcall;' \
+  'TQueryContextAttributesExWFunc = function\(\s*phContext: PCtxtHandle;\s*ulAttribute: ULONG;\s*pBuffer: Pointer;\s*cbBuffer: ULONG\s*\): SECURITY_STATUS; stdcall;' \
   'WinSSL proof defines an explicit QueryContextAttributesExW function type'
 
 require_match "$proof_file" \
-  'function ResolveQueryContextAttributesExW: TQueryContextAttributesExWFunc;.*?GetModuleHandle\(PChar\(SECUR32_DLL\)\).*?GetProcAddress\(LModule,\s*PChar\(\x27QueryContextAttributesExW\x27\)\)' \
-  'WinSSL proof resolves QueryContextAttributesExW dynamically from secur32.dll'
+  'function ResolveQueryContextAttributesExW: TQueryContextAttributesExWFunc;.*?for I := Low\(LCandidates\) to High\(LCandidates\) do.*?GetProcAddress\(LModule,\s*PAnsiChar\(LCandidates\[I\]\.SymbolName\)\)' \
+  'WinSSL proof resolves QueryContextAttributesEx dynamically through candidate export traversal'
 
 require_match "$proof_file" \
   'function TryQueryCurrentSessionInfoWithSizedBuffer\(' \

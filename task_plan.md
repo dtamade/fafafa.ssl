@@ -4812,3 +4812,50 @@
        从 `before_query_context_attributes` 这条边界上拉开
      - 若仍 crash，再继续追：
        - `SECPKG_ATTR_SESSION_INFO` 的 attribute binding / lifetime / provider behavior
+102. `WinSSL native probe resolver diagnostics` 已完成 repo-side focused 收口，并应作为当前 `QueryContextAttributesEx*` 解析调查的最新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-winssl-native-probe-resolver-diagnostics.md`
+   - 当前 fresh runtime evidence：
+     - run `26106025515`
+       在带上 `ExW 优先 + W 回退` 补丁后仍失败于 wider suite
+     - 但关键新事实已经从 log 里显式暴露出来：
+       - `stage=query_api api=query_context_attributesw`
+       - 说明本次 Windows runner 上 `QueryContextAttributesEx*` 根本没有解析成功
+       - crash 仍然停在：
+         - `native_probe_worker exit_code=-1073741819`
+         - last marker:
+           - `stage=query_api api=query_context_attributesw`
+   - 当前最小正确修法已落地：
+     - 不重开 probe 行为本身
+     - 只把 resolver 收紧为：
+       - 候选模块/符号遍历
+         - `secur32.dll`:
+           - `QueryContextAttributesExW`
+           - `QueryContextAttributesExA`
+           - `QueryContextAttributesEx`
+         - `sspicli.dll`:
+           - `QueryContextAttributesExW`
+           - `QueryContextAttributesExA`
+           - `QueryContextAttributesEx`
+       - 显式 `PAnsiChar(...)` 调用 `GetProcAddress`
+       - 新增 resolver diagnostic marker：
+         - `stage=query_resolver module=... symbol=... resolved=...`
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_winssl_native_probe_resolver_diagnostics_contract.sh`
+     - `bash tests/scripts/test_winssl_native_probe_resolver_diagnostics_contract.sh`
+     - `bash -n tests/scripts/test_winssl_native_probe_safe_query_contract.sh`
+     - `bash tests/scripts/test_winssl_native_probe_safe_query_contract.sh`
+     - `bash tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+     - `bash tests/scripts/test_winssl_session_info_probe_allowlist_contract.sh`
+     - `bash tests/scripts/test_winssl_native_probe_stage_markers_contract.sh`
+     - `bash tests/scripts/test_winssl_native_probe_handle_metadata_contract.sh`
+     - `mkdir -p tmp/winssl_native_probe_resolver_diag_win64 && fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/winssl_native_probe_resolver_diag_win64 -FEtmp/winssl_native_probe_resolver_diag_win64 -otmp/winssl_native_probe_resolver_diag_win64/test_winssl_session_resumption.exe tests/winssl/test_winssl_session_resumption.pas`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 推送后重新发起 native-probe Windows manual lane
+     - 先看 resolver marker：
+       - 是哪个 `module/symbol` 被成功解析
+       - 还是全部失败
+     - 如果全部失败，再把问题继续收窄到：
+       - runner 平台缺少导出
+       - 或 API 名字/模块 reality 与文档不一致

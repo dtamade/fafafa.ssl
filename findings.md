@@ -6274,3 +6274,41 @@
     - provider behavior
     - handle lifetime
     - `SECPKG_ATTR_SESSION_INFO` 本身的 runtime boundary
+
+- 最新带上 `ExW 优先 + W 回退` 补丁的 Windows run `26106025515` 已经给出更细的新结论：
+  - crash 还在
+  - 但它不再只是停在
+    - `before_query_context_attributes`
+  - fresh log 已经明确告诉我们：
+    - `stage=query_api api=query_context_attributesw`
+  - 这说明这次 runner 上 `QueryContextAttributesEx*` 解析根本没成功，probe 实际还是走回了旧的 `QueryContextAttributesW`
+
+- 这条新证据非常关键，因为它把问题再次缩小了一层：
+  - 现在最值得追的不是：
+    - `SECPKG_ATTR_SESSION_INFO` 结构是不是错了
+    - `SizeOf(...)` 路径是不是没意义
+  - 而是：
+    - 为什么 `QueryContextAttributesEx*` 在当前 runner 上没有解析成功
+    - 是模块不对、导出名不对，还是平台根本没有导出
+
+- 所以这批新的 repo-side 修复重点不再是 probe 行为，而是 resolver 可观测性：
+  - 增加候选模块/符号：
+    - `secur32.dll`
+    - `sspicli.dll`
+    - `ExW / ExA / undecorated`
+  - 明确用 `PAnsiChar(...)` 走 `GetProcAddress`
+  - 再把解析结果直接打进 marker：
+    - `stage=query_resolver module=... symbol=... resolved=...`
+
+- 这能让下一轮 Windows run 直接回答一个比以前更硬的问题：
+  - 到底是我们没有命中正确导出
+  - 还是 runner 上确实没有任何 `QueryContextAttributesEx*` 导出可用
+
+- 当前这批 resolver-diagnostics repo-side 收口还额外证明了一件对后续很有用的事：
+  - 新增 resolver marker 和候选导出遍历之后
+  - 周边几条关键静态契约仍然保持绿色：
+    - session-resumption runtime truth
+    - session-info probe allowlist
+    - native-probe stage markers
+    - native-probe handle metadata
+  - 所以下一轮如果 Windows runtime 仍失败，优先应该继续收窄到真实 runner/export/provider 边界，而不是回头怀疑这批 repo-side 收口把公共语义打坏了

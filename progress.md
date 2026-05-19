@@ -13039,3 +13039,107 @@
   - result: PASS
   - summary:
     - current native-probe safe-query batch has no whitespace or patch-format issues
+
+- `gh run download 26106025515 --dir tmp/gh-run-26106025515`
+  - result: PASS
+  - summary:
+    - downloaded fresh artifacts for the post-`ExW`-preference Windows investigation run
+
+- `rg -n "session_resumption|evidence_model|query_api|query_context_attributes_exw|query_context_attributesw|native_probe_worker|before_query_context_attributes|after_query_context_attributes|query_failed|native_observed_reuse|native_probe_succeeded|suite_end|test_result index=5" tmp/gh-run-26106025515 -g '*.log' -g '*.md'`
+  - result: PASS
+  - summary:
+    - fresh runtime transcript confirmed:
+      - `windows quick smoke` = PASS
+      - `Run Windows Wave B gate` = PASS
+      - failure stayed isolated to `Run broader WinSSL runtime suite`
+      - the session lane still failed at test index `5`
+
+- `rg -n "stage=query_api api=query_context_attributesw|native_probe_worker exit_code=-1073741819|stage=before_query_context_attributes" tmp/gh-run-26106025515/wave-b-windows-winssl_native_probe_exw_20260519_2330/winssl_runtime_suite_winssl_native_probe_exw_20260519_2330.log`
+  - result: PASS
+  - summary:
+    - post-safe-query Windows run `26106025515` established the new key fact:
+      - `QueryContextAttributesEx*` did not resolve
+      - native probe still fell back to `query_context_attributesw`
+      - crash remained `native_probe_worker exit_code=-1073741819`
+    - this moved the main unresolved issue from the query-call shape to the resolver itself
+
+### WinSSL Native Probe Resolver Diagnostics
+
+- add `docs/plans/2026-05-19-winssl-native-probe-resolver-diagnostics.md`
+  - change:
+    - recorded the bounded plan for making the `QueryContextAttributesEx*` resolver observable and broad enough to distinguish module/name drift from true platform absence
+
+- add `tests/scripts/test_winssl_native_probe_resolver_diagnostics_contract.sh`
+  - change:
+    - added a focused shell contract that guards:
+      - candidate module/symbol record
+      - cached resolved module/symbol names
+      - ANSI `GetProcAddress` lookup
+      - resolver diagnostic evidence marker
+
+- update `tests/winssl/test_winssl_session_resumption.pas`
+  - change:
+    - added explicit candidate traversal for:
+      - `secur32.dll` / `sspicli.dll`
+      - `QueryContextAttributesExW` / `QueryContextAttributesExA` / `QueryContextAttributesEx`
+    - switched `GetProcAddress` to explicit `PAnsiChar(...)`
+    - cached the resolved module/symbol names
+    - emitted:
+      - `stage=query_resolver module=... symbol=... resolved=...`
+
+- `bash -n tests/scripts/test_winssl_native_probe_resolver_diagnostics_contract.sh`
+  - result: PASS
+  - summary:
+    - new resolver-diagnostics contract syntax is valid
+
+- `bash tests/scripts/test_winssl_native_probe_resolver_diagnostics_contract.sh`
+  - result: PASS
+  - summary:
+    - resolver candidates, ANSI lookup, and resolver diagnostic markers are all present in source
+
+- `bash tests/scripts/test_winssl_native_probe_safe_query_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED came from contract brittleness after the new candidate record shifted the type block
+    - GREEN after relaxing the type matcher to a stable fragment
+
+- `mkdir -p tmp/winssl_native_probe_resolver_diag_win64 && fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/winssl_native_probe_resolver_diag_win64 -FEtmp/winssl_native_probe_resolver_diag_win64 -otmp/winssl_native_probe_resolver_diag_win64/test_winssl_session_resumption.exe tests/winssl/test_winssl_session_resumption.pas`
+  - result: PASS
+  - summary:
+    - Win64 focused cross-target compile accepted the resolver-diagnostics changes
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current resolver-diagnostics batch has no whitespace or patch-format issues
+
+- `bash -n tests/scripts/test_winssl_native_probe_safe_query_contract.sh && bash tests/scripts/test_winssl_native_probe_safe_query_contract.sh`
+  - result: PASS
+  - summary:
+    - updated safe-query contract now matches the candidate-based resolver shape
+    - Ex-first sized-buffer helper, W fallback, and query-path marker all stayed green after the resolver-diagnostics patch
+
+- `bash -n tests/scripts/test_winssl_native_probe_resolver_diagnostics_contract.sh && bash tests/scripts/test_winssl_native_probe_resolver_diagnostics_contract.sh`
+  - result: PASS
+  - summary:
+    - resolver candidate traversal, resolved module/symbol cache, ANSI export lookup, and resolver marker all remain locked by focused contract
+
+- `bash tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - broader session-resumption runtime-truth contract remained green after the resolver-diagnostics batch
+
+- `bash tests/scripts/test_winssl_session_info_probe_allowlist_contract.sh`
+  - result: PASS
+  - summary:
+    - controlled allowlist boundary for session-info probing was not broadened by the resolver-diagnostics batch
+
+- `bash tests/scripts/test_winssl_native_probe_stage_markers_contract.sh`
+  - result: PASS
+  - summary:
+    - native-probe stage marker contract remained green alongside the new resolver marker
+
+- `bash tests/scripts/test_winssl_native_probe_handle_metadata_contract.sh`
+  - result: PASS
+  - summary:
+    - native-handle metadata markers remained intact after the resolver-diagnostics changes
