@@ -136,12 +136,13 @@ Ctx := TSSLContextBuilder.Create
 | Session Ticket | ✅ | ✅ | ⚠️ |
 | PSK | ✅ | ✅ | ❌ |
 | Ed25519 | ✅ | ⚠️ | ❌ |
-| FIPS | ❌ 默认构建 | ❌ | ✅ |
+| FIPS | ❌ 默认构建 | ❌ | ❌ |
 | 系统证书存储 | ⚠️ | ⚠️ | ✅ |
 
 *需要 Windows 10 1903+
 
 OpenSSL 如需 FIPS 需要专门模块/构建；当前默认 backend capability 不发布 FIPS。
+WinSSL 目前只提供 Windows FIPS policy/helper 检测，不把它发布成 backend capability。
 
 ## 实现状态
 

@@ -555,6 +555,7 @@ if TOSVersion.Major < 7 then
   WriteLn('Warning: Windows 7+ required for full WinSSL support');
 
 // 检查 FIPS 模式
+// 注意：这里只是在检查 Windows FIPS policy/helper 状态，不等于 backend capability 已发布
 var LConfig := TSSLEnterpriseConfig.Create;
 try
   LConfig.LoadFromSystem;

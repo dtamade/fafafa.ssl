@@ -89,7 +89,7 @@ MyApp.exe (210 KB)                 ← 仅需这一个文件
 
 - 密码套件优先级（GPO 配置）
 - 禁用的协议版本（GPO 配置）
-- FIPS 140-2 合规模式
+- Windows FIPS policy 检测/遵循（不等于当前 capability 已发布）
 
 #### 3. ✅ 自动维护
 
@@ -144,7 +144,7 @@ Conn.Connect;
 
 - 需要集成企业 CA
 - 需要遵守安全策略
-- 需要 FIPS 140-2 合规
+- 需要检测/遵循 Windows FIPS / GPO 策略
 - 集中式证书管理
 
 **零依赖部署需求**:
@@ -300,7 +300,9 @@ end;
 | **维护**         | Windows Update | 手动更新           |
 | **性能**         | ✅ 硬件加速    | ✅ 优化良好        |
 | **企业策略**     | ✅ 自动遵守    | ❌ 手动配置        |
-| **FIPS 合规**    | ✅ 内置        | ⚠️ 需要特殊构建    |
+| **FIPS 合规**    | ⚠️ 系统策略检测/遵循 | ⚠️ 需要特殊构建    |
+
+当前 `fafafa.ssl.winssl.enterprise` 提供的是 Windows FIPS policy 检测 helper，不等于 `ISSLLibrary.GetCapabilities.SupportsFIPSMode=True`。
 
 ### 选择建议
 
@@ -311,7 +313,7 @@ end;
 ✅ 需要零依赖部署
 ✅ 企业环境（Windows 管理）
 ✅ 简单 HTTPS 客户端
-✅ 需要 FIPS 合规
+✅ 需要系统证书存储与企业策略检测
 ```
 
 **使用 OpenSSL**:

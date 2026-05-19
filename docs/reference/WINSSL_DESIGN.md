@@ -49,7 +49,7 @@ Windows SSL 后端基于 Windows 内置的 Schannel (Security Channel) API 实�
 
 - **协议支持**：支持 Windows 系统支持的所有 TLS 版本
 - **密码套件**：使用系统配置的密码套件
-- **FIPS 140-2**：在启用 FIPS 模式时自动合规
+- **FIPS policy 检测**：可检测 Windows 是否启用 FIPS policy，但这不是当前公开 `SupportsFIPSMode` capability
 
 ## 3. 技术实现
 

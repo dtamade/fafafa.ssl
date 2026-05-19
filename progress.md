@@ -2,6 +2,93 @@
 
 ## 2026-05-19
 
+### WinSSL FIPS Capability Truth Tightening
+
+- add `docs/plans/2026-05-19-winssl-fips-capability-truth-tightening.md`
+  - change:
+    - define the bounded implementation batch for WinSSL FIPS capability truth, enterprise-helper boundary clarification, and focused selector-visible contract updates
+
+- update `tests/scripts/test_active_fips_docs_truth_contract.sh`
+  - change:
+    - extend the existing active-FIPS truth contract to lock:
+      - `src/fafafa.ssl.winssl.lib.pas` no longer publishes `SupportsFIPSMode=True`
+      - WinSSL active docs no longer market FIPS as a published backend capability
+      - enterprise/helper docs explicitly separate policy detection from capability truth
+
+- update `tests/scripts/test_active_capability_docs_runtime_truth_contract.sh`
+  - change:
+    - tighten `MIGRATION_GUIDE_V1.1.md` expectations so FIPS is unpublished across the current active backend table
+    - lock the new WinSSL enterprise-helper note
+
+- add `tests/test_backend_fips_capability_truth_contract.pas`
+  - change:
+    - prove the current shipped backend FIPS capability baseline is `False`
+      for FreePascal / OpenSSL / MbedTLS / WolfSSL
+    - keep a Windows-conditional WinSSL assertion ready for the Windows lane
+
+- update `src/fafafa.ssl.winssl.lib.pas`
+  - change:
+    - replace `SupportsFIPSMode=True` publication with `False`
+    - record that the current WinSSL FIPS line is helper/policy detection, not a published backend capability
+
+- update active docs:
+  - `docs/reference/WINSSL_DESIGN.md`
+  - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  - `docs/guides/WINSSL_USER_GUIDE.md`
+  - `docs/PLATFORM_SUPPORT.md`
+  - `docs/reference/BACKEND_SELECTOR_DESIGN.md`
+  - `docs/reference/BACKEND_ABSTRACTION_LAYER_DESIGN.md`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/MIGRATION_GUIDE_V1.1.md`
+  - `docs/guides/MIGRATION_GUIDE.md`
+  - `docs/guides/USER_GUIDE.md`
+  - `docs/guides/TROUBLESHOOTING.md`
+  - change:
+    - stop marketing WinSSL FIPS as a published backend capability
+    - explicitly preserve WinSSL enterprise helper usage as Windows policy/GPO detection
+
+- `bash -n tests/scripts/test_active_fips_docs_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - updated WinSSL/OpenSSL FIPS truth contract syntax is valid
+
+- `bash -n tests/scripts/test_active_capability_docs_runtime_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - updated active-capability docs truth contract syntax is valid
+
+- `bash tests/scripts/test_active_fips_docs_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - initial RED first exposed that active FIPS docs still advertised WinSSL as a published FIPS backend
+    - a second RED exposed shell command-substitution noise from backtick-containing literal patterns inside the contract, which was fixed before final verification
+    - GREEN after fix proves source/docs truth now separates WinSSL enterprise FIPS helpers from published capability truth
+
+- `bash tests/scripts/test_active_capability_docs_runtime_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - initial RED exposed that `MIGRATION_GUIDE_V1.1.md` still kept the WinSSL FIPS column as published truth
+    - a second RED exposed the same backtick-literal shell issue in the new WinSSL note contract
+    - GREEN after fix proves the active migration guide now aligns with the unpublished FIPS capability baseline
+
+- `fpc -B -Fu./src -Fu./tests -FUtmp/test_backend_fips_capability_truth -FEtmp/test_backend_fips_capability_truth -otmp/test_backend_fips_capability_truth/test_backend_fips_capability_truth_contract tests/test_backend_fips_capability_truth_contract.pas`
+  - result: FAIL -> PASS with existing repository warnings
+  - summary:
+    - the first attempt failed because the `-FE/-FU` target directory did not yet exist
+    - after creating `tmp/test_backend_fips_capability_truth`, the focused capability contract compiled successfully
+
+- `./tmp/test_backend_fips_capability_truth/test_backend_fips_capability_truth_contract`
+  - result: PASS
+  - summary:
+    - current Linux runtime proof confirms:
+      - FreePascal / OpenSSL / MbedTLS / WolfSSL all publish `SupportsFIPSMode=False`
+      - the Windows Schannel assertion remains compiled into the contract for Windows-side execution, but is skipped on Linux because that backend is unavailable here
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - WinSSL FIPS capability truth batch is whitespace-clean after final source/doc/test sync
+
 ### Custom Cipher Capability Truth Alignment
 
 - add `docs/plans/2026-05-19-custom-cipher-capability-truth-alignment.md`

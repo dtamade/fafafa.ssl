@@ -1484,6 +1484,8 @@ function IsFIPSModeEnabled: Boolean;
 function GetEnterpriseTrustedRoots: TStringArray;
 ```
 
+这些 WinSSL 企业 helper 当前提供的是 Windows FIPS policy / 企业证书 / GPO 检测能力，不等于 `ISSLLibrary.GetCapabilities.SupportsFIPSMode=True`。
+
 ---
 
 ## 工厂函数

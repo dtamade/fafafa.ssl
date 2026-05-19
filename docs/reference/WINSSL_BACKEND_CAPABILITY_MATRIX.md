@@ -124,7 +124,7 @@ Ctx := TSSLContextBuilder.Create
 | 安装依赖 | 无 | 需要 DLL |
 | 系统集成 | 原生 | 独立 |
 | 证书存储 | 系统存储 | 文件/内存 |
-| FIPS 模式 | 系统级 | 库级 |
+| FIPS policy / capability | 系统策略检测（不作为当前 capability 发布） | 库级 capability（需专门构建） |
 | 跨平台 | 仅 Windows | 全平台 |
 | 更新方式 | Windows Update | 手动更新 |
 | 功能完整性 | TLS 核心 | 完整密码学 |

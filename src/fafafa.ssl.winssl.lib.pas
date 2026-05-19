@@ -605,7 +605,7 @@ begin
 
   // 安全特性
   Result.HasConstantTimeOperations := True;  // 系统级实现
-  Result.SupportsFIPSMode := True;           // Windows FIPS 模式
+  Result.SupportsFIPSMode := False;          // current WinSSL surface only exposes Windows FIPS policy/helper detection, not a published backend capability
   Result.HasSecureMemoryWipe := True;        // CNG 提供
 
   // 证书和密钥格式支持（WinSSL 偏好 Windows 格式）

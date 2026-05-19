@@ -646,9 +646,10 @@ end;
 | **系统证书** | ❌        | ❌        | ❌        | ✅          |
 | **PKCS#11**  | ⚠️ 依赖运行时 | ❌        | ❌        | ❌          |
 | **TPM**      | ❌        | ❌        | ❌        | ❌          |
-| **FIPS**     | ❌        | ❌        | ❌        | ✅          |
+| **FIPS**     | ❌        | ❌        | ❌        | ❌          |
 
 OpenSSL 的 PKCS#11 capability 取决于 Provider / ENGINE runtime surface readiness；默认构建也不发布 FIPS capability。
+WinSSL 的 `fafafa.ssl.winssl.enterprise` 当前只提供系统 FIPS policy/helper 检测，不等于已发布 `SupportsFIPSMode=True` capability。
 
 ### 相关文档
 

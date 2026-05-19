@@ -216,6 +216,7 @@ end;
 如果你在 Windows 上迁移企业场景，`fafafa.ssl.winssl.enterprise` 仍然可以用，但要按当前 shipped 命名来理解。
 
 `TSSLEnterpriseConfig` 当前 helper 名称是 `IsFIPSEnabled`、`GetTrustedRoots`、`GetAllPolicies`。
+`IsFIPSEnabled` 代表系统 policy/helper 检测，不等于当前 WinSSL backend 已发布 `SupportsFIPSMode=True`。
 
 ```pascal
 {$IFDEF WINDOWS}

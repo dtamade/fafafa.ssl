@@ -10,6 +10,50 @@
 
 ## Current Status
 
+- [completed] WinSSL FIPS capability truth tightening 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-winssl-fips-capability-truth-tightening.md`
+  - 新增/收紧 focused contracts：
+    - `tests/scripts/test_active_fips_docs_truth_contract.sh`
+    - `tests/scripts/test_active_capability_docs_runtime_truth_contract.sh`
+    - `tests/test_backend_fips_capability_truth_contract.pas`
+  - 当前已修正的真实 implementation/capability drift：
+    - `src/fafafa.ssl.winssl.lib.pas`
+      不再继续误发：
+      - `SupportsFIPSMode=True`
+    - 当前 WinSSL FIPS 相关 public/source truth 现在统一回到：
+      - `fafafa.ssl.winssl.enterprise`
+        只提供 Windows FIPS policy / enterprise helper 检测
+      - `ISSLLibrary.GetCapabilities.SupportsFIPSMode`
+        不再把这条 helper/policy 检测发布成 backend capability
+  - 当前已同步收口的活跃 docs truth：
+    - `docs/reference/WINSSL_DESIGN.md`
+    - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+    - `docs/guides/WINSSL_USER_GUIDE.md`
+    - `docs/PLATFORM_SUPPORT.md`
+    - `docs/reference/BACKEND_SELECTOR_DESIGN.md`
+    - `docs/reference/BACKEND_ABSTRACTION_LAYER_DESIGN.md`
+    - `docs/reference/API_REFERENCE.md`
+    - `docs/MIGRATION_GUIDE_V1.1.md`
+    - `docs/guides/MIGRATION_GUIDE.md`
+    - `docs/guides/USER_GUIDE.md`
+    - `docs/guides/TROUBLESHOOTING.md`
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_active_fips_docs_truth_contract.sh`
+    - `bash tests/scripts/test_active_fips_docs_truth_contract.sh`
+    - `bash -n tests/scripts/test_active_capability_docs_runtime_truth_contract.sh`
+    - `bash tests/scripts/test_active_capability_docs_runtime_truth_contract.sh`
+    - `fpc -B -Fu./src -Fu./tests -FUtmp/test_backend_fips_capability_truth -FEtmp/test_backend_fips_capability_truth -otmp/test_backend_fips_capability_truth/test_backend_fips_capability_truth_contract tests/test_backend_fips_capability_truth_contract.pas`
+    - `./tmp/test_backend_fips_capability_truth/test_backend_fips_capability_truth_contract`
+    - `git diff --check`
+  - 当前结论：
+    - 这批收掉的是一个真实 implementation/capability drift，不是单纯措辞漂移
+    - 关键边界不是“Windows 能否检测/遵循 FIPS policy”，而是：
+      - 这条线当前没有被 fafafa.ssl 发布成 backend capability/runtime contract
+    - 后续继续扫 backend completeness 时，应优先区分：
+      - system policy / enterprise helper
+      - versus
+      - shipped public capability / selector-visible truth
 - [completed] Custom cipher capability truth alignment 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-custom-cipher-capability-truth-alignment.md`

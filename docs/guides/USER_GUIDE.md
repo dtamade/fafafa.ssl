@@ -344,6 +344,7 @@ begin
       LConfig.LoadFromSystem;
       
       // 检测 FIPS 模式
+      // 注意：这只是 Windows policy/helper 检测，不等于当前 backend capability 已发布
       if LConfig.IsFIPSEnabled then
         WriteLn('✓ FIPS 模式已启用')
       else

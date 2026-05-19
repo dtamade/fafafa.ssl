@@ -40,10 +40,12 @@ require_present "$migration_doc" "| **PKCS#11**  | ⚠️ 依赖运行时 | ❌ 
   "Migration guide no longer records runtime-aware PKCS#11 truth"
 require_present "$migration_doc" "| **TPM**      | ❌        | ❌        | ❌        | ❌          |" \
   "Migration guide no longer records that TPM capability is currently unpublished across active backends"
-require_present "$migration_doc" "| **FIPS**     | ❌        | ❌        | ❌        | ✅          |" \
-  "Migration guide no longer records the current default-build FIPS truth"
+require_present "$migration_doc" "| **FIPS**     | ❌        | ❌        | ❌        | ❌          |" \
+  "Migration guide no longer records that FIPS capability is currently unpublished across active backends"
 require_present "$migration_doc" "OpenSSL 的 PKCS#11 capability 取决于 Provider / ENGINE runtime surface readiness；默认构建也不发布 FIPS capability。" \
   "Migration guide no longer records the runtime-aware OpenSSL PKCS#11/FIPS note"
+require_present "$migration_doc" 'WinSSL 的 `fafafa.ssl.winssl.enterprise` 当前只提供系统 FIPS policy/helper 检测，不等于已发布 `SupportsFIPSMode=True` capability。' \
+  "Migration guide no longer records the WinSSL FIPS helper-vs-capability boundary"
 
 require_absent "$selection_doc" "- SupportsPKCS11: Yes" \
   "Backend selection guide still presents OpenSSL PKCS#11 as unconditional truth"

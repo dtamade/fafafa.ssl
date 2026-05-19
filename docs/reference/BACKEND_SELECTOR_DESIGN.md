@@ -93,12 +93,13 @@ type
 | 客户端证书 | ✅ | ✅ | ✅ |
 | PSK | ✅ | ❌ | ✅ |
 | Ed25519 | ✅ | ❌ | ⚠️ |
-| FIPS | ❌ 默认构建 | ✅ | ❌ |
+| FIPS | ❌ 默认构建 | ❌ | ❌ |
 | 系统证书存储 | ⚠️ | ✅ | ⚠️ |
 
 *需要 Windows 10 1903+
 
 OpenSSL 如需进入 FIPS 路线，必须先满足专门模块/构建前提；默认 capability 不能当成已满足。
+WinSSL 的 `fafafa.ssl.winssl.enterprise` 目前提供的是系统 FIPS policy 检测 helper，不是 `ISSLLibrary.GetCapabilities.SupportsFIPSMode=True` 的已发布 backend capability。
 
 ## API 设计
 

@@ -2,6 +2,50 @@
 
 ## 2026-05-19
 
+- 继续沿着“capability 先说支持、实现/控制面其实没发布”的线往下压后，又确认了一条更隐蔽但影响 selector/security score 的问题：
+  - `src/fafafa.ssl.winssl.lib.pas`
+    仍在发布：
+    - `SupportsFIPSMode=True`
+  - 但当前源码里与 WinSSL FIPS 最接近的实现主要是：
+    - `src/fafafa.ssl.winssl.enterprise.pas`
+      - `IsFIPSModeEnabled`
+      - `TSSLEnterpriseConfig.IsFIPSEnabled`
+  - 这条线体现的是：
+    - Windows FIPS policy / 注册表 / enterprise helper 检测
+    - 不是 fafafa.ssl 已发布的 backend runtime/control surface
+
+- 这条漂移比普通文档错误更危险，因为它会直接进入公共打分和选择路径：
+  - `src/fafafa.ssl.backend.selector.pas`
+    会把：
+    - `SupportsFIPSMode`
+    用在 `PreferFIPSCompliant` 平台打分
+    和推荐原因输出里
+  - `src/fafafa.ssl.base.pas`
+    还会把：
+    - `SupportsFIPSMode`
+    计入 security score
+  - 如果 WinSSL 在这里只是“能检测系统 policy”，却先对外发成 `True`
+  - 那 selector / score / docs 就会一起把 helper 当成 shipped capability
+
+- 当前最小正确修法因此不是删掉 WinSSL enterprise helper，而是把边界重新说真：
+  - `SupportsFIPSMode` 回到：
+    - `False`
+  - `fafafa.ssl.winssl.enterprise`
+    继续保留：
+    - FIPS policy 检测
+    - enterprise roots / GPO helper
+  - 活跃文档统一改成：
+    - 可检测/遵循 Windows FIPS policy
+    - 但这不等于 `ISSLLibrary.GetCapabilities.SupportsFIPSMode=True`
+
+- 这批还再次证明了一条后续审查准则：
+  - “平台有潜在能力 / 系统可检测某策略”
+    不等于
+  - “fafafa.ssl 当前 backend 已发布 capability”
+  - 对 WinSSL 这种 OS-native backend，最容易出错的正是这类：
+    - system-managed policy
+    - 被误投影成 coarse public capability bool
+
 - 继续从 callback/runtime drift 往下压后，又确认了一条同样属于“capability 先说支持、实现其实没接通”的问题族：
   - `SupportsCustomCipherSuites`
   - `SetCipherList(...)`
