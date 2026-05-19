@@ -216,24 +216,24 @@ end;
 
 ### 当前 public surface 与验证边界
 
-| 功能 | 当前状态 | 当前口径 |
-| --- | --- | --- |
-| **TLS 1.0/1.1/1.2** | ✅ 支持 | 基础 TLS capability 已接通 |
-| **TLS 1.3** | ⚠️ 条件支持 | 受 Windows 版本限制 |
-| **客户端 TLS 握手** | ✅ 已有当前 Windows runtime baseline | 见状态报告 |
-| **服务器 TLS 握手** | ✅ 已实现 | 更细 server runtime 场景继续按状态报告区分 |
-| **SNI (服务器名称指示)** | ✅ 支持 | 客户端 / 服务器 surface 已接通 |
-| **证书验证（自动模式）** | ✅ 支持 | 基础证书链 / 主机名校验已接通 |
-| **证书链验证** | ✅ 支持 | 使用 Windows 证书存储 |
-| **主机名验证** | ✅ 支持 | 支持通配符和 SAN |
-| **证书文件加载** | ✅ 支持 | PFX / DER / PEM |
-| **客户端证书（双向 TLS）** | ✅ 支持 | 见状态报告中的当前证据边界 |
-| **ALPN 协议协商** | ✅ 支持 | 受 Windows 版本影响 |
-| **会话复用 / Session Ticket** | ⚠️ 实验性 public surface | 当前 dedicated Windows runtime truth: `observed_reuse=false` / `session_configured=true` |
-| **数据加密/解密** | ✅ 支持 | 连接读写 surface 已接通 |
-| **连接管理** | ✅ 支持 | 客户端 / 服务器 connection surface 已接通 |
-| **错误处理** | ✅ 支持 | WinSSL 错误映射已接到公共接口 |
-| **Windows 证书存储访问** | ✅ 支持 | 原生集成 |
+| 功能                          | 当前状态                             | 当前口径                                                                                 |
+| ----------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------- |
+| **TLS 1.0/1.1/1.2**           | ✅ 支持                              | 基础 TLS capability 已接通                                                               |
+| **TLS 1.3**                   | ⚠️ 条件支持                          | 受 Windows 版本限制                                                                      |
+| **客户端 TLS 握手**           | ✅ 已有当前 Windows runtime baseline | 见状态报告                                                                               |
+| **服务器 TLS 握手**           | ✅ 已实现                            | 更细 server runtime 场景继续按状态报告区分                                               |
+| **SNI (服务器名称指示)**      | ✅ 支持                              | 客户端 / 服务器 surface 已接通                                                           |
+| **证书验证（自动模式）**      | ✅ 支持                              | 基础证书链 / 主机名校验已接通                                                            |
+| **证书链验证**                | ✅ 支持                              | 使用 Windows 证书存储                                                                    |
+| **主机名验证**                | ✅ 支持                              | 支持通配符和 SAN                                                                         |
+| **证书文件加载**              | ✅ 支持                              | PFX / DER / PEM                                                                          |
+| **客户端证书（双向 TLS）**    | ✅ 支持                              | 见状态报告中的当前证据边界                                                               |
+| **ALPN 协议协商**             | ✅ 支持                              | 受 Windows 版本影响                                                                      |
+| **会话复用 / Session Ticket** | ⚠️ 实验性 public surface             | 当前 dedicated Windows runtime truth: `observed_reuse=false` / `session_configured=true` |
+| **数据加密/解密**             | ✅ 支持                              | 连接读写 surface 已接通                                                                  |
+| **连接管理**                  | ✅ 支持                              | 客户端 / 服务器 connection surface 已接通                                                |
+| **错误处理**                  | ✅ 支持                              | WinSSL 错误映射已接到公共接口                                                            |
+| **Windows 证书存储访问**      | ✅ 支持                              | 原生集成                                                                                 |
 
 ### 📋 功能详情
 
@@ -276,12 +276,12 @@ end;
 
 ### ⏳ 验证状态
 
-| 验证类型 | 状态 | 说明 |
-| --- | --- | --- |
-| **源码 / compile proof** | ✅ 通过 | Linux 侧 source contract 与 compile gate 已闭环 |
-| **GitHub Windows runtime baseline** | ✅ 通过 | 当前 broader suite / runtime evidence 已落地 |
-| **Session resumption semantics** | ⚠️ 实验性 | 当前 dedicated Windows runtime truth: `observed_reuse=false` / `session_configured=true` |
-| **更深 native resumed-handshake 行为** | ⚠️ 继续按状态报告收敛 | 不再写成“100% 完成” |
+| 验证类型                               | 状态                  | 说明                                                                                     |
+| -------------------------------------- | --------------------- | ---------------------------------------------------------------------------------------- |
+| **源码 / compile proof**               | ✅ 通过               | Linux 侧 source contract 与 compile gate 已闭环                                          |
+| **GitHub Windows runtime baseline**    | ✅ 通过               | 当前 broader suite / runtime evidence 已落地                                             |
+| **Session resumption semantics**       | ⚠️ 实验性             | 当前 dedicated Windows runtime truth: `observed_reuse=false` / `session_configured=true` |
+| **更深 native resumed-handshake 行为** | ⚠️ 继续按状态报告收敛 | 不再写成“100% 完成”                                                                      |
 
 ---
 
@@ -289,17 +289,17 @@ end;
 
 ### 快速对比
 
-| 特性             | WinSSL         | OpenSSL            |
-| ---------------- | -------------- | ------------------ |
-| **部署依赖**     | ✅ 零依赖      | ❌ 需要 6+ MB DLL  |
-| **Windows 集成** | ✅ 原生支持    | ⚠️ 第三方库        |
-| **跨平台**       | ❌ 仅 Windows  | ✅ Win/Linux/macOS |
-| **协议支持**     | TLS 1.0-1.3    | SSL 2.0-TLS 1.3    |
-| **算法控制**     | ⚠️ 系统决定    | ✅ 完全控制        |
-| **证书存储**     | ✅ 系统存储    | 📁 文件/内存       |
-| **维护**         | Windows Update | 手动更新           |
-| **性能**         | ✅ 硬件加速    | ✅ 优化良好        |
-| **企业策略**     | ✅ 自动遵守    | ❌ 手动配置        |
+| 特性             | WinSSL               | OpenSSL            |
+| ---------------- | -------------------- | ------------------ |
+| **部署依赖**     | ✅ 零依赖            | ❌ 需要 6+ MB DLL  |
+| **Windows 集成** | ✅ 原生支持          | ⚠️ 第三方库        |
+| **跨平台**       | ❌ 仅 Windows        | ✅ Win/Linux/macOS |
+| **协议支持**     | TLS 1.0-1.3          | SSL 2.0-TLS 1.3    |
+| **算法控制**     | ⚠️ 系统决定          | ✅ 完全控制        |
+| **证书存储**     | ✅ 系统存储          | 📁 文件/内存       |
+| **维护**         | Windows Update       | 手动更新           |
+| **性能**         | ✅ 硬件加速          | ✅ 优化良好        |
+| **企业策略**     | ✅ 自动遵守          | ❌ 手动配置        |
 | **FIPS 合规**    | ⚠️ 系统策略检测/遵循 | ⚠️ 需要特殊构建    |
 
 当前 `fafafa.ssl.winssl.enterprise` 提供的是 Windows FIPS policy 检测 helper，不等于 `ISSLLibrary.GetCapabilities.SupportsFIPSMode=True`。
@@ -417,20 +417,29 @@ Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);
 
 ---
 
-## 📈 性能
+## 📈 性能与稳定性验证口径
 
-### 测试结果（Phase 2.4）
+WinSSL 的 runtime 性能和稳定性会受到 Windows 版本、Schannel、runner/主机、网络路径、目标站点等因素影响，不应该把某次历史运行的固定延迟、连接速率或成功率写成当前长期 truth。
 
-| 指标         | 测量值      | 评估                 |
-| ------------ | ----------- | -------------------- |
-| TLS 握手延迟 | 436.94 ms   | 可接受（含网络延迟） |
-| 数据传输延迟 | 204.52 ms   | 良好                 |
-| 连接建立速率 | 2.41 conn/s | 可接受               |
-| 连接稳定性   | 100%        | 优秀 (30/30 成功)    |
+如果你需要当前 WinSSL runtime baseline，请优先查看：
 
-**测试环境**: Windows 11 x64, 网络连接到互联网服务器
+- [WINSSL_BACKEND_STATUS_REPORT.md](../test_reports/WINSSL_BACKEND_STATUS_REPORT.md)
+- `tests/windows/VALIDATION_BUNDLE.md`
+- `.github/workflows/wave-b-b2-manual.yml` 的 `windows-gate` lane
 
-详细性能说明：**[WINSSL_PERFORMANCE_TUNING.md](../reference/WINSSL_PERFORMANCE_TUNING.md)**
+推荐把性能/稳定性验证理解成“当前证据链是否闭环”，而不是“某个固定数字是否永远成立”。
+
+当前更有价值的成功标准是：
+
+- quick smoke、minimal gate、`windows-gate`、broader manual suite 都能产出 fresh log / summary
+- 当前 session truth 仍与状态报告一致：
+  - `observed_reuse=false`
+  - `session_configured=true`
+- 当前运行如果出现新的 latency / throughput / stability 数字，应留在当前 run artifact 里，不要回写成长期文档 truth
+
+如果你要做调优，请把这部分当成 run-specific benchmark 工作，而不是 capability 判断。详细调优策略见：**[WINSSL_PERFORMANCE_TUNING.md](../reference/WINSSL_PERFORMANCE_TUNING.md)**
+
+不要把某次运行产物里的固定毫秒数、连接速率或成功率复制回当前用户指南正文。
 
 ---
 

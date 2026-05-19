@@ -5862,3 +5862,39 @@
   - `QUICKSTART_30SEC.md` / `5_MINUTE_QUICKSTART.md` 还残留 captured `预期输出`
   - `ARCHITECTURE.md` 还残留阶段完成度口径
   - `PERFORMANCE_GUIDE` / `PERFORMANCE_OPTIMIZATION_GUIDE` 还有 phase/baseline 类旧叙事，但优先级低于前面的高入口页
+
+- 顺着 WinSSL 高入口 guide 继续往下扫时，又确认了一类和 PKCS7 类似的运行时 drift：
+  - `WINSSL_USER_GUIDE.md` 已经不再整体过度宣称“100% 完成”
+  - 但它底部还保留了一张固定性能/稳定性表
+  - 这会把某次 Windows 跑数误导成当前长期 runtime truth
+
+- 这类 WinSSL drift 的特殊风险在于：
+  - 它不是纯静态 API 指南
+  - 它直接触碰 runtime baseline
+  - 而 WinSSL 恰好又强依赖：
+    - Windows 版本
+    - Schannel
+    - runner/宿主机
+    - 网络路径
+    - 目标站点
+  - 所以固定 latency / throughput / success-rate 比一般文档数字更容易漂移
+
+- 这批收口后，WinSSL runtime 口径又更清楚了一层：
+  - 用户指南不该继续内嵌固定 benchmark snapshot
+  - 当前更可靠的入口是：
+    - `WINSSL_BACKEND_STATUS_REPORT`
+    - `tests/windows/VALIDATION_BUNDLE.md`
+    - `.github/workflows/wave-b-b2-manual.yml` 的 `windows-gate`
+  - 当前成功标准也不该是“某个毫秒数”
+  - 而应是：
+    - fresh artifact / summary 存在
+    - broader suite 当前可执行
+    - session truth 仍与状态报告一致
+
+- 这批也帮助我们把高入口队列再收紧了一步：
+  - `WINSSL_QUICKSTART.md` 现在被抬升为更高优先级
+  - 因为它仍保留：
+    - `WinSSL 后端 100% 完成（所有 6 个阶段）`
+    - FAQ 里的 `Phase 5 完成`
+    - 以及若干阶段性完成口径
+  - 这比一般 `预期输出` 更危险，因为它会直接影响第一次接触 WinSSL 的调用方心智

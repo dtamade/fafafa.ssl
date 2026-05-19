@@ -12060,3 +12060,83 @@
       - `5_MINUTE_QUICKSTART.md`
       - `ARCHITECTURE.md`
     - performance-doc cleanup still exists, but remains lower priority than the high-entry pages above
+
+### WinSSL User Guide Performance/Runtime Truth
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - batch started from a clean `master...origin/master` worktree
+
+- `rg -n "30/30|100%|204\\.52 ms|连接稳定性|Production Ready|预期输出|完成|性能|稳定性" docs/guides/WINSSL_USER_GUIDE.md`
+  - result: PASS
+  - summary:
+    - static scan confirmed `WINSSL_USER_GUIDE.md` still embedded fixed WinSSL runtime snapshots in the performance/stability section
+
+- `rg -n "observed_reuse|session_configured|VALIDATION_BUNDLE|windows-gate|runtime baseline" docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md tests/windows/VALIDATION_BUNDLE.md docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md .github/workflows/wave-b-b2-manual.yml`
+  - result: PASS
+  - summary:
+    - current WinSSL runtime truth sources already existed for this batch:
+      - `WINSSL_BACKEND_STATUS_REPORT`
+      - `tests/windows/VALIDATION_BUNDLE.md`
+      - `.github/workflows/wave-b-b2-manual.yml`
+      - capability matrix session truth
+
+- add `docs/plans/2026-05-19-winssl-user-guide-performance-runtime-truth.md`
+  - change:
+    - recorded the bounded docs-only plan for WinSSL user-guide performance/runtime truth cleanup
+
+- add `tests/scripts/test_winssl_user_guide_performance_truth_contract.sh`
+  - change:
+    - added a focused shell contract that guards:
+      - presence of runtime-baseline entrypoint wording
+      - presence of validation-bundle / `windows-gate` references
+      - absence of hardcoded `436.94 ms`, `204.52 ms`, `2.41 conn/s`, `30/30 成功`
+
+- update docs:
+  - `docs/guides/WINSSL_USER_GUIDE.md`
+  - change:
+    - replaced the fixed WinSSL benchmark table with runtime-baseline guidance
+    - pointed readers to `WINSSL_BACKEND_STATUS_REPORT`, `tests/windows/VALIDATION_BUNDLE.md`, and `windows-gate`
+    - rewrote success criteria around fresh artifact evidence and current session truth
+    - kept the performance-tuning guide only as tuning guidance, not current runtime proof
+
+- `bash -n tests/scripts/test_winssl_user_guide_performance_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new WinSSL user-guide performance/runtime truth contract syntax is valid
+
+- `bash tests/scripts/test_winssl_user_guide_performance_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - WinSSL user guide no longer presents historical runtime metrics as current truth
+
+- `bash tests/scripts/test_active_release_platform_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - broader release/platform/WinSSL bounded-status truth remained green after the guide runtime cleanup
+
+- `bash tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - current connection-surface / backend-capability wording in the WinSSL guide remained green
+
+- `npx prettier --write docs/guides/WINSSL_USER_GUIDE.md`
+  - result: PASS
+  - summary:
+    - WinSSL user guide formatting remains stable
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current WinSSL user-guide runtime-truth batch has no whitespace or patch-format issues
+
+- `rg -n "100% 完成|预期输出|完成度|Phase|30/30|Production Ready|100%|稳定性|项目状态" docs/guides/WINSSL_QUICKSTART.md docs/guides/QUICKSTART_30SEC.md docs/guides/5_MINUTE_QUICKSTART.md docs/reference/ARCHITECTURE.md`
+  - result: PASS
+  - summary:
+    - next residual high-entry truth drift has now been narrowed to:
+      - `docs/guides/WINSSL_QUICKSTART.md`
+      - `docs/guides/QUICKSTART_30SEC.md`
+      - `docs/guides/5_MINUTE_QUICKSTART.md`
+      - `docs/reference/ARCHITECTURE.md`
+    - `WINSSL_QUICKSTART.md` was promoted in priority because it still embeds `100% 完成` and phase-completion language in a first-contact guide

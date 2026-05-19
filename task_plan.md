@@ -4263,7 +4263,48 @@
    - 当前批收口后默认下一步应为：
      - 优先继续审查高入口 truth drift 页面：
        - `docs/guides/WINSSL_USER_GUIDE.md`
+       - `docs/guides/WINSSL_QUICKSTART.md`
        - `docs/guides/QUICKSTART_30SEC.md`
        - `docs/guides/5_MINUTE_QUICKSTART.md`
        - `docs/reference/ARCHITECTURE.md`
      - 性能类文档如 `PERFORMANCE_GUIDE` / `PERFORMANCE_OPTIMIZATION_GUIDE` 暂排在这些高入口页之后
+92. `WinSSL user guide performance/runtime truth` 已完成 focused 收口，并应作为当前 WinSSL 高入口 guide 的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-winssl-user-guide-performance-runtime-truth.md`
+   - 当前已确认的真实 drift：
+     - `docs/guides/WINSSL_USER_GUIDE.md`
+       - 仍把：
+         - `436.94 ms`
+         - `204.52 ms`
+         - `2.41 conn/s`
+         - `100%`
+         - `30/30 成功`
+         直接写成当前性能/稳定性正文 truth
+       - 同时没有把：
+         - `WINSSL_BACKEND_STATUS_REPORT`
+         - `tests/windows/VALIDATION_BUNDLE.md`
+         - `.github/workflows/wave-b-b2-manual.yml` 的 `windows-gate`
+         作为当前 runtime baseline 入口讲清楚
+   - 当前最小正确修法已落地：
+     - 不改生产实现
+     - 只把 `WINSSL_USER_GUIDE` 的性能段落重新锚回当前 runtime truth：
+       - 明确固定 latency / rate / success-rate 只是历史运行快照
+       - 明确当前 baseline 应看状态报告、validation bundle、`windows-gate`
+       - 明确成功标准是 fresh artifact / summary / session truth 对齐
+       - 保留调优文档链接，但不再把 benchmark snapshot 写成 capability truth
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_winssl_user_guide_performance_truth_contract.sh`
+     - `bash tests/scripts/test_winssl_user_guide_performance_truth_contract.sh`
+     - `bash tests/scripts/test_active_release_platform_truth_contract.sh`
+     - `bash tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+     - `npx prettier --write docs/guides/WINSSL_USER_GUIDE.md`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 优先继续审查：
+       - `docs/guides/WINSSL_QUICKSTART.md`
+         - 仍保留 `WinSSL 后端 100% 完成（所有 6 个阶段）`
+         - FAQ 里仍有 `Phase 5 完成` 这类阶段快照口径
+       - `docs/guides/QUICKSTART_30SEC.md`
+       - `docs/guides/5_MINUTE_QUICKSTART.md`
+       - `docs/reference/ARCHITECTURE.md`
+     - 性能类文档仍排在这些高入口页之后
