@@ -32,9 +32,25 @@
     - `bash tests/scripts/test_wave_b_b2_optional_runner_artifact_download_workflow_contract.sh`
     - `bash tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
     - `git diff --check`: PASS
+  - live GitHub verification 已完成：
+    - `git push origin master`: PASS
+    - `gh workflow run wave-b-b2-manual.yml -f run_id=winssl_native_probe_20260519_google -f strict_closure=false -f winssl_session_host=www.google.com -f winssl_enable_native_probe=true`: PASS
+    - manual run `26068984446`: `FAILURE`
+    - GitHub step log 已确认：
+      - `Using WinSSL session resumption host override: www.google.com`
+      - `Enabling risky WinSSL native probe for Schannel session evidence`
+    - downloaded Windows runtime artifact confirms:
+      - 失败点仍落在 first public signal 之后
+      - 没有任何 `native_probe ...` marker 成功写出
+      - `WinSSL Session Resumption Truth` 退出码仍为 `-1073741819`
   - 当前结论：
-    - repo 已具备 bounded native-probe manual investigation lane 的本地/contract truth
-    - 下一步最值钱的是 push 后派发一轮启用 native probe 的 GitHub Windows run，确认它到底会给出 marker 还是再次触发已知风险
+    - repo 已具备 bounded、可复用、已实跑证明接通的 native-probe manual investigation lane
+    - `www.google.com + native_probe=true` 这轮 live run 说明当前 public-handle native probe 在 GitHub Windows runner 上依旧不安全
+    - 失败边界与旧证据一致：
+      - 初始 public reuse signal 已输出
+      - 尚未进入首条 `native_probe` marker
+      - 紧接着以 `-1073741819` 退出
+    - 对这类 opt-in lane，`wave_b_cross_platform_summary` / `handoff_bundle CLOSED` 只能说明 summary/closure 链存在，不能当作 native-probe 成功证据；真实判断必须看 workflow run conclusion 和 `winssl_runtime_suite_*.log`
 - [completed] WinSSL session runtime host-override investigation lane 已完成本地收口：
   - 新增计划：`docs/plans/2026-05-19-winssl-session-runtime-host-override-investigation.md`
   - 新增 focused workflow/source contract：`tests/scripts/test_wave_b_b2_winssl_session_host_input_contract.sh`

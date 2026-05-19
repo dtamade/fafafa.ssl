@@ -33,6 +33,45 @@
     - 如果执行了，返回了什么 `SECPKG_ATTR_SESSION_INFO` truth
     - 如果没执行成功，失败点是否仍和旧的 public-handle crash 模式一致
 
+- live dispatch 结果已经把这条 lane 从“能配”推进到“已实跑复现旧边界”：
+  - pushed head: `ce602cb`
+  - manual run: `26068984446`
+  - URL: `https://github.com/dtamade/fafafa.ssl/actions/runs/26068984446`
+  - GitHub step log 明确确认了这次输入真的生效：
+    - `Using WinSSL session resumption host override: www.google.com`
+    - `Enabling risky WinSSL native probe for Schannel session evidence`
+
+- 但 Windows runtime transcript 的结果同样很明确：
+  - 只来得及写出第一条 public signal：
+    - `signal label=initial_handshake reused=false info_resumed=false perf_reused=false`
+  - 还没来得及写任何 `native_probe ...` marker
+  - 紧接着 `WinSSL Session Resumption Truth` 就以 `exit_code=-1073741819` 失败
+
+- 这说明当前事实已经进一步收窄了：
+  - host override 通道本身没问题
+  - native probe opt-in 通道本身也没问题
+  - 真正的问题仍然是 public-handle `SECPKG_ATTR_SESSION_INFO` probe 在 GitHub Windows runner 上的执行边界
+  - 而且这次即使切到 `www.google.com`，失败形态也没有变化
+
+- 因而现在不该再继续怀疑 host plumbing 或 workflow input wiring，而应把后续调查收缩到更窄的实现层问题：
+  - 是否需要一个更安全的 WinSSL-specific probe seam
+  - 是否应该绕开当前 `ISSLNativeHandleAccess.GetNativeHandle -> QueryContextAttributesW(...)` 路径
+
+- 这轮 live run 还额外暴露出一条“读报告方式”的真相：
+  - `wave_b_cross_platform_summary` 仍会显示 `windows | PASS`
+  - `wave_b_b2_handoff_bundle` 仍可能是 `CLOSED`
+  - `wave_b_b2_evidence_consistency` 也可能保持 `CONSISTENT`
+  - 因为它们当前只把 Windows runtime transcript 视为“存在且含 suite_end marker 的 substantive evidence”，不会把 opt-in lane 的 `suite_end_status=FAIL` 自动抬成 top-level platform failure
+
+- 所以对于这类 opt-in/risky investigation lane，权威证据顺序必须明确改成：
+  1. GitHub run conclusion
+  2. `winssl_runtime_suite_<run_id>.log`
+  3. 然后才是 cross summary / consistency / handoff bundle
+
+- 下一刀最自然的高价值方向因此有两个，但不该混在同一批：
+  - A. 做更安全的 WinSSL-specific native probe seam
+  - B. 单独收口 Wave B/B2 handoff reports 对 opt-in runtime-failure 的 truth presentation
+
 - 当前 WinSSL session-resumption 这条线，普通 guide / benchmark wording 已经不是主问题；真正还会阻碍后续判断的一层，是 GitHub Actions manual lane 里还没有一个 repo 内建的“换 host 做真实调查”入口。
 
 - 这个缺口的性质也已经确认清楚：

@@ -97,6 +97,84 @@
   - summary:
     - current native-probe workflow batch has no whitespace or patch-format issues
 
+- `git push origin master`
+  - result: PASS
+  - summary:
+    - pushed `ce602cb ci(winssl): add manual native probe lane` to `master`
+
+- `gh workflow run wave-b-b2-manual.yml -f run_id=winssl_native_probe_20260519_google -f strict_closure=false -f winssl_session_host=www.google.com -f winssl_enable_native_probe=true`
+  - result: PASS
+  - summary:
+    - dispatched the new native-probe manual investigation lane against non-default host `www.google.com`
+
+- `gh run list --workflow wave-b-b2-manual.yml --limit 5 --json databaseId,displayTitle,headSha,status,conclusion,createdAt,event,workflowName`
+  - result: PASS
+  - summary:
+    - captured fresh run `26068984446` on head `ce602cbe9174cd3bdf8aa6353df773a6c298bdb7`
+
+- `gh run watch 26068984446`
+  - result: PASS
+  - summary:
+    - workflow completed with overall `FAILURE`
+    - `windows-gate` failed in `Run broader WinSSL runtime suite`
+    - `linux-gate`, `macos-gate`, and `summary` still completed
+
+- `gh run download 26068984446 -n wave-b-windows-winssl_native_probe_20260519_google -D tmp/gh-run-26068984446/windows`
+  - result: PASS
+  - summary:
+    - downloaded Windows evidence bundle including `winssl_runtime_suite_winssl_native_probe_20260519_google.log`
+
+- `gh run download 26068984446 -n wave-b-summary-winssl_native_probe_20260519_google -D tmp/gh-run-26068984446/summary`
+  - result: PASS
+  - summary:
+    - downloaded cross-platform summary bundle for the native-probe run
+
+- `gh run view 26068984446 --json url,conclusion,status,createdAt,updatedAt,workflowName,displayTitle,headSha`
+  - result: PASS
+  - summary:
+    - run URL: `https://github.com/dtamade/fafafa.ssl/actions/runs/26068984446`
+    - conclusion: `failure`
+    - headSha: `ce602cbe9174cd3bdf8aa6353df773a6c298bdb7`
+
+- `gh run view 26068984446 --log > tmp/gh-run-26068984446/full_run.log && rg -n "Enabling risky WinSSL native probe|Using WinSSL session resumption host override|Run broader WinSSL runtime suite|exit code 1|-1073741819" tmp/gh-run-26068984446/full_run.log`
+  - result: PASS
+  - summary:
+    - confirmed the step really ran with:
+      - `host=www.google.com`
+      - `nativeProbeInput=true`
+      - `FAFAFA_WINSSL_ENABLE_NATIVE_PROBE=1`
+    - confirmed the workflow step printed:
+      - `Using WinSSL session resumption host override: www.google.com`
+      - `Enabling risky WinSSL native probe for Schannel session evidence`
+
+- `sed -n '1,260p' tmp/gh-run-26068984446/windows/winssl_runtime_suite_winssl_native_probe_20260519_google.log`
+  - result: PASS
+  - summary:
+    - confirmed the dedicated session-resumption test still reaches only the first public signal:
+      - `signal label=initial_handshake reused=false info_resumed=false perf_reused=false`
+    - confirmed no `native_probe ...` marker was emitted before failure
+    - confirmed the failure remains:
+      - `exit_code=-1073741819`
+      - immediately after `initial handshake must not report reuse: PASS`
+
+- `sed -n '1,220p' tmp/gh-run-26068984446/summary/wave_b_b2_evidence_consistency_winssl_native_probe_20260519_google.md`
+  - result: PASS
+  - summary:
+    - confirmed consistency report records `windows_runtime_transcript` as present substantive evidence with `suite_end_status=FAIL`
+    - confirmed this report stays `CONSISTENT`, which means transcript failure truth is not currently promoted into top-level inconsistency
+
+- `sed -n '1,220p' tmp/gh-run-26068984446/summary/wave_b_b2_handoff_bundle_winssl_native_probe_20260519_google.md`
+  - result: PASS
+  - summary:
+    - confirmed handoff bundle still renders `handoff_state: CLOSED` for this opt-in native-probe run
+    - confirmed top-level handoff truth does not currently treat native-probe runtime failure as a closure-breaker
+
+- `sed -n '1,260p' tmp/gh-run-26068984446/summary/wave_b_cross_platform_summary_winssl_native_probe_20260519_google.md`
+  - result: PASS
+  - summary:
+    - confirmed cross summary still shows `windows | PASS` because it keys off `wave_b_windows_gate_summary_*`, not the broader runtime-suite failure
+    - this establishes that opt-in native-probe lane success/failure must be read from workflow conclusion + runtime transcript, not from cross summary alone
+
 ### WinSSL Session Runtime Host-Override Investigation Lane
 
 - `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
