@@ -21,6 +21,7 @@ uses
   fafafa.ssl.base64,
   fafafa.ssl.errors,
   fafafa.ssl.exceptions,
+  fafafa.ssl.x509,
   fafafa.ssl.mbedtls.base,
   fafafa.ssl.mbedtls.native_handle,
   fafafa.ssl.mbedtls.api;
@@ -38,6 +39,7 @@ type
 
     procedure AllocateCertificate;
     procedure FreeCertificate;
+    function TryLoadX509Parser(out AParser: TX509Certificate): Boolean;
     function TryGetParsedAlgorithmMetadata(out APublicKeyAlgorithm,
       ASignatureAlgorithm: string): Boolean;
 
@@ -151,8 +153,7 @@ implementation
 
 uses
   Contnrs, DateUtils,
-  fafafa.ssl.utils,
-  fafafa.ssl.x509;
+  fafafa.ssl.utils;
 
 const
   MBEDTLS_X509_CRT_SIZE = 1024;  // 估算大小
@@ -186,6 +187,93 @@ begin
   end;
 end;
 
+function X509KeyUsageToBitfield(const AUsage: TX509KeyUsage): Word;
+begin
+  Result := 0;
+  if kuDigitalSignature in AUsage then
+    Result := Result or $0080;
+  if kuNonRepudiation in AUsage then
+    Result := Result or $0040;
+  if kuKeyEncipherment in AUsage then
+    Result := Result or $0020;
+  if kuDataEncipherment in AUsage then
+    Result := Result or $0010;
+  if kuKeyAgreement in AUsage then
+    Result := Result or $0008;
+  if kuKeyCertSign in AUsage then
+    Result := Result or $0004;
+  if kuCRLSign in AUsage then
+    Result := Result or $0002;
+  if kuEncipherOnly in AUsage then
+    Result := Result or $0001;
+  if kuDecipherOnly in AUsage then
+    Result := Result or $8000;
+end;
+
+function X509KeyUsageToStrings(const AUsage: TX509KeyUsage): TSSLStringArray;
+
+  procedure AddToResult(const AValue: string);
+  begin
+    SetLength(Result, Length(Result) + 1);
+    Result[High(Result)] := AValue;
+  end;
+
+begin
+  SetLength(Result, 0);
+  if kuDigitalSignature in AUsage then
+    AddToResult('digitalSignature');
+  if kuNonRepudiation in AUsage then
+    AddToResult('nonRepudiation');
+  if kuKeyEncipherment in AUsage then
+    AddToResult('keyEncipherment');
+  if kuDataEncipherment in AUsage then
+    AddToResult('dataEncipherment');
+  if kuKeyAgreement in AUsage then
+    AddToResult('keyAgreement');
+  if kuKeyCertSign in AUsage then
+    AddToResult('keyCertSign');
+  if kuCRLSign in AUsage then
+    AddToResult('cRLSign');
+  if kuEncipherOnly in AUsage then
+    AddToResult('encipherOnly');
+  if kuDecipherOnly in AUsage then
+    AddToResult('decipherOnly');
+end;
+
+function X509ExtKeyUsageToStrings(const AUsage: TX509ExtKeyUsage): TSSLStringArray;
+
+  procedure AddToResult(const AValue: string);
+  begin
+    SetLength(Result, Length(Result) + 1);
+    Result[High(Result)] := AValue;
+  end;
+
+begin
+  SetLength(Result, 0);
+  if ekuServerAuth in AUsage then
+    AddToResult('serverAuth');
+  if ekuClientAuth in AUsage then
+    AddToResult('clientAuth');
+  if ekuCodeSigning in AUsage then
+    AddToResult('codeSigning');
+  if ekuEmailProtection in AUsage then
+    AddToResult('emailProtection');
+  if ekuTimeStamping in AUsage then
+    AddToResult('timeStamping');
+  if ekuOCSPSigning in AUsage then
+    AddToResult('OCSPSigning');
+end;
+
+function X509SubjectAltNamesToStrings(
+  const ASANs: TX509SubjectAltNames): TSSLStringArray;
+var
+  I: Integer;
+begin
+  SetLength(Result, Length(ASANs));
+  for I := 0 to High(ASANs) do
+    Result[I] := ASANs[I].Value;
+end;
+
 { TMbedTLSCertificate }
 
 constructor TMbedTLSCertificate.Create;
@@ -197,6 +285,8 @@ begin
   FIssuerCert := nil;
   FOwnsHandle := True;
   FillChar(FInfo, SizeOf(FInfo), 0);
+  FInfo.PathLenConstraint := -1;
+  FInfo.PathLength := -1;
 end;
 
 constructor TMbedTLSCertificate.Create(ACrt: Pmbedtls_x509_crt; AOwnsHandle: Boolean);
@@ -239,46 +329,59 @@ begin
   end;
 end;
 
-function TMbedTLSCertificate.TryGetParsedAlgorithmMetadata(
-  out APublicKeyAlgorithm, ASignatureAlgorithm: string): Boolean;
+function TMbedTLSCertificate.TryLoadX509Parser(
+  out AParser: TX509Certificate): Boolean;
 var
-  LParser: TX509Certificate;
   LDER: TBytes;
 begin
-  APublicKeyAlgorithm := '';
-  ASignatureAlgorithm := '';
+  AParser := nil;
   Result := False;
 
   if FX509Crt = nil then
     Exit;
 
-  LParser := TX509Certificate.Create;
+  AParser := TX509Certificate.Create;
   try
-    try
-      if Length(FDERData) > 0 then
-        LParser.LoadFromDER(FDERData)
-      else if FPEMData <> '' then
-        LParser.LoadFromPEM(FPEMData)
-      else
-      begin
-        LDER := SaveToDER;
-        if Length(LDER) = 0 then
-          Exit;
-        LParser.LoadFromDER(LDER);
-      end;
-
-      APublicKeyAlgorithm := LParser.PublicKeyInfo.Algorithm.Name;
-      if APublicKeyAlgorithm = '' then
-        APublicKeyAlgorithm := LParser.PublicKeyInfo.Algorithm.OID;
-
-      ASignatureAlgorithm := LParser.SignatureAlgorithm.Name;
-      if ASignatureAlgorithm = '' then
-        ASignatureAlgorithm := LParser.SignatureAlgorithm.OID;
-
-      Result := (APublicKeyAlgorithm <> '') or (ASignatureAlgorithm <> '');
-    except
-      Result := False;
+    if Length(FDERData) > 0 then
+      AParser.LoadFromDER(FDERData)
+    else if FPEMData <> '' then
+      AParser.LoadFromPEM(FPEMData)
+    else
+    begin
+      LDER := SaveToDER;
+      if Length(LDER) = 0 then
+        Exit;
+      AParser.LoadFromDER(LDER);
     end;
+    Result := True;
+  except
+    FreeAndNil(AParser);
+    Result := False;
+  end;
+end;
+
+function TMbedTLSCertificate.TryGetParsedAlgorithmMetadata(
+  out APublicKeyAlgorithm, ASignatureAlgorithm: string): Boolean;
+var
+  LParser: TX509Certificate;
+begin
+  APublicKeyAlgorithm := '';
+  ASignatureAlgorithm := '';
+  Result := False;
+
+  if not TryLoadX509Parser(LParser) then
+    Exit;
+
+  try
+    APublicKeyAlgorithm := LParser.PublicKeyInfo.Algorithm.Name;
+    if APublicKeyAlgorithm = '' then
+      APublicKeyAlgorithm := LParser.PublicKeyInfo.Algorithm.OID;
+
+    ASignatureAlgorithm := LParser.SignatureAlgorithm.Name;
+    if ASignatureAlgorithm = '' then
+      ASignatureAlgorithm := LParser.SignatureAlgorithm.OID;
+
+    Result := (APublicKeyAlgorithm <> '') or (ASignatureAlgorithm <> '');
   finally
     LParser.Free;
   end;
@@ -290,6 +393,8 @@ begin
   if not FileExists(AFileName) then Exit;
   if not Assigned(mbedtls_x509_crt_parse_file) then Exit;
 
+  FPEMData := '';
+  SetLength(FDERData, 0);
   AllocateCertificate;
 
   if mbedtls_x509_crt_parse_file(FX509Crt, PAnsiChar(AnsiString(AFileName))) = 0 then
@@ -305,6 +410,8 @@ begin
   Result := False;
   if AStream = nil then Exit;
 
+  FPEMData := '';
+  SetLength(FDERData, 0);
   SetLength(LData, AStream.Size - AStream.Position);
   if Length(LData) = 0 then Exit;
 
@@ -318,6 +425,8 @@ begin
   if (AData = nil) or (ASize <= 0) then Exit;
   if not Assigned(mbedtls_x509_crt_parse) then Exit;
 
+  FPEMData := '';
+  SetLength(FDERData, 0);
   AllocateCertificate;
 
   // MbedTLS 需要 null 终止的 PEM 或 DER 数据
@@ -335,9 +444,10 @@ begin
   if APEM = '' then Exit;
 
   LAnsi := AnsiString(APEM);
-  FPEMData := APEM;
   // MbedTLS PEM 解析需要 null 终止
   Result := LoadFromMemory(PAnsiChar(LAnsi), Length(LAnsi) + 1);
+  if Result then
+    FPEMData := APEM;
 end;
 
 function TMbedTLSCertificate.LoadFromDER(const ADER: TBytes): Boolean;
@@ -345,8 +455,9 @@ begin
   Result := False;
   if Length(ADER) = 0 then Exit;
 
-  FDERData := Copy(ADER);
   Result := LoadFromMemory(@ADER[0], Length(ADER));
+  if Result then
+    FDERData := Copy(ADER);
 end;
 
 function TMbedTLSCertificate.SaveToFile(const AFileName: string): Boolean;
@@ -456,6 +567,8 @@ begin
 end;
 
 function TMbedTLSCertificate.GetInfo: TSSLCertificateInfo;
+var
+  LParser: TX509Certificate;
 begin
   Result := FInfo;
   Result.Subject := GetSubject;
@@ -463,9 +576,34 @@ begin
   Result.SerialNumber := GetSerialNumber;
   Result.NotBefore := GetNotBefore;
   Result.NotAfter := GetNotAfter;
-  Result.PublicKeyAlgorithm := GetPublicKeyAlgorithm;
-  Result.SignatureAlgorithm := GetSignatureAlgorithm;
   Result.Version := GetVersion;
+
+  if TryLoadX509Parser(LParser) then
+  begin
+    try
+      Result.PublicKeyAlgorithm := LParser.PublicKeyInfo.Algorithm.Name;
+      if Result.PublicKeyAlgorithm = '' then
+        Result.PublicKeyAlgorithm := LParser.PublicKeyInfo.Algorithm.OID;
+
+      Result.SignatureAlgorithm := LParser.SignatureAlgorithm.Name;
+      if Result.SignatureAlgorithm = '' then
+        Result.SignatureAlgorithm := LParser.SignatureAlgorithm.OID;
+
+      Result.PublicKeySize := LParser.PublicKeyInfo.KeySize;
+      Result.IsCA := LParser.IsCA;
+      Result.PathLenConstraint := LParser.BasicConstraints.PathLenConstraint;
+      Result.PathLength := LParser.BasicConstraints.PathLenConstraint;
+      Result.KeyUsage := X509KeyUsageToBitfield(LParser.KeyUsage);
+      Result.SubjectAltNames := X509SubjectAltNamesToStrings(LParser.SubjectAltNames);
+    finally
+      LParser.Free;
+    end;
+  end
+  else
+  begin
+    Result.PublicKeyAlgorithm := GetPublicKeyAlgorithm;
+    Result.SignatureAlgorithm := GetSignatureAlgorithm;
+  end;
 end;
 
 function TMbedTLSCertificate.GetSubject: string;
@@ -899,8 +1037,18 @@ begin
 end;
 
 function TMbedTLSCertificate.IsCA: Boolean;
+var
+  LParser: TX509Certificate;
 begin
-  Result := False;  // 需要检查 BasicConstraints
+  Result := False;
+  if not TryLoadX509Parser(LParser) then
+    Exit;
+
+  try
+    Result := LParser.IsCA;
+  finally
+    LParser.Free;
+  end;
 end;
 
 function TMbedTLSCertificate.GetDaysUntilExpiry: Integer;
@@ -934,194 +1082,47 @@ end;
 
 function TMbedTLSCertificate.GetSubjectAltNames: TSSLStringArray;
 var
-  LBuf: array[0..4095] of AnsiChar;
-  LLen: Integer;
-  LInfo: string;
-  LLines: TStringList;
-  I: Integer;
-  LInSAN: Boolean;
-  LLine, LLabel, LValue: string;
-  LColonPos: Integer;
-  LSANs: array of string;
-
-  procedure AddSAN(const AValue: string);
-  begin
-    if AValue = '' then
-      Exit;
-    SetLength(LSANs, Length(LSANs) + 1);
-    LSANs[High(LSANs)] := AValue;
-  end;
-
+  LParser: TX509Certificate;
 begin
   SetLength(Result, 0);
-  if FX509Crt = nil then Exit;
-  if not Assigned(mbedtls_x509_crt_info) then Exit;
+  if not TryLoadX509Parser(LParser) then
+    Exit;
 
-  FillChar(LBuf, SizeOf(LBuf), 0);
-  LLen := mbedtls_x509_crt_info(@LBuf[0], SizeOf(LBuf), '', FX509Crt);
-  if LLen <= 0 then Exit;
-
-  LInfo := string(LBuf);
-  SetLength(LSANs, 0);
-
-  LLines := TStringList.Create;
   try
-    LLines.Text := LInfo;
-    LInSAN := False;
-
-    for I := 0 to LLines.Count - 1 do
-    begin
-      LLine := LLines[I];
-
-      if not LInSAN then
-      begin
-        if Pos('subject alt name', LowerCase(LLine)) > 0 then
-          LInSAN := True;
-        Continue;
-      end;
-
-      // Stop when leaving SAN section
-      if Trim(LLine) = '' then
-        Break;
-      if (Length(LLine) > 0) and not (LLine[1] in [' ', #9]) then
-        Break;
-
-      LLine := Trim(LLine);
-      LColonPos := Pos(':', LLine);
-      if LColonPos <= 0 then
-        Continue;
-
-      LLabel := Trim(Copy(LLine, 1, LColonPos - 1));
-      LValue := Trim(Copy(LLine, LColonPos + 1, MaxInt));
-
-      if SameText(LLabel, 'dNSName') or SameText(LLabel, 'DNSName') or SameText(LLabel, 'DNS') then
-        AddSAN(LValue)
-      else if SameText(LLabel, 'iPAddress') or SameText(LLabel, 'IPAddress') or SameText(LLabel, 'IP Address') then
-        AddSAN(LValue);
-    end;
+    Result := X509SubjectAltNamesToStrings(LParser.SubjectAltNames);
   finally
-    LLines.Free;
+    LParser.Free;
   end;
-
-  Result := LSANs;
 end;
 
 function TMbedTLSCertificate.GetKeyUsage: TSSLStringArray;
 var
-  LBuf: array[0..4095] of AnsiChar;
-  LLen: Integer;
-  LInfo, LUsage: string;
-  LPos, LEndPos: Integer;
-  LUsages: array of string;
+  LParser: TX509Certificate;
 begin
   SetLength(Result, 0);
-  if FX509Crt = nil then Exit;
-  if not Assigned(mbedtls_x509_crt_info) then Exit;
+  if not TryLoadX509Parser(LParser) then
+    Exit;
 
-  FillChar(LBuf, SizeOf(LBuf), 0);
-  LLen := mbedtls_x509_crt_info(@LBuf[0], SizeOf(LBuf), '', FX509Crt);
-  if LLen <= 0 then Exit;
-
-  LInfo := string(LBuf);
-  SetLength(LUsages, 0);
-
-  // 查找 "key usage" 部分
-  LPos := Pos('key usage', LowerCase(LInfo));
-  if LPos > 0 then
-  begin
-    LPos := LPos + 9;
-    while (LPos <= Length(LInfo)) and (LInfo[LPos] in [' ', #9, ':']) do
-      Inc(LPos);
-
-    // 读取到行尾
-    LEndPos := LPos;
-    while (LEndPos <= Length(LInfo)) and not (LInfo[LEndPos] in [#10, #13]) do
-      Inc(LEndPos);
-
-    LUsage := Trim(Copy(LInfo, LPos, LEndPos - LPos));
-
-    // 按逗号分割
-    while LUsage <> '' do
-    begin
-      LPos := Pos(',', LUsage);
-      if LPos > 0 then
-      begin
-        SetLength(LUsages, Length(LUsages) + 1);
-        LUsages[High(LUsages)] := Trim(Copy(LUsage, 1, LPos - 1));
-        LUsage := Trim(Copy(LUsage, LPos + 1, Length(LUsage)));
-      end
-      else
-      begin
-        SetLength(LUsages, Length(LUsages) + 1);
-        LUsages[High(LUsages)] := Trim(LUsage);
-        Break;
-      end;
-    end;
+  try
+    Result := X509KeyUsageToStrings(LParser.KeyUsage);
+  finally
+    LParser.Free;
   end;
-
-  Result := LUsages;
 end;
 
 function TMbedTLSCertificate.GetExtendedKeyUsage: TSSLStringArray;
 var
-  LBuf: array[0..4095] of AnsiChar;
-  LLen: Integer;
-  LInfo, LUsage: string;
-  LPos, LEndPos: Integer;
-  LUsages: array of string;
+  LParser: TX509Certificate;
 begin
   SetLength(Result, 0);
-  if FX509Crt = nil then Exit;
-  if not Assigned(mbedtls_x509_crt_info) then Exit;
+  if not TryLoadX509Parser(LParser) then
+    Exit;
 
-  FillChar(LBuf, SizeOf(LBuf), 0);
-  LLen := mbedtls_x509_crt_info(@LBuf[0], SizeOf(LBuf), '', FX509Crt);
-  if LLen <= 0 then Exit;
-
-  LInfo := string(LBuf);
-  SetLength(LUsages, 0);
-
-  // 查找 "ext key usage" 或 "extended key usage" 部分
-  LPos := Pos('ext key usage', LowerCase(LInfo));
-  if LPos = 0 then
-    LPos := Pos('extended key usage', LowerCase(LInfo));
-
-  if LPos > 0 then
-  begin
-    // 跳过标签
-    while (LPos <= Length(LInfo)) and (LInfo[LPos] <> ':') do
-      Inc(LPos);
-    Inc(LPos);  // 跳过冒号
-    while (LPos <= Length(LInfo)) and (LInfo[LPos] in [' ', #9]) do
-      Inc(LPos);
-
-    // 读取到行尾
-    LEndPos := LPos;
-    while (LEndPos <= Length(LInfo)) and not (LInfo[LEndPos] in [#10, #13]) do
-      Inc(LEndPos);
-
-    LUsage := Trim(Copy(LInfo, LPos, LEndPos - LPos));
-
-    // 按逗号分割
-    while LUsage <> '' do
-    begin
-      LPos := Pos(',', LUsage);
-      if LPos > 0 then
-      begin
-        SetLength(LUsages, Length(LUsages) + 1);
-        LUsages[High(LUsages)] := Trim(Copy(LUsage, 1, LPos - 1));
-        LUsage := Trim(Copy(LUsage, LPos + 1, Length(LUsage)));
-      end
-      else
-      begin
-        SetLength(LUsages, Length(LUsages) + 1);
-        LUsages[High(LUsages)] := Trim(LUsage);
-        Break;
-      end;
-    end;
+  try
+    Result := X509ExtKeyUsageToStrings(LParser.ExtKeyUsage);
+  finally
+    LParser.Free;
   end;
-
-  Result := LUsages;
 end;
 
 function TMbedTLSCertificate.GetFingerprint(AHashType: TSSLHash): string;

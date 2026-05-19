@@ -2,6 +2,86 @@
 
 ## 2026-05-20
 
+- 上一批把
+  算法元数据默认壳
+  收掉之后，
+  optional backends
+  证书 surface
+  的下一条高价值缺口
+  不是新的算法名，
+  而是
+  “扩展类元数据
+  在 getter / `GetInfo`
+  之间继续分裂”
+
+- 当前最直接的残缺是：
+  - `TMbedTLSCertificate.IsCA`
+    仍固定 `False`
+  - `TWolfSSLCertificate.GetKeyUsage`
+    / `GetExtendedKeyUsage`
+    仍固定空数组
+  - 两边 `GetInfo`
+    都没有完整填：
+    - `PublicKeySize`
+    - `IsCA`
+    - `SubjectAltNames`
+    - `KeyUsage`
+
+- 这比单个 getter 更危险，
+  因为调用方通常会把
+  `GetInfo`
+  当作快照 truth；
+  如果 snapshot 缺字段，
+  上层逻辑就会在
+  “getter 有值 / snapshot 没值”
+  之间继续漂移
+
+- 这批也说明，
+  `TX509Certificate`
+  不只是算法名 fallback 工具，
+  它其实已经是 optional backends
+  最稳的扩展 truth owner：
+  - `BasicConstraints`
+  - `SubjectAltNames`
+  - `KeyUsage`
+  - `ExtKeyUsage`
+  - `PublicKeyInfo.KeySize`
+  都已经在那里统一解析好了
+
+- `MbedTLS`
+  这批真正暴露出来的
+  不是 parser 解析能力不足，
+  而是证书对象
+  在多次 `LoadFromFile(...)`
+  之间
+  没有清理旧的
+  `FDERData` /
+  `FPEMData`
+  缓存
+
+- 这意味着，
+  之前某些“看起来像 extension parser 不支持”
+  的现象，
+  实际上只是
+  第二张证书开始
+  还在读取第一张证书的 cached snapshot
+
+- 所以 optional backends
+  证书审查里
+  不能只看单次加载后的 truth，
+  还必须看：
+  - 同一对象反复 load
+    不同 cert
+    时
+    snapshot 有没有跟着切换
+
+- 这批收口后，
+  `GetInfo`
+  不再只是“部分字段随缘可用”的半快照，
+  而开始真正接近
+  一个可供上层直接消费的
+  structured certificate snapshot
+
 - `CI` run `26131410258`
   现已完整 `success`，
   说明上一批

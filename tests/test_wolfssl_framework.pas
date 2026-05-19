@@ -152,6 +152,18 @@ begin
   end;
 end;
 
+function ArrayContains(const AValues: TSSLStringArray; const AExpected: string): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := Low(AValues) to High(AValues) do
+  begin
+    if SameText(AValues[I], AExpected) then
+      Exit(True);
+  end;
+end;
+
 procedure TestWolfSSLConstants;
 begin
   WriteLn('');
@@ -372,6 +384,97 @@ begin
       SameText(LInfo.PublicKeyAlgorithm, LCert.GetPublicKeyAlgorithm));
     Test('GetInfo signature algorithm matches getter truth',
       SameText(LInfo.SignatureAlgorithm, LCert.GetSignatureAlgorithm));
+  finally
+    LCert.Free;
+    LLib.Finalize;
+  end;
+end;
+
+procedure TestWolfSSLCertificateExtensionMetadataContract;
+var
+  LLib: ISSLLibrary;
+  LCert: TWolfSSLCertificate;
+  LInfo: TSSLCertificateInfo;
+  LValues: TSSLStringArray;
+begin
+  WriteLn('');
+  WriteLn('=== WolfSSL Certificate Extension Metadata Contract ===');
+
+  LLib := CreateWolfSSLLibrary;
+  if not LLib.Initialize then
+  begin
+    WriteLn('  (Skipped - WolfSSL library not available)');
+    Test('Certificate extension metadata contract skipped', True);
+    Exit;
+  end;
+
+  LCert := TWolfSSLCertificate.Create;
+  try
+    if not LCert.LoadFromFile('tests/certificate/test_certs/signer_ecdsa_cert.pem') then
+    begin
+      Test('Load ECDSA CA fixture', False);
+      Exit;
+    end;
+    Test('Load ECDSA CA fixture', True);
+
+    LInfo := LCert.GetInfo;
+    Test('ECDSA CA fixture GetInfo exposes public-key size',
+      LInfo.PublicKeySize = 256);
+    Test('ECDSA CA fixture IsCA exposes parsed truth',
+      LCert.IsCA and LInfo.IsCA);
+    Test('ECDSA CA fixture GetInfo IsCA matches getter truth',
+      LInfo.IsCA = LCert.IsCA);
+
+    if not LCert.LoadFromFile('tests/certs/san-test.pem') then
+    begin
+      Test('Load SAN fixture', False);
+      Exit;
+    end;
+    Test('Load SAN fixture', True);
+
+    LInfo := LCert.GetInfo;
+    Test('SAN fixture GetInfo exposes SAN count',
+      Length(LInfo.SubjectAltNames) = 3);
+    Test('SAN fixture GetInfo contains san-test.local',
+      ArrayContains(LInfo.SubjectAltNames, 'san-test.local'));
+    Test('SAN fixture GetInfo contains example.test',
+      ArrayContains(LInfo.SubjectAltNames, 'example.test'));
+    Test('SAN fixture GetInfo contains 127.0.0.1',
+      ArrayContains(LInfo.SubjectAltNames, '127.0.0.1'));
+
+    LValues := LCert.GetSubjectAltNames;
+    Test('SAN fixture getter exposes SAN count',
+      Length(LValues) = 3);
+    Test('SAN fixture getter contains san-test.local',
+      ArrayContains(LValues, 'san-test.local'));
+    Test('SAN fixture getter contains example.test',
+      ArrayContains(LValues, 'example.test'));
+    Test('SAN fixture getter contains 127.0.0.1',
+      ArrayContains(LValues, '127.0.0.1'));
+
+    if not LCert.LoadFromFile('tests/certificate/test_certs/keyusage_cert.pem') then
+    begin
+      Test('Load KeyUsage fixture', False);
+      Exit;
+    end;
+    Test('Load KeyUsage fixture', True);
+
+    LInfo := LCert.GetInfo;
+    LValues := LCert.GetKeyUsage;
+    Test('KeyUsage fixture getter contains digitalSignature',
+      ArrayContains(LValues, 'digitalSignature'));
+    Test('KeyUsage fixture getter contains keyEncipherment',
+      ArrayContains(LValues, 'keyEncipherment'));
+    Test('KeyUsage fixture GetInfo bitfield keeps digitalSignature',
+      (LInfo.KeyUsage and $0080) <> 0);
+    Test('KeyUsage fixture GetInfo bitfield keeps keyEncipherment',
+      (LInfo.KeyUsage and $0020) <> 0);
+
+    LValues := LCert.GetExtendedKeyUsage;
+    Test('KeyUsage fixture getter contains serverAuth',
+      ArrayContains(LValues, 'serverAuth'));
+    Test('KeyUsage fixture getter contains clientAuth',
+      ArrayContains(LValues, 'clientAuth'));
   finally
     LCert.Free;
     LLib.Finalize;
@@ -1084,6 +1187,7 @@ begin
   // Certificate tests
   TestWolfSSLCertificateClass;
   TestWolfSSLCertificateAlgorithmMetadataContract;
+  TestWolfSSLCertificateExtensionMetadataContract;
   TestWolfSSLCertificateCloneMaterializationContract;
   TestWolfSSLCertificateStore;
 

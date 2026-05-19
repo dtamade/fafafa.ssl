@@ -10,6 +10,140 @@
 
 ## Current Status
 
+- [completed] `optional backends certificate extension metadata completeness`
+  当前 focused 目标：
+  - 把
+    `MbedTLS` / `WolfSSL`
+    证书对象
+    在扩展类元数据上的
+    published surface
+    从残缺快照
+    收紧成
+    与真实 X.509 扩展一致的
+    truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-optional-backends-certificate-extension-metadata-completeness.md`
+  - 修改实现：
+    - `src/fafafa.ssl.mbedtls.certificate.pas`
+    - `src/fafafa.ssl.wolfssl.certificate.pas`
+  - 修改 focused tests：
+    - `tests/test_mbedtls_framework.pas`
+    - `tests/test_wolfssl_framework.pas`
+  当前预判：
+  - 上一批已经收掉
+    算法元数据默认壳
+  - 但当前 optional backends
+    仍在下列字段上
+    存在真实残缺：
+    - `IsCA`
+    - `SubjectAltNames`
+    - `KeyUsage`
+    - `ExtendedKeyUsage`
+    - `GetInfo.PublicKeySize`
+    - `GetInfo.IsCA`
+    - `GetInfo.SubjectAltNames`
+    - `GetInfo.KeyUsage`
+  当前验证策略：
+  - 继续复用
+    `TX509Certificate`
+    作为单一 truth source
+  - 用 3 组现成夹具
+    做 focused RED：
+    - `signer_ecdsa_cert.pem`
+      用于
+      `PublicKeySize=256`
+      和
+      `IsCA=True`
+    - `san-test.pem`
+      用于
+      `SAN`
+      快照完整性
+    - `keyusage_cert.pem`
+      用于
+      `KeyUsage` /
+      `ExtendedKeyUsage`
+      与
+      `GetInfo.KeyUsage`
+      bitfield
+  当前 done 条件：
+  - `MbedTLS` / `WolfSSL`
+    对上面 3 组夹具
+    都能发布真实扩展元数据
+  - `GetInfo`
+    不再遗漏
+    `PublicKeySize` /
+    `IsCA` /
+    `SubjectAltNames` /
+    `KeyUsage`
+  - focused tests
+    通过
+  - `git diff --check`
+    通过
+  当前最终收口证据：
+  - `WolfSSL`
+    新增扩展元数据 contract
+    首次运行即 GREEN，
+    说明 parser-based 路径
+    直接补齐了：
+    - `IsCA`
+    - `SAN`
+    - `KeyUsage`
+    - `ExtendedKeyUsage`
+    - `GetInfo` 快照字段
+  - `MbedTLS`
+    新增 contract
+    首次运行打出 14 个失败，
+    暴露的不是 parser 能力缺失，
+    而是：
+    - 多次 `LoadFromFile(...)`
+      后
+      `FDERData` /
+      `FPEMData`
+      缓存没有清掉，
+      导致后续 cert metadata
+      仍读到前一张证书快照
+  - GREEN 后证明：
+    - `TMbedTLSCertificate`
+      现在不再跨证书复用旧缓存
+    - `TMbedTLSCertificate` /
+      `TWolfSSLCertificate`
+      都能对现有夹具
+      发布真实扩展 metadata
+    - `GetInfo`
+      已补齐：
+      - `PublicKeySize`
+      - `IsCA`
+      - `PathLength`
+      - `PathLenConstraint`
+      - `KeyUsage`
+      - `SubjectAltNames`
+  focused verification 已通过：
+  - `tests/test_mbedtls_framework.pas`: `139 passed / 0 failed`
+  - `tests/test_wolfssl_framework.pas`: `164 passed / 0 failed`
+  - `tests/contract/test_backend_contract.pas`: `Total Tests: 135 / Passed: 111 / Failed: 0 / Skipped: 24`
+  - `git diff --check`
+  当前结论：
+  - 这批收掉的是
+    optional backends
+    在
+    扩展类 certificate metadata
+    和
+    `GetInfo` snapshot
+    上的真实实现缺口，
+    并顺手修掉了
+    `MbedTLS`
+    的 stale-cache 证书加载 bug
+  当前下一条真实工作：
+  - 继续审查
+    optional backends
+    剩余 certificate surface：
+    - `GetPublicKey`
+    - `GetExtension`
+    - 可能仍缺的
+      `issuer-link`
+      / snapshot parity
+      残余点
 - [completed] `optional backends certificate algorithm metadata completeness`
   当前 focused 目标：
   - 把

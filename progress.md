@@ -4,6 +4,110 @@
 
 ## 2026-05-20
 
+### Optional Backends Certificate Extension Metadata Completeness
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - worktree is clean after commit `7eb3ce4`
+    - current branch is aligned with `origin/master`
+
+- `gh run list --limit 3 --json databaseId,status,conclusion,workflowName,headSha,displayTitle`
+  - result: PASS
+  - summary:
+    - fresh `CI` run for `7eb3ce4`
+      is currently `in_progress`:
+      - run `26131945228`
+    - previous `CI 26131410258`
+      remains fully green
+
+- `mcp__ace_tool__.search_context(...)`
+- `sed -n '560,910p' src/fafafa.ssl.freepascal.lib.pas`
+- `sed -n '880,1095p' src/fafafa.ssl.mbedtls.certificate.pas`
+- `sed -n '820,980p' src/fafafa.ssl.wolfssl.certificate.pas`
+- `openssl x509 -in tests/certificate/test_certs/signer_ecdsa_cert.pem -text -noout | sed -n '1,120p'`
+- `openssl x509 -in tests/certs/san-test.pem -text -noout | sed -n '1,140p'`
+- `openssl x509 -in tests/certificate/test_certs/keyusage_cert.pem -text -noout | sed -n '1,160p'`
+  - result: PASS
+  - summary:
+    - confirmed the next real gap is certificate extension metadata completeness:
+      - `MbedTLS IsCA` still defaults to `False`
+      - `WolfSSL GetKeyUsage` / `GetExtendedKeyUsage` still return empty arrays
+      - both optional backends leave `GetInfo.PublicKeySize` /
+        `GetInfo.IsCA` /
+        `GetInfo.SubjectAltNames` /
+        `GetInfo.KeyUsage` incomplete
+    - confirmed reusable fixtures for RED:
+      - `signer_ecdsa_cert.pem` -> `256 bit`, `CA:TRUE`
+      - `san-test.pem` -> `san-test.local`, `example.test`, `127.0.0.1`
+      - `keyusage_cert.pem` -> `digitalSignature`, `keyEncipherment`, `serverAuth`, `clientAuth`
+
+- update tests:
+  - `tests/test_mbedtls_framework.pas`
+  - `tests/test_wolfssl_framework.pas`
+  - change:
+    - added extension-metadata contracts covering:
+      - `PublicKeySize`
+      - `IsCA`
+      - `SAN`
+      - `KeyUsage`
+      - `ExtendedKeyUsage`
+      - `GetInfo` parity
+
+- `mkdir -p tmp/test_mbedtls_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas && ./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+  - result: FAIL -> PASS
+  - summary:
+    - first RED surfaced 14 failures in the new extension-metadata contract
+    - the real root cause was not parser weakness:
+      - repeated `LoadFromFile(...)`
+        left stale `FDERData` / `FPEMData`
+        cached from the previous certificate
+      - so second/third fixtures still read the first certificate snapshot
+    - after fixing cache invalidation + parser-backed extension snapshot fill:
+      - final result: `139 passed / 0 failed`
+
+- `mkdir -p tmp/test_wolfssl_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas && ./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+  - result: PASS
+  - summary:
+    - parser-backed extension metadata path worked end-to-end on the first run
+    - `WolfSSL` now exposes:
+      - `PublicKeySize`
+      - `IsCA`
+      - `SAN`
+      - `KeyUsage`
+      - `ExtendedKeyUsage`
+      through getter + `GetInfo`
+    - final result: `164 passed / 0 failed`
+
+- `mkdir -p tmp/test_backend_contract_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_backend_contract_units -FEtmp/test_backend_contract_units -otmp/test_backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/test_backend_contract_units/test_backend_contract`
+  - result: PASS
+  - summary:
+    - cross-check confirmed SAN + VerifyHostname behavior remained green across:
+      - `OpenSSL`
+      - `WolfSSL`
+      - `MbedTLS`
+      - `FreePascal`
+    - final result:
+      - `Total Tests: 135`
+      - `Passed: 111`
+      - `Failed: 0`
+      - `Skipped: 24`
+
+- update implementation:
+  - `src/fafafa.ssl.mbedtls.certificate.pas`
+  - `src/fafafa.ssl.wolfssl.certificate.pas`
+  - change:
+    - added parser-backed extension metadata extraction for optional backends
+    - filled `GetInfo.PublicKeySize` / `IsCA` / `PathLength` / `PathLenConstraint` / `KeyUsage` / `SubjectAltNames`
+    - implemented `GetKeyUsage` / `GetExtendedKeyUsage` from parsed X.509 truth
+    - rewired `IsCA` / `GetSubjectAltNames` to the same truth source
+    - fixed `MbedTLS` repeated-load stale cache bug by clearing encoded-data caches before a new load
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remain after the optional-backends extension metadata batch
+
 ### Optional Backends Certificate Algorithm Metadata Completeness
 
 - `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py /home/dtamade/projects/fafafa.ssl`
