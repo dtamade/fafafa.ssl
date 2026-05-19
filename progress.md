@@ -2,6 +2,63 @@
 
 ## 2026-05-19
 
+### Backend Doc Linkage And Enum Truth
+
+- add `docs/plans/2026-05-19-backend-doc-linkage-and-enum-truth.md`
+  - change:
+    - define the bounded active-doc truth batch for backend link targets and `TSSLLibraryType` enum drift
+
+- add `tests/scripts/test_backend_doc_linkage_and_enum_truth_contract.sh`
+  - change:
+    - lock that the top-level backend capability matrix only links live backend docs
+    - lock that `API_REFERENCE` keeps a complete `TSSLLibraryType` snippet
+    - lock that `sslFreePascal` is no longer described as future-only in source enum comments
+
+- `bash -n tests/scripts/test_backend_doc_linkage_and_enum_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new backend-doc-linkage focused contract syntax is valid
+
+- `bash tests/scripts/test_backend_doc_linkage_and_enum_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `docs/BACKEND_CAPABILITY_MATRIX.md` still linked missing `reference/OPENSSL_BACKEND.md`
+      - the same doc still linked missing `reference/WINSSL_BACKEND.md`
+      - `API_REFERENCE` still described `sslMbedTLS` as planned
+      - source enum comment still described `sslFreePascal` as future-only
+    - GREEN after fix:
+      - top-level backend matrix now links live backend references only
+      - `API_REFERENCE` enum snippet now matches the current source enum family
+      - `sslFreePascal` source enum comment now reflects implemented status
+
+- update `docs/BACKEND_CAPABILITY_MATRIX.md`
+  - change:
+    - replace missing backend-doc links with live references:
+      - `reference/OPENSSL_MODULES.md`
+      - `reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+      - `reference/WINSSL_DESIGN.md`
+      - `reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - refresh `TSSLLibraryType` snippet to the current source truth:
+      - `sslAutoDetect`
+      - `sslOpenSSL`
+      - `sslWolfSSL`
+      - `sslMbedTLS`
+      - `sslWinSSL`
+      - `sslFreePascal`
+
+- update `src/fafafa.ssl.base.pas`
+  - change:
+    - remove stale `sslFreePascal` “future” comment residue from the public enum declaration
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current backend-doc-linkage batch has no whitespace or patch-format issues
+
 ### Backend Capability Truth Tightening
 
 - add `docs/plans/2026-05-19-backend-capability-truth-tightening.md`

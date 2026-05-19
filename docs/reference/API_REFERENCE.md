@@ -1046,9 +1046,12 @@ end;
 
 ```pascal
 TSSLLibraryType = (
-  sslOpenSSL,  // OpenSSL 后端
-  sslWinSSL,   // Windows Schannel 后端
-  sslMbedTLS   // MbedTLS 后端（计划中）
+  sslAutoDetect,  // 自动检测可用库
+  sslOpenSSL,     // OpenSSL 后端
+  sslWolfSSL,     // WolfSSL 后端
+  sslMbedTLS,     // MbedTLS 后端
+  sslWinSSL,      // Windows Schannel 后端
+  sslFreePascal   // 纯 FreePascal 实现
 );
 ```
 

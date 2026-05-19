@@ -10,6 +10,39 @@
 
 ## Current Status
 
+- [completed] Backend doc linkage + enum truth 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-backend-doc-linkage-and-enum-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_backend_doc_linkage_and_enum_truth_contract.sh`
+  - 当前已修正的活跃真相：
+    - `docs/BACKEND_CAPABILITY_MATRIX.md`
+      - 不再引用不存在的：
+        - `reference/OPENSSL_BACKEND.md`
+        - `reference/WINSSL_BACKEND.md`
+      - 现已改为 live backend references：
+        - `reference/OPENSSL_MODULES.md`
+        - `reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+        - `reference/WINSSL_DESIGN.md`
+        - `reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+    - `docs/reference/API_REFERENCE.md`
+      - `TSSLLibraryType` 示例现已补齐：
+        - `sslAutoDetect`
+        - `sslOpenSSL`
+        - `sslWolfSSL`
+        - `sslMbedTLS`
+        - `sslWinSSL`
+        - `sslFreePascal`
+      - 不再把 `sslMbedTLS` 标成“计划中”
+    - `src/fafafa.ssl.base.pas`
+      - `sslFreePascal` 注释不再保留“未来”表述
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_backend_doc_linkage_and_enum_truth_contract.sh`
+    - `bash tests/scripts/test_backend_doc_linkage_and_enum_truth_contract.sh`
+    - `git diff --check`: PASS
+  - 当前结论：
+    - 这批修掉的是活跃 backend 文档导航和公共枚举说明的真相漂移
+    - 后续不会再被坏链接和过期 enum 注释带偏 backend completeness 审查
 - [completed] Backend capability truth tightening 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-backend-capability-truth-tightening.md`

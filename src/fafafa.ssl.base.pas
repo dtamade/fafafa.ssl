@@ -99,7 +99,7 @@ type
     sslWolfSSL,      // WolfSSL
     sslMbedTLS,      // MbedTLS
     sslWinSSL,       // Windows Schannel (仅Windows)
-    sslFreePascal    // 纯 FreePascal 实现（未来）
+    sslFreePascal    // 纯 FreePascal 实现
   );
   TSSLLibraryTypes = set of TSSLLibraryType;
 

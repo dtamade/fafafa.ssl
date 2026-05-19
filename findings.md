@@ -2,6 +2,48 @@
 
 ## 2026-05-19
 
+- 继续做 backend completeness 审查时，又发现一条很容易把后续工作流带偏的活跃文档裂缝：
+  - `docs/BACKEND_CAPABILITY_MATRIX.md` 底部还在链接：
+    - `reference/OPENSSL_BACKEND.md`
+    - `reference/WINSSL_BACKEND.md`
+  - 但这两个文件在当前仓库里根本不存在
+
+- 这类问题的风险不只是“点开 404”：
+  - 主能力矩阵本来就是现在最容易被继续拿来做 backend 决策入口的文档之一
+  - 如果它还把人导向不存在或历史想象中的 backend 文档，
+  - 后续审查就会不断从错误入口重新拉起
+
+- 同一轮又顺手挖出另一条更基础的 enum truth 漂移：
+  - `docs/reference/API_REFERENCE.md` 的 `TSSLLibraryType` 示例只剩：
+    - `sslOpenSSL`
+    - `sslWinSSL`
+    - `sslMbedTLS // 计划中`
+  - 这和当前源码真相已经明显打架：
+    - `sslAutoDetect`
+    - `sslOpenSSL`
+    - `sslWolfSSL`
+    - `sslMbedTLS`
+    - `sslWinSSL`
+    - `sslFreePascal`
+
+- 更关键的是，源码自己也还残留一条过期心智模型：
+  - `src/fafafa.ssl.base.pas` 里 `sslFreePascal` 注释仍写成“纯 FreePascal 实现（未来）”
+  - 但当前仓库里 `src/fafafa.ssl.freepascal.*.pas` 已经是活跃实现，不应继续被 enum 注释说成“未来”
+
+- 这批最小正确修法因此非常窄：
+  - 不重写整个文档索引
+  - 不改 backend 行为
+  - 只把：
+    - 主能力矩阵 backend links
+    - `API_REFERENCE` 的 `TSSLLibraryType` 示例
+    - `src/fafafa.ssl.base.pas` 的 `sslFreePascal` 注释
+    收回当前真实状态
+
+- 当前收口后的新基线应明确保留：
+  - 顶层 backend 能力入口只能指向仓库里真实存在的活跃文档
+  - `TSSLLibraryType` 的公开示例必须与源码完整枚举同步
+  - `sslFreePascal` 不能再被任何活跃源码/文档表述为“未来态”
+
 - 继续沿“接口设计 + 各 backend completeness”做横向静态审查时，挖出来一条比文档漂移更实的能力发布裂缝：
   - `TMbedTLSLibrary.IsFeatureSupported(sslFeatSessionCache)` 早就返回 `True`
   - `TWolfSSLLibrary.IsFeatureSupported(sslFeatSessionCache)` 也早就返回 `True`
