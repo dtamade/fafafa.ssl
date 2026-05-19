@@ -197,6 +197,65 @@
   - summary:
     - the P2 minimum API matrix CT-truth batch is whitespace-clean
 
+### Backend Capability Matrix Quick Reference Truth
+
+- `sed -n '1,260p' docs/BACKEND_CAPABILITY_MATRIX.md`
+- `rg -n "SupportsTLS13|SNISupport|ALPNSupport|KnownIssues" src/fafafa.ssl.freepascal.lib.pas src/fafafa.ssl.winssl.lib.pas docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+- `rg -n "\*\*TLS 1\.3\*\*|\*\*ALPN\*\*|\*\*SNI\*\*|\*\*PSK\*\*|Windows 10 1903\+|PSK \| ❌ 不支持" docs/BACKEND_CAPABILITY_MATRIX.md docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md docs/guides/WINSSL_USER_GUIDE.md`
+  - result: PASS
+  - summary:
+    - static comparison found a summary-level contradiction in the top-level backend matrix:
+      - `WinSSL TLS 1.3` was still shown as unconditional `✅`
+      - `WinSSL PSK` was still shown as `⚠️`
+      - `FreePascal ALPN / SNI` were still shown as stable `✅`
+    - source / backend-specific docs already said:
+      - WinSSL TLS 1.3 is Windows-version gated
+      - WinSSL PSK is unsupported
+      - FreePascal ALPN/SNI still publish `sslSupportExperimental`
+
+- add `docs/plans/2026-05-19-backend-capability-matrix-quick-reference-truth.md`
+  - change:
+    - recorded the bounded docs-only plan for quick-reference capability-truth tightening
+
+- add `tests/scripts/test_backend_capability_matrix_quick_reference_truth_contract.sh`
+  - change:
+    - added a focused shell contract that guards:
+      - FreePascal `ALPN` / `SNI` rows stay aligned with `sslSupportExperimental`
+      - WinSSL `TLS 1.3` stays conditional instead of unconditional `✅`
+      - WinSSL `PSK` stays aligned with the backend-specific unsupported truth
+      - the top-level matrix keeps explicit explanatory notes for those exceptions
+
+- update `docs/BACKEND_CAPABILITY_MATRIX.md`
+  - change:
+    - tightened the quick-reference cells for:
+      - `WinSSL TLS 1.3`
+      - `WinSSL PSK`
+      - `FreePascal ALPN`
+      - `FreePascal SNI`
+    - added short explanatory bullets so the root matrix no longer outruns
+      source/backend-specific truth
+
+- `bash -n tests/scripts/test_backend_capability_matrix_quick_reference_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new quick-reference truth contract syntax is valid
+
+- `bash tests/scripts/test_backend_capability_matrix_quick_reference_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - the top-level backend matrix quick reference now stays aligned with source
+      capability gates and WinSSL backend-specific truth
+
+- `npx prettier --write docs/BACKEND_CAPABILITY_MATRIX.md`
+  - result: PASS
+  - summary:
+    - the backend capability matrix remains formatter-stable after the quick-reference cleanup
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - the quick-reference truth batch is whitespace-clean
+
 ### ISSLSessionResumption Runtime Residual Classification Tightening
 
 - add `docs/plans/2026-05-19-isslsessionresumption-runtime-residual-classification-tightening.md`

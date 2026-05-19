@@ -11,18 +11,18 @@
 | 功能                         | FreePascal | OpenSSL | WinSSL | MbedTLS | WolfSSL |
 | ---------------------------- | ---------- | ------- | ------ | ------- | ------- |
 | **TLS 1.2**                  | ✅         | ✅      | ✅     | ✅      | ✅      |
-| **TLS 1.3**                  | ✅         | ✅      | ✅     | ⚠️      | ✅      |
+| **TLS 1.3**                  | ✅         | ✅      | ⚠️     | ⚠️      | ✅      |
 | **Early Data (0-RTT)**       | ⚠️         | ✅      | ❌     | ❌      | ⚠️      |
 | **Session Resumption**       | ⚠️         | ✅      | ⚠️     | ✅      | ✅      |
 | **OCSP Stapling**            | ⚠️         | ✅      | ❌     | ❌      | ⚠️      |
 | **Certificate Transparency** | ⚠️         | ❌      | ❌     | ❌      | ❌      |
-| **ALPN**                     | ✅         | ✅      | ✅     | ✅      | ✅      |
-| **SNI**                      | ✅         | ✅      | ✅     | ✅      | ✅      |
-| **PSK**                      | ✅         | ✅      | ⚠️     | ✅      | ✅      |
+| **ALPN**                     | ⚠️         | ✅      | ✅     | ✅      | ✅      |
+| **SNI**                      | ⚠️         | ✅      | ✅     | ✅      | ✅      |
+| **PSK**                      | ✅         | ✅      | ❌     | ✅      | ✅      |
 | **PKCS#11**                  | ❌         | ✅      | ❌     | ❌      | ❌      |
 | **PKCS#12 / PFX**            | ❌         | ✅      | ⚠️     | ❌      | ❌      |
 | **Password-Protected Keys**  | ❌         | ✅      | ⚠️     | ✅      | ❌      |
-| **Custom Cipher Suites**      | ❌         | ✅      | ❌     | ❌      | ❌      |
+| **Custom Cipher Suites**     | ❌         | ✅      | ❌     | ❌      | ❌      |
 | **Context Callbacks**        | ❌         | ✅      | ⚠️     | ❌      | ❌      |
 
 **图例**:
@@ -34,25 +34,45 @@
 本表对 SNI / ALPN / OCSP stapling / Certificate Transparency / Session Tickets 统一按 `*Support` 支持级别字段汇总；legacy `Supports*` 布尔值仅作为兼容投影。
 `SupportsTLS13` 仍按主 bool 字段解读，因为当前没有 `TLS13Support`。
 
+`TLS 1.3` 这一行对 `WinSSL` 按条件 capability truth 汇总：
+
+- `SupportsTLS13=True` 取决于运行时 Windows / Schannel 版本（例如 Windows 10 1903+）
+- 因此顶层矩阵对 `WinSSL` 记为 `⚠️` 条件支持，而不是无条件 `✅`
+
+`ALPN` / `SNI` 这两行对 `FreePascal` 按当前 published capability truth 汇总：
+
+- `SupportsALPN=True` / `SupportsSNI=True`
+- 但 `ALPNSupport` / `SNISupport` 当前仍发布为 `sslSupportExperimental`
+
+`PSK` 这一行对 `WinSSL` 当前按 unsupported 汇总：
+
+- Schannel 不发布 PSK public/runtime path
+- `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md` 当前已明确 `PSK = ❌`
+
 `Session Resumption` 这一行按当前 runtime/capability truth 汇总：
+
 - `FreePascal`: public surface 已闭合，但 `SessionTicketsSupport` / `SessionCacheSupport` 仍发布为 `experimental`
 - `WinSSL`: public surface 存在，但当前 dedicated Windows runtime truth 仍是 `observed_reuse=false` / `session_configured=true`
 
 `Context Callbacks` 这一行按当前 published runtime truth 汇总：
+
 - `OpenSSL`: verify/password/info callback 都已发布并具备 runtime wiring
 - `WinSSL`: 仅 verify/info callback 已发布；password callback 当前仍为 unsupported
 - `FreePascal` / `WolfSSL` / `MbedTLS`: `SupportsCallbacks=False`，verify/password/info setter 当前都已 fail-closed
 
 `Password-Protected Keys` 这一行按当前 published/runtime truth 汇总：
+
 - `OpenSSL` / `MbedTLS`: password-protected private-key path 当前已发布
 - `WinSSL`: 当前仅 password-protected PFX/P12 import path 已发布；PEM private-key password path 仍为 unsupported
 - `FreePascal` / `WolfSSL`: `SupportsPasswordProtectedKeys=False`；non-empty `APassword` 当前会 fail-closed
 
 `Custom Cipher Suites` 这一行按当前 published/runtime truth 汇总：
+
 - `OpenSSL`: `SupportsCustomCipherSuites=True` 仅在 TLS 1.2 / TLS 1.3 custom-cipher helper 都就绪时发布；custom cipher override 当前具备 runtime apply
 - `FreePascal` / `WinSSL` / `MbedTLS` / `WolfSSL`: `SupportsCustomCipherSuites=False`；custom non-default `SetCipherList` / `SetCipherSuites` 当前会 fail-closed，empty clear / shipped baseline defaults 仅保留 compatibility/default-context path
 
 `PKCS#12 / PFX` 这一行按当前 published/runtime truth 汇总：
+
 - `OpenSSL`: `SupportsPKCS12=True`；当前发布完整 PKCS#12 helper/API surface（create / parse / BIO I/O）
 - `WinSSL`: `SupportsPKCS12=True`；当前仅发布 PFX/P12 private-key/certificate bundle import path
 - `FreePascal` / `MbedTLS` / `WolfSSL`: `SupportsPKCS12=False`；当前没有 shipped PKCS#12 bundle create / parse / import surface

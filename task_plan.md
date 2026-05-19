@@ -10,6 +10,36 @@
 
 ## Current Status
 
+- [completed] `BACKEND_CAPABILITY_MATRIX` quick-reference truth alignment
+  已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-backend-capability-matrix-quick-reference-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_backend_capability_matrix_quick_reference_truth_contract.sh`
+  - 当前已收紧的 summary truth：
+    - `docs/BACKEND_CAPABILITY_MATRIX.md`
+      顶层 quick reference 现已和 source / backend-specific truth 对齐：
+      - `WinSSL TLS 1.3` 不再写成无条件 `✅`
+      - `WinSSL PSK` 不再写成 `⚠️`
+      - `FreePascal ALPN / SNI` 不再写成稳定 `✅`
+    - 顶层说明现已补清：
+      - `WinSSL TLS 1.3` 受 Windows / Schannel 版本门控
+      - `FreePascal ALPN / SNI` 当前按 `sslSupportExperimental` 解读
+      - `WinSSL PSK` 当前按 unsupported 解读
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_backend_capability_matrix_quick_reference_truth_contract.sh`
+    - `bash tests/scripts/test_backend_capability_matrix_quick_reference_truth_contract.sh`
+    - `npx prettier --write docs/BACKEND_CAPABILITY_MATRIX.md`
+    - `git diff --check`
+  - 当前结论：
+    - `docs/BACKEND_CAPABILITY_MATRIX.md` 这次暴露的不是 section 细节错，
+      而是 quick reference 自己已经跑得比 source truth 更快
+    - 这种“顶层摘要比下钻文档更激进”的漂移现在已被 focused contract
+      冻结住
+  - 当前下一条真实剩余工作：
+    - 继续审查 `docs/BACKEND_CAPABILITY_MATRIX.md`
+      里其它非自动映射行/摘要说明，确认是否还存在
+      `summary > source/backend-specific truth` 的残留
 - [completed] `ISSLSessionResumption` runtime residual classification tightening 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-isslsessionresumption-runtime-residual-classification-tightening.md`

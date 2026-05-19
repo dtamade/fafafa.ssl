@@ -73,6 +73,26 @@
   - 所以 capability 文档里，顶部 summary 反而要比具体行更保守
   - 后续扫 capability matrix / KnownIssues 时，也要优先盯 summary / 结论段
 
+- `BACKEND_CAPABILITY_MATRIX.md` 这次又证明了一个更具体的模式：
+  - 顶层 quick reference 不只是会和细节段落打架
+  - 它甚至可能直接违背它自己刚写下来的 precedence 规则
+  - 这次最典型的 3 处就是：
+    - `WinSSL TLS 1.3`
+      - source 明确受 Windows / Schannel 版本门控
+      - quick reference 却先写成了无条件 `✅`
+    - `WinSSL PSK`
+      - WinSSL 专项矩阵已明确 `❌ 不支持`
+      - quick reference 却先写成了 `⚠️`
+    - `FreePascal ALPN / SNI`
+      - 顶层文档自己声明这两行按 `*Support` 字段解读
+      - source 当前却仍是 `sslSupportExperimental`
+      - quick reference 却先写成了稳定 `✅`
+
+- 这说明 capability 审查里最危险的不一定是“大段说明文字”，
+  反而可能是首页那几个看起来最省事的单元格：
+  - 因为读者最容易只扫一眼 quick reference 就形成心智模型
+  - 一旦 quick reference 比 source/backend truth 更激进，后面再多详细解释都很难补救
+
 - session-resumption residual 这条线现在终于可以稳定冻结了：
   - `tests/contract/test_backend_contract.pas`
     是 compatibility mirror proof
