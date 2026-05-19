@@ -4409,3 +4409,24 @@
     - `WithSecurityFirst` 不等于默认 FIPS
     - `RequirePKCS11Support` 是 runtime-aware requirement
     - `FIPS + PKCS#11` 场景是需求表达，不是当前默认 shipped deployment 保证
+
+- 顺着这条线继续往行为层收口时，又确认了一个更真实的残余点：
+  - 问题已经不在 guide wording 本身
+  - 而在于 `WithSecurityFirst` / `CreateSecurityFirstRequirements` 还缺一个真正可执行的 downstream proof
+  - 否则下次很容易又回到“security-first 是不是其实默认偏向 FIPS”的重复争论
+
+- 这次补上的最小正确证据因此没有继续依赖本机环境，而是直接用 mock backends 固定能力矩阵：
+  - 一个 non-FIPS backend：
+    - 更符合当前 security-first 的综合安全/性能评分
+  - 一个 FIPS-capable backend：
+    - 只有在显式 `PreferFIPSCompliant=True` 时才应该翻盘
+
+- 新 focused contract 现在已经直接证明了 3 个关键事实：
+  - `CreateSecurityFirstRequirements.PlatformPreferences.PreferFIPSCompliant = False`
+  - 默认 security-first selector 会选择更强的 non-FIPS backend，而不是因为“有 FIPS backend 存在”就自动转向它
+  - `WithSecurityFirst` builder 路径默认构建出来的 context 同样来自 non-FIPS backend
+
+- 这条 proof 还顺手把一条流程层误差也校正了：
+  - `task_plan.md` 顶部原先那句“goal 工具保留已完成 goal、无法再次新建”已经过时
+  - 当前线程级 goal 其实仍是 active
+  - 因而后续应继续把 `task_plan.md` / `docs/plans/...` 视为同一总 goal 下的子批记录，而不是假设 goal 工具已经失效

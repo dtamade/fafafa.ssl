@@ -6,7 +6,7 @@
 
 > note:
 > - 本轮用户要求“执行一个 goal 全面的验证并记录”。
-> - 线程内 goal 工具当前保留了一条已完成 goal，无法再次新建；因此这份 `task_plan.md` 与新增 `docs/plans/...` 将作为本轮新的权威 goal 记录。
+> - 线程级 goal 当前仍处于 active 状态；这份 `task_plan.md` 与新增 `docs/plans/...` 继续作为该总 goal 下各个 focused 批次的权威执行记录。
 
 ## Current Status
 
@@ -2985,3 +2985,26 @@
    - 当前批收口后默认下一步应为：
      - 继续找 builder/selector 入口 docs/examples 是否还把“需求表达”误写成“当前默认环境必然满足”
      - 或回到 selector/implementation 的下一个 downstream proof gap
+76. `security-first FIPS independence contract` 已完成 focused 收口，并应作为当前 interface/backend completeness 的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-security-first-fips-independence-contract.md`
+   - 当前已确认的真实 proof gap：
+     - active guide 虽然已经写明：
+       - `WithSecurityFirst` 不等于默认 FIPS
+     - 但 builder / selector 层还缺少可执行证明来说明：
+       - `CreateSecurityFirstRequirements` 默认不会设置 `PreferFIPSCompliant=True`
+       - `WithSecurityFirst` 在存在 FIPS-capable backend 时，也不会把它当成默认偏好
+   - 当前最小正确修法已落地：
+     - 不改生产 selector / builder 代码
+     - 只新增一条 environment-independent mock contract：
+       - 默认 security-first 选择 non-FIPS backend
+       - 只有显式打开 `PreferFIPSCompliant` 后，选择结果才切到 FIPS backend
+       - `WithSecurityFirst` builder 默认构建出的 context 仍来自 non-FIPS backend
+   - 当前 focused proof 已覆盖：
+     - `mkdir -p tmp/test_security_first_fips_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_security_first_fips_units -FEtmp/test_security_first_fips_units -otmp/test_security_first_fips_units/test_security_first_fips_independence_contract tests/test_security_first_fips_independence_contract.pas && ./tmp/test_security_first_fips_units/test_security_first_fips_independence_contract`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 继续找其它“guide truth 已修正，但 behavior proof 仍未闭环”的 builder / selector / facade 入口
+     - 优先复审：
+       - deprecated context-level SNI 是否仍由高层入口默认传播
+       - capability dual-truth 在 serializer / selector / docs 之间是否还有残余漂移

@@ -9305,3 +9305,46 @@
   - result: PASS
   - summary:
     - current backend-selection-guide runtime-truth batch has no whitespace or patch-format issues
+
+### Security-First FIPS Independence Contract
+
+- `get_goal`
+  - result: ACTIVE
+  - summary:
+    - thread-level goal is still active for the long-running interface/backend completeness closure
+    - the stale note in `task_plan.md` about the goal tool being unavailable needed correction
+
+- `sed -n '220,260p' src/fafafa.ssl.backend.selector.pas`
+- `sed -n '500,520p' src/fafafa.ssl.backend.selector.pas`
+- `sed -n '3018,3032p' src/fafafa.ssl.context.builder.pas`
+- `sed -n '1,220p' tests/test_backend_selector_security_first_viability.pas`
+  - result: PASS
+  - summary:
+    - confirmed the real residual gap was not production behavior drift already visible in source
+    - the missing piece was focused proof that `WithSecurityFirst` is not a default FIPS preference path
+
+- add `docs/plans/2026-05-19-security-first-fips-independence-contract.md`
+  - purpose:
+    - record the bounded batch that closes the behavior-level proof gap under the broader interface/backend completeness goal
+
+- add `tests/test_security_first_fips_independence_contract.pas`
+  - change:
+    - build an environment-independent mock backend matrix
+    - prove `CreateSecurityFirstRequirements` defaults `PreferFIPSCompliant=False`
+    - prove default security-first selection prefers a stronger non-FIPS backend
+    - prove explicit `PreferFIPSCompliant=True` is the step that flips selection to the FIPS backend
+    - prove `WithSecurityFirst` builder still constructs a non-FIPS context by default
+
+- `mkdir -p tmp/test_security_first_fips_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_security_first_fips_units -FEtmp/test_security_first_fips_units -otmp/test_security_first_fips_units/test_security_first_fips_independence_contract tests/test_security_first_fips_independence_contract.pas && ./tmp/test_security_first_fips_units/test_security_first_fips_independence_contract`
+  - result: PASS
+  - summary:
+    - contract passed green with the controlled mock matrix
+    - default selection chose non-FIPS `sslOpenSSL`
+    - explicit FIPS preference flipped selection to FIPS-capable `sslWinSSL`
+    - `WithSecurityFirst` builder path successfully built a non-FIPS context
+    - compile emitted existing unrelated warnings in shared units, but no failure
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current security-first/FIPS-independence batch has no whitespace or patch-format issues
