@@ -29,6 +29,7 @@ end;
 procedure HandleClient(AContext: ISSLContext; var AClientSocket: TSocketHandle);
 var
   Connection: ISSLConnection;
+  ConnectionInfo: ISSLConnectionInfo;
   Request, SelectedProto, Body: string;
 begin
   try
@@ -42,10 +43,14 @@ begin
     if not ReadHTTPRequest(Connection, Request) then
       raise Exception.Create('客户端未发送有效请求');
 
-    try
-      SelectedProto := Connection.GetSelectedALPNProtocol;
-    except
-      SelectedProto := '';
+    SelectedProto := '';
+    if Supports(Connection, ISSLConnectionInfo, ConnectionInfo) then
+    begin
+      try
+        SelectedProto := ConnectionInfo.GetSelectedALPNProtocol;
+      except
+        SelectedProto := '';
+      end;
     end;
 
     Body := '{"selected_protocol":"' + JsonEscape(SelectedProto) + '"}';

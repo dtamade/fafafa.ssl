@@ -2,6 +2,57 @@
 
 ## 2026-05-19
 
+### ALPN Owner-Path Active Guidance
+
+- add `docs/plans/2026-05-19-alpn-owner-path-active-guidance.md`
+  - change:
+    - define the bounded active guide/example truth batch for ALPN owner-path drift
+
+- add `tests/scripts/test_alpn_owner_path_active_guidance_contract.sh`
+  - change:
+    - lock that active guide/example no longer teach `GetSelectedALPNProtocol` as an `ISSLConnection` primary path
+
+- read-only evidence triage
+  - summary:
+    - `src/fafafa.ssl.base.pas` still marks:
+      - `deprecated 'Use ISSLConnectionInfo.GetSelectedALPNProtocol'`
+    - active residual hits were confirmed in:
+      - `docs/guides/WINSSL_USER_GUIDE.md`
+      - `examples/https_server/https_server_alpn.pas`
+
+- update `docs/guides/WINSSL_USER_GUIDE.md`
+  - change:
+    - ALPN capability bullet now explicitly points readers at:
+      - `ISSLConnectionInfo.GetSelectedALPNProtocol`
+
+- update `examples/https_server/https_server_alpn.pas`
+  - change:
+    - add `ConnectionInfo: ISSLConnectionInfo`
+    - replace direct `Connection.GetSelectedALPNProtocol` read with:
+      - `if Supports(Connection, ISSLConnectionInfo, ConnectionInfo) then`
+      - `SelectedProto := ConnectionInfo.GetSelectedALPNProtocol;`
+
+- `bash -n tests/scripts/test_alpn_owner_path_active_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - new ALPN owner-path guidance contract syntax is valid
+
+- `bash tests/scripts/test_alpn_owner_path_active_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - active ALPN guide/example now prefer the `ISSLConnectionInfo` owner path
+
+- `mkdir -p tmp/example_https_server_alpn && fpc -B -Fu./src -Fu./examples -FUtmp/example_https_server_alpn -FEtmp/example_https_server_alpn -otmp/example_https_server_alpn/https_server_alpn examples/https_server/https_server_alpn.pas`
+  - result: PASS
+  - summary:
+    - updated ALPN server example still compiles after moving to the owner-surface accessor
+    - compile emitted existing unrelated warnings/notes only
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current ALPN owner-path guidance batch has no whitespace or patch-format issues
+
 ### ReadString Active Example Signature Truth
 
 - add `docs/plans/2026-05-19-readstring-active-example-signature-truth.md`

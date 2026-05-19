@@ -257,7 +257,7 @@ end;
 
 - ✅ ALPN 配置（SetALPNProtocols/GetALPNProtocols）
 - ✅ ALPN 缓冲区构建和协商
-- ✅ 协商结果获取（GetSelectedALPNProtocol）
+- ✅ 协商结果获取（优先通过 `ISSLConnectionInfo.GetSelectedALPNProtocol`）
 
 **Phase 5: 服务器 TLS 握手**
 

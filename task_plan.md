@@ -10,6 +10,28 @@
 
 ## Current Status
 
+- [completed] ALPN owner-path active guidance 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-alpn-owner-path-active-guidance.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_alpn_owner_path_active_guidance_contract.sh`
+  - 当前已修正的活跃入口：
+    - `docs/guides/WINSSL_USER_GUIDE.md`
+    - `examples/https_server/https_server_alpn.pas`
+  - 当前已收掉的真问题：
+    - `GetSelectedALPNProtocol` 当前已是 `ISSLConnectionInfo` owner surface 的 deprecated mirror
+    - 但活跃 WinSSL 指南和 ALPN server example 之前还把它教成 `ISSLConnection` 普通主路径
+    - 活跃入口现在统一回到：
+      - guide 文案显式指向 `ISSLConnectionInfo.GetSelectedALPNProtocol`
+      - example 先 `Supports(Connection, ISSLConnectionInfo, ...)` 再读取协商结果
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_alpn_owner_path_active_guidance_contract.sh`
+    - `bash tests/scripts/test_alpn_owner_path_active_guidance_contract.sh`
+    - `fpc -B -Fu./src -Fu./examples -FUtmp/example_https_server_alpn -FEtmp/example_https_server_alpn -otmp/example_https_server_alpn/https_server_alpn examples/https_server/https_server_alpn.pas`
+    - `git diff --check`
+  - 当前结论：
+    - 这批修掉的是 active guidance 对 deprecated ALPN mirror 的回流，不是 backend 实现缺口
+    - 后续再看 `ISSLConnectionInfo` owner-path completeness 时，不应再把这条 ALPN 活跃示例误导当成未审问题
 - [completed] `ReadString` 活跃示例签名真相 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-readstring-active-example-signature-truth.md`

@@ -2,6 +2,31 @@
 
 ## 2026-05-19
 
+- 在修完 `ReadString` 活跃示例签名漂移之后，继续扫 `ISSLConnection` / owner-surface 残口时，又压实了另一条高入口指导面回流：
+  - `GetSelectedALPNProtocol` 当前在源码里已经是：
+    - `deprecated 'Use ISSLConnectionInfo.GetSelectedALPNProtocol'`
+  - 但活跃指导面仍有两处把它教成 `ISSLConnection` 普通主路径：
+    - `docs/guides/WINSSL_USER_GUIDE.md`
+    - `examples/https_server/https_server_alpn.pas`
+
+- 这条问题的风险并不只是文案不够新，而是会把已经 demote 的 mirror surface 又带回主路径：
+  - guide 会让读者觉得“ALPN 协商结果就该直接从 connection 取”
+  - example 会把这种旧路径固化成可复制代码
+  - 结果会冲淡前面已经收口的 `ISSLConnectionInfo` owner-surface 真相
+
+- 当前这批的最小正确修法同样很清楚：
+  - 不改 ALPN runtime/backends
+  - 不改 public signature
+  - 只把活跃 guide/example 统一回 owner path：
+    - guide 明确指向 `ISSLConnectionInfo.GetSelectedALPNProtocol`
+    - example 先 `Supports(Connection, ISSLConnectionInfo, ...)`
+      再读取协商结果
+
+- 这批收口后的新基线应明确保留：
+  - `GetSelectedALPNProtocol` 在 `ISSLConnection` 上当前只应被视为 compatibility-core mirror
+  - 活跃 guide/example 不再应把它教成普通主路径
+  - 后续若继续做 `ISSLConnectionInfo` / owner-surface completeness 审查，可以把这条 ALPN 活跃示例误导视为已收口问题
+
 - 在 `ISSLConnection` convenience surface 路线真相收口之后，继续扫活跃 guide/reference/example 时，又压实了一条更具体的用法级漂移：
   - 多份活跃入口还在把 `ReadString` 当成“直接返回字符串”的旧签名
   - 但当前 shipped source 真相一直是：
