@@ -312,6 +312,56 @@
   - summary:
     - the performance/selection truth batch is whitespace-clean
 
+### Backend Capability Matrix Version History Truth
+
+- `rg -n "FAFAFA_SSL_VERSION_STRING|FAFAFA_SSL_INTERFACE_VERSION" src/fafafa.ssl.base.pas`
+- `rg -n "^### v1\\.|^## v1\\.|1\\.5\\.0|v1\\.4\\.1|v1\\.4\\.0|v1\\.4\\.3" README.md docs/RELEASE_NOTES.md docs/BACKEND_CAPABILITY_MATRIX.md docs/ROADMAP.md`
+- `sed -n '445,520p' docs/BACKEND_CAPABILITY_MATRIX.md`
+  - result: PASS
+  - summary:
+    - static comparison confirmed the top-level backend matrix still started its
+      bottom version section from `v1.4.1` / `v1.4.0` / `v1.3.0`
+    - source / roadmap / release notes already said:
+      - current stable version is `v1.5.0`
+      - current release-control truth belongs to `ROADMAP` and `RELEASE_READINESS_V1.5.0`
+
+- add `docs/plans/2026-05-19-backend-capability-matrix-version-history-truth.md`
+  - change:
+    - recorded the bounded docs-only plan for current-version / historical-milestone truth alignment
+
+- add `tests/scripts/test_backend_capability_matrix_version_history_truth_contract.sh`
+  - change:
+    - added a focused shell contract that guards:
+      - the root matrix publishes current stable version `v1.5.0` first
+      - the root matrix points to roadmap/release-readiness/release-notes
+      - older `v1.4.x` / `v1.3.0` items are explicitly demoted to capability milestones
+
+- update `docs/BACKEND_CAPABILITY_MATRIX.md`
+  - change:
+    - replaced the bare `版本历史` entrypoint with a current-release section
+    - relabeled older items as historical capability milestones instead of implicit current-version truth
+
+- `bash -n tests/scripts/test_backend_capability_matrix_version_history_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new version-history truth contract syntax is valid
+
+- `bash tests/scripts/test_backend_capability_matrix_version_history_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first proved the contract itself still used shell-unsafe backtick quoting and tried to execute the version string
+    - GREEN after switching those literal checks to safe quoting proves the root matrix now stays aligned with current v1.5.0 release truth
+
+- `npx prettier --write docs/BACKEND_CAPABILITY_MATRIX.md`
+  - result: PASS
+  - summary:
+    - the backend capability matrix remains formatter-stable after the version-history cleanup
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - the version-history truth batch is whitespace-clean
+
 ### ISSLSessionResumption Runtime Residual Classification Tightening
 
 - add `docs/plans/2026-05-19-isslsessionresumption-runtime-residual-classification-tightening.md`

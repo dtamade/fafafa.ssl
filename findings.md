@@ -114,6 +114,25 @@
   - 真正的性能 truth 要回到 benchmark runner / baseline / fresh output
   - 真正的选型建议要回到 capability-aware recommendation
 
+- `BACKEND_CAPABILITY_MATRIX.md` 底部的 `版本历史` 也属于同一种 summary drift：
+  - 它表面上只是历史说明
+  - 但如果根入口直接从 `v1.4.1` / `v1.4.0` 开始列，就会把读者带回
+    “这页自己已经覆盖当前 release truth”的错觉
+
+- 这再次说明一个路线图级原则：
+  - capability milestone
+  - release truth
+  - runtime truth
+  这三层不能混在同一段口径里
+  - 否则人会把“某版本曾经加过什么功能”
+    误判成“当前稳定版已经完整验证并正式发布了什么”
+
+- 根入口最稳的写法应该是：
+  - 先指向当前 stable/release-control 权威入口
+  - 再把旧里程碑降级成历史附录
+  - 这样 capability matrix 才不会变成一张混合了
+    当前路线图 + 历史公告 + 旧 milestone 的误导页
+
 - session-resumption residual 这条线现在终于可以稳定冻结了：
   - `tests/contract/test_backend_contract.pas`
     是 compatibility mirror proof

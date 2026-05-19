@@ -461,20 +461,31 @@ session/ticket 证据状态影响；因此固定 `x 倍`、固定 `ms` 或固定
 
 ---
 
-## 版本历史
+## 当前发布状态与历史里程碑
 
-### v1.4.1 (2026-05-02)
+**当前稳定版本**: `v1.5.0`
+
+**当前权威入口**:
+
+- [当前路线图](ROADMAP.md)
+- [Release Readiness v1.5.0](test_reports/RELEASE_READINESS_V1.5.0.md)
+- [Release Notes](RELEASE_NOTES.md)
+
+下面这些条目只保留 capability/capability-doc 相关的历史里程碑，不能替代当前
+`v1.5.0` 的 release/runtime truth。
+
+### v1.4.1 capability 里程碑 (2026-05-02)
 
 - ✅ OpenSSL 后端添加 Early Data 支持
 - ✅ OpenSSL 后端添加 Server OCSP Stapling 支持
 
-### v1.4.0 (2026-05-02)
+### v1.4.0 capability 里程碑 (2026-05-02)
 
 - ✅ FreePascal 后端 Early Data 支持
 - ✅ 完整的 TLS 1.3 实现
 - ✅ Certificate Transparency 支持
 
-### v1.3.0
+### v1.3.0 capability 里程碑
 
 - ✅ WinSSL 后端
 - ✅ MbedTLS 后端

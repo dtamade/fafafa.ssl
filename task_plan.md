@@ -10,6 +10,35 @@
 
 ## Current Status
 
+- [completed] `BACKEND_CAPABILITY_MATRIX` version-history truth alignment
+  已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-backend-capability-matrix-version-history-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_backend_capability_matrix_version_history_truth_contract.sh`
+  - 当前已收紧的根入口版本口径：
+    - `docs/BACKEND_CAPABILITY_MATRIX.md`
+      现已先指向：
+      - 当前稳定版本 `v1.5.0`
+      - `ROADMAP.md`
+      - `RELEASE_READINESS_V1.5.0.md`
+      - `RELEASE_NOTES.md`
+    - 原先裸列的 `v1.4.1` / `v1.4.0` / `v1.3.0`
+      现在都已降级成 historical capability milestone
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_backend_capability_matrix_version_history_truth_contract.sh`
+    - `bash tests/scripts/test_backend_capability_matrix_version_history_truth_contract.sh`
+    - `npx prettier --write docs/BACKEND_CAPABILITY_MATRIX.md`
+    - `git diff --check`
+  - 当前结论：
+    - 这次暴露的不是 capability 内容本身，而是根入口底部仍在拿旧 milestone
+      冒充当前 release truth
+    - 现在这页已经不会再把 `v1.4.x` 历史条目误读成当前 `v1.5.0`
+      发布口径
+  - 当前下一条真实剩余工作：
+    - 继续从根入口 capability/doc truth 线往外扩，
+      审查还有哪些 active docs 仍保留旧 milestone /
+      phase-snapshot / release-announcement 式口径
 - [completed] `BACKEND_CAPABILITY_MATRIX` performance/selection truth alignment
   已完成 focused 收口：
   - 新增计划：
