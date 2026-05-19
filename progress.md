@@ -137,6 +137,39 @@
   - summary:
     - follow-up Windows password assertion fix is whitespace-clean before the next commit/push
 
+- `git commit -m "test(winssl): accept published fail-closed callback proof"`
+  - result: PASS
+  - summary:
+    - recorded the follow-up Windows callback assertion fix in commit `26bad43`
+
+- `git push origin master`
+  - result: PASS
+  - summary:
+    - pushed `26bad43` to `origin/master`
+
+- `gh workflow run "Wave B B2 Manual Gate (Template)" --ref master -f run_id=winssl_callback_markers_fix2_20260519_191025`
+  - result: PASS
+  - summary:
+    - dispatched the final verification run for the Windows password assertion follow-up
+
+- `gh run watch 26093405878`
+  - result: PASS
+  - summary:
+    - `windows-gate`, `linux-gate`, `macos-gate`, and `summary` all completed successfully
+
+- `gh run download 26093405878 -n wave-b-windows-winssl_callback_markers_fix2_20260519_191025 -D tmp/gh_run_26093405878/windows`
+  - result: PASS
+  - summary:
+    - downloaded the final successful Windows evidence artifact locally
+
+- `rg -n "\\[WINSSL-RUNTIME\\] callback_surface|\\[WINSSL-RUNTIME\\] suite_summary|\\[WINSSL-RUNTIME\\] suite_end" tmp/gh_run_26093405878/windows/winssl_runtime_suite_winssl_callback_markers_fix2_20260519_191025.log`
+  - result: PASS
+  - summary:
+    - final Windows artifact now contains the exact closeout evidence:
+      - `[WINSSL-RUNTIME] callback_surface verify=pass password=unsupported info=pass`
+      - `[WINSSL-RUNTIME] suite_summary passed=8 failed=0 total=8 success_rate=100`
+      - `[WINSSL-RUNTIME] suite_end status=PASS`
+
 ### WinSSL FIPS Capability Truth Tightening
 
 - add `docs/plans/2026-05-19-winssl-fips-capability-truth-tightening.md`

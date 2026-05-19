@@ -10,7 +10,7 @@
 
 ## Current Status
 
-- [in_progress] WinSSL callback runtime proof markers 正在收口：
+- [completed] WinSSL callback runtime proof markers 已完成收口：
   - 新增计划：
     - `docs/plans/2026-05-19-winssl-callback-runtime-proof-markers.md`
   - 当前已确认的 proof gap：
@@ -51,12 +51,28 @@
     - `bash -n tests/scripts/test_winssl_runtime_callback_markers_contract.sh`
     - `bash tests/scripts/test_winssl_runtime_callback_markers_contract.sh`
     - `git diff --check`
-  - 当前下一步：
-    - 提交推送 password fail-closed assertion fix
-    - 重新 dispatch `Wave B B2 Manual Gate (Template)`
-    - 再次下载 Windows transcript，确认：
-      - `[WINSSL-RUNTIME] callback_surface verify=pass password=unsupported info=pass`
-    - 同时确认 broader runtime suite 回到全绿
+  - 当前最终验证已完成：
+    - commit:
+      - `12e62a2`
+      - `26bad43`
+    - GitHub Actions:
+      - 首轮 root-cause fix 验证：
+        - run `26092828923`
+        - 证明 marker 已收敛到：
+          - `[WINSSL-RUNTIME] callback_surface verify=pass password=unsupported info=pass`
+        - 同时暴露出 Windows comprehensive test 对 fail-closed 文案判断过窄
+      - 第二轮 follow-up 验证：
+        - run `26093405878`
+        - `windows-gate` / `linux-gate` / `macos-gate` / `summary` 全部 `success`
+        - Windows artifact 现已同时证明：
+          - `[WINSSL-RUNTIME] callback_surface verify=pass password=unsupported info=pass`
+          - `[WINSSL-RUNTIME] suite_summary passed=8 failed=0 total=8 success_rate=100`
+          - `[WINSSL-RUNTIME] suite_end status=PASS`
+  - 当前结论：
+    - WinSSL callback runtime proof marker 已从“抓错测试对象导致的 `missing/missing/missing`”
+      收敛到
+      artifact 可 grep 的稳定 Windows runtime truth
+    - broader WinSSL runtime suite 也已回到全绿
 - [completed] WinSSL FIPS capability truth tightening 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-winssl-fips-capability-truth-tightening.md`

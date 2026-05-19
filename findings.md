@@ -2,6 +2,31 @@
 
 ## 2026-05-19
 
+- 第三轮 Windows CI (`26093405878`) 证明这条 callback runtime proof 链已经真正闭环：
+  - `windows-gate` / `linux-gate` / `macos-gate` / `summary` 全部 `success`
+  - 成功 artifact `wave-b-windows-winssl_callback_markers_fix2_20260519_191025`
+    内现在可以直接 grep 到：
+    - `[WINSSL-RUNTIME] callback_surface verify=pass password=unsupported info=pass`
+    - `[WINSSL-RUNTIME] suite_summary passed=8 failed=0 total=8 success_rate=100`
+    - `[WINSSL-RUNTIME] suite_end status=PASS`
+
+- 这也把整个问题链最终分成了两个已经验证完成的子结论：
+  - 第一层 root cause：
+    - marker 提取链之前抓错了 Windows runtime truth source
+  - 第二层 follow-up root cause：
+    - Windows comprehensive test 对 password callback fail-closed 文案判断过窄
+  - 这两层都已经被修正并经过真实 Windows artifact 证明
+
+- 这批之后应保留的 durable truth 是：
+  - WinSSL partial callback publication 的 Windows runtime artifact 现在有稳定 marker，可直接回答：
+    - verify callback 已发布
+    - info callback 已发布
+    - password callback 当前仍为 unsupported / not published
+  - 后续再看这条链，不需要重新读源码推理，只要优先检查成功 artifact 里的：
+    - `callback_surface`
+    - `suite_summary`
+    - `suite_end`
+
 - 第二轮 Windows CI (`26092828923`) 把这条链又往前推了一步：
   - artifact 里已经明确出现了：
     - `[WINSSL-RUNTIME] callback_surface verify=pass password=unsupported info=pass`
