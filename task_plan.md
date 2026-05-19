@@ -10,6 +10,95 @@
 
 ## Current Status
 
+- [completed] `backend selector design doc truth alignment`
+  当前 focused 目标：
+  - 收掉
+    `BACKEND_ABSTRACTION_LAYER_DESIGN`
+    /
+    `BACKEND_SELECTOR_DESIGN`
+    里仍在传播的：
+    - 旧 selector / builder 草案 API
+    - `FreePascal (Future)` 叙事
+    - 设计层重复维护旧 capability 表
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-backend-selector-design-doc-truth-alignment.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_backend_selector_design_doc_truth_contract.sh`
+  - 收口 design docs：
+    - `docs/reference/BACKEND_ABSTRACTION_LAYER_DESIGN.md`
+    - `docs/reference/BACKEND_SELECTOR_DESIGN.md`
+  当前预判：
+  - 这批的真实问题
+    不是 backend source 失真，
+    而是 design/reference 层
+    继续把：
+    - `WithRequirements([br...])`
+    - `WithAutoBackend`
+    - `TBackendSelector`
+    - `WithPreferredBackend`
+    - selector env vars
+    这些草案 surface
+    写成当前 public API
+  - 同时还把
+    `FreePascal`
+    留在
+    `Future`
+    叙事里，
+    会持续把后续路线判断带偏
+  当前验证策略：
+  - 用一条 source-backed focused shell contract
+    同时冻结：
+    - selector / builder 当前真实 public API
+    - `FreePascal` 活跃 backend 真相
+    - `WinSSL`
+      `OCSPStaplingSupport=sslSupportNone`
+      /
+      `EarlyDataSupport=sslSupportNone`
+      真相
+    - design docs 当前必须出现/必须消失的表述
+  当前最终收口证据：
+  - 新 contract 第一次运行时，
+    先暴露的是 contract 自己的反引号 quoting 问题，
+    不是产品 drift
+  - 修正 quoting 后，
+    第一处真实 RED
+    就是 abstraction doc
+    仍未声明
+    `FreePascal`
+    已是活跃 backend
+  - GREEN 后证明：
+    - abstraction doc
+      不再把
+      `FreePascal`
+      写成 future
+    - selector doc
+      不再把旧 draft API
+      写成当前 public surface
+    - design docs
+      改成引用 canonical capability truth，
+      而不是再维护一套易漂移大表
+  focused verification 已通过：
+  - `bash -n tests/scripts/test_backend_selector_design_doc_truth_contract.sh`
+  - `bash tests/scripts/test_backend_selector_design_doc_truth_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - 这批收掉的是
+    “设计文档继续定义错误接口地图”
+    这类路线级 drift，
+    不是 selector 实现缺口
+  当前下一条真实工作：
+  - 继续审查
+    backend-specific / guide / design docs
+    是否还残留
+    “应用层工作流”
+    和
+    “backend 已发布 capability”
+    混写的入口
+  - `MbedTLS`
+    `OCSP Stapling`
+    相关表述
+    仍是高价值下一候选
 - [completed] `server-side optional surface active-doc truth contract`
   当前 focused 目标：
   - 给

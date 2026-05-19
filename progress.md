@@ -4,6 +4,69 @@
 
 ## 2026-05-20
 
+### Backend Selector Design Doc Truth Alignment
+
+- `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "/home/dtamade/projects/fafafa.ssl"`
+  - result: PASS
+  - summary:
+    - no catchup output surfaced
+    - current batch could proceed from the live worktree without session-recovery repair
+
+- `sed -n '1,220p' /home/dtamade/.codex/skills/planning-with-files/SKILL.md`
+- `rg -n "BACKEND_ABSTRACTION_LAYER_DESIGN|BACKEND_SELECTOR_DESIGN|WithAutoBackendSelection|TBackendSelector|WithPreferredBackend|WithFallbackBackend|WithAllowPartialMatch|EarlyDataSupport|OCSPStaplingSupport" /home/dtamade/.codex/memories/MEMORY.md`
+- `mcp__ace_tool__.search_context(...)`
+- `sed -n '1,240p' docs/reference/BACKEND_ABSTRACTION_LAYER_DESIGN.md`
+- `sed -n '1,260p' docs/reference/BACKEND_SELECTOR_DESIGN.md`
+- `rg -n "TBackendSelector|TBackendSelectionResult|WithRequirements|WithAutoBackend|WithPreferredBackend|WithFallbackBackend|WithAllowPartialMatch|FAFAFA_SSL_BACKEND" src docs tests -S`
+- `sed -n '1,220p' src/fafafa.ssl.context.builder.pas`
+- `sed -n '1,260p' src/fafafa.ssl.backend.selector.pas`
+  - result: PASS
+  - summary:
+    - confirmed a real design-layer drift:
+      - current source already exposes function-based selector APIs and `WithAutoBackendSelection(...)`
+      - but active design docs still published multiple retired draft surfaces and still treated `FreePascal` as future in abstraction design
+
+- add `docs/plans/2026-05-20-backend-selector-design-doc-truth-alignment.md`
+- add `tests/scripts/test_backend_selector_design_doc_truth_contract.sh`
+  - change:
+    - recorded a bounded design-doc truth batch
+    - added a focused source-backed contract freezing:
+      - current selector / builder public API names
+      - `FreePascal` active-backend truth
+      - `WinSSL` early-data / OCSP none-capability truth
+      - required present / absent wording in both active design docs
+
+- `bash -n tests/scripts/test_backend_selector_design_doc_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new focused selector-design contract syntax was valid
+
+- `bash tests/scripts/test_backend_selector_design_doc_truth_contract.sh`
+  - result: FAIL -> FAIL -> PASS
+  - summary:
+    - first failure was contract-side, not product-side:
+      - unescaped backticks in the new doc needle triggered shell command substitution
+    - after fixing quoting,
+      the first real RED proved a live design drift:
+      - abstraction design doc still did not state that `FreePascal` is already an active backend
+    - GREEN after the doc update proves:
+      - abstraction design no longer presents `FreePascal` as future
+      - selector design no longer publishes retired draft APIs as current public surface
+      - both design docs now defer detailed capability truth to the canonical matrix instead of maintaining another stale capability table
+
+- update design docs:
+  - `docs/reference/BACKEND_ABSTRACTION_LAYER_DESIGN.md`
+  - `docs/reference/BACKEND_SELECTOR_DESIGN.md`
+  - change:
+    - rewrote stale exact-interface snippets into current abstract entrypoints
+    - replaced old `WithRequirements([br...])` / `WithAutoBackend` / `TBackendSelector` family wording with current `TSSLRequirements` + `WithAutoBackendSelection(...)` / `SelectBestBackend(...)` / `SelectBestBackends(...)`
+    - removed `FreePascal (Future)` drift and reduced duplicated capability-table truth
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remain after the design-doc closeout
+
 ### Server-Side Optional Surface Active-Docs Truth Contract
 
 - `rg -n "ISSLServerOCSPStaplingContext|ISSLEarlyDataContext|ISSLEarlyDataConnection|OCSPStaplingSupport=sslSupportNone|EarlyDataSupport=sslSupportNone|当前 backend 不暴露|当前 capability 不发布|public surface" docs/BACKEND_CAPABILITY_MATRIX.md docs/reference/*.md docs/guides/*.md README.md -S`

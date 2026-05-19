@@ -2,6 +2,87 @@
 
 ## 2026-05-20
 
+- 这批说明，
+  design/reference 文档
+  本身也可能成为
+  “开发路线漂移源”，
+  即使：
+  - source truth 是对的
+  - canonical matrix 是对的
+  - active guides 也已经基本对齐
+
+- `BACKEND_ABSTRACTION_LAYER_DESIGN`
+  这次最危险的点
+  不是某一行 capability 写错，
+  而是它继续把
+  `FreePascal`
+  放在
+  `Future`
+  位置，
+  这会直接把读者的架构心智
+  拉回旧阶段
+
+- `BACKEND_SELECTOR_DESIGN`
+  暴露的是另一类更隐蔽的 drift：
+  - 文档在描述一个
+    “看起来合理”
+    但当前 source 里并不存在的
+    public API 家族
+  - 例如：
+    - `TBackendSelector`
+    - `TBackendSelectionResult`
+    - `WithAutoBackend`
+    - `WithPreferredBackend`
+    - `WithFallbackBackend`
+    - `WithAllowPartialMatch`
+    - dedicated selector env vars
+
+- 这类 drift
+  比普通文案错误更伤路线，
+  因为它不只是说错现状，
+  还会让后续开发/补测/补文档
+  围绕一个并不存在的接口层
+  继续做决策
+
+- selector 这一支现在更稳的文档策略是：
+  - design doc 只说明：
+    - 抽象关系
+    - 真实入口
+    - capability 映射原则
+  - backend 细粒度能力真值
+    统一下钻到
+    canonical matrix
+    和 dedicated backend pages
+  - 不再在 design doc
+    里复制一张容易过期的大表
+
+- 这批也再次证明，
+  focused contract 不应该只盯“哪些句子必须出现”，
+  还要盯
+  “哪些旧草案 surface 必须消失”。
+  对设计文档尤其如此，
+  因为旧 API 名字
+  一旦继续留在活跃文档里，
+  就会被误读成
+  “还没实现完”
+  而不是
+  “当前根本没发布”
+
+- `WinSSL`
+  这次虽然没有新实现变更，
+  但 design doc 里仍需要显式保留一条原则：
+  - 平台潜力
+    不等于
+    当前已发布 capability
+  - 所以
+    `OCSPStaplingSupport=sslSupportNone`
+    /
+    `EarlyDataSupport=sslSupportNone`
+    这类真相
+    不能在 selector / abstraction 设计层
+    被“系统可能支持”
+    这种表述冲淡
+
 - 这次补出来的不是新的实现问题，
   而是一类“验证空洞”：
   - server-side optional surface
