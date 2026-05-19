@@ -349,6 +349,8 @@ Ctx := TSSLContextBuilder.Create
   .BuildClient;
 ```
 
+注意：`WithSecurityFirst` 会优先满足 TLS 1.3、现代密码套件与安全评分；它本身不等于默认已进入 FIPS 路线。
+
 **等同于**:
 ```pascal
 Requirements := CreateSecurityFirstRequirements;
@@ -443,7 +445,9 @@ Ctx := TSSLContextBuilder.Create
 
 #### RequirePKCS11Support
 
-要求支持 PKCS#11。
+要求当前已发布 PKCS#11 capability；若当前没有任何已注册 backend 发布 `SupportsPKCS11=True`，自动选择会失败。
+
+在 OpenSSL 路径下，这又取决于 Provider / ENGINE runtime surface readiness。
 
 ```pascal
 Ctx := TSSLContextBuilder.Create
@@ -475,7 +479,7 @@ Ctx := TSSLContextBuilder.Create
 Ctx := TSSLContextBuilder.Create
   .RequireTLS13                           // 1. TLS 1.3
   .RequireCipher(sslCipherCHACHA20_POLY1305)  // 2. ChaCha20
-  .RequirePKCS11Support                   // 3. PKCS#11
+  .RequirePKCS11Support                   // 3. PKCS#11（取决于当前 runtime-aware capability）
   .PreferOSNative                         // 4. OS 原生
   .WithVerifyPeer                         // 5. 验证对端
   .WithSystemRoots                        // 6. 系统证书
@@ -536,6 +540,10 @@ Ctx := TSSLContextBuilder.Create
   .WithVerifyPeer
   .BuildClient;
 ```
+
+注意：这段代码表达的是需求，不保证当前默认 shipped backends 一定能自动满足。
+
+OpenSSL 默认构建 capability 不发布 FIPS，WinSSL 当前 capability 不发布 PKCS#11；如需这条路线，必须先准备专门 OpenSSL FIPS 模块/构建，并确认 PKCS#11 runtime surface 已发布。
 
 ### 场景 5: Windows 应用
 

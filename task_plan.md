@@ -2961,3 +2961,27 @@
    - 当前批收口后默认下一步应为：
      - 继续找其它 active reference/platform docs 是否仍把 OpenSSL 默认构建写成已发布 FIPS capability
      - 或继续回到 builder/selector/implementation completeness 的下一个 focused proof gap
+75. `backend selection guide runtime truth` 已完成 focused 收口，并应作为当前 builder/selector docs completeness 的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-backend-selection-guide-runtime-truth-sweep.md`
+   - 当前已确认的 active-guide drift：
+     - `WithSecurityFirst`
+       - 只写安全优先快捷方式，没有说明它不等于默认 FIPS 路线
+     - `RequirePKCS11Support`
+       - 只写“要求支持 PKCS#11”，没有说明这取决于当前已发布 capability，且可能失败
+     - “政府/金融系统”场景
+       - 直接把 `FIPS + PKCS#11` 组合成当前示例
+       - 但没有说明当前默认 shipped backends 不保证自动满足这条路线
+   - 当前最小正确修法已落地：
+     - 不改生产代码
+     - 只把 `docs/BACKEND_SELECTION_GUIDE.md` 重新锚回：
+       - `WithSecurityFirst` 不等于默认 FIPS
+       - `RequirePKCS11Support` = runtime-aware requirement
+       - `FIPS + PKCS#11` 场景 = 需求表达，不是当前默认部署必然成功
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_backend_selection_guide_runtime_truth_contract.sh`
+     - `bash tests/scripts/test_backend_selection_guide_runtime_truth_contract.sh`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 继续找 builder/selector 入口 docs/examples 是否还把“需求表达”误写成“当前默认环境必然满足”
+     - 或回到 selector/implementation 的下一个 downstream proof gap

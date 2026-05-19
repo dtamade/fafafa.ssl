@@ -4382,3 +4382,30 @@
 - 因而当前 capability/completeness 路线的 docs 真相又向前收了一层：
   - 不只是 `PKCS11/TPM`
   - `FIPS` 这一类“特殊构建/平台合规能力”也不能再被 active docs 冒充成默认 shipped capability
+
+- 顺着 builder/selector 入口继续往下看，还确认了一条比能力矩阵更靠近用户操作面的 drift：
+  - `BACKEND_SELECTION_GUIDE.md` 里虽然前几批已经修过部分 capability 表述
+  - 但几个最常被直接复制的入口示例，仍带着旧的静态心智
+
+- 当前压实的 3 个高风险入口是：
+  - `WithSecurityFirst`
+    - 看起来像“安全优先快捷方式”
+    - 但如果不额外写明，调用方很容易把它误读成“默认已经偏向 FIPS”
+  - `RequirePKCS11Support`
+    - 如果只写“要求支持 PKCS#11”
+    - 调用方看不到这其实依赖当前已注册 backend 的已发布 capability
+    - 也看不到 OpenSSL 路线还要再受 Provider / ENGINE runtime readiness 约束
+  - “政府/金融系统”场景
+    - 直接摆出 `FIPS + PKCS#11`
+    - 但不说明当前默认 shipped backends 未必能自动满足
+
+- 这类问题的风险比一般示例文案更高：
+  - 它会把“需求表达”和“当前部署一定可满足”混成一件事
+  - 结果是后续接口设计、选型、排障都从错误期望出发
+
+- 这批最小正确修法因此继续保持窄 scope：
+  - 不改 selector/builder 代码
+  - 只把 guide 入口重新锚回：
+    - `WithSecurityFirst` 不等于默认 FIPS
+    - `RequirePKCS11Support` 是 runtime-aware requirement
+    - `FIPS + PKCS#11` 场景是需求表达，不是当前默认 shipped deployment 保证

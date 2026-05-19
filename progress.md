@@ -9260,3 +9260,48 @@
   - result: PASS
   - summary:
     - current active FIPS docs-truth batch has no whitespace or patch-format issues
+
+### Backend Selection Guide Runtime Truth Sweep
+
+- add `docs/plans/2026-05-19-backend-selection-guide-runtime-truth-sweep.md`
+  - purpose:
+    - record the bounded batch that realigns the builder/selector entry guide with current runtime-aware truth
+
+- add `tests/scripts/test_backend_selection_guide_runtime_truth_contract.sh`
+  - change:
+    - guard that:
+      - `WithSecurityFirst` is no longer presented as a default FIPS shortcut
+      - `RequirePKCS11Support` is described as a runtime-aware requirement
+      - the government/finance scenario no longer pretends current default shipped backends must satisfy `FIPS + PKCS#11`
+
+- `bash -n tests/scripts/test_backend_selection_guide_runtime_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new backend-selection-guide shell contract syntax is valid after one quoting cleanup
+
+- `bash tests/scripts/test_backend_selection_guide_runtime_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - first contract-run issue:
+      - the new shell contract initially used backticks inside double-quoted patterns
+      - a quick quoting cleanup fixed the harness itself
+    - RED after harness cleanup:
+      - `Backend selection guide no longer records that WithSecurityFirst is not a default FIPS shortcut`
+    - static review then confirmed the same guide also still lacked:
+      - runtime-aware `RequirePKCS11Support` wording
+      - a deployment-boundary warning for the `FIPS + PKCS#11` scenario
+    - GREEN after fix:
+      - the builder/selector entry guide now matches current runtime-aware truth
+
+- update `docs/BACKEND_SELECTION_GUIDE.md`
+  - change:
+    - add explicit note that `WithSecurityFirst` does not imply default FIPS readiness
+    - redefine `RequirePKCS11Support` as a runtime-aware published-capability requirement
+    - add OpenSSL Provider / ENGINE runtime-readiness note
+    - annotate the chained example so PKCS#11 is clearly marked runtime-aware
+    - bound the government/finance scenario with the current `FIPS + PKCS#11` deployment reality
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current backend-selection-guide runtime-truth batch has no whitespace or patch-format issues
