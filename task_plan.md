@@ -10,6 +10,45 @@
 
 ## Current Status
 
+- [completed] `performance profiling guide truth`
+  当前 focused 目标：
+  - 把 `PERFORMANCE_PROFILING_GUIDE` 里的过强 session/performance truth 收回当前口径，
+    并补 profiling 场景下 direct-path 的使用原因说明，
+    避免高可见性能页继续把固定数字和实验性 session surface 误教成 current truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-performance-profiling-guide-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_performance_profiling_guide_truth_contract.sh`
+  - 同步更新：
+    - `docs/guides/PERFORMANCE_PROFILING_GUIDE.md`
+  当前预判：
+  - 这页当前 owner path / SNI 用法本身不一定错，
+    真正的缺口是把固定性能目标和 WinSSL session public surface 讲成了 current truth
+  当前最终收口证据：
+  - `PERFORMANCE_PROFILING_GUIDE.md` 明确：
+    - profiling direct path 是 intentional path
+    - session public surface 当前仍是实验性 public surface
+    - 固定性能目标不再被写成 current truth
+  focused verification 已通过：
+  - `bash -n tests/scripts/test_performance_profiling_guide_truth_contract.sh`
+  - `bash tests/scripts/test_performance_profiling_guide_truth_contract.sh`
+  - `bash tests/scripts/test_active_owner_path_docs_alignment_contract.sh`
+  - `bash tests/scripts/test_secondary_guides_connection_level_sni_api_drift_contract.sh`
+  - `bash tests/scripts/test_winssl_session_resumption_docs_truth_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - `PERFORMANCE_PROFILING_GUIDE` 当前并不是 profiling helper 名或 owner-path 用法本身出错，
+    而是高可见性能页还把固定量级和 WinSSL session public surface 写成了 current truth。
+  - 现在 WinSSL quickstart / user guide / best-practices / performance profiling
+    这几层高可见文档已经回到了同一套 conservative session/runtime truth。
+  当前下一条真实工作：
+  - 继续扫 remaining active performance / specialized pages：
+    - 看还有没有固定 benchmark snapshot / blanket recommendation
+      被写成 current truth
+    - 同时继续找 direct `CreateConnection(...)` 已是 intentional path、
+      但原因还没写透的 residual
+
 - [completed] `winssl best-practices session truth`
   当前 focused 目标：
   - 把 `WINSSL_BEST_PRACTICES` 里的 WinSSL session public surface

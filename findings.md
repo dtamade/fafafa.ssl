@@ -6707,3 +6707,38 @@
      在新增 WinSSL session truth 说明之后仍保持绿色
    - 现在新的稳定基线应记为：
      - `WINSSL_BEST_PRACTICES` 不会再把 WinSSL session public surface 误读成默认性能优化路径
+
+114. `PERFORMANCE_PROFILING_GUIDE` 暴露的是高可见性能页里同一类 truth 漂移：
+   - 这页的问题不只是 direct `CreateConnection(...)` 没解释
+   - 它还同时把：
+     - `**预期提升**: 70-90% 握手时间减少`
+     - `- [ ] 启用 Session 复用`
+     - `| Session 复用握手 | < 10ms | 本地网络 |`
+     这些固定说法写成了 current truth
+   - 这与当前更 durable 的性能 truth 冲突：
+     - WinSSL session public surface 仍应按
+       `observed_reuse=false` / `session_configured=true`
+       理解
+     - profiling / benchmark 当前应该回到：
+       - `scripts/run_phase2_performance_baseline.sh`
+       - `tests/benchmarks/run_all_benchmarks.sh`
+       - `docs/test_reports/PHASE2_PERFORMANCE_METRICS_TEMPLATE.md`
+   - 当前最小正确修法已经压实为：
+     - 在握手 profiling 样例后明确：
+       - direct `CreateConnection(...)` 是为了 profiling caller-owned socket /
+         握手计时边界
+       - 普通跨后端 HTTPS 客户端仍优先
+         `TSSLContextBuilder` + `TSSLConnector` + `TSSLStream`
+     - 在 session 小节明确：
+       - WinSSL session public surface 仍只按实验性 public truth 理解
+       - 不要把示例直接读成已稳定命中的通用性能收益
+     - 在目标表前明确：
+       - 固定数字最多只是量级参考
+       - 最新 baseline 应回到基准脚本与指标模板
+   - 这批也顺手证明：
+     - `test_active_owner_path_docs_alignment_contract.sh`
+     - `test_secondary_guides_connection_level_sni_api_drift_contract.sh`
+     - `test_winssl_session_resumption_docs_truth_contract.sh`
+     在新增 profiling/runtime truth 说明之后仍保持绿色
+   - 现在新的稳定基线应记为：
+     - `PERFORMANCE_PROFILING_GUIDE` 不会再把固定性能 snapshot 和 WinSSL session public surface 误读成 current truth

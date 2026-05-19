@@ -96,7 +96,7 @@ if Assigned(Session) and Supports(Conn2, ISSLSessionResumption, Resumption2) the
   Resumption2.SetSession(Session);
 ```
 
-**预期提升**: 70-90% 握手时间减少
+当前 WinSSL session public surface 仍应按 `observed_reuse=false` / `session_configured=true` 的实验性 public truth 理解；如果没有 dedicated Windows / target-specific validation，不要把这段示例直接读成已稳定命中的通用性能收益。
 
 ### 2. 证书验证
 
@@ -233,6 +233,8 @@ begin
 end.
 ```
 
+这里保留 direct `CreateConnection(...)`，是因为 profiling 样例需要显式控制 caller-owned socket、连接建立和握手计时边界；如果你只是普通跨后端 HTTPS 客户端，优先使用 `TSSLContextBuilder` + `TSSLConnector` + `TSSLStream`。
+
 ### 加密吞吐测试
 
 ```pascal
@@ -267,7 +269,7 @@ end.
 
 ### 连接性能
 
-- [ ] 启用 Session 复用
+- [ ] 仅在 dedicated Windows / target-specific validation 已证明命中时，再考虑 Session public surface
 - [ ] 使用连接池
 - [ ] 避免频繁创建/销毁 Context
 - [ ] 使用 TLS 1.3（更快握手）
@@ -295,11 +297,13 @@ end.
 
 ## 性能目标参考
 
+下面这些数值最多只能作为“你自己 profiling 时可以关注的量级形状”，不能当成当前长期 truth；最新 baseline 请回到 `scripts/run_phase2_performance_baseline.sh`、`tests/benchmarks/run_all_benchmarks.sh`，并按 `docs/test_reports/PHASE2_PERFORMANCE_METRICS_TEMPLATE.md` 记录环境与结果。
+
 | 操作             | 目标时间   | 说明     |
 | ---------------- | ---------- | -------- |
 | TLS 1.3 握手     | < 50ms     | 本地网络 |
 | TLS 1.2 握手     | < 100ms    | 本地网络 |
-| Session 复用握手 | < 10ms     | 本地网络 |
+| Session public surface | 需按当前 runner/目标站点实测 | 非 runtime-proven truth |
 | AES-256-GCM 加密 | > 500 MB/s | 现代 CPU |
 | RSA 2048 签名    | < 5ms      | 现代 CPU |
 | ECDSA P-256 签名 | < 1ms      | 现代 CPU |

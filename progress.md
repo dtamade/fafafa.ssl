@@ -14101,3 +14101,56 @@
   - result: PASS
   - summary:
     - current WinSSL best-practices batch has no whitespace or patch-format issues
+
+### Performance Profiling Guide Truth
+
+- add `docs/plans/2026-05-20-performance-profiling-guide-truth.md`
+  - change:
+    - define the bounded profiling-guide batch for tightening current session/performance truth and explaining intentional direct-path profiling samples
+
+- add `tests/scripts/test_performance_profiling_guide_truth_contract.sh`
+  - change:
+    - lock that `PERFORMANCE_PROFILING_GUIDE` must stop teaching fixed session/performance claims as current truth
+
+- `bash -n tests/scripts/test_performance_profiling_guide_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new performance-profiling-guide truth contract syntax is valid
+
+- `bash tests/scripts/test_performance_profiling_guide_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `PERFORMANCE_PROFILING_GUIDE` still lacked an explicit explanation for why profiling samples intentionally use direct connection paths
+    - GREEN after fix:
+      - `PERFORMANCE_PROFILING_GUIDE` now explains why profiling samples intentionally use caller-owned direct connection paths
+      - `PERFORMANCE_PROFILING_GUIDE` now demotes WinSSL session public surface to current conservative runtime truth
+      - `PERFORMANCE_PROFILING_GUIDE` now demotes fixed target numbers to non-authoritative reference shapes
+
+- update `docs/guides/PERFORMANCE_PROFILING_GUIDE.md`
+  - change:
+    - explain that the profiling handshake sample intentionally uses direct `CreateConnection(...)` to control socket/handshake timing boundaries
+    - explain that WinSSL session public surface remains experimental under
+      `observed_reuse=false` / `session_configured=true`
+    - demote the checklist item so Session public surface is only considered after dedicated Windows / target-specific validation
+    - demote the fixed target table so fresh baseline truth points back to benchmark runners and the metrics template
+
+- `bash tests/scripts/test_active_owner_path_docs_alignment_contract.sh`
+  - result: PASS
+  - summary:
+    - active owner-path doc alignment remained intact after tightening the profiling guide truth
+
+- `bash tests/scripts/test_secondary_guides_connection_level_sni_api_drift_contract.sh`
+  - result: PASS
+  - summary:
+    - secondary guide SNI guidance remained aligned after the profiling-guide batch
+
+- `bash tests/scripts/test_winssl_session_resumption_docs_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - broader WinSSL session-resumption docs truth remained aligned after tightening the profiling guide
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current profiling-guide batch has no whitespace or patch-format issues
