@@ -8,6 +8,7 @@ uses
   SysUtils, Classes,
   fafafa.ssl,
   fafafa.ssl.base,
+  fafafa.ssl.exceptions,
   fafafa.ssl.winssl.lib;
 
 var
@@ -20,6 +21,7 @@ type
       const AErrorCode: Integer; const AErrorMessage: string): Boolean;
     function PasswordCallback(var APassword: string;
       const AIsRetry: Boolean): Boolean;
+    procedure InfoCallback(const AWhere: Integer; const ARet: Integer; const AState: string);
   end;
 
 procedure Pass(const ATestName: string);
@@ -45,6 +47,11 @@ function TTestCallbacks.PasswordCallback(var APassword: string;
 begin
   APassword := 'testpassword';
   Result := True;
+end;
+
+procedure TTestCallbacks.InfoCallback(const AWhere: Integer; const ARet: Integer;
+  const AState: string);
+begin
 end;
 
 procedure EnsureWinSSLBackendRegistered;
@@ -614,13 +621,18 @@ begin
       LContext.SetVerifyCallback(@LCallbacks.VerifyCallback);
       Pass('Verify callback set');
       
-      // Test 14.2: Set password callback
-      LContext.SetPasswordCallback(@LCallbacks.PasswordCallback);
-      Pass('Password callback set');
+      // Test 14.2: Password callback remains unsupported on current WinSSL runtime
+      try
+        LContext.SetPasswordCallback(@LCallbacks.PasswordCallback);
+        Fail('Password callback', 'Expected unsupported semantics for WinSSL password callback');
+      except
+        on E: ESSLException do
+          Pass('Password callback unsupported as expected');
+      end;
       
-      // Test 14.3: Set info callback (nil is acceptable)
-      LContext.SetInfoCallback(nil);
-      Pass('Info callback set (nil)');
+      // Test 14.3: Set info callback
+      LContext.SetInfoCallback(@LCallbacks.InfoCallback);
+      Pass('Info callback set');
     finally
       LCallbacks.Free;
     end;

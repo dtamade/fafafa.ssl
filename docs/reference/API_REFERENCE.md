@@ -1476,6 +1476,7 @@ function CreateSSLLibrary(aType: TSSLLibraryType = sslOpenSSL): ISSLLibrary;
 ## 回调类型
 
 在安装非 nil 的 Verify/Password/Info callback 前，先检查 `ISSLLibrary.GetCapabilities.SupportsCallbacks`；对 `SupportsCallbacks=False` 的 backend，non-nil 赋值应抛出 unsupported，`nil` 仅用于清除并回到默认行为。
+SupportsCallbacks=True 只表示至少一条 published context callback path 存在；具体 callback 种类仍可能 backend-specific。当前 WinSSL 仅发布 verify/info runtime path，password callback 仍为 unsupported。
 
 ```pascal
 // 日志回调

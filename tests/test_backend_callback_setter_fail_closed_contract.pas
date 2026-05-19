@@ -131,6 +131,62 @@ begin
     ' published callback setters accept non-nil assignments and nil clears');
 end;
 
+procedure CheckWinSSLPartialBackend(ABackend: TSSLLibraryType);
+var
+  LLib: ISSLLibrary;
+  LCtx: ISSLContext;
+  LProbe: TCallbackProbe;
+  LRejected: Boolean;
+  LLowerMsg: string;
+begin
+  if not TSSLFactory.IsLibraryAvailable(ABackend) then
+  begin
+    WriteLn('[SKIP] ', SSL_LIBRARY_NAMES[ABackend], ' backend not available on this platform');
+    Exit;
+  end;
+
+  LLib := TSSLFactory.GetLibrary(ABackend);
+  Require(LLib <> nil, SSL_LIBRARY_NAMES[ABackend] + ' library should be creatable when available');
+  Require(LLib.GetCapabilities.SupportsCallbacks,
+    SSL_LIBRARY_NAMES[ABackend] + ' must publish SupportsCallbacks=True for this contract');
+
+  LCtx := LLib.CreateContext(sslCtxClient);
+  Require(LCtx <> nil, SSL_LIBRARY_NAMES[ABackend] + ' context should be creatable');
+  LProbe := TCallbackProbe.Create;
+  try
+    AssignNonNilCallback(LCtx, ckVerify, LProbe);
+    ClearCallback(LCtx, ckVerify);
+
+    AssignNonNilCallback(LCtx, ckInfo, LProbe);
+    ClearCallback(LCtx, ckInfo);
+
+    LRejected := False;
+    try
+      AssignNonNilCallback(LCtx, ckPassword, LProbe);
+    except
+      on E: ESSLException do
+      begin
+        LLowerMsg := LowerCase(E.Message);
+        Require((E.ErrorCode = sslErrUnsupported) or (Pos('unsupported', LLowerMsg) > 0) or
+          (Pos('不支持', E.Message) > 0),
+          Format('%s password callback rejection must report unsupported semantics: %s',
+            [SSL_LIBRARY_NAMES[ABackend], E.Message]));
+        LRejected := True;
+      end;
+    end;
+
+    Require(LRejected,
+      SSL_LIBRARY_NAMES[ABackend] + ' must reject non-nil password callback while only verify/info are published');
+
+    ClearCallback(LCtx, ckPassword);
+  finally
+    LProbe.Free;
+  end;
+
+  WriteLn('[PASS] ', SSL_LIBRARY_NAMES[ABackend],
+    ' verify/info callbacks remain published while password callback fails closed');
+end;
+
 procedure CheckUnpublishedBackend(ABackend: TSSLLibraryType);
 var
   LLib: ISSLLibrary;
@@ -197,7 +253,7 @@ begin
   WriteLn('====================================================');
 
   CheckPublishedBackend(sslOpenSSL);
-  CheckPublishedBackend(sslWinSSL);
+  CheckWinSSLPartialBackend(sslWinSSL);
   CheckUnpublishedBackend(sslFreePascal);
   CheckUnpublishedBackend(sslWolfSSL);
   CheckUnpublishedBackend(sslMbedTLS);

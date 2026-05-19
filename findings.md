@@ -4682,3 +4682,41 @@
   - 也就是说，下一批更值得做的是 callback surface granularity 审查：
     - 要么补 WinSSL password callback runtime completeness
     - 要么承认当前 bool 只代表 partial callback publication，并把 active docs 写清
+
+- 继续顺着这个残余点往下收后，静态证据已经足够明确：
+  - `WinSSL` 并不是“三种 callback 都已发布”
+  - 它更接近：
+    - verify callback 已接线
+    - info callback 已接线
+    - password callback 未接线
+
+- 这里最危险的不是 bool 本身，而是 `SetPasswordCallback` 的静默表象：
+  - 代码会接收 non-nil password callback
+  - 存入 `FPasswordCallback`
+  - 但没有任何 runtime use-site
+  - 同时 `tests/unit/test_winssl_comprehensive.pas` 还把这条 silent setter 当成“Password callback set”通过条件
+
+- 因而这批的最小正确结论不是推翻 `SupportsCallbacks=True`，而是承认它当前是 coarse-grained publication：
+  - 至少一条 callback path 已发布
+  - 但具体 callback 种类仍可能 backend-specific
+  - 当前 `WinSSL` 只应发布 verify/info runtime path
+  - password callback 应 fail-closed
+
+- 这次补上的修法因此继续保持窄 scope：
+  - `TWinSSLContext.SetPasswordCallback`
+    - non-nil -> `unsupported`
+    - `nil` -> clear / no-op
+  - `SetVerifyCallback` / `SetInfoCallback`
+    - 保持当前 published path
+  - `test_backend_callback_setter_fail_closed_contract`
+    - 从“published backend 三个 callback 都能设”改成 WinSSL partial matrix
+  - `test_winssl_comprehensive`
+    - 改成 password callback unsupported 预期
+  - active docs
+    - `API_REFERENCE`
+    - `WINSSL_DESIGN`
+    一起写清 partial-publication truth
+
+- 这样一来，callback 路线又向前收了一层：
+  - 不只是 false-capability backend 不再 silently accept
+  - 连 `SupportsCallbacks=True` 的 coarse-grained backend，也不再把未发布的具体 callback 种类继续伪装成“可安全配置”

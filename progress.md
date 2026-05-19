@@ -9844,3 +9844,90 @@
   - result: PASS
   - summary:
     - current callback setter fail-closed batch has no whitespace or patch-format issues
+
+### WinSSL Password Callback Partial-Publication Alignment
+
+- `rg -n "FPasswordCallback|SetPasswordCallback\(|GetWinSSLVerifyCallback|GetWinSSLInfoCallback|Password callback|Verify callback|Info callback" src/fafafa.ssl.winssl.* tests/unit/test_winssl_comprehensive.pas docs/reference/WINSSL_DESIGN.md docs/reference/API_REFERENCE.md`
+  - result: PASS
+  - summary:
+    - static audit confirmed:
+      - `WinSSL` verify/info callbacks still have runtime/source use-sites
+      - `WinSSL` password callback only had field storage and a misleading passing unit test
+
+- add `docs/plans/2026-05-19-winssl-password-callback-publication-alignment.md`
+  - change:
+    - record the bounded WinSSL callback granularity batch that narrows published callback truth to verify/info and retracts password callback silent setter behavior
+
+- add `tests/scripts/test_winssl_password_callback_partial_publication_contract.sh`
+  - change:
+    - add a focused source/docs contract that guards:
+      - WinSSL password callback fail-closed source pattern
+      - WinSSL verify/info setter publication
+      - WinSSL docs truth
+      - WinSSL unit-test expectation
+      - callback runtime contract special-casing
+
+- update `src/fafafa.ssl.winssl.context.pas`
+  - change:
+    - add `RejectUnsupportedCallbackAssignment`
+    - make `SetPasswordCallback` fail-closed for non-nil assignments
+    - keep verify/info callback setters published
+
+- update `tests/unit/test_winssl_comprehensive.pas`
+  - change:
+    - add `InfoCallback` helper
+    - change callback test truth from:
+      - password callback set
+      to:
+      - password callback unsupported as expected
+    - keep verify/info published expectations
+
+- update `tests/test_backend_callback_setter_fail_closed_contract.pas`
+  - change:
+    - replace the old “published backends accept all three callbacks” assumption for `WinSSL`
+    - add `CheckWinSSLPartialBackend(...)` so future Windows runtime proof checks:
+      - verify/info published
+      - password callback unsupported
+
+- update docs:
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/WINSSL_DESIGN.md`
+  - change:
+    - record that `SupportsCallbacks=True` is coarse-grained and current `WinSSL` only publishes verify/info runtime paths
+
+- `bash -n tests/scripts/test_winssl_password_callback_partial_publication_contract.sh`
+  - result: PASS
+  - summary:
+    - new WinSSL callback granularity source contract syntax is valid
+
+- `bash tests/scripts/test_winssl_password_callback_partial_publication_contract.sh`
+  - result: PASS
+  - summary:
+    - WinSSL password callback partial-publication truth is now locked across source, docs, unit-test expectation, and runtime-contract special-casing
+
+- `mkdir -p tmp/test_callback_setter_fail_closed && fpc -B -Fu./src -Fu./tests -FUtmp/test_callback_setter_fail_closed -FEtmp/test_callback_setter_fail_closed -otmp/test_callback_setter_fail_closed/test_backend_callback_setter_fail_closed_contract tests/test_backend_callback_setter_fail_closed_contract.pas && ./tmp/test_callback_setter_fail_closed/test_backend_callback_setter_fail_closed_contract`
+  - result: PASS
+  - summary:
+    - Linux still skips `WinSSL`
+    - the cross-backend callback setter runtime contract stayed green after adding the WinSSL partial-publication matrix
+    - compile emitted existing unrelated warnings only
+
+- `bash tests/scripts/test_callback_setter_fail_closed_contract.sh`
+  - result: PASS
+  - summary:
+    - the previous callback setter fail-closed batch remains aligned after the WinSSL partial-publication refinement
+
+- `bash tests/scripts/test_callback_capability_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - callback capability truth remains aligned after the WinSSL password callback refinement
+
+- `bash tests/scripts/test_api_reference_library_context_surface_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - active interface docs still match current source truth after the new API reference wording
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current WinSSL password callback partial-publication batch has no whitespace or patch-format issues

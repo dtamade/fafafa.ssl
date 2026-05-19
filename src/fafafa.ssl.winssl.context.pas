@@ -80,6 +80,8 @@ type
     procedure RequireValidContext(const AMethodName: string);
     { P1: PEM→DER 转换 - 消除跨平台差异 }
     function PEMToDER(const APEM: string): TBytes;
+    procedure RejectUnsupportedCallbackAssignment(
+      const AFeature, AMethodName: string);
 
   public
     constructor Create(ALibrary: ISSLLibrary; AType: TSSLContextType);
@@ -1151,9 +1153,25 @@ end;
 // ISSLContext - 回调设置（Schannel 模型限制）
 // ============================================================================
 
+procedure TWinSSLContext.RejectUnsupportedCallbackAssignment(
+  const AFeature, AMethodName: string);
+begin
+  raise ESSLConfigurationException.CreateWithContext(
+    Format('%s is not published by the current WinSSL backend runtime. ' +
+      'The current WinSSL callback surface only publishes verify/info paths.',
+      [AFeature]),
+    sslErrUnsupported,
+    AMethodName,
+    0,
+    sslWinSSL
+  );
+end;
+
 procedure TWinSSLContext.SetPasswordCallback(ACallback: TSSLPasswordCallback);
 begin
-  FPasswordCallback := ACallback;
+  if Assigned(ACallback) then
+    RejectUnsupportedCallbackAssignment('Password callback', 'TWinSSLContext.SetPasswordCallback');
+  FPasswordCallback := nil;
 end;
 
 procedure TWinSSLContext.SetInfoCallback(ACallback: TSSLInfoCallback);

@@ -3214,3 +3214,39 @@
      - 继续审查：
        - `WinSSL` 的 callback surface 是否只是 verify/info partial runtime，而 `Password callback` 仍未接线
        - 现有单一 `SupportsCallbacks` bool 是否需要继续细化成 per-callback truth，或至少补 active docs 说明 partial runtime coverage
+81. `WinSSL password callback partial-publication alignment` 已完成 focused 收口，并应作为当前 WinSSL callback granularity truth 的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-winssl-password-callback-publication-alignment.md`
+   - 当前已确认的 WinSSL callback truth：
+     - verify callback
+       - 有真实 runtime use-site
+     - info callback
+       - 有真实 runtime use-site
+     - password callback
+       - 没有 runtime use-site
+       - 没有 access seam
+       - 之前只是 silent setter / field store
+   - 当前最小正确修法已落地：
+     - 不改 `WinSSL` verify/info callback path
+     - 不改 `SupportsCallbacks` bool 结构
+     - 只把 `WinSSL` password callback 收紧为：
+       - non-nil 赋值 -> fail-closed `unsupported`
+       - `nil` -> clear / no-op
+     - 并同步：
+       - `test_winssl_comprehensive` 的 Windows 预期
+       - callback setter runtime contract 的 WinSSL 特例矩阵
+       - `API_REFERENCE`
+       - `WINSSL_DESIGN`
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_winssl_password_callback_partial_publication_contract.sh`
+     - `bash tests/scripts/test_winssl_password_callback_partial_publication_contract.sh`
+     - `mkdir -p tmp/test_callback_setter_fail_closed && fpc -B -Fu./src -Fu./tests -FUtmp/test_callback_setter_fail_closed -FEtmp/test_callback_setter_fail_closed -otmp/test_callback_setter_fail_closed/test_backend_callback_setter_fail_closed_contract tests/test_backend_callback_setter_fail_closed_contract.pas && ./tmp/test_callback_setter_fail_closed/test_backend_callback_setter_fail_closed_contract`
+     - `bash tests/scripts/test_callback_setter_fail_closed_contract.sh`
+     - `bash tests/scripts/test_callback_capability_truth_contract.sh`
+     - `bash tests/scripts/test_api_reference_library_context_surface_truth_contract.sh`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 不再把 `WinSSL` password callback 当作已发布 callback surface
+     - 继续审查：
+       - 单一 `SupportsCallbacks` bool 是否需要进一步拆成 per-callback capability
+       - 或先做 active docs / capability matrix，把 callback publication granularity 系统化写清
