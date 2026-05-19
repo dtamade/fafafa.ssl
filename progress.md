@@ -2,6 +2,60 @@
 
 ## 2026-05-19
 
+### WinSSL Session Shim Safe Fallback
+
+- `rg -n "CreateFromConnection\\(|fafafa\\.ssl\\.winssl\\.session|TWinSSLSession\\(" src tests docs`
+  - result: PASS
+  - summary:
+    - confirmed `src/fafafa.ssl.winssl.session.pas` is still documented and wired as a compatibility shim
+    - confirmed `CreateFromConnection(...)` is the only remaining shim-side construction path that could carry risky behavior
+
+- `sed -n '1,140p' src/fafafa.ssl.winssl.session.pas`
+  - result: PASS
+  - summary:
+    - confirmed the compatibility shim still directly called `QueryContextAttributesW(..., SECPKG_ATTR_SESSION_INFO, ...)`
+    - confirmed this drift contradicted the current canonical conservative WinSSL session truth
+
+- add `docs/plans/2026-05-19-winssl-session-shim-safe-fallback.md`
+  - change:
+    - define the bounded static fix that pulls the compatibility shim back to a safe conservative fallback
+
+- add `tests/scripts/test_winssl_session_shim_safe_fallback_contract.sh`
+  - change:
+    - lock the absence of direct risky session-info query in the shim
+    - lock the pointer-based fallback session id
+    - lock conservative `reused=false` metadata
+
+- `bash -n tests/scripts/test_winssl_session_shim_safe_fallback_contract.sh`
+  - result: PASS
+  - summary:
+    - new shim-safe-fallback contract syntax is valid
+
+- `bash tests/scripts/test_winssl_session_shim_safe_fallback_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED:
+      - compatibility shim still directly called `QueryContextAttributesW(...)`
+    - GREEN:
+      - compatibility shim no longer queries risky session-info directly
+      - compatibility shim now uses conservative pointer-based fallback metadata
+
+- update `src/fafafa.ssl.winssl.session.pas`
+  - change:
+    - remove direct session-info query from `CreateFromConnection(...)`
+    - remove query-specific residue
+    - align fallback session id with pointer-based conservative truth
+
+- `bash tests/scripts/test_winssl_session_truth_source_contract.sh`
+  - result: PASS
+  - summary:
+    - the earlier single-truth-source guard remained aligned after the shim-safe fallback change
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - shim-safe fallback batch has no whitespace or patch-format issues
+
 ### WinSSL Native-Probe Handle Metadata
 
 - add `docs/plans/2026-05-19-winssl-native-probe-handle-metadata.md`

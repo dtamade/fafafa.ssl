@@ -2,6 +2,34 @@
 
 ## 2026-05-19
 
+- 继续沿 WinSSL native-probe 做静态复核时，又挖出一条真正该立即收掉的实现漂移：
+  - `src/fafafa.ssl.winssl.session.pas` 文档和 earlier plan 都把自己定位成 compatibility shim
+  - 但这个 shim 里竟然还保留着一条未隔离的直接 `QueryContextAttributesW(...)` session-info probe
+
+- 这条路径的问题不在“是否当前有人用到”，而在它和 repo 已经明确确立的 canonical truth 直接冲突：
+  - 当前 risky session-info probe 只能存在于：
+    - opt-in
+    - isolated worker
+    - experimental evidence lane
+  - shim 如果继续私自做同一类 query，就等于给外部调用者留了一个未 quarantine 的绕行入口
+
+- 因而这批最小正确动作也非常明确：
+  - 不碰 shared handshake
+  - 不重开 WinSSL probe 实现层
+  - 只把 `winssl.session.pas` 拉回真正的 conservative compatibility shim：
+    - pointer-based fallback session id
+    - `reused=false`
+
+- focused 结果说明这条静态风险已经被彻底拿掉：
+  - 新增 safe-fallback contract 先 RED，直接命中 shim 内还存在的 `QueryContextAttributesW`
+  - 修复后转 GREEN
+  - 既有 `test_winssl_session_truth_source_contract.sh` 也继续 GREEN
+
+- 这样一来，当前 repo 内关于 WinSSL session-info probe 的边界就重新干净了：
+  - canonical shared path：保守 truth，不直接 probe
+  - dedicated proof lane：opt-in isolated worker
+  - compatibility shim：保守 fallback，不再私自 probe
+
 - `26071188795` 的真实 summary artifact 现在已经把 closure-truth 这条流程修复彻底坐实了：
   - `closure readiness` 不再把 Windows 写成 `PASS`
   - `cross summary` / `handoff bundle` / `closure readiness`

@@ -22,7 +22,6 @@ uses
   SysUtils,
   fafafa.ssl.base,
   fafafa.ssl.winssl.base,
-  fafafa.ssl.winssl.api,
   fafafa.ssl.winssl.connection;
 
 type
@@ -36,9 +35,6 @@ type
 
 implementation
 
-const
-  HexDigits: array[0..15] of Char = '0123456789ABCDEF';
-
 constructor TWinSSLSession.CreateFromData(const AData: TBytes);
 begin
   inherited Create;
@@ -48,37 +44,16 @@ end;
 constructor TWinSSLSession.CreateFromConnection(AContext: PCtxtHandle;
   AProtocol: TSSLProtocolVersion; const ACipher: string);
 var
-  LSecStatus: SECURITY_STATUS;
-  LSessionInfo: SecPkgContext_SessionInfo;
   LSessionID: string;
-  I: Integer;
 begin
   inherited Create;
 
   if AContext = nil then
     Exit;
 
-  LSessionID := '';
-  if Assigned(QueryContextAttributesW) then
-  begin
-    FillChar(LSessionInfo, SizeOf(LSessionInfo), 0);
-    LSecStatus := QueryContextAttributesW(AContext,
-      SECPKG_ATTR_SESSION_INFO, @LSessionInfo);
-
-    if (LSecStatus = SEC_E_OK) and (LSessionInfo.cbSessionId > 0) then
-    begin
-      SetLength(LSessionID, LSessionInfo.cbSessionId * 2);
-      for I := 0 to LSessionInfo.cbSessionId - 1 do
-      begin
-        LSessionID[I * 2 + 1] := HexDigits[(LSessionInfo.rgbSessionId[I] shr 4) and $0F];
-        LSessionID[I * 2 + 2] := HexDigits[LSessionInfo.rgbSessionId[I] and $0F];
-      end;
-    end;
-  end;
-
-  if LSessionID = '' then
-    LSessionID := IntToHex(Int64(Now * 86400000), 16);
-
+  // Keep the compatibility shim aligned with the current canonical conservative truth:
+  // no direct risky Schannel session-info probe here; callers only get a fallback session id.
+  LSessionID := Format('winssl-session-%p', [Pointer(AContext)]);
   SetSessionMetadata(LSessionID, AProtocol, ACipher, False);
 end;
 

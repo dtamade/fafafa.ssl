@@ -10,6 +10,23 @@
 
 ## Current Status
 
+- [completed] WinSSL session shim safe fallback 已完成本地收口：
+  - 新增计划：`docs/plans/2026-05-19-winssl-session-shim-safe-fallback.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_winssl_session_shim_safe_fallback_contract.sh`
+  - `src/fafafa.ssl.winssl.session.pas`
+    - compatibility shim 已移除直接 `QueryContextAttributesW(...)` / risky session-info attribute 路径
+    - 当前已改回保守 fallback：
+      - `Format('winssl-session-%p', [Pointer(AContext)])`
+      - `SetSessionMetadata(..., False)`
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_winssl_session_shim_safe_fallback_contract.sh`
+    - `bash tests/scripts/test_winssl_session_shim_safe_fallback_contract.sh`
+    - `bash tests/scripts/test_winssl_session_truth_source_contract.sh`
+    - `git diff --check`: PASS
+  - 当前结论：
+    - `winssl.session.pas` 现在重新符合“compatibility shim only”的定位
+    - 不会再绕过当前 WinSSL native-probe quarantine 再私自碰 risky session-info query
 - [completed] WinSSL native-probe handle metadata 已完成本地收口：
   - 新增计划：`docs/plans/2026-05-19-winssl-native-probe-handle-metadata.md`
   - 新增 focused contract：
