@@ -4670,3 +4670,40 @@
      - 继续按 capability truth 主线审查：
        - 其它 matrix / KnownIssues / API reference 是否还有“顶部结论”和具体字段口径打架
        - backend capability 发布面是否还存在 coarse-grained flag 与具体 runtime/public surface 不一致
+99. `WinSSL session cache semantic boundary` 已完成 focused 收口，并应作为当前 WinSSL capability/source/runtime 边界的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-winssl-session-cache-semantic-boundary.md`
+   - 当前已确认的真实 drift：
+     - `docs/reference/API_REFERENCE.md`
+       - `TSSLBackendCapabilities` 代码块之前没有完整列出：
+         - `SessionCacheSupport`
+       - 读取优先级说明也漏掉了：
+         - `SessionCacheSupport`
+       - 这会把 active interface truth 写成“只看 `SessionTicketsSupport`”，但没有把
+         context-level session cache/control surface 单独发布出来
+     - `src/fafafa.ssl.base.pas`
+       - `SessionCacheSupport` 注释之前只写“会话缓存支持级别”
+       - 没有说明它不等于已观测到 resumed handshake
+     - `src/fafafa.ssl.winssl.lib.pas`
+       - `Result.SessionCacheSupport := sslSupportStable`
+         之前缺少紧邻语义注释
+       - 容易让后续审查把这个 `stable` 直接误读成 dedicated Windows runtime proof
+   - 当前最小正确修法已落地：
+     - 不改 WinSSL runtime/handshake 实现
+     - 只把 source comment / API reference / WinSSL active docs 明确收紧到：
+       - `SessionCacheSupport=sslSupportStable`
+         在 WinSSL 上表示 context-level session cache/control surface 已发布且已接线
+       - 这不等于当前已经 runtime-proven 的 resumed handshake
+       - 当前 dedicated Windows truth 仍看：
+         - `observed_reuse=false`
+         - `session_configured=true`
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_winssl_session_cache_semantic_boundary_contract.sh`
+     - `bash tests/scripts/test_winssl_session_cache_semantic_boundary_contract.sh`
+     - `bash tests/scripts/test_winssl_session_cache_runtime_flag_contract.sh`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 不再重开“`SessionCacheSupport=stable` 是否天然等于 resumed-handshake proof”这条线
+     - 继续回到更值钱的 WinSSL runtime 端调查：
+       - 为什么 same `target name` + same `credential handle` 仍然停在 `observed_reuse=false`
+     - 或继续横向审查其它 backend capability/support-level 字段是否还有类似的语义漂移

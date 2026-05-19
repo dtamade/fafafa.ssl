@@ -652,7 +652,7 @@ type
     OCSPStaplingSupport: TSSLFeatureSupportLevel; // OCSP 装订支持级别
     CertTransparencySupport: TSSLFeatureSupportLevel; // 证书透明度支持级别
     SessionTicketsSupport: TSSLFeatureSupportLevel;   // 会话票据支持级别
-    SessionCacheSupport: TSSLFeatureSupportLevel;     // 会话缓存支持级别
+    SessionCacheSupport: TSSLFeatureSupportLevel;     // 会话缓存支持级别（cache/control surface，不保证已观测到 resumed handshake）
     ZeroRTTSupport: TSSLFeatureSupportLevel;    // 0-RTT 支持级别（TLS 1.3）
     EarlyDataSupport: TSSLFeatureSupportLevel;  // Early Data 支持级别
     RenegotiationSupport: TSSLFeatureSupportLevel; // 重新协商支持级别（TLS 1.2）

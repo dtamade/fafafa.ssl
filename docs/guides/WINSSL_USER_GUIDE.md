@@ -272,6 +272,7 @@ end;
 - ✅ 线程安全的会话对象 / metadata surface
 - ✅ FIFO 缓存与会话材料接线
 - ⚠️ `ISSLSessionResumption.SetSession(...)` 当前更接近 compatibility metadata surface；client-side reconnect/cache lookup 仍主要取决于相同的 `target name` 与相同的 context-level `credential handle`
+- ⚠️ `SessionCacheSupport=sslSupportStable` 在 WinSSL 上当前表示 context-level session cache/control surface 已发布且已接线；是否真的命中 resumed handshake 仍要看 dedicated Windows runtime proof
 - ⚠️ 当前 dedicated Windows runtime truth 仍是 `observed_reuse=false` / `session_configured=true`
 - ⚠️ 因此 session resumption / tickets 继续按实验性 public surface 理解
 

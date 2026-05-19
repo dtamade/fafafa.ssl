@@ -1675,6 +1675,7 @@ type
     OCSPStaplingSupport: TSSLFeatureSupportLevel;
     CertTransparencySupport: TSSLFeatureSupportLevel;
     SessionTicketsSupport: TSSLFeatureSupportLevel;
+    SessionCacheSupport: TSSLFeatureSupportLevel;
     // ... 其他功能级别字段
 
     // 算法支持
@@ -1706,7 +1707,8 @@ type
 
 读取优先级说明：
 
-- 当 `SNISupport` / `ALPNSupport` / `OCSPStaplingSupport` / `CertTransparencySupport` / `SessionTicketsSupport` 出现时，它们是当前 source/runtime truth；legacy `SupportsSNI` / `SupportsALPN` / `SupportsOCSPStapling` / `SupportsCertificateTransparency` / `SupportsSessionTickets` 仅作为兼容投影。
+- 当 `SNISupport` / `ALPNSupport` / `OCSPStaplingSupport` / `CertTransparencySupport` / `SessionTicketsSupport` / `SessionCacheSupport` 出现时，它们是当前 source/runtime truth；legacy `SupportsSNI` / `SupportsALPN` / `SupportsOCSPStapling` / `SupportsCertificateTransparency` / `SupportsSessionTickets` 仅作为兼容投影。
+- `SessionCacheSupport` 表示 context-scoped session cache/control surface 的 published support level；对 WinSSL 而言，它不等于当前已 runtime-proven 的 resumed handshake 结果。
 - `SupportsTLS13` 仍是主 bool 字段，因为当前没有 `TLS13Support`。
 
 ### ISSLLibrary.GetCapabilities

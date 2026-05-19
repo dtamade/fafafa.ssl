@@ -12751,3 +12751,80 @@
   - result: PASS
   - summary:
     - current architecture backend-status truth batch has no whitespace or patch-format issues
+
+### WinSSL Session Cache Semantic Boundary
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - batch started from a clean `master...origin/master` worktree
+
+- `rg -n "SessionCacheSupport|SessionTicketsSupport|session resumption|session cache|SetSession|DoSetSession|InitializeSecurityContextW|observed_reuse|session_configured" task_plan.md findings.md progress.md src/fafafa.ssl.winssl.lib.pas src/fafafa.ssl.winssl.context.pas src/fafafa.ssl.winssl.connection.pas docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md docs/reference/API_REFERENCE.md docs/guides/WINSSL_USER_GUIDE.md tests/scripts/test_winssl_session_cache_runtime_flag_contract.sh tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh tests/scripts/test_winssl_session_injection_semantics_truth_contract.sh tests/winssl/test_winssl_session_resumption.pas`
+  - result: PASS
+  - summary:
+    - static audit confirmed the remaining question is no longer WinSSL runtime flag wiring
+    - the active ambiguity had narrowed to what `SessionCacheSupport=sslSupportStable` is actually supposed to mean
+
+- `sed -n '3210,3298p' task_plan.md`
+  - result: PASS
+  - summary:
+    - existing ledger already pinned:
+      - `SessionCacheSupport := sslSupportStable`
+      - `SessionTicketsSupport := sslSupportExperimental`
+      - `observed_reuse=false`
+      - `session_configured=true`
+    - but it still left the semantic boundary of `SessionCacheSupport` under-explained in active interface docs
+
+- `sed -n '1648,1718p' docs/reference/API_REFERENCE.md`
+  - result: PASS
+  - summary:
+    - `TSSLBackendCapabilities` code block was still missing `SessionCacheSupport`
+    - read-priority notes still mentioned `SessionTicketsSupport` but not `SessionCacheSupport`
+    - this was the clearest active interface-truth drift in the lane
+
+- add `docs/plans/2026-05-19-winssl-session-cache-semantic-boundary.md`
+  - change:
+    - recorded the bounded plan for locking the WinSSL SessionCacheSupport semantic boundary
+
+- add `tests/scripts/test_winssl_session_cache_semantic_boundary_contract.sh`
+  - change:
+    - added a focused shell contract that guards:
+      - `SessionCacheSupport` is explicitly present in `API_REFERENCE.md`
+      - source/docs define it as cache/control support, not resumed-handshake proof
+      - active WinSSL matrix/user-guide wording preserves the runtime caveat
+
+- `bash -n tests/scripts/test_winssl_session_cache_semantic_boundary_contract.sh`
+  - result: PASS
+  - summary:
+    - new session-cache semantic-boundary contract syntax is valid
+
+- `bash tests/scripts/test_winssl_session_cache_semantic_boundary_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed two real documentation/source truth gaps:
+      - `src/fafafa.ssl.base.pas` did not describe `SessionCacheSupport` as cache/control-only support
+      - `docs/reference/API_REFERENCE.md` still omitted `SessionCacheSupport` from the active capability record
+    - GREEN after the focused doc/source patch:
+      - base/source/docs now consistently explain that WinSSL `SessionCacheSupport=sslSupportStable` only publishes context-level cache/control truth
+      - current resumed-handshake truth remains delegated to dedicated Windows runtime proof
+
+- update docs/source:
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  - `docs/guides/WINSSL_USER_GUIDE.md`
+  - change:
+    - clarify that `SessionCacheSupport` is a cache/control surface support-level field
+    - add the missing `SessionCacheSupport` field to the API reference capability record
+    - restate that WinSSL `SessionCacheSupport=sslSupportStable` does not itself prove runtime resumed-handshake success
+
+- `bash tests/scripts/test_winssl_session_cache_runtime_flag_contract.sh`
+  - result: PASS
+  - summary:
+    - previous context-level wiring proof stays green after the semantic-boundary cleanup
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current session-cache semantic-boundary batch has no whitespace or patch-format issues

@@ -94,7 +94,7 @@ Ctx := TSSLContextBuilder.Create
 | -------------- | --------- | ------------------------------------------------------------------------------------------------------------------ |
 | Session 复用   | ⚠️ 实验性 | public surface 存在；当前 dedicated Windows CI runtime truth 为 `observed_reuse=false` / `session_configured=true` |
 | Session Ticket | ⚠️ 实验性 | Schannel surface 存在，但 fafafa.ssl 尚未在 dedicated Windows proof 中观测到真实 resumed handshake                 |
-| Session Cache  | ✅ 支持   | 系统管理；`SessionCacheSupport=sslSupportStable`，但这不等于当前已 runtime-proven 的 resumed handshake             |
+| Session Cache  | ✅ 支持   | 系统管理；`SessionCacheSupport=sslSupportStable` 代表 context-level cache/control surface 已发布且已接线，不等于当前已 runtime-proven 的 resumed handshake |
 | 0-RTT          | ⚠️ 部分   | TLS 1.3（Schannel 有限支持；fafafa.ssl 封装层不暴露 ISSLEarlyDataContext）                                         |
 
 > 当前 dedicated Windows CI runtime truth 以 run `26037518301` 为准：

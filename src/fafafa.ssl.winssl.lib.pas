@@ -564,6 +564,8 @@ begin
   Result.OCSPStaplingSupport := sslSupportNone;
   Result.CertTransparencySupport := sslSupportNone;
   Result.SessionTicketsSupport := sslSupportExperimental;
+  // `SessionCacheSupport` 在 WinSSL 上当前表示 context-level cache/control
+  // surface 已发布且已接线，不等于已 runtime-proven 的 resumed handshake。
   Result.SessionCacheSupport := sslSupportStable;
   Result.ZeroRTTSupport := sslSupportNone;
   Result.EarlyDataSupport := sslSupportNone;

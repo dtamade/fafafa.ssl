@@ -6144,3 +6144,35 @@
   - 最危险的 high-entry drift 已经大幅下降
   - 接下来更值钱的工作会逐步从“第一页 / 入口页 truth 修正”
   - 转向“性能/历史型文档里仍残留的 phase / baseline / benchmark 快照清理”
+
+- 顺着 WinSSL capability/source/runtime 边界继续往下审，又确认了一条容易反复误读的语义缺口：
+  - `SessionCacheSupport=sslSupportStable`
+    当前可以成立
+  - 但它成立的层级是：
+    - context-level session cache/control surface 已发布且已接线
+  - 不是：
+    - dedicated Windows runtime 已稳定观测到 resumed handshake
+
+- 这条 drift 的具体危险点不在 runtime 实现，而在接口真相链没有写透：
+  - `src/fafafa.ssl.base.pas`
+    之前只写“会话缓存支持级别”
+  - `src/fafafa.ssl.winssl.lib.pas`
+    之前直接赋：
+    - `Result.SessionCacheSupport := sslSupportStable`
+    但没有把 stable 的层级写在旁边
+  - `docs/reference/API_REFERENCE.md`
+    甚至漏掉了 `SessionCacheSupport` 字段本身
+  - 这会让后续读文档的人把：
+    - capability stable
+    - resumed-handshake proof
+    混成同一个判断
+
+- 这批之后，WinSSL session cache 这条线的稳定结论应该固定为：
+  - `SessionCacheSupport`
+    说的是 published cache/control surface truth
+  - `SessionTicketsSupport`
+    说的是 resumption/ticket surface 的支持级别
+  - `observed_reuse=false` / `session_configured=true`
+    仍是当前 dedicated Windows runtime truth
+  - 因而不能再把 `SessionCacheSupport=stable`
+    当作“resumed handshake 已经 runtime-proven”的旁证
