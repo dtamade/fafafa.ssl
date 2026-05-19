@@ -2,6 +2,50 @@
 
 ## 2026-05-19
 
+- 继续从文档收尾切回 implementation completeness 后，当前最有价值的新问题已经从“表述漂移”升级成了真正的 capability/runtime 撒谎：
+  - `src/fafafa.ssl.openssl.backed.pas`
+    之前无条件发布：
+    - `Result.SupportsCallbacks := True;`
+  - 但 `src/fafafa.ssl.openssl.context.pas`
+    的 verify/password/info callback setter 仍然依赖 runtime symbol/helper 是否真的存在
+
+- 这条漂移的关键不只是“某个符号可能缺失”，而是 coarse `SupportsCallbacks` bool 当前并没有 per-callback 粒度：
+  - 调用方只能先看：
+    - `ISSLLibrary.GetCapabilities.SupportsCallbacks`
+  - 如果这里先说 `True`
+  - 然后在 non-nil callback assignment 时再抛 `unsupported`
+  - 那就等于 capability 对外先撒谎，再在 setter 层补刀
+
+- 这批重新核对后还额外压实了一条容易漏掉的细节：
+  - password callback 不只依赖：
+    - `SSL_CTX_set_default_passwd_cb`
+  - 还依赖：
+    - `SSL_CTX_set_default_passwd_cb_userdata`
+  - 否则 `PasswordCallbackThunk` 拿不到 `Self`
+  - 所以“password callback helper 存在但 userdata helper 丢了”也必须视为 callback surface 不完整
+
+- 因而当前最小正确修法不是引入新的 per-callback capability 字段，而是先把 OpenSSL 的 coarse published truth 收紧到 fail-closed：
+  - 新增共享 helper：
+    - `OpenSSLPublishedContextCallbackSurfaceReady`
+  - `GetCapabilities.SupportsCallbacks`
+    现在直接跟随这条 helper
+  - `SetVerifyCallback` / `SetPasswordCallback` / `SetInfoCallback`
+    对 non-nil assignment 统一先检查 published callback surface
+  - callback surface 不完整时：
+    - non-nil 统一 `unsupported`
+    - `nil` clear 继续允许作为 compatibility clear/no-op
+
+- focused runtime proof 也已经补上，避免以后只靠静态 grep 重新争论：
+  - 动态把 `SSL_CTX_set_default_passwd_cb_userdata` 置空后：
+    - `OpenSSL SupportsCallbacks` 会回落为 `False`
+    - verify/password/info 三个 non-nil setter 都会 fail-closed
+    - `nil` clear 仍然可用
+
+- 这批收口后的新基线应明确保留：
+  - `OpenSSL` callback publication 不再是 unconditional truth
+  - coarse capability 与 setter/runtime 语义重新对齐
+  - 后续如果继续做 callback / capability completeness，应优先审查：
+    - 还有哪些 coarse bool 仍然没有把“required helper set”锁进 published truth
 - 在前面连续收掉 specialized guides 的旧 helper 名之后，active docs 扫描结果已经明显收窄：
   - 当前只剩 `docs/guides/MIGRATION_GUIDE.md`
     里 OpenSSL low-level helper 片段还保留了一处：

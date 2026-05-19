@@ -10,11 +10,15 @@ uses
   fafafa.ssl.freepascal.lib
   {$IFDEF UNIX}
   , fafafa.ssl.openssl.backed
+  , fafafa.ssl.openssl.api.core
+  , fafafa.ssl.openssl.api.ssl
   , fafafa.ssl.mbedtls.lib
   , fafafa.ssl.wolfssl.lib
   {$ENDIF}
   {$IFDEF WINDOWS}
   , fafafa.ssl.openssl.backed
+  , fafafa.ssl.openssl.api.core
+  , fafafa.ssl.openssl.api.ssl
   , fafafa.ssl.winssl.lib
   , fafafa.ssl.mbedtls.lib
   , fafafa.ssl.wolfssl.lib
@@ -248,15 +252,115 @@ begin
     ' unpublished callback setters fail-closed on non-nil assignments and accept nil clears');
 end;
 
+procedure CheckOpenSSLIncompleteSurfaceFailsClosed;
+var
+  LLib: ISSLLibrary;
+  LCtx: ISSLContext;
+  LProbe: TCallbackProbe;
+  LKind: TCallbackKind;
+  LRejected: Boolean;
+  LLowerMsg: string;
+  LOrigPasswordUserdata: TSSL_CTX_set_default_passwd_cb_userdata;
+begin
+  if not TSSLFactory.IsLibraryAvailable(sslOpenSSL) then
+  begin
+    WriteLn('[SKIP] OpenSSL backend not available on this platform');
+    Exit;
+  end;
+
+  LLib := TOpenSSLLibrary.Create as ISSLLibrary;
+  Require(LLib.Initialize,
+    'OpenSSL probe library should initialize for incomplete callback-surface contract');
+
+  LOrigPasswordUserdata := SSL_CTX_set_default_passwd_cb_userdata;
+  if not Assigned(LOrigPasswordUserdata) then
+  begin
+    WriteLn('[SKIP] OpenSSL build does not export password callback userdata helper');
+    Exit;
+  end;
+
+  SSL_CTX_set_default_passwd_cb_userdata := nil;
+  try
+    Require(not LLib.GetCapabilities.SupportsCallbacks,
+      'OpenSSL must stop publishing SupportsCallbacks when callback helper surface is incomplete');
+
+    LCtx := LLib.CreateContext(sslCtxClient);
+    Require(LCtx <> nil, 'OpenSSL context should still be creatable while callbacks are unpublished');
+
+    LProbe := TCallbackProbe.Create;
+    try
+      for LKind := Low(TCallbackKind) to High(TCallbackKind) do
+      begin
+        LRejected := False;
+        try
+          AssignNonNilCallback(LCtx, LKind, LProbe);
+        except
+          on E: ESSLException do
+          begin
+            LLowerMsg := LowerCase(E.Message);
+            Require((E.ErrorCode = sslErrUnsupported) or (Pos('unsupported', LLowerMsg) > 0) or
+              (Pos('不支持', E.Message) > 0),
+              Format('OpenSSL incomplete callback surface must report unsupported for non-nil %s: %s',
+                [CallbackKindName(LKind), E.Message]));
+            LRejected := True;
+          end;
+        end;
+
+        Require(LRejected,
+          Format('OpenSSL must reject non-nil %s when callback helper surface is incomplete',
+            [CallbackKindName(LKind)]));
+
+        try
+          ClearCallback(LCtx, LKind);
+        except
+          on E: Exception do
+            raise Exception.CreateFmt(
+              'OpenSSL nil clear should stay available for %s while callback helper surface is incomplete: %s',
+              [CallbackKindName(LKind), E.Message]
+            );
+        end;
+      end;
+    finally
+      LProbe.Free;
+    end;
+  finally
+    LCtx := nil;
+    SSL_CTX_set_default_passwd_cb_userdata := LOrigPasswordUserdata;
+    LLib := nil;
+  end;
+
+  WriteLn('[PASS] OpenSSL incomplete callback surface fails closed across verify/password/info setters');
+end;
+
+procedure CheckOpenSSLPublishedStateFromRuntimeGate;
+var
+  LLib: ISSLLibrary;
+begin
+  if not TSSLFactory.IsLibraryAvailable(sslOpenSSL) then
+  begin
+    WriteLn('[SKIP] OpenSSL backend not available on this platform');
+    Exit;
+  end;
+
+  LLib := TSSLFactory.GetLibrary(sslOpenSSL);
+  Require(LLib <> nil, 'OpenSSL library should be creatable when available');
+
+  if OpenSSLPublishedContextCallbackSurfaceReady then
+    CheckPublishedBackend(sslOpenSSL)
+  else
+    CheckUnpublishedBackend(sslOpenSSL);
+end;
+
 begin
   WriteLn('Testing backend callback setter fail-closed contract');
   WriteLn('====================================================');
 
-  CheckPublishedBackend(sslOpenSSL);
+  CheckOpenSSLPublishedStateFromRuntimeGate;
   CheckWinSSLPartialBackend(sslWinSSL);
   CheckUnpublishedBackend(sslFreePascal);
   CheckUnpublishedBackend(sslWolfSSL);
   CheckUnpublishedBackend(sslMbedTLS);
+  CheckOpenSSLIncompleteSurfaceFailsClosed;
 
   WriteLn('====================================================');
   WriteLn('✅ backend callback setter fail-closed contract verified');

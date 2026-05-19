@@ -9,11 +9,15 @@ uses
   fafafa.ssl.freepascal.lib
   {$IFDEF UNIX}
   , fafafa.ssl.openssl.backed
+  , fafafa.ssl.openssl.api.core
+  , fafafa.ssl.openssl.api.ssl
   , fafafa.ssl.mbedtls.lib
   , fafafa.ssl.wolfssl.lib
   {$ENDIF}
   {$IFDEF WINDOWS}
   , fafafa.ssl.openssl.backed
+  , fafafa.ssl.openssl.api.core
+  , fafafa.ssl.openssl.api.ssl
   , fafafa.ssl.winssl.lib
   , fafafa.ssl.mbedtls.lib
   , fafafa.ssl.wolfssl.lib
@@ -49,15 +53,75 @@ begin
     BoolToStr(LActual, True));
 end;
 
+procedure CheckOpenSSLBackendCapability;
+var
+  LLib: ISSLLibrary;
+  LActual: Boolean;
+  LExpected: Boolean;
+begin
+  if not TSSLFactory.IsLibraryAvailable(sslOpenSSL) then
+  begin
+    WriteLn('[SKIP] OpenSSL backend not available on this platform');
+    Exit;
+  end;
+
+  LLib := TSSLFactory.GetLibrary(sslOpenSSL);
+  Require(LLib <> nil, 'OpenSSL library should be creatable when available');
+
+  LExpected := OpenSSLPublishedContextCallbackSurfaceReady;
+  LActual := LLib.GetCapabilities.SupportsCallbacks;
+  Require(LActual = LExpected,
+    Format('OpenSSL SupportsCallbacks mismatch: expected=%s actual=%s',
+      [BoolToStr(LExpected, True), BoolToStr(LActual, True)]));
+
+  WriteLn('[PASS] OpenSSL SupportsCallbacks = ', BoolToStr(LActual, True));
+end;
+
+procedure CheckOpenSSLCallbackRuntimeGateContract;
+var
+  LLib: ISSLLibrary;
+  LCaps: TSSLBackendCapabilities;
+  LOrigPasswordUserdata: TSSL_CTX_set_default_passwd_cb_userdata;
+begin
+  if not TSSLFactory.IsLibraryAvailable(sslOpenSSL) then
+  begin
+    WriteLn('[SKIP] OpenSSL backend not available on this platform');
+    Exit;
+  end;
+
+  LLib := TOpenSSLLibrary.Create as ISSLLibrary;
+  Require(LLib.Initialize,
+    'OpenSSL probe library should initialize for callback capability runtime gate contract');
+
+  LOrigPasswordUserdata := SSL_CTX_set_default_passwd_cb_userdata;
+  if not Assigned(LOrigPasswordUserdata) then
+  begin
+    WriteLn('[SKIP] OpenSSL build does not export password callback userdata helper');
+    Exit;
+  end;
+
+  SSL_CTX_set_default_passwd_cb_userdata := nil;
+  try
+    LCaps := LLib.GetCapabilities;
+    Require(not LCaps.SupportsCallbacks,
+      'OpenSSL must stop publishing SupportsCallbacks when the password callback userdata helper is missing');
+  finally
+    SSL_CTX_set_default_passwd_cb_userdata := LOrigPasswordUserdata;
+  end;
+
+  WriteLn('[PASS] OpenSSL runtime callback gate clears SupportsCallbacks when helper surface is incomplete');
+end;
+
 begin
   WriteLn('Testing backend callback capability truth contract');
   WriteLn('=================================================');
 
-  CheckBackendCapability(sslOpenSSL, True);
+  CheckOpenSSLBackendCapability;
   CheckBackendCapability(sslWinSSL, True);
   CheckBackendCapability(sslFreePascal, False);
   CheckBackendCapability(sslWolfSSL, False);
   CheckBackendCapability(sslMbedTLS, False);
+  CheckOpenSSLCallbackRuntimeGateContract;
 
   WriteLn('=================================================');
   WriteLn('✅ backend callback capability truth contract verified');

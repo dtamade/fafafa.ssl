@@ -10,6 +10,41 @@
 
 ## Current Status
 
+- [completed] OpenSSL callback publication runtime gate 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-openssl-callback-publication-runtime-gate.md`
+  - 当前已修正的实现真问题：
+    - `src/fafafa.ssl.openssl.backed.pas`
+      不再无条件发布：
+      - `SupportsCallbacks=True`
+    - OpenSSL callback capability 现在统一跟随共享 runtime gate：
+      - verify callback helper
+      - password callback helper
+      - password callback userdata helper
+      - info callback helper
+    - `src/fafafa.ssl.openssl.context.pas`
+      的 verify/password/info setter 现在统一回到：
+      - callback surface 不完整时 non-nil fail-closed
+      - `nil` clear 继续允许作为 compatibility clear/no-op
+  - 当前已补强的 focused contracts：
+    - `tests/scripts/test_callback_capability_truth_contract.sh`
+    - `tests/scripts/test_callback_setter_fail_closed_contract.sh`
+    - `tests/test_backend_callback_capability_truth_contract.pas`
+    - `tests/test_backend_callback_setter_fail_closed_contract.pas`
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_callback_capability_truth_contract.sh`
+    - `bash tests/scripts/test_callback_capability_truth_contract.sh`
+    - `bash -n tests/scripts/test_callback_setter_fail_closed_contract.sh`
+    - `bash tests/scripts/test_callback_setter_fail_closed_contract.sh`
+    - `fpc -B -Fu./src -Fu./tests -FUtmp/test_callback_capability_truth -FEtmp/test_callback_capability_truth -otmp/test_callback_capability_truth/test_backend_callback_capability_truth_contract tests/test_backend_callback_capability_truth_contract.pas`
+    - `./tmp/test_callback_capability_truth/test_backend_callback_capability_truth_contract`
+    - `fpc -B -Fu./src -Fu./tests -FUtmp/test_callback_setter_fail_closed -FEtmp/test_callback_setter_fail_closed -otmp/test_callback_setter_fail_closed/test_backend_callback_setter_fail_closed_contract tests/test_backend_callback_setter_fail_closed_contract.pas`
+    - `./tmp/test_callback_setter_fail_closed/test_backend_callback_setter_fail_closed_contract`
+  - 当前结论：
+    - 这批收掉的是一个真实 implementation/capability drift，不是文档措辞问题
+    - 后续继续做 backend completeness 审查时，应优先查这种：
+      - capability bool 已发布
+      - 但 setter/runtime 仍依赖未锁定 symbol/helper 的路径
 - [completed] Migration guide low-level helper entrypoint truth 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-migration-guide-lowlevel-helper-entrypoint-truth.md`

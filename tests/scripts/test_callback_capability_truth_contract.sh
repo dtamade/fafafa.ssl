@@ -27,7 +27,17 @@ require_absent() {
   fi
 }
 
+require_match() {
+  local file="$1"
+  local pattern="$2"
+  local message="$3"
+  if ! rg -n --multiline --multiline-dotall "$pattern" "$file" >/dev/null; then
+    fail "$message"
+  fi
+}
+
 base_file="src/fafafa.ssl.base.pas"
+openssl_ssl_api="src/fafafa.ssl.openssl.api.ssl.pas"
 openssl_lib="src/fafafa.ssl.openssl.backed.pas"
 openssl_ctx="src/fafafa.ssl.openssl.context.pas"
 winssl_lib="src/fafafa.ssl.winssl.lib.pas"
@@ -48,12 +58,19 @@ echo "[TEST] callback capability truth contract"
 require_present "$base_file" "SupportsCallbacks: Boolean;" \
   "base capability record must continue to expose SupportsCallbacks"
 
-require_present "$openssl_lib" "Result.SupportsCallbacks := True;" \
-  "OpenSSL must continue to publish SupportsCallbacks"
+require_match "$openssl_ssl_api" \
+  "function OpenSSLPublishedContextCallbackSurfaceReady: Boolean;.*?Assigned\\(SSL_CTX_set_cert_verify_callback\\).*?Assigned\\(SSL_CTX_set_default_passwd_cb\\).*?Assigned\\(SSL_CTX_set_default_passwd_cb_userdata\\).*?Assigned\\(SSL_CTX_set_info_callback\\)" \
+  "OpenSSL callback publication helper must require verify/password/userdata/info runtime helpers together"
+require_absent "$openssl_lib" "Result.SupportsCallbacks := True;" \
+  "OpenSSL must not publish SupportsCallbacks unconditionally"
+require_present "$openssl_lib" "Result.SupportsCallbacks := OpenSSLPublishedContextCallbackSurfaceReady;" \
+  "OpenSSL published callback capability must follow the runtime callback-surface gate"
 require_present "$openssl_ctx" "SSL_CTX_set_cert_verify_callback(FSSLContext, @VerifyCertificateCallback, Self)" \
   "OpenSSL verify callback wiring must remain live"
 require_present "$openssl_ctx" "SSL_CTX_set_default_passwd_cb(FSSLContext, @PasswordCallbackThunk);" \
   "OpenSSL password callback wiring must remain live"
+require_present "$openssl_ctx" "SSL_CTX_set_default_passwd_cb_userdata(FSSLContext, Self);" \
+  "OpenSSL password callback publication must continue to bind userdata for thunk dispatch"
 require_present "$openssl_ctx" "SSL_CTX_set_info_callback(FSSLContext, @InfoCallbackThunk)" \
   "OpenSSL info callback wiring must remain live"
 

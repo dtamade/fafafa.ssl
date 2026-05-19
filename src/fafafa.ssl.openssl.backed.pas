@@ -1139,7 +1139,7 @@ begin
 
   // ----- 扩展性 -----
   Result.SupportsCustomCipherSuites := True;
-  Result.SupportsCallbacks := True;
+  Result.SupportsCallbacks := OpenSSLPublishedContextCallbackSurfaceReady;
 
   // ----- 兼容性和质量 -----
   Result.CompatibilityLevel := 100;  // OpenSSL 是参考实现，完全兼容

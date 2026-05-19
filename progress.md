@@ -2,6 +2,101 @@
 
 ## 2026-05-19
 
+### OpenSSL Callback Publication Runtime Gate
+
+- add `docs/plans/2026-05-19-openssl-callback-publication-runtime-gate.md`
+  - change:
+    - define the bounded implementation batch for runtime-aware OpenSSL callback publication and setter fail-closed alignment
+
+- update `src/fafafa.ssl.openssl.api.ssl.pas`
+  - change:
+    - add shared `OpenSSLPublishedContextCallbackSurfaceReady` helper
+    - define the minimal required helper set as:
+      - `SSL_CTX_set_cert_verify_callback`
+      - `SSL_CTX_set_default_passwd_cb`
+      - `SSL_CTX_set_default_passwd_cb_userdata`
+      - `SSL_CTX_set_info_callback`
+
+- update `src/fafafa.ssl.openssl.backed.pas`
+  - change:
+    - replace unconditional `SupportsCallbacks=True` publication with the shared runtime callback-surface gate
+
+- update `src/fafafa.ssl.openssl.context.pas`
+  - change:
+    - add `RequirePublishedOpenSSLContextCallbackSurface(...)`
+    - make verify/password/info callback setter non-nil assignments fail-closed when the published callback surface is incomplete
+    - keep `nil` clear as a best-effort compatibility operation instead of raising on missing helpers
+
+- update `tests/scripts/test_callback_capability_truth_contract.sh`
+  - change:
+    - lock that OpenSSL callback publication is no longer unconditional
+    - lock that password callback publication also requires userdata helper readiness
+
+- update `tests/scripts/test_callback_setter_fail_closed_contract.sh`
+  - change:
+    - lock that OpenSSL verify/password/info setter now guard non-nil assignment behind the published callback-surface gate
+
+- update `tests/test_backend_callback_capability_truth_contract.pas`
+  - change:
+    - evaluate OpenSSL expected publication after runtime initialization, not before symbol loading
+    - add a focused runtime drift contract that temporarily removes `SSL_CTX_set_default_passwd_cb_userdata`
+      and proves `SupportsCallbacks` falls back to `False`
+
+- update `tests/test_backend_callback_setter_fail_closed_contract.pas`
+  - change:
+    - evaluate OpenSSL published-vs-unpublished path from the live runtime gate
+    - add a focused runtime drift contract that temporarily removes `SSL_CTX_set_default_passwd_cb_userdata`
+      and proves verify/password/info non-nil setter assignment fails closed while `nil` clear remains available
+    - fix the focused probe lifecycle to use interface ownership and avoid invalid pointer teardown noise
+
+- `bash -n tests/scripts/test_callback_capability_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - updated OpenSSL callback capability source contract syntax is valid
+
+- `bash tests/scripts/test_callback_capability_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - static capability truth now locks the runtime-aware OpenSSL callback publication gate
+
+- `bash -n tests/scripts/test_callback_setter_fail_closed_contract.sh`
+  - result: PASS
+  - summary:
+    - updated OpenSSL callback setter contract syntax is valid
+
+- `bash tests/scripts/test_callback_setter_fail_closed_contract.sh`
+  - result: PASS
+  - summary:
+    - static setter contract now locks OpenSSL non-nil callback gating behind the published callback surface
+
+- `fpc -B -Fu./src -Fu./tests -FUtmp/test_callback_capability_truth -FEtmp/test_callback_capability_truth -otmp/test_callback_capability_truth/test_backend_callback_capability_truth_contract tests/test_backend_callback_capability_truth_contract.pas`
+  - result: PASS with existing repository warnings
+  - summary:
+    - focused callback capability runtime contract compiled successfully after OpenSSL runtime-gate updates
+
+- `./tmp/test_callback_capability_truth/test_backend_callback_capability_truth_contract`
+  - result: FAIL -> PASS
+  - summary:
+    - initial RED exposed that the test was reading the OpenSSL helper gate before backend initialization
+    - after moving the expected-value check behind real library initialization, the runtime contract proved:
+      - current Linux OpenSSL build still publishes callbacks on the fully-ready path
+      - removing password-callback userdata helper drops `SupportsCallbacks` back to `False`
+
+- `fpc -B -Fu./src -Fu./tests -FUtmp/test_callback_setter_fail_closed -FEtmp/test_callback_setter_fail_closed -otmp/test_callback_setter_fail_closed/test_backend_callback_setter_fail_closed_contract tests/test_backend_callback_setter_fail_closed_contract.pas`
+  - result: PASS with existing repository warnings
+  - summary:
+    - focused callback setter runtime contract compiled successfully after OpenSSL fail-closed alignment
+
+- `./tmp/test_callback_setter_fail_closed/test_backend_callback_setter_fail_closed_contract`
+  - result: FAIL -> PASS
+  - summary:
+    - initial RED first exposed the same pre-initialization expectation bug in the test
+    - a second RED exposed probe teardown ownership noise (`EInvalidPointer`) in the focused test harness rather than product code
+    - GREEN after fix proves:
+      - current Linux OpenSSL build accepts verify/password/info callbacks on the fully-ready path
+      - removing password-callback userdata helper makes all three non-nil setter assignments fail-closed
+      - `nil` clear remains available on the incomplete path
+
 ### Migration Guide Low-Level Helper Entrypoint Truth
 
 - add `docs/plans/2026-05-19-migration-guide-lowlevel-helper-entrypoint-truth.md`

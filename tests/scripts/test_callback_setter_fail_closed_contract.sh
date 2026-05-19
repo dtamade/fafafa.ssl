@@ -29,6 +29,7 @@ require_fixed() {
 
 base_file="src/fafafa.ssl.base.pas"
 api_reference_file="docs/reference/API_REFERENCE.md"
+openssl_ctx="src/fafafa.ssl.openssl.context.pas"
 freepascal_ctx="src/fafafa.ssl.freepascal.context.pas"
 wolfssl_ctx="src/fafafa.ssl.wolfssl.context.pas"
 mbedtls_ctx="src/fafafa.ssl.mbedtls.context.pas"
@@ -52,6 +53,16 @@ require_match "$api_reference_file" \
 require_match "$api_reference_file" \
   'TSSLInfoCallback = procedure\(const aWhere: Integer;\s*const aRet: Integer;\s*const aState: string\) of object;' \
   "API reference must publish the current TSSLInfoCallback signature"
+
+require_match "$openssl_ctx" \
+  "procedure TOpenSSLContext\\.SetVerifyCallback\\(ACallback: TSSLVerifyCallback\\);.*?if Assigned\\(ACallback\\) then.*?RequirePublishedOpenSSLContextCallbackSurface\\('TOpenSSLContext\\.SetVerifyCallback'\\);" \
+  "OpenSSL verify callback setter must guard non-nil assignment behind the published callback-surface gate"
+require_match "$openssl_ctx" \
+  "procedure TOpenSSLContext\\.SetPasswordCallback\\(ACallback: TSSLPasswordCallback\\);.*?if Assigned\\(ACallback\\) then.*?RequirePublishedOpenSSLContextCallbackSurface\\('TOpenSSLContext\\.SetPasswordCallback'\\);" \
+  "OpenSSL password callback setter must guard non-nil assignment behind the published callback-surface gate"
+require_match "$openssl_ctx" \
+  "procedure TOpenSSLContext\\.SetInfoCallback\\(ACallback: TSSLInfoCallback\\);.*?if Assigned\\(ACallback\\) then.*?RequirePublishedOpenSSLContextCallbackSurface\\('TOpenSSLContext\\.SetInfoCallback'\\);" \
+  "OpenSSL info callback setter must guard non-nil assignment behind the published callback-surface gate"
 
 require_match "$freepascal_ctx" \
   "procedure TFreePascalContext\\.SetVerifyCallback\\(ACallback: TSSLVerifyCallback\\);.*?if Assigned\\(ACallback\\) then.*?RejectUnsupportedCallbackAssignment\\('Verify callback', 'TFreePascalContext\\.SetVerifyCallback'\\);.*?FVerifyCallback := nil;" \

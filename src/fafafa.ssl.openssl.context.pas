@@ -269,6 +269,19 @@ begin
     );
 end;
 
+procedure RequirePublishedOpenSSLContextCallbackSurface(const AMethodName: string);
+begin
+  if not OpenSSLPublishedContextCallbackSurfaceReady then
+    raise ESSLInitializationException.CreateWithContext(
+      'OpenSSL callback surface is incomplete in this runtime build; ' +
+      'verify/password/info callback publication remains unsupported until all required helpers are available.',
+      sslErrUnsupported,
+      AMethodName,
+      0,
+      sslOpenSSL
+    );
+end;
+
 function OpenSSLOCSPResponseAlloc(ASize: size_t): PByte;
 var
   LCryptoMalloc: TCRYPTO_malloc;
@@ -1902,18 +1915,19 @@ end;
 
 procedure TOpenSSLContext.SetVerifyCallback(ACallback: TSSLVerifyCallback);
 begin
-  FVerifyCallback := ACallback;
-  if FSSLContext = nil then Exit;
-  if not Assigned(SSL_CTX_set_cert_verify_callback) then
-    raise ESSLInitializationException.CreateWithContext(
-      'Verify callback not supported by this OpenSSL build',
-      sslErrUnsupported,
-      'TOpenSSLContext.SetVerifyCallback'
-    );
-  if Assigned(FVerifyCallback) then
+  if Assigned(ACallback) then
+  begin
+    RequirePublishedOpenSSLContextCallbackSurface('TOpenSSLContext.SetVerifyCallback');
+    FVerifyCallback := ACallback;
+    if FSSLContext = nil then Exit;
     SSL_CTX_set_cert_verify_callback(FSSLContext, @VerifyCertificateCallback, Self)
+  end
   else
-    SSL_CTX_set_cert_verify_callback(FSSLContext, nil, nil);
+  begin
+    FVerifyCallback := nil;
+    if (FSSLContext <> nil) and Assigned(SSL_CTX_set_cert_verify_callback) then
+      SSL_CTX_set_cert_verify_callback(FSSLContext, nil, nil);
+  end;
 end;
 
 // ============================================================================
@@ -2169,34 +2183,39 @@ end;
 
 procedure TOpenSSLContext.SetPasswordCallback(ACallback: TSSLPasswordCallback);
 begin
-  FPasswordCallback := ACallback;
-  if FSSLContext = nil then Exit;
-  if not Assigned(SSL_CTX_set_default_passwd_cb) then
-    RaiseUnsupported('Password callback');
-  if Assigned(FPasswordCallback) then
+  if Assigned(ACallback) then
   begin
+    RequirePublishedOpenSSLContextCallbackSurface('TOpenSSLContext.SetPasswordCallback');
+    FPasswordCallback := ACallback;
+    if FSSLContext = nil then Exit;
     SSL_CTX_set_default_passwd_cb(FSSLContext, @PasswordCallbackThunk);
-    if Assigned(SSL_CTX_set_default_passwd_cb_userdata) then
-      SSL_CTX_set_default_passwd_cb_userdata(FSSLContext, Self);
+    SSL_CTX_set_default_passwd_cb_userdata(FSSLContext, Self);
   end
   else
   begin
-    SSL_CTX_set_default_passwd_cb(FSSLContext, nil);
-    if Assigned(SSL_CTX_set_default_passwd_cb_userdata) then
+    FPasswordCallback := nil;
+    if (FSSLContext <> nil) and Assigned(SSL_CTX_set_default_passwd_cb) then
+      SSL_CTX_set_default_passwd_cb(FSSLContext, nil);
+    if (FSSLContext <> nil) and Assigned(SSL_CTX_set_default_passwd_cb_userdata) then
       SSL_CTX_set_default_passwd_cb_userdata(FSSLContext, nil);
   end;
 end;
 
 procedure TOpenSSLContext.SetInfoCallback(ACallback: TSSLInfoCallback);
 begin
-  FInfoCallback := ACallback;
-  if FSSLContext = nil then Exit;
-  if not Assigned(SSL_CTX_set_info_callback) then
-    RaiseUnsupported('Info callback');
-  if Assigned(FInfoCallback) then
+  if Assigned(ACallback) then
+  begin
+    RequirePublishedOpenSSLContextCallbackSurface('TOpenSSLContext.SetInfoCallback');
+    FInfoCallback := ACallback;
+    if FSSLContext = nil then Exit;
     SSL_CTX_set_info_callback(FSSLContext, @InfoCallbackThunk)
+  end
   else
-    SSL_CTX_set_info_callback(FSSLContext, nil);
+  begin
+    FInfoCallback := nil;
+    if (FSSLContext <> nil) and Assigned(SSL_CTX_set_info_callback) then
+      SSL_CTX_set_info_callback(FSSLContext, nil);
+  end;
 end;
 
 // ============================================================================
