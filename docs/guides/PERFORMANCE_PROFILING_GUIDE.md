@@ -72,6 +72,7 @@ gprof your_program gmon.out > profile.txt
 **症状**: 首次连接慢
 
 **原因**:
+
 - 密钥交换计算密集
 - 证书链验证
 - OCSP 查询（如启用）
@@ -80,13 +81,19 @@ gprof your_program gmon.out > profile.txt
 
 ```pascal
 // 启用 Session 复用
+var
+  Session: ISSLSession;
+  Resumption1, Resumption2: ISSLSessionResumption;
+
 Ctx := TSSLContextBuilder.Create
   .WithSessionCache(1000)  // 缓存 1000 个 session
   .BuildClient;
 
 // 复用 session
-Session := Conn1.GetSession;
-Conn2.SetSession(Session);
+if Supports(Conn1, ISSLSessionResumption, Resumption1) then
+  Session := Resumption1.GetSession;
+if Assigned(Session) and Supports(Conn2, ISSLSessionResumption, Resumption2) then
+  Resumption2.SetSession(Session);
 ```
 
 **预期提升**: 70-90% 握手时间减少
@@ -96,6 +103,7 @@ Conn2.SetSession(Session);
 **症状**: 每次连接都慢
 
 **原因**:
+
 - 证书链遍历
 - CRL/OCSP 检查
 - 签名验证
@@ -287,14 +295,14 @@ end.
 
 ## 性能目标参考
 
-| 操作 | 目标时间 | 说明 |
-|------|----------|------|
-| TLS 1.3 握手 | < 50ms | 本地网络 |
-| TLS 1.2 握手 | < 100ms | 本地网络 |
-| Session 复用握手 | < 10ms | 本地网络 |
+| 操作             | 目标时间   | 说明     |
+| ---------------- | ---------- | -------- |
+| TLS 1.3 握手     | < 50ms     | 本地网络 |
+| TLS 1.2 握手     | < 100ms    | 本地网络 |
+| Session 复用握手 | < 10ms     | 本地网络 |
 | AES-256-GCM 加密 | > 500 MB/s | 现代 CPU |
-| RSA 2048 签名 | < 5ms | 现代 CPU |
-| ECDSA P-256 签名 | < 1ms | 现代 CPU |
+| RSA 2048 签名    | < 5ms      | 现代 CPU |
+| ECDSA P-256 签名 | < 1ms      | 现代 CPU |
 
 ## 相关文档
 

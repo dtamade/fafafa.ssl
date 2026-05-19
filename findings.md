@@ -38,6 +38,30 @@
     - 或跨换行的语义匹配
   - 记住这一点可以减少之后重复返工 contract 本身
 
+- 文档 owner-path drift 现在已经很明确地分成了两类：
+  - 一类是“解释性提及” core mirror 名字，但同时明确说它是 deprecated/compatibility
+  - 另一类是“教学示例真的在调用 direct-core”
+  - 真正需要优先收口的是第二类，因为它会直接把读者带回旧接口使用方式
+
+- 这次第 97 批确认了一个很重要的事实：
+  - `API_REFERENCE` 里最危险的不是大段代码示例
+  - 反而是 record 小节前的说明 bullet
+  - 因为读者会把“通过 ISSLConnection.GetHealthStatus 获取...”这种描述当成权威入口，
+    即使下面已经写了 deprecated/owner-path 说明，也还是会形成自相矛盾心智
+
+- `WINSSL_BEST_PRACTICES` / `PERFORMANCE_PROFILING_GUIDE` / `WINSSL_DESIGN`
+  这三页说明了另一个模式：
+  - 一旦某条旧示例进入“最佳实践 / profiling / design pseudocode”层，
+  - 它的伤害往往比普通 FAQ 更大，
+  - 因为读者更容易把它当成“推荐实现模式”而不是“历史遗留 API”
+
+- 当前活跃文档 owner-path 面现在已经基本清空：
+  - 我们重新扫描 `docs/guides` / `docs/reference`
+  - 已经没有 direct-core `GetSession` / `SetSession` / `IsSessionReused` /
+    `GetHealthStatus` / `GetPerformanceMetrics` / `GetDiagnosticInfo` 调用示例残留
+  - 剩下的 direct-core 名字主要是解释性提及或 compatibility/deprecation 声明，
+    不再属于 active guidance drift
+
 - session-resumption residual 这条线现在终于可以稳定冻结了：
   - `tests/contract/test_backend_contract.pas`
     是 compatibility mirror proof

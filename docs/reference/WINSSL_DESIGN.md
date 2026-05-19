@@ -345,14 +345,15 @@ procedure WarmupSessions(const AHosts: TStringList);
 var
   LHost: string;
   LConn: ISSLConnection;
+  LResumption: ISSLSessionResumption;
 begin
   for LHost in AHosts do
   begin
     LConn := CreateConnection(LHost, 443);
-    if LConn.Connect then
+    if LConn.Connect and Supports(LConn, ISSLSessionResumption, LResumption) then
     begin
       // 保存 Session 供后续使用
-      FSessionManager.AddSession(LHost, LConn.GetSession);
+      FSessionManager.AddSession(LHost, LResumption.GetSession);
       LConn.Shutdown;
     end;
   end;
@@ -460,14 +461,14 @@ end;
 
 #### 4.4.7 与 OpenSSL 的差异
 
-| 特性             | WinSSL (Schannel)    | OpenSSL              |
-| ---------------- | -------------------- | -------------------- |
-| **Session 存储** | 凭据句柄内部自动缓存 | 需要手动序列化和存储 |
+| 特性             | WinSSL (Schannel)                                   | OpenSSL              |
+| ---------------- | --------------------------------------------------- | -------------------- |
+| **Session 存储** | 凭据句柄内部自动缓存                                | 需要手动序列化和存储 |
 | **复用机制**     | 系统自动尝试；当前 fafafa.ssl public truth 仍偏保守 | 需要显式设置 Session |
-| **跨进程共享**   | 不支持（进程隔离）   | 支持（通过序列化）   |
-| **有效期控制**   | 系统策略控制         | 应用程序控制         |
-| **内存管理**     | 系统自动管理         | 应用程序负责         |
-| **性能收益**     | 当前未在 fafafa.ssl Windows CI 中 runtime-proven | 需按具体场景实测      |
+| **跨进程共享**   | 不支持（进程隔离）                                  | 支持（通过序列化）   |
+| **有效期控制**   | 系统策略控制                                        | 应用程序控制         |
+| **内存管理**     | 系统自动管理                                        | 应用程序负责         |
+| **性能收益**     | 当前未在 fafafa.ssl Windows CI 中 runtime-proven    | 需按具体场景实测     |
 
 #### 4.4.8 已知限制
 

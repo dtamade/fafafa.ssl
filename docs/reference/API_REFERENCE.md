@@ -872,11 +872,11 @@ end;
 
 #### 与 OpenSSL 的差异
 
-| 特性             | WinSSL                                            | OpenSSL            |
-| ---------------- | ------------------------------------------------- | ------------------ |
-| Session 存储     | 自动（凭据句柄缓存）                              | 手动（需要序列化） |
-| Session 有效期   | 系统策略控制                                      | 应用程序控制       |
-| 跨进程共享       | 不支持                                            | 支持（通过序列化） |
+| 特性               | WinSSL                                             | OpenSSL            |
+| ------------------ | -------------------------------------------------- | ------------------ |
+| Session 存储       | 自动（凭据句柄缓存）                               | 手动（需要序列化） |
+| Session 有效期     | 系统策略控制                                       | 应用程序控制       |
+| 跨进程共享         | 不支持                                             | 支持（通过序列化） |
 | 当前 runtime truth | `observed_reuse=false` / `session_configured=true` | 常见场景可见收益   |
 
 #### 错误处理
@@ -1330,7 +1330,7 @@ end;
 
 **说明**:
 
-- 通过 `ISSLConnection.GetHealthStatus` 获取连接健康状态
+- 通过 `ISSLDiagnostics.GetHealthStatus` 获取连接健康状态
 - 用于快速诊断连接问题和监控连接状态
 - `ConnectionAge` 从连接创建时开始计算
 - 在 `ISSLConnection` 上当前只是编译期 `deprecated` 的 compatibility mirror。
@@ -1350,7 +1350,7 @@ end;
 
 **说明**:
 
-- 通过 `ISSLConnection.GetPerformanceMetrics` 获取性能指标
+- 通过 `ISSLDiagnostics.GetPerformanceMetrics` 获取性能指标
 - 用于性能分析和优化
 - `HandshakeTime` 使用高精度计时器测量
 - 在 `ISSLConnection` 上当前只是编译期 `deprecated` 的 compatibility mirror。
@@ -1384,7 +1384,7 @@ end;
 
 **说明**:
 
-- 通过 `ISSLConnection.GetDiagnosticInfo` 获取完整诊断信息
+- 通过 `ISSLDiagnostics.GetDiagnosticInfo` 获取完整诊断信息
 - 包含连接的所有监控和诊断数据
 - 用于故障排查和性能分析
 - 在 `ISSLConnection` 上当前只是编译期 `deprecated` 的 compatibility mirror。

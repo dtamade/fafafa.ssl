@@ -88,6 +88,69 @@
   - summary:
     - the performance-guide benchmark-truth batch is whitespace-clean
 
+### Active Owner-Path Docs Alignment
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - batch started from a clean `master...origin/master` worktree
+
+- `rg -l '\b(?:Conn|LConn|Conn1|Conn2|Connection|Stream\.Connection)\.(?:GetSession|SetSession|IsSessionReused|GetPerformanceMetrics|GetHealthStatus|GetDiagnosticInfo|IsHealthy)\b|`ISSLConnection\.(?:GetSession|SetSession|IsSessionReused|GetPerformanceMetrics|GetHealthStatus|GetDiagnosticInfo|IsHealthy)`' docs/guides docs/reference --glob '!docs/archive/**' --glob '!docs/plans/**' | sort`
+  - result: PASS
+  - summary:
+    - active-doc scan narrowed the remaining owner-path guidance drift to:
+      - `docs/reference/API_REFERENCE.md`
+      - `docs/guides/WINSSL_BEST_PRACTICES.md`
+      - `docs/guides/PERFORMANCE_PROFILING_GUIDE.md`
+      - `docs/reference/WINSSL_DESIGN.md`
+
+- add `docs/plans/2026-05-19-active-owner-path-docs-alignment.md`
+  - change:
+    - recorded the bounded docs-only plan for the remaining active owner-path guidance cleanup
+
+- add `tests/scripts/test_active_owner_path_docs_alignment_contract.sh`
+  - change:
+    - added a focused shell contract that guards:
+      - API-reference diagnostics bullets now point to `ISSLDiagnostics`
+      - WinSSL/profiling/design session examples now point to `ISSLSessionResumption`
+      - direct-core session/diagnostics teaching is absent from the targeted active docs
+
+- update docs:
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/guides/WINSSL_BEST_PRACTICES.md`
+  - `docs/guides/PERFORMANCE_PROFILING_GUIDE.md`
+  - `docs/reference/WINSSL_DESIGN.md`
+  - change:
+    - rewrote diagnostics bullets to point at `ISSLDiagnostics`
+    - migrated WinSSL/profiling/design session snippets to `ISSLSessionResumption`
+    - kept compatibility-mirror discussion only as explanatory/deprecation wording
+
+- `bash -n tests/scripts/test_active_owner_path_docs_alignment_contract.sh`
+  - result: PASS
+  - summary:
+    - new active owner-path docs contract syntax is valid
+
+- `bash tests/scripts/test_active_owner_path_docs_alignment_contract.sh`
+  - result: PASS
+  - summary:
+    - targeted active docs now all prefer owner-path guidance over direct-core compatibility mirrors
+
+- `npx prettier --write docs/reference/API_REFERENCE.md docs/guides/WINSSL_BEST_PRACTICES.md docs/guides/PERFORMANCE_PROFILING_GUIDE.md docs/reference/WINSSL_DESIGN.md`
+  - result: PASS
+  - summary:
+    - all four active docs remain formatter-stable after the owner-path cleanup
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - the active owner-path docs batch is whitespace-clean
+
+- `rg -l '\b(?:Conn|LConn|Conn1|Conn2|Connection|Stream\.Connection)\.(?:GetSession|SetSession|IsSessionReused|GetPerformanceMetrics|GetHealthStatus|GetDiagnosticInfo|IsHealthy)\b' docs/guides docs/reference --glob '!docs/archive/**' --glob '!docs/plans/**' | sort`
+  - result: PASS
+  - summary:
+    - active `docs/guides` / `docs/reference` no longer retain direct-core connection-call examples
+    - the remaining direct-core names in active docs are now explanatory compatibility/deprecation mentions rather than teaching call sites
+
 ### ISSLSessionResumption Runtime Residual Classification Tightening
 
 - add `docs/plans/2026-05-19-isslsessionresumption-runtime-residual-classification-tightening.md`

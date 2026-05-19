@@ -4469,3 +4469,47 @@
        - 固定 phase 完成度
        - direct-core compatibility mirror 示例
      - 但不再回头重开已经收口的高入口 docs truth 页面
+97. `active owner-path docs alignment` 已完成 focused 收口，并应作为当前活跃文档 owner-path guidance 的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-active-owner-path-docs-alignment.md`
+   - 当前已确认的真实 drift：
+     - `docs/reference/API_REFERENCE.md`
+       - `TSSLHealthStatus` / `TSSLPerformanceMetrics` / `TSSLDiagnosticInfo`
+         的说明仍写成：
+         - `通过 ISSLConnection.GetHealthStatus 获取...`
+         - `通过 ISSLConnection.GetPerformanceMetrics 获取...`
+         - `通过 ISSLConnection.GetDiagnosticInfo 获取...`
+       - 这会和同段里已有的 deprecated/owner-path 说明自相矛盾
+     - `docs/guides/WINSSL_BEST_PRACTICES.md`
+       - 仍示范：
+         - `LConn1.GetSession`
+         - `LConn.SetSession`
+     - `docs/guides/PERFORMANCE_PROFILING_GUIDE.md`
+       - 仍示范：
+         - `Conn1.GetSession`
+         - `Conn2.SetSession`
+     - `docs/reference/WINSSL_DESIGN.md`
+       - warmup 伪代码仍写：
+         - `FSessionManager.AddSession(LHost, LConn.GetSession);`
+   - 当前最小正确修法已落地：
+     - 不改生产实现
+     - 只把这 4 份活跃文档统一切回：
+       - `ISSLDiagnostics`
+       - `ISSLSessionResumption`
+     - 并新增 focused contract 冻结这组 owner-path guidance
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_active_owner_path_docs_alignment_contract.sh`
+     - `bash tests/scripts/test_active_owner_path_docs_alignment_contract.sh`
+     - `npx prettier --write docs/reference/API_REFERENCE.md docs/guides/WINSSL_BEST_PRACTICES.md docs/guides/PERFORMANCE_PROFILING_GUIDE.md docs/reference/WINSSL_DESIGN.md`
+     - `git diff --check`
+     - `rg -l '\b(?:Conn|LConn|Conn1|Conn2|Connection|Stream\.Connection)\.(?:GetSession|SetSession|IsSessionReused|GetPerformanceMetrics|GetHealthStatus|GetDiagnosticInfo|IsHealthy)\b' docs/guides docs/reference --glob '!docs/archive/**' --glob '!docs/plans/**' | sort`
+   - 当前批收口后的新剩余面：
+     - 活跃 `docs/guides` / `docs/reference` 已不再残留 direct-core 连接调用示例
+     - 这条线现在只剩：
+       - `PERFORMANCE_OPTIMIZATION_GUIDE.md`
+         对 direct-core 名字的“解释性提及”，但它已经明确说明这些只是 compatibility mirror，不属于 owner-path drift
+   - 当前批收口后默认下一步应为：
+     - 继续回到“接口设计 + 各 backend 实现完整性”主轴
+     - 优先查：
+       - capability matrix / KnownIssues / backend contract 之间是否还有实现或发布边界不一致
+       - 活跃 reference/guides 是否还残留固定 capability 结论或 backend-specific old truth

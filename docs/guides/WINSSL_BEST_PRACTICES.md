@@ -21,12 +21,14 @@
 ### 1. 始终验证证书
 
 **❌ 错误做法**:
+
 ```pascal
 // 禁用证书验证（仅用于测试！）
 LContext.SetVerifyMode([]);
 ```
 
 **✅ 正确做法**:
+
 ```pascal
 // 启用完整的证书验证
 LContext.SetVerifyMode([sslVerifyPeer, sslVerifyFailIfNoPeerCert]);
@@ -42,22 +44,26 @@ LContext.LoadCAPath('/etc/ssl/certs');  // Linux
 当前 WinSSL backend 不发布 custom cipher suite override；不要把 `SetCipherSuites(...)` 当成 Schannel 调优手段。
 
 **❌ 错误做法**:
+
 - 在应用层调用 `SetCipherSuites('ALL')` 以为可以放宽 Schannel 的实际 cipher order
 - 通过 `SetCipherList(...)` / `SetCipherSuites(...)` 尝试覆盖系统 TLS 策略
 
 **✅ 正确做法**:
+
 - 通过 Windows / Schannel 系统策略维护强密码套件顺序
 - 在应用层只收紧 TLS 协议版本、证书、ALPN 等已发布能力
 
 ### 3. 使用最新的 TLS 版本
 
 **❌ 错误做法**:
+
 ```pascal
 // 允许旧版本 TLS
 LContext.SetProtocolVersions([sslProtocolTLS10, sslProtocolTLS11]);
 ```
 
 **✅ 正确做法**:
+
 ```pascal
 // 只使用 TLS 1.2 和 TLS 1.3
 LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
@@ -66,12 +72,14 @@ LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
 ### 4. 验证主机名
 
 **❌ 错误做法**:
+
 ```pascal
 // 不验证主机名
 LConn.Connect;
 ```
 
 **✅ 正确做法**:
+
 ```pascal
 // 设置服务器名称（SNI）并验证
 (LConn as ISSLClientConnection).SetServerName('example.com');
@@ -87,12 +95,14 @@ end;
 ### 5. 保护私钥
 
 **❌ 错误做法**:
+
 ```pascal
 // 私钥明文存储
 LKey := '-----BEGIN PRIVATE KEY-----...';
 ```
 
 **✅ 正确做法**:
+
 ```pascal
 // WinSSL 当前使用 PFX/P12 bundle 导入证书和私钥
 LContext.LoadPrivateKey('server.pfx', 'pfx-password');
@@ -148,6 +158,7 @@ end;
 ### 1. 复用 Context 对象
 
 **❌ 错误做法**:
+
 ```pascal
 // 每次连接创建新 Context
 for i := 1 to 100 do
@@ -159,6 +170,7 @@ end;
 ```
 
 **✅ 正确做法**:
+
 ```pascal
 // 复用 Context 对象
 LContext := LLib.CreateContext(sslCtxClient);
@@ -172,6 +184,7 @@ end;
 ### 2. 启用 Session 复用
 
 **❌ 错误做法**:
+
 ```pascal
 // 每次完整握手
 for i := 1 to 100 do
@@ -183,12 +196,17 @@ end;
 ```
 
 **✅ 正确做法**:
+
 ```pascal
 // 使用 Session 复用
+var
+  LSession: ISSLSession;
+  LResumption1, LResumption: ISSLSessionResumption;
+
 LConn1 := LContext.CreateConnection(Socket1);
-if LConn1.Connect then
+if LConn1.Connect and Supports(LConn1, ISSLSessionResumption, LResumption1) then
 begin
-  LSession := LConn1.GetSession;
+  LSession := LResumption1.GetSession;
   LConn1.Shutdown;
 end;
 
@@ -196,7 +214,8 @@ end;
 for i := 1 to 100 do
 begin
   LConn := LContext.CreateConnection(Socket);
-  LConn.SetSession(LSession);
+  if Assigned(LSession) and Supports(LConn, ISSLSessionResumption, LResumption) then
+    LResumption.SetSession(LSession);
   LConn.Connect;  // 快速握手
   LConn.Shutdown;
 end;
@@ -205,12 +224,14 @@ end;
 ### 3. 使用合适的缓冲区大小
 
 **❌ 错误做法**:
+
 ```pascal
 // 缓冲区太小
 const BUFFER_SIZE = 512;  // 太小，频繁系统调用
 ```
 
 **✅ 正确做法**:
+
 ```pascal
 // 根据数据大小选择合适的缓冲区
 const BUFFER_SIZE = 8192;  // 8 KB，适合大多数场景
@@ -222,6 +243,7 @@ const LARGE_BUFFER_SIZE = 65536;  // 64 KB
 ### 4. 批量读写数据
 
 **❌ 错误做法**:
+
 ```pascal
 // 逐字节读取
 for i := 1 to FileSize do
@@ -229,6 +251,7 @@ for i := 1 to FileSize do
 ```
 
 **✅ 正确做法**:
+
 ```pascal
 // 批量读取
 var
@@ -250,6 +273,7 @@ end;
 ### 1. 使用结构化错误处理
 
 **❌ 错误做法**:
+
 ```pascal
 // 忽略错误
 LConn.Connect;
@@ -257,6 +281,7 @@ LConn.WriteString('data');
 ```
 
 **✅ 正确做法**:
+
 ```pascal
 // 完整的错误处理
 try
@@ -290,12 +315,14 @@ end;
 ### 2. 记录详细的错误上下文
 
 **❌ 错误做法**:
+
 ```pascal
 // 只记录错误码
 WriteLn('Error: ', LErr);
 ```
 
 **✅ 正确做法**:
+
 ```pascal
 // 记录完整的错误上下文
 procedure LogDetailedError(const AOperation: string; AErrorCode: DWORD);
@@ -317,6 +344,7 @@ end;
 ### 3. 实现重试逻辑
 
 **❌ 错误做法**:
+
 ```pascal
 // 连接失败就放弃
 if not LConn.Connect then
@@ -324,6 +352,7 @@ if not LConn.Connect then
 ```
 
 **✅ 正确做法**:
+
 ```pascal
 // 实现指数退避重试
 function ConnectWithRetry(AConn: ISSLConnection;
@@ -364,6 +393,7 @@ end;
 ### 1. 正确释放连接
 
 **❌ 错误做法**:
+
 ```pascal
 // 未调用 Shutdown
 LConn := LContext.CreateConnection(Socket);
@@ -372,6 +402,7 @@ LConn.Connect;
 ```
 
 **✅ 正确做法**:
+
 ```pascal
 // 使用 try-finally 确保释放
 LConn := LContext.CreateConnection(Socket);
@@ -388,12 +419,14 @@ end;
 ### 2. 管理 Session 缓存
 
 **❌ 错误做法**:
+
 ```pascal
 // Session 缓存无限增长
 FSessionCache.Add(Host, Session);  // 永不清理
 ```
 
 **✅ 正确做法**:
+
 ```pascal
 // 定期清理过期 Session
 procedure TSessionCache.CleanExpired;
@@ -428,6 +461,7 @@ end;
 ### 3. 使用连接池
 
 **❌ 错误做法**:
+
 ```pascal
 // 每次请求创建新连接
 for i := 1 to 1000 do
@@ -440,6 +474,7 @@ end;
 ```
 
 **✅ 正确做法**:
+
 ```pascal
 // 使用连接池复用连接
 LPool := TSSLConnectionPool.Create(LContext, Host, Port, 10);
@@ -468,6 +503,7 @@ end;
 ### 1. 使用本地测试服务器
 
 **❌ 错误做法**:
+
 ```pascal
 // 依赖外部服务器测试
 LConn := LContext.CreateConnection(CreateSocket('example.com', 443));
@@ -476,6 +512,7 @@ Assert(LConn.Connect);
 ```
 
 **✅ 正确做法**:
+
 ```pascal
 // 使用本地测试服务器
 procedure SetupTestServer;
@@ -495,6 +532,7 @@ Assert(LConn.Connect);
 ### 2. 测试错误场景
 
 **❌ 错误做法**:
+
 ```pascal
 // 只测试成功场景
 procedure TestConnect;
@@ -504,6 +542,7 @@ end;
 ```
 
 **✅ 正确做法**:
+
 ```pascal
 // 测试各种错误场景
 procedure TestConnectErrors;
@@ -572,12 +611,14 @@ end;
 ### 1. 配置日志记录
 
 **❌ 错误做法**:
+
 ```pascal
 // 不记录日志
 LConn.Connect;
 ```
 
 **✅ 正确做法**:
+
 ```pascal
 // 配置结构化日志
 var
@@ -833,6 +874,7 @@ end;
 ## 检查清单
 
 ### 安全检查清单
+
 - [ ] 启用证书验证
 - [ ] 使用强密码套件
 - [ ] 使用 TLS 1.2+
@@ -841,6 +883,7 @@ end;
 - [ ] 实施证书固定（高安全场景）
 
 ### 性能检查清单
+
 - [ ] 复用 Context 对象
 - [ ] 启用 Session 复用
 - [ ] 使用合适的缓冲区大小
@@ -849,6 +892,7 @@ end;
 - [ ] 监控性能指标
 
 ### 错误处理检查清单
+
 - [ ] 使用结构化错误处理
 - [ ] 记录详细的错误上下文
 - [ ] 实现重试逻辑
@@ -856,6 +900,7 @@ end;
 - [ ] 提供友好的错误消息
 
 ### 资源管理检查清单
+
 - [ ] 正确释放连接
 - [ ] 管理 Session 缓存
 - [ ] 使用连接池
@@ -863,6 +908,7 @@ end;
 - [ ] 实施优雅关闭
 
 ### 测试检查清单
+
 - [ ] 使用本地测试服务器
 - [ ] 测试错误场景
 - [ ] 使用 Mock 对象
@@ -870,6 +916,7 @@ end;
 - [ ] 性能基准测试
 
 ### 生产部署检查清单
+
 - [ ] 配置日志记录
 - [ ] 实施健康检查
 - [ ] 监控性能指标
