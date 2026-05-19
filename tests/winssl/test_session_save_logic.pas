@@ -93,7 +93,7 @@ type
       const ACipher: string; ACert: ISSLCertificate);
     procedure SaveSessionAfterHandshake;
     
-    function GetSession: ISSLSession;
+    function GetSavedSession: ISSLSession;
   end;
 
 var
@@ -230,7 +230,7 @@ begin
   end;
 end;
 
-function TMockConnection.GetSession: ISSLSession;
+function TMockConnection.GetSavedSession: ISSLSession;
 begin
   Result := FCurrentSession;
 end;
@@ -280,7 +280,7 @@ begin
     LConn.SaveSessionAfterHandshake;
     
     // 获取会话
-    LSession := LConn.GetSession;
+    LSession := LConn.GetSavedSession;
     Check('会话已创建', LSession <> nil);
     
     if LSession <> nil then
@@ -316,7 +316,7 @@ begin
     LConn.SaveSessionAfterHandshake;
     
     // 获取会话
-    LSession := LConn.GetSession;
+    LSession := LConn.GetSavedSession;
     Check('会话已创建', LSession <> nil);
     
     if LSession <> nil then
@@ -344,12 +344,12 @@ begin
     // 第一次保存
     LConn.SetConnectionInfo(sslProtocolTLS12, 'TLS_AES_128_GCM_SHA256', nil);
     LConn.SaveSessionAfterHandshake;
-    LSession1 := LConn.GetSession;
+    LSession1 := LConn.GetSavedSession;
     
     // 第二次保存(模拟重新连接)
     LConn.SetConnectionInfo(sslProtocolTLS13, 'TLS_AES_256_GCM_SHA384', nil);
     LConn.SaveSessionAfterHandshake;
-    LSession2 := LConn.GetSession;
+    LSession2 := LConn.GetSavedSession;
     
     Check('第一个会话已创建', LSession1 <> nil);
     Check('第二个会话已创建', LSession2 <> nil);

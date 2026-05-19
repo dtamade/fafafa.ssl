@@ -75,6 +75,10 @@ var
 begin
   WriteLn;
   WriteLn('=== OpenSSL connection session reused guard ===');
+  // INTENTIONAL_SESSION_REUSED_SEMANTIC_PROOF:
+  // keep the direct core IsSessionReused read here because this focused
+  // contract validates the compatibility path when SSL_session_reused is
+  // unavailable.
 
   if (not Assigned(SSL_new)) or
      (not Assigned(SSL_set_bio)) or

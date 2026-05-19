@@ -2,6 +2,27 @@
 
 ## 2026-05-19
 
+- session-resumption residual 这条线现在终于可以稳定冻结了：
+  - `tests/contract/test_backend_contract.pas`
+    是 compatibility mirror proof
+  - `tests/test_mbedtls_connection_session_reused_contract.pas`
+  - `tests/test_openssl_connection_session_reused_contract.pas`
+    是 backend semantic truth proof
+  - 这 3 份继续保留 direct-core，不再属于 ordinary owner-path drift
+
+- `tests/winssl/test_session_save_logic.pas`
+  之前之所以总被 residual 扫描带出来，并不是 public interface truth 真的有问题，
+  而是 mock helper 自己用了一个看起来像 public surface 的 `GetSession` 命名。
+  把它改成 `GetSavedSession` 之后，噪音 residual 就能真正从扫描结果里消失。
+
+- `src/fafafa.ssl.connection.base.pas`
+  的 residual note 也需要跟着说真话：
+  - 之前写成 `backend-specific runtime residuals`
+    会继续暗示这批文件像是“还没迁完”
+  - 但当前更准确的 truth 是：
+    `backend-specific semantic truth proofs`
+  - 这类措辞收紧对后续防止重复审查很重要，因为它决定大家会不会继续把 intentional proof 当成 drift
+
 - `tests/test_freepascal_tls13_early_data.pas`
   这块最大的 ordinary runtime residual 证明了一个更稳的迁移策略：
   - 对超大测试文件，最小正确修法不是到处散落 `Supports(...)` 局部变量

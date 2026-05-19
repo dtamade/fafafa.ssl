@@ -2,6 +2,81 @@
 
 ## 2026-05-19
 
+### ISSLSessionResumption Runtime Residual Classification Tightening
+
+- add `docs/plans/2026-05-19-isslsessionresumption-runtime-residual-classification-tightening.md`
+  - change:
+    - define the bounded batch that freezes the direct-core residual file set
+      into intentional compatibility/semantic proofs and removes mock-helper noise
+
+- add `tests/scripts/test_isslsessionresumption_runtime_residual_classification_contract.sh`
+  - change:
+    - lock that:
+      - `src/fafafa.ssl.connection.base.pas`
+        records semantic-truth residual wording instead of vague runtime-residual wording
+      - `tests/contract/test_backend_contract.pas`
+        keeps its explicit compatibility-mirror marker
+      - `tests/test_mbedtls_connection_session_reused_contract.pas`
+        and `tests/test_openssl_connection_session_reused_contract.pas`
+        are explicitly marked as semantic proofs
+      - `tests/winssl/test_session_save_logic.pas`
+        no longer exposes mock `GetSession` call sites
+      - the direct-core residual file set is exactly:
+        - `tests/contract/test_backend_contract.pas`
+        - `tests/test_mbedtls_connection_session_reused_contract.pas`
+        - `tests/test_openssl_connection_session_reused_contract.pas`
+
+- `bash -n tests/scripts/test_isslsessionresumption_runtime_residual_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - the new residual-classification contract is syntactically valid
+
+- `bash tests/scripts/test_isslsessionresumption_runtime_residual_classification_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first proved the base residual note still mislabeled these files as generic runtime residuals
+    - GREEN after the wording/marker/mock-getter cleanup proves the residual set is now frozen to intentional proof files
+
+- update session-resumption residual truth files:
+  - `src/fafafa.ssl.connection.base.pas`
+  - `tests/test_mbedtls_connection_session_reused_contract.pas`
+  - `tests/test_openssl_connection_session_reused_contract.pas`
+  - `tests/winssl/test_session_save_logic.pas`
+  - change:
+    - tighten source residual wording from `backend-specific runtime residuals`
+      to `backend-specific semantic truth proofs`
+    - mark the MbedTLS/OpenSSL contracts as intentional direct-core semantic proofs
+    - rename the WinSSL mock getter from `GetSession` to `GetSavedSession`
+      so it stops surfacing as public owner-path noise
+
+- `mkdir -p tmp/test_mbedtls_connection_session_reused_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_connection_session_reused_contract -FEtmp/test_mbedtls_connection_session_reused_contract -otmp/test_mbedtls_connection_session_reused_contract/test_mbedtls_connection_session_reused_contract tests/test_mbedtls_connection_session_reused_contract.pas && ./tmp/test_mbedtls_connection_session_reused_contract/test_mbedtls_connection_session_reused_contract`
+  - result: PASS
+  - summary:
+    - MbedTLS semantic truth proof still compiles and runs green after adding the explicit residual marker
+
+- `mkdir -p tmp/test_openssl_connection_session_reused_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_openssl_connection_session_reused_contract -FEtmp/test_openssl_connection_session_reused_contract -otmp/test_openssl_connection_session_reused_contract/test_openssl_connection_session_reused_contract tests/test_openssl_connection_session_reused_contract.pas && ./tmp/test_openssl_connection_session_reused_contract/test_openssl_connection_session_reused_contract`
+  - result: PASS
+  - summary:
+    - OpenSSL semantic truth proof still compiles and runs green after adding the explicit residual marker
+
+- `mkdir -p tmp/test_winssl_session_save_logic && fpc -B -Fu./tests/winssl -FUtmp/test_winssl_session_save_logic -FEtmp/test_winssl_session_save_logic -otmp/test_winssl_session_save_logic/test_session_save_logic tests/winssl/test_session_save_logic.pas && ./tmp/test_winssl_session_save_logic/test_session_save_logic`
+  - result: PASS
+  - summary:
+    - the renamed WinSSL mock save-logic getter still compiles and all 12 checks pass
+
+- `rg -lP "\\b(?:Conn|LConn|LConn1|LConn2|ResumedConn|InitialConn|LTLSStream\\.Connection)\\.(?:GetSession|SetSession|IsSessionReused)\\b" tests --glob '!tests/scripts/**' | sort`
+  - result: PASS
+  - summary:
+    - the direct-core residual set is now frozen to exactly:
+      - `tests/contract/test_backend_contract.pas`
+      - `tests/test_mbedtls_connection_session_reused_contract.pas`
+      - `tests/test_openssl_connection_session_reused_contract.pas`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - residual-classification tightening is whitespace-clean
+
 ### ISSLSessionResumption Runtime Owner-Path Migration Wave 2 (`test_freepascal_tls13_early_data`)
 
 - add `docs/plans/2026-05-19-isslsessionresumption-runtime-owner-path-migration-wave2-freepascal-tls13-early-data.md`

@@ -10,6 +10,44 @@
 
 ## Current Status
 
+- [completed] `ISSLSessionResumption` runtime residual classification tightening 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-isslsessionresumption-runtime-residual-classification-tightening.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_isslsessionresumption_runtime_residual_classification_contract.sh`
+  - 当前已冻结的 residual truth：
+    - `tests/contract/test_backend_contract.pas`
+      - intentional compatibility mirror proof
+    - `tests/test_mbedtls_connection_session_reused_contract.pas`
+      - intentional backend semantic truth proof
+    - `tests/test_openssl_connection_session_reused_contract.pas`
+      - intentional backend semantic truth proof
+  - 当前已去除的 residual 噪音：
+    - `tests/winssl/test_session_save_logic.pas`
+      - mock getter 已改成 `GetSavedSession`
+      - 不再继续冒充 public `GetSession` owner-path 漂移
+  - 当前已同步的 source truth：
+    - `src/fafafa.ssl.connection.base.pas`
+      现已明确：
+      - ordinary docs/tests 默认走 `ISSLSessionResumption`
+      - direct core session-resumption 当前只剩
+        `contract mirror proof + backend-specific semantic truth proofs`
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_isslsessionresumption_runtime_residual_classification_contract.sh`
+    - `bash tests/scripts/test_isslsessionresumption_runtime_residual_classification_contract.sh`
+    - `fpc + run tests/test_mbedtls_connection_session_reused_contract.pas`
+    - `fpc + run tests/test_openssl_connection_session_reused_contract.pas`
+    - `fpc + run tests/winssl/test_session_save_logic.pas`
+    - `rg -lP "\\b(?:Conn|LConn|LConn1|LConn2|ResumedConn|InitialConn|LTLSStream\\.Connection)\\.(?:GetSession|SetSession|IsSessionReused)\\b" tests --glob '!tests/scripts/**' | sort`
+    - `git diff --check`
+  - 当前结论：
+    - session-resumption ordinary runtime lane 与 residual classification lane
+      现在都已经收口
+    - 后续不应再把 `mbedtls/openssl semantic proof` 或 `mock save helper`
+      混同为 owner-path migration 漂移
+  - 当前下一条真实剩余工作：
+    - 跳出 session-resumption 这条线，继续核对其它公共接口 /
+      backend implementation completeness 的真实缺口
 - [completed] `ISSLSessionResumption` runtime owner-path migration wave 2
   (`tests/test_freepascal_tls13_early_data.pas`) 已完成 focused 收口：
   - 新增计划：

@@ -164,6 +164,10 @@ var
 begin
   WriteLn;
   WriteLn('=== MbedTLS session reused semantic truth ===');
+  // INTENTIONAL_SESSION_REUSED_SEMANTIC_PROOF:
+  // keep direct core SetSession / IsSessionReused reads here because this
+  // focused contract proves that configuring a session is not the same as
+  // observing a post-handshake resumed result.
 
   LOriginalSSLInit := mbedtls_ssl_init;
   LOriginalSSLFree := mbedtls_ssl_free;
