@@ -95,6 +95,8 @@ end.
 
 如果你不想用 `TSSLConnector`，也可以直接：
 
+这条 direct `ISSLConnection` 路径仍是当前 shipped 的低层入口；如果你只是普通客户端/服务端接入，优先继续使用 `TSSLConnector` / `TSSLAcceptor` / `TSSLStream`。
+
 ```pascal
 var
   Conn: ISSLConnection;

@@ -89,6 +89,8 @@ end.
 > `observed_reuse=false / session_configured=true`。
 > 因此这里的示例更适合作为 API 用法参考，而不是“已 runtime-proven 会稳定命中 resumed handshake”的承诺。
 
+这里之所以回到 direct `ISSLConnection`，是因为当前 public session-resumption surface 通过 `ISSLSessionResumption` 挂在连接对象上；普通 HTTPS 客户端仍优先走前面的 `TSSLConnector` + `TSSLStream` 快速路径。
+
 **基本 Session 复用示例**:
 ```pascal
 program winssl_session_reuse;

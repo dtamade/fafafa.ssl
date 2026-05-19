@@ -312,6 +312,8 @@ AESKey := TCryptoUtils.GenerateKey(256);
 
 ### TLS 连接
 
+下面这段 `TLS 连接` 代码块展示的是底层 core surface reference；普通新代码优先沿用上面的 `TSSLContextBuilder` + `TSSLConnector` + `TSSLStream` 快速路径。
+
 ```pascal
 uses fafafa.ssl;
 

@@ -6522,3 +6522,26 @@
      - active guides 不再把 still-shipped convenience surface 误教成推荐主路径
      - `MIGRATION_GUIDE` 重新展示当前 `ReadString(out ...)` truth
      - `GETTING_STARTED` 已确认无需重复治理
+
+106. 继续往更高入口的 landing docs 往外看时，新的真实 residual 也已经压实：
+   - 根问题不是 `README.md` / `GETTING_STARTED.md` / `QUICKSTART.md`
+     里出现了 direct `ISSLConnection`
+   - 而是这些最高入口文档如果不显式说明“为什么这里回到 direct path”，
+     新用户仍然会把它误判成普通新代码的推荐主路径
+   - 当前已确认的三处高价值位置：
+     - `README.md`
+       `核心 API -> TLS 连接` 代码块直接展示 raw `Ctx.CreateConnection(...)`
+     - `docs/guides/GETTING_STARTED.md`
+       第 4 节 `直接用 ISSLConnection`
+     - `docs/guides/QUICKSTART.md`
+       WinSSL session-resumption 示例为了用 `ISSLSessionResumption`
+       直接操作 connection
+   - 这三处示例本身并不错误，但此前缺的都是同一层解释：
+     - 普通客户端/服务端接入优先 builder + connector/acceptor + stream
+     - direct `ISSLConnection` 是低层/高级/特定能力入口
+     - WinSSL session-resumption 回到 direct path，
+       是因为当前 public surface 通过 `ISSLSessionResumption` 挂在 connection 上
+   - 现在新的稳定基线应记为：
+     - root README 不再让 raw `CreateConnection` 代码块冒充 quickstart 主路径
+     - `GETTING_STARTED` 已明确 direct `ISSLConnection` 只是低层入口
+     - `QUICKSTART` 已明确 WinSSL session-resumption 示例的 direct-path 原因

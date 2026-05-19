@@ -10,6 +10,49 @@
 
 ## Current Status
 
+- [completed] `landing quickstarts direct-path classification`
+  当前 focused 目标：
+  - 把最高入口文档里仍展示 direct `ISSLConnection` 的地方统一标回当前主路径 truth：
+    - 普通新代码优先 `TSSLContextBuilder` + `TSSLConnector` / `TSSLAcceptor` + `TSSLStream`
+    - direct `ISSLConnection` 仍是 shipped 的低层/高级/特定场景入口
+    - WinSSL session-resumption 之类的连接级能力示例，需要显式说明为什么要回到 direct path
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-landing-quickstarts-direct-path-classification.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_landing_quickstarts_direct_path_classification_contract.sh`
+  - 同步更新：
+    - `README.md`
+    - `docs/guides/GETTING_STARTED.md`
+    - `docs/guides/QUICKSTART.md`
+  当前最终收口证据：
+  - `README.md` 现在明确：
+    - `核心 API -> TLS 连接` 代码块只是底层 core surface reference
+    - 普通新代码仍优先使用前面的 builder + connector + stream 快速路径
+  - `GETTING_STARTED.md` 现在明确：
+    - 第 4 节 direct `ISSLConnection` 仍是 shipped 的低层入口
+    - 普通客户端/服务端接入优先 `TSSLConnector` / `TSSLAcceptor` / `TSSLStream`
+  - `QUICKSTART.md` 现在明确：
+    - WinSSL session-resumption 示例之所以回到 direct `ISSLConnection`
+      是因为 `ISSLSessionResumption` 当前挂在连接对象上
+    - 这不替代前面普通 HTTPS 客户端的 connector + stream 主路径
+  focused verification 已通过：
+  - `bash -n tests/scripts/test_landing_quickstarts_direct_path_classification_contract.sh`
+  - `bash tests/scripts/test_landing_quickstarts_direct_path_classification_contract.sh`
+  - `bash tests/scripts/test_facade_main_entry_truth_contract.sh`
+  - `bash tests/scripts/test_landing_docs_connection_level_sni_guidance_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - 这批暴露的不是接口本身有错，而是 landing quickstarts 还缺少一层
+    “主路径 vs 低层入口 / 特定能力路径”的明确分层。
+  - 现在 root README / quickstart 系列与之前已收口的 integration / guide truth
+    已经重新对齐。
+  当前下一条真实工作：
+  - 继续交叉审 active backend-specific guides / examples：
+    - 哪些 direct `ISSLConnection` / backend-specific helper 示例
+      仍缺少“为什么需要 direct path”的解释
+    - 优先看高入口但尚未纳入 focused contract 的 active 页面
+
 - [completed] `active guide convenience-surface classification`
   当前 focused 目标：
   - 把 active guides 中仍然直接使用的 `ISSLConnection` convenience surface

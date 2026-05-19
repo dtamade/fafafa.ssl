@@ -13674,3 +13674,61 @@
   - result: PASS
   - summary:
     - current active-guide convenience-surface batch has no whitespace or patch-format issues
+
+### Landing Quickstarts Direct-Path Classification
+
+- add `docs/plans/2026-05-20-landing-quickstarts-direct-path-classification.md`
+  - change:
+    - define the bounded landing-doc batch for direct `ISSLConnection` path classification in root README and quickstarts
+
+- add `tests/scripts/test_landing_quickstarts_direct_path_classification_contract.sh`
+  - change:
+    - lock that high-entry landing docs must explain:
+      - raw `CreateConnection(...)` snippets are low-level/specific-capability paths
+      - ordinary new code still prefers builder + connector + stream
+
+- `bash -n tests/scripts/test_landing_quickstarts_direct_path_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - new landing-quickstarts direct-path contract syntax is valid
+
+- `bash tests/scripts/test_landing_quickstarts_direct_path_classification_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - root `README.md` still showed the raw `TLS 连接` core snippet without explicitly classifying it as lower-level reference
+    - GREEN after fix:
+      - root README now labels the raw connection snippet as core-surface reference
+      - `GETTING_STARTED` now labels direct `ISSLConnection` as a low-level shipped path
+      - `QUICKSTART` now explains that the WinSSL session example drops to direct path because `ISSLSessionResumption` hangs off the connection object
+
+- update `README.md`
+  - change:
+    - classify the `核心 API -> TLS 连接` snippet as low-level core-surface reference
+    - point ordinary new code back to the earlier builder + connector + stream quickstart
+
+- update `docs/guides/GETTING_STARTED.md`
+  - change:
+    - clarify that direct `ISSLConnection` remains a shipped low-level entry
+    - point ordinary client/server integrations back to `TSSLConnector` / `TSSLAcceptor` / `TSSLStream`
+
+- update `docs/guides/QUICKSTART.md`
+  - change:
+    - explain that the WinSSL session-resumption sample uses direct `ISSLConnection`
+      because the current public resumption surface is connection-attached
+    - keep the earlier connector + stream client path as the ordinary main entry
+
+- `bash tests/scripts/test_facade_main_entry_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - landing-doc wording changes did not drift the existing facade/main-entry truth
+
+- `bash tests/scripts/test_landing_docs_connection_level_sni_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - direct-path clarification did not regress the already-closed per-connection SNI guidance
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current landing-quickstarts direct-path batch has no whitespace or patch-format issues
