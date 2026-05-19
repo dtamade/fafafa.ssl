@@ -63,15 +63,20 @@ type
    *   `ISSLConnectionInfo.GetStateString`，direct core `GetStateString` 当前只剩
    *   contract mirror proof 和 backend-specific runtime residuals。
    * - `GetSelectedALPNProtocol` 当前通过一条共享基类实现同时服务于 core mirror 和
-   *   `ISSLConnectionInfo` owner；active docs/tests 已转向
-   *   `ISSLConnectionInfo.GetSelectedALPNProtocol`，direct core
-   *   `GetSelectedALPNProtocol` 当前只剩 contract mirror proof 和 backend-specific runtime residuals。
-   * - `GetContext` 当前通过一条共享基类实现同时服务于 core mirror 和
-   *   `ISSLConnectionInfo` owner；active docs 已转向 `ISSLConnectionInfo.GetContext`，
-   *   direct core `GetContext` 只剩 contract mirror proof。
-   * - OCSP / CT / CT validation getter/stub 仍保留在基类里，供显式支持这些可选接口
-   *   的后端连接类复用；但基类本身不再无条件暴露对应 interface。
-   *}
+ *   `ISSLConnectionInfo` owner；active docs/tests 已转向
+ *   `ISSLConnectionInfo.GetSelectedALPNProtocol`，direct core
+ *   `GetSelectedALPNProtocol` 当前只剩 contract mirror proof 和 backend-specific runtime residuals。
+ * - `GetContext` 当前通过一条共享基类实现同时服务于 core mirror 和
+ *   `ISSLConnectionInfo` owner；active docs 已转向 `ISSLConnectionInfo.GetContext`，
+ *   direct core `GetContext` 只剩 contract mirror proof。
+ * - `GetOCSPStaplingEnabled` / `GetOCSPResponse` / `IsOCSPResponseVerified` /
+ *   `GetOCSPResponseStatus` 当前共享同一组基类 bridge/stub 实现；ordinary guidance
+ *   已转向 `ISSLOCSPStapling` owner path，direct core `GetOCSP*` 当前只剩
+ *   `MbedTLS` capability/runtime residual、`OpenSSL` runtime/contract residual
+ *   与 `WolfSSL` runtime residual。
+ * - OCSP / CT / CT validation getter/stub 仍保留在基类里，供显式支持这些可选接口
+ *   的后端连接类复用；但基类本身不再无条件暴露对应 interface。
+ *}
   TBaseSSLConnection = class(TInterfacedObject,
     ISSLConnection,
     ISSLDiagnostics,

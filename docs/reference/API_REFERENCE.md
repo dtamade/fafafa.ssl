@@ -612,7 +612,7 @@ end;
 - `GetSession` / `SetSession` / `IsSessionReused` 也由 `ISSLSessionResumption` 暴露。
 - `GetPeerCertificateChain` / `GetVerifyResult` / `GetVerifyResultString` 也由 `ISSLCertificateVerification` 暴露。
 - `GetVerifyResult` / `GetVerifyResultString` 在 `ISSLConnection` 上仅作为 `v1.x` compatibility-core mirror 保留；当前源码声明已经是编译期 `deprecated`，需要证书验证结果时，新代码优先通过 `ISSLCertificateVerification` 暴露的 owner surface 访问。
-- `GetOCSPStaplingEnabled` / `GetOCSPResponse` / `IsOCSPResponseVerified` / `GetOCSPResponseStatus` 也由 `ISSLOCSPStapling` 暴露。
+- `GetOCSPStaplingEnabled` / `GetOCSPResponse` / `IsOCSPResponseVerified` / `GetOCSPResponseStatus` 在 `ISSLConnection` 上仅作为 `v1.x` compatibility-core mirrors 保留；新代码优先通过 `ISSLOCSPStapling` owner surface 访问。
 - `GetNativeHandle` 不属于 `ISSLContext` / `ISSLConnection` 核心接口；当前应通过可选接口 `ISSLNativeHandleAccess` 访问。
 - 下列旧名字不是当前活跃源码：`GetCipherBits`、`VerifyPeerCertificate`、`GetSessionID`、`IsSessionResumed`、`GetSessionData`、`SetSessionData`。
 

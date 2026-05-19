@@ -1337,19 +1337,31 @@ type
     // OCSP Stapling support
     
     {** 获取 OCSP Stapling 状态
-        @returns True 如果启用了 OCSP Stapling *}
+        @returns True 如果启用了 OCSP Stapling
+        @preferred-access 新代码优先通过 ISSLOCSPStapling.GetOCSPStaplingEnabled 获取
+        @owner-note 默认 owner 为 ISSLOCSPStapling.GetOCSPStaplingEnabled；此入口仅兼容保留
+        @compatibility-note v1.x compatibility-core mirror; not recommended as the primary entry for new code; Stage-A demotion target is ISSLOCSPStapling *}
     function GetOCSPStaplingEnabled: Boolean;
     
     {** 获取 OCSP Stapling 响应（客户端）
-        @returns OCSP 响应的 DER 编码字节，未提供时返回空数组 *}
+        @returns OCSP 响应的 DER 编码字节，未提供时返回空数组
+        @preferred-access 新代码优先通过 ISSLOCSPStapling.GetOCSPResponse 获取
+        @owner-note 默认 owner 为 ISSLOCSPStapling.GetOCSPResponse；此入口仅兼容保留
+        @compatibility-note v1.x compatibility-core mirror; not recommended as the primary entry for new code; Stage-A demotion target is ISSLOCSPStapling *}
     function GetOCSPResponse: TBytes;
     
     {** 检查 OCSP Stapling 响应是否已验证
-        @returns True 如果响应已验证且证书状态为 Good *}
+        @returns True 如果响应已验证且证书状态为 Good
+        @preferred-access 新代码优先通过 ISSLOCSPStapling.IsOCSPResponseVerified 获取
+        @owner-note 默认 owner 为 ISSLOCSPStapling.IsOCSPResponseVerified；此入口仅兼容保留
+        @compatibility-note v1.x compatibility-core mirror; not recommended as the primary entry for new code; Stage-A demotion target is ISSLOCSPStapling *}
     function IsOCSPResponseVerified: Boolean;
     
     {** 获取 OCSP 响应状态描述
-        @returns 状态描述字符串（如 "Good", "Revoked", "Unknown", "Not Provided"） *}
+        @returns 状态描述字符串（如 "Good", "Revoked", "Unknown", "Not Provided"）
+        @preferred-access 新代码优先通过 ISSLOCSPStapling.GetOCSPResponseStatus 获取
+        @owner-note 默认 owner 为 ISSLOCSPStapling.GetOCSPResponseStatus；此入口仅兼容保留
+        @compatibility-note v1.x compatibility-core mirror; not recommended as the primary entry for new code; Stage-A demotion target is ISSLOCSPStapling *}
     function GetOCSPResponseStatus: string;
   end;
 

@@ -19,6 +19,11 @@ uses
   fafafa.ssl.openssl.certificate,
   fafafa.ssl.openssl.connection;
 
+// INTENTIONAL_OCSP_CORE_SURFACE: this OpenSSL-specific contract file
+// intentionally keeps direct core OCSP compatibility-surface coverage
+// as backend proof for storectx-issuer fail-closed behavior. Ordinary
+// ISSLOCSPStapling owner-path guidance is frozen elsewhere.
+
 type
   TOpenSSLConnectionOCSPAccess = class(TOpenSSLConnection)
   private

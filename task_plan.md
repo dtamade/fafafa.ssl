@@ -3083,3 +3083,31 @@
      - 优先复审：
        - deprecated context-level SNI 是否仍由高层入口默认传播
        - capability dual-truth 在 serializer / selector / docs 之间是否还有残余漂移
+77. `ISSLOCSPStapling residual classification freeze` 已完成并应作为当前 backend-specific OCSP residual truth 的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-isslocspstapling-residual-classification-freeze.md`
+   - 当前已确认的 residual truth：
+     - ordinary docs 已不再把：
+       - `Connection.GetOCSP*`
+         当作新代码推荐路径
+     - 当前 direct-core `GetOCSP*` residual file set 已稳定收缩到：
+       - `tests/mbedtls/test_mbedtls_ocsp_capability.pas`
+       - `tests/openssl/test_ocsp_connection_verification_regression.pas`
+       - `tests/test_openssl_connection_ocsp_storectx_issuer_contract.pas`
+       - `tests/test_wolfssl_ocsp_stapling_contract.pas`
+     - 这 4 个 residual files 的性质都更接近 backend-specific runtime / contract proof，而不是 ordinary guidance 漂移
+   - 当前最小正确修法已落地：
+     - 不改 public signature
+     - 不改 backend runtime 行为
+     - 只补：
+       - source owner / compatibility note
+       - API reference compatibility note
+       - residual-file `INTENTIONAL_OCSP_CORE_SURFACE` 标注
+       - focused allowlist contract
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_isslocspstapling_residual_classification_contract.sh`
+     - `bash tests/scripts/test_isslocspstapling_residual_classification_contract.sh`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 不再重复拉起 OCSP residual archaeology
+     - 继续切回更大的 backend implementation-completeness 审查

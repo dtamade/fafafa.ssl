@@ -29,6 +29,11 @@ begin
   Result := ValidateRequiredOCSPStapling(AIsClient);
 end;
 
+// INTENTIONAL_OCSP_CORE_SURFACE: this OpenSSL-specific runtime/regression
+// file intentionally keeps direct core OCSP compatibility-surface coverage
+// as backend proof for stapled-response status/verification behavior.
+// Ordinary ISSLOCSPStapling owner-path guidance is frozen elsewhere.
+
 type
   TSkipCategory = (
     scDependency,

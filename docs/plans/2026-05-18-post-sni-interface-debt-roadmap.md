@@ -760,6 +760,23 @@ Recommended first bounded batch:
     - 重新盘点 public interface 仍有哪些结构性设计债
     - 以及各 backend implementation / docs / tests 是否还有 completion gap
 
+## Progress Since The `ISSLOCSPStapling` Residual Classification Freeze
+
+- 已交付：
+  - OCSP compatibility-core mirrors 的 source-facing classification freeze
+  - focused contract:
+    - `tests/scripts/test_isslocspstapling_residual_classification_contract.sh`
+  - residual direct-core `GetOCSP*` file set 已冻结为：
+    - `tests/mbedtls/test_mbedtls_ocsp_capability.pas`
+    - `tests/openssl/test_ocsp_connection_verification_regression.pas`
+    - `tests/test_openssl_connection_ocsp_storectx_issuer_contract.pas`
+    - `tests/test_wolfssl_ocsp_stapling_contract.pas`
+
+- 当前更准确的 next step：
+  - 不再重复拉起 OCSP ordinary-guidance / residual archaeology
+  - `ISSLOCSPStapling` 的 backend-specific runtime / contract residual proof 现在已被显式分类冻结
+  - 默认主线应继续切回更大的 backend implementation-completeness 审查，而不是在这组 `GetOCSP*` 命中上反复打转
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

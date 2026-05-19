@@ -17,6 +17,11 @@ uses
   fafafa.ssl.mbedtls.lib,
   fafafa.examples.tcp;
 
+// INTENTIONAL_OCSP_CORE_SURFACE: this MbedTLS-specific capability/runtime
+// file intentionally keeps direct core OCSP compatibility-surface coverage
+// as backend proof for the unsupported/fail-closed path. Ordinary
+// ISSLOCSPStapling owner-path guidance is frozen elsewhere.
+
 procedure TestOCSPCapability;
 var
   LLib: ISSLLibrary;

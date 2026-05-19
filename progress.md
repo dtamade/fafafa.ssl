@@ -9529,3 +9529,67 @@
   - result: PASS
   - summary:
     - current security-first/FIPS-independence batch has no whitespace or patch-format issues
+
+### ISSLOCSPStapling Residual Classification Freeze
+
+- `rg -n '\\b(?:LConn|Conn|Connection)\\.(GetOCSPStaplingEnabled|GetOCSPResponse|IsOCSPResponseVerified|GetOCSPResponseStatus)\\b' tests --glob '!tests/scripts/**'`
+  - result: PASS
+  - summary:
+    - confirmed the current direct-core `GetOCSP*` residual surface had narrowed to 4 files:
+      - `tests/mbedtls/test_mbedtls_ocsp_capability.pas`
+      - `tests/openssl/test_ocsp_connection_verification_regression.pas`
+      - `tests/test_openssl_connection_ocsp_storectx_issuer_contract.pas`
+      - `tests/test_wolfssl_ocsp_stapling_contract.pas`
+    - this ruled out reopening the earlier ordinary-guidance lane and pointed to a bounded residual-freeze batch instead
+
+- add `docs/plans/2026-05-19-isslocspstapling-residual-classification-freeze.md`
+  - change:
+    - record the bounded batch that freezes the remaining OCSP direct-core test surface as backend-specific proof
+
+- add `tests/scripts/test_isslocspstapling_residual_classification_contract.sh`
+  - change:
+    - guard source/API truth for the `ISSLOCSPStapling` owner path
+    - lock the current direct-core `GetOCSP*` residual file set to the expected 4 files
+    - require intent labels on all residual files
+
+- update `src/fafafa.ssl.base.pas`
+  - change:
+    - add `@preferred-access` / `@owner-note` / `@compatibility-note` for:
+      - `GetOCSPStaplingEnabled`
+      - `GetOCSPResponse`
+      - `IsOCSPResponseVerified`
+      - `GetOCSPResponseStatus`
+
+- update `src/fafafa.ssl.connection.base.pas`
+  - change:
+    - record that the shared OCSP bridge/stub surface now has ordinary guidance on `ISSLOCSPStapling`
+    - classify the remaining direct-core `GetOCSP*` files as MbedTLS/OpenSSL/WolfSSL backend-specific residual proof
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - restate the OCSP methods on `ISSLConnection` as `v1.x` compatibility-core mirrors
+    - point new code at the `ISSLOCSPStapling` owner surface
+
+- update residual proof files:
+  - `tests/mbedtls/test_mbedtls_ocsp_capability.pas`
+  - `tests/openssl/test_ocsp_connection_verification_regression.pas`
+  - `tests/test_openssl_connection_ocsp_storectx_issuer_contract.pas`
+  - `tests/test_wolfssl_ocsp_stapling_contract.pas`
+  - change:
+    - add `INTENTIONAL_OCSP_CORE_SURFACE` labels so the remaining direct-core coverage is explicitly classified as backend-specific proof
+
+- `bash -n tests/scripts/test_isslocspstapling_residual_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - new OCSP residual-classification contract syntax is valid
+
+- `bash tests/scripts/test_isslocspstapling_residual_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - source/API truth now points at `ISSLOCSPStapling`
+    - the direct-core `GetOCSP*` residual surface is frozen to the expected 4 backend-specific proof files
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current OCSP residual-classification batch has no whitespace or patch-format issues

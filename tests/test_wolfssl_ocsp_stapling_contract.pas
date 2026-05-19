@@ -9,6 +9,11 @@ uses
   fafafa.ssl.context.builder,
   fafafa.ssl.wolfssl.lib;
 
+// INTENTIONAL_OCSP_CORE_SURFACE: this WolfSSL-specific runtime/contract
+// file intentionally keeps direct core OCSP compatibility-surface coverage
+// as backend proof for the public stapling surface defaults. Ordinary
+// ISSLOCSPStapling owner-path guidance is frozen elsewhere.
+
 const
   OCSP_FIXTURE_FILE = 'tests/fixtures/p2/ocsp/ocsp_response_successful_basic_v1.der';
   CERT_FILE = 'tests/certificate/test_certs/signer_cert.pem';

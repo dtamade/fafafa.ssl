@@ -4522,3 +4522,30 @@
   - `task_plan.md` 顶部原先那句“goal 工具保留已完成 goal、无法再次新建”已经过时
   - 当前线程级 goal 其实仍是 active
   - 因而后续应继续把 `task_plan.md` / `docs/plans/...` 视为同一总 goal 下的子批记录，而不是假设 goal 工具已经失效
+
+- 再把主线切回 interface/backend completeness 时，`ISSLOCSPStapling` 的 residual 面已经可以被视为一个单独收口的 backend-specific subgroup：
+  - ordinary docs 之前的问题已经在 active-guidance 批次收掉
+  - 当前重新扫 direct-core `GetOCSP*` 命中后，实际只剩 4 个文件：
+    - `tests/mbedtls/test_mbedtls_ocsp_capability.pas`
+    - `tests/openssl/test_ocsp_connection_verification_regression.pas`
+    - `tests/test_openssl_connection_ocsp_storectx_issuer_contract.pas`
+    - `tests/test_wolfssl_ocsp_stapling_contract.pas`
+
+- 这 4 个 residual files 的性质也已经足够明确：
+  - `tests/mbedtls/test_mbedtls_ocsp_capability.pas`
+    - 是 unsupported/fail-closed capability/runtime proof
+  - `tests/openssl/test_ocsp_connection_verification_regression.pas`
+    - 是 stapled-response status/verification runtime regression proof
+  - `tests/test_openssl_connection_ocsp_storectx_issuer_contract.pas`
+    - 是 storectx issuer fallback fail-closed contract proof
+  - `tests/test_wolfssl_ocsp_stapling_contract.pas`
+    - 是 WolfSSL public stapling surface default/runtime proof
+
+- 因而这批最小正确动作不是再把它们迁成 `ISSLOCSPStapling` owner-path 写法，而是做 residual freeze：
+  - 在 source comment 中明确 `ISSLOCSPStapling` 才是 owner surface
+  - 在 residual files 中显式标注 `INTENTIONAL_OCSP_CORE_SURFACE`
+  - 用 focused contract 守住这 4 个文件就是当前全部 direct-core `GetOCSP*` residual set
+
+- 这样一来，`ISSLOCSPStapling` 这条线就和前面的 verify-result / ALPN / connection-info residual 路线一样，进入了“已分类冻结”的状态：
+  - 后续不应再把这组 OCSP direct-core hits 当成普通 guidance 漂移反复拉起
+  - 默认主线应继续回到更大的 backend implementation-completeness 审查
