@@ -7,13 +7,61 @@
 - add `docs/plans/2026-05-19-winssl-callback-runtime-proof-markers.md`
   - change:
     - define the bounded batch that closes the remaining WinSSL callback proof gap by making Windows runtime transcript evidence grep-able
+    - later corrected after artifact review:
+      the real Windows truth source is `tests/winssl/test_winssl_unit_comprehensive.pas`, not `tests/unit/test_winssl_comprehensive.pas`
 
 - add `tests/scripts/test_winssl_runtime_callback_markers_contract.sh`
   - change:
     - lock that:
+      - the actual Windows comprehensive unit test source emits callback truth
       - `tests/run_winssl_tests.ps1` derives callback markers from `test_winssl_unit_comprehensive.lpi`
       - the runtime script emits `callback_surface` markers
       - `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md` documents the new marker and its meaning
+
+- `gh run download 26092105397 -n wave-b-windows-winssl_callback_markers_20260519_184245 -D tmp/gh_run_26092105397/windows`
+  - result: FAIL with existing file collision
+  - summary:
+    - a previous partial download already existed under `tmp/gh_run_26092105397/windows`, so the artifact had to be inspected in place instead of extracted over itself
+
+- `rg -n "\\[WINSSL-RUNTIME\\] callback_surface|Verify callback set|Password callback unsupported as expected|Info callback set" tmp/gh_run_26092105397/windows`
+  - result: PASS with negative callback-proof evidence
+  - summary:
+    - the downloaded Windows artifact did contain a callback marker, but it was:
+      - `[WINSSL-RUNTIME] callback_surface verify=missing password=missing info=missing`
+    - none of the expected callback truth lines were present in the runtime transcript
+
+- `sed -n '1,240p' tmp/gh_run_26092105397/windows/winssl_runtime_suite_winssl_callback_markers_20260519_184245.log`
+  - result: PASS
+  - summary:
+    - broader suite transcript confirmed the failure mode precisely:
+      the callback marker is emitted after test `1/8`, but all three values are `missing`
+
+- `sed -n '1,260p' tests/run_winssl_tests.ps1`
+  - result: PASS
+  - summary:
+    - callback marker extraction is currently gated on `test_winssl_unit_comprehensive.lpi`
+
+- `sed -n '1,220p' tests/winssl/test_winssl_unit_comprehensive.lpi`
+  - result: PASS
+  - summary:
+    - the Windows comprehensive LPI points to `tests/winssl/test_winssl_unit_comprehensive.pas`
+    - this proved the earlier assumption about `tests/unit/test_winssl_comprehensive.pas` being the runtime truth source was wrong
+
+- `bash tests/scripts/test_winssl_runtime_callback_markers_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - first RED correctly exposed that `tests/winssl/test_winssl_unit_comprehensive.pas` did not emit any callback truth
+    - GREEN after the fix proves the focused contract now locks the actual Windows suite entrypoint instead of the wrong cross-platform test file
+
+- update `tests/winssl/test_winssl_unit_comprehensive.pas`
+  - change:
+    - add `TCallbackProbe`
+    - add `TestCallbackConfiguration`
+    - make the actual Windows comprehensive unit test emit:
+      - `Verify callback set`
+      - `Password callback unsupported as expected`
+      - `Info callback set`
+    - register the callback test in the main Windows comprehensive suite
 
 - update `tests/run_winssl_tests.ps1`
   - change:
@@ -29,22 +77,17 @@
 - update `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md`
   - change:
     - add the `callback_surface` runtime marker to the WinSSL transcript marker checklist
-    - explain that it maps directly to the callback granularity truth in `tests/unit/test_winssl_comprehensive.pas`
+    - explain that it maps directly to the callback granularity truth in `tests/winssl/test_winssl_unit_comprehensive.pas`
 
 - `bash -n tests/scripts/test_winssl_runtime_callback_markers_contract.sh`
   - result: PASS
   - summary:
-    - new WinSSL callback runtime marker contract syntax is valid
-
-- `bash tests/scripts/test_winssl_runtime_callback_markers_contract.sh`
-  - result: PASS
-  - summary:
-    - broader-suite script and Windows checklist now lock the new callback proof marker path
+    - corrected WinSSL callback runtime marker contract syntax is valid
 
 - `git diff --check`
   - result: PASS
   - summary:
-    - current WinSSL callback runtime marker batch is whitespace-clean before commit/push
+    - current WinSSL callback runtime marker root-cause fix batch is whitespace-clean before commit/push
 
 ### WinSSL FIPS Capability Truth Tightening
 

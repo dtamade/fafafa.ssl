@@ -29,8 +29,19 @@ require_match() {
 
 script_file="tests/run_winssl_tests.ps1"
 checklist_file="tests/windows/WINDOWS_VALIDATION_CHECKLIST.md"
+runtime_test_file="tests/winssl/test_winssl_unit_comprehensive.pas"
 
 echo "[TEST] winssl runtime callback markers contract"
+
+require_fixed "$runtime_test_file" \
+  "Verify callback set" \
+  "Windows WinSSL comprehensive unit test must emit verify callback truth"
+require_fixed "$runtime_test_file" \
+  "Password callback unsupported as expected" \
+  "Windows WinSSL comprehensive unit test must emit password callback unsupported truth"
+require_fixed "$runtime_test_file" \
+  "Info callback set" \
+  "Windows WinSSL comprehensive unit test must emit info callback truth"
 
 require_match "$script_file" \
   'function Write-CallbackSurfaceMarkers \{.*?test_winssl_unit_comprehensive\.lpi.*?Verify callback set.*?Password callback unsupported as expected.*?Info callback set.*?callback_surface verify=' \
@@ -43,7 +54,7 @@ require_fixed "$checklist_file" \
   '[WINSSL-RUNTIME] callback_surface verify=pass password=unsupported info=pass' \
   "Windows validation checklist must document the callback_surface runtime marker"
 require_fixed "$checklist_file" \
-  '这条 marker 直接对应 `tests/unit/test_winssl_comprehensive.pas` 里的 WinSSL callback 粒度 truth：verify/info 已发布，password 仍 unsupported。' \
+  '这条 marker 直接对应 `tests/winssl/test_winssl_unit_comprehensive.pas` 里的 WinSSL callback 粒度 truth：verify/info 已发布，password 仍 unsupported。' \
   "Windows validation checklist must explain the callback_surface runtime marker meaning"
 
 echo "[PASS] winssl runtime callback markers contract passed"

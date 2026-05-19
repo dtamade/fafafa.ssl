@@ -14,21 +14,25 @@
   - 新增计划：
     - `docs/plans/2026-05-19-winssl-callback-runtime-proof-markers.md`
   - 当前已确认的 proof gap：
-    - `tests/unit/test_winssl_comprehensive.pas`
-      已经有稳定 callback 断言输出：
-      - `Verify callback set`
-      - `Password callback unsupported as expected`
-      - `Info callback set`
-    - 但 `tests/run_winssl_tests.ps1`
-      在 broader suite 成功时默认不会把这些单项输出写成 artifact 内可 grep 的稳定 marker
-    - 这会让 WinSSL callback granularity 继续停留在：
-      - Linux 静态契约已绿
-      - Windows runtime transcript 仍缺 direct proof
+    - 已下载 Windows artifact：
+      - workflow `26092105397`
+      - artifact `wave-b-windows-winssl_callback_markers_20260519_184245`
+    - 当前已确认的失败事实不是 marker 缺失，而是：
+      - `[WINSSL-RUNTIME] callback_surface verify=missing password=missing info=missing`
+    - 当前 root cause 已锁定：
+      - `test_winssl_unit_comprehensive.lpi`
+        实际对应 `tests/winssl/test_winssl_unit_comprehensive.pas`
+      - 之前 callback truth 在 `tests/unit/test_winssl_comprehensive.pas`
+        里，但 broader suite 并不会运行那份源文件
+      - 所以 `tests/run_winssl_tests.ps1`
+        的提取逻辑之前从一开始就在抓错 truth source
   - 当前已落地的本地收口：
+    - `tests/winssl/test_winssl_unit_comprehensive.pas`
+      已补实际 Windows callback configuration tests
     - `tests/run_winssl_tests.ps1`
       新增 `callback_surface` runtime marker 汇总逻辑
     - `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md`
-      已补 callback marker 检索口径
+      已补 callback marker 检索口径并指向真实 Windows test source
     - 新增 focused shell contract：
       - `tests/scripts/test_winssl_runtime_callback_markers_contract.sh`
   - 当前本地验证已通过：
@@ -36,9 +40,9 @@
     - `bash tests/scripts/test_winssl_runtime_callback_markers_contract.sh`
     - `git diff --check`
   - 当前下一步：
-    - 提交推送本批 marker 收口
-    - dispatch `Wave B B2 Manual Gate (Template)`
-    - 下载 Windows transcript，确认：
+    - 提交推送本批 root-cause fix
+    - 重新 dispatch `Wave B B2 Manual Gate (Template)`
+    - 再次下载 Windows transcript，确认：
       - `[WINSSL-RUNTIME] callback_surface verify=pass password=unsupported info=pass`
 - [completed] WinSSL FIPS capability truth tightening 已完成 focused 收口：
   - 新增计划：

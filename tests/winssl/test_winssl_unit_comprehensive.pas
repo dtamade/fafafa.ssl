@@ -21,6 +21,17 @@ var
   FailedTests: Integer = 0;
   CurrentSection: string;
 
+type
+  TCallbackProbe = class
+  public
+    function VerifyCallback(const ACertificate: TSSLCertificateInfo;
+      const AErrorCode: Integer; const AErrorMessage: string): Boolean;
+    function PasswordCallback(var APassword: string;
+      const AIsRetry: Boolean): Boolean;
+    procedure InfoCallback(const AWhere: Integer; const ARet: Integer;
+      const AState: string);
+  end;
+
 procedure BeginSection(const aName: string);
 begin
   WriteLn;
@@ -45,6 +56,24 @@ begin
       WriteLn('    Reason: ', aMessage);
     Inc(FailedTests);
   end;
+end;
+
+function TCallbackProbe.VerifyCallback(const ACertificate: TSSLCertificateInfo;
+  const AErrorCode: Integer; const AErrorMessage: string): Boolean;
+begin
+  Result := True;
+end;
+
+function TCallbackProbe.PasswordCallback(var APassword: string;
+  const AIsRetry: Boolean): Boolean;
+begin
+  APassword := '';
+  Result := not AIsRetry;
+end;
+
+procedure TCallbackProbe.InfoCallback(const AWhere: Integer;
+  const ARet: Integer; const AState: string);
+begin
 end;
 
 // ============================================================================
@@ -394,6 +423,73 @@ begin
 end;
 
 // ============================================================================
+// Callback Configuration Tests
+// ============================================================================
+
+procedure TestCallbackConfiguration;
+var
+  LLib: ISSLLibrary;
+  LContext: ISSLContext;
+  LCallbacks: TCallbackProbe;
+begin
+  BeginSection('Callback Configuration');
+
+  LLib := CreateWinSSLLibrary;
+  if not LLib.Initialize then
+  begin
+    Test('Library initialization failed', False, LLib.GetLastErrorString);
+    Exit;
+  end;
+
+  try
+    LContext := LLib.CreateContext(sslCtxClient);
+    Test('Create callback test context', LContext <> nil);
+  except
+    on E: Exception do
+    begin
+      Test('Create callback test context', False, E.Message);
+      LLib.Finalize;
+      Exit;
+    end;
+  end;
+
+  LCallbacks := TCallbackProbe.Create;
+  try
+    try
+      LContext.SetVerifyCallback(@LCallbacks.VerifyCallback);
+      Test('Verify callback set', True);
+    except
+      on E: Exception do
+        Test('Verify callback set', False, E.Message);
+    end;
+
+    try
+      LContext.SetPasswordCallback(@LCallbacks.PasswordCallback);
+      Test('Password callback unsupported as expected', False,
+        'Expected unsupported semantics for WinSSL password callback');
+    except
+      on E: Exception do
+        Test('Password callback unsupported as expected',
+          Pos('unsupported', LowerCase(E.Message)) > 0, E.Message);
+    end;
+
+    try
+      LContext.SetInfoCallback(@LCallbacks.InfoCallback);
+      Test('Info callback set', True);
+    except
+      on E: Exception do
+        Test('Info callback set', False, E.Message);
+    end;
+  finally
+    LCallbacks.Free;
+  end;
+
+  LContext := nil;
+  LLib.Finalize;
+  LLib := nil;
+end;
+
+// ============================================================================
 // Error Handling Tests
 // ============================================================================
 
@@ -581,6 +677,7 @@ begin
     TestLibraryInitialization;
     TestContextManagement;
     TestCertificateManagement;
+    TestCallbackConfiguration;
     TestErrorHandling;
     TestUtilsModule;
 

@@ -2,37 +2,38 @@
 
 ## 2026-05-19
 
-- 继续往 WinSSL runtime completeness 收口时，又确认了一条很典型的“实现 truth 已有，但 CI 证据不可检索”的 proof gap：
-  - `tests/unit/test_winssl_comprehensive.pas`
-    已经有：
+- 继续往 WinSSL runtime completeness 收口时，先用 GitHub Windows artifact 把 callback proof gap 反证实了：
+  - workflow `26092105397`
+    的 `winssl_runtime_suite_winssl_callback_markers_20260519_184245.log`
+    已经写出：
+    - `[WINSSL-RUNTIME] callback_surface verify=missing password=missing info=missing`
+  - 所以问题不是 marker 没写出来，而是 marker 背后的 truth source 本来就抓错了
+
+- 当前真正的 root cause 也因此比原先判断更具体：
+  - broader suite 运行的是：
+    - `test_winssl_unit_comprehensive.lpi`
+  - 这份 LPI 实际对应：
+    - `tests/winssl/test_winssl_unit_comprehensive.pas`
+  - 但我们之前拿来当 callback truth source 的是：
+    - `tests/unit/test_winssl_comprehensive.pas`
+  - 也就是说，脚本不是“没把正确输出写进 artifact”，而是“从一开始就在等一份根本不会被当前 Windows suite 运行的输出”
+
+- 这条问题仍然不是新的 library product bug，而是典型的验证链错位：
+  - library callback publication / unsupported truth 本身没变
+  - 出错的是 Windows runtime proof 把错误的测试源当成了证据来源
+  - 如果不改这里，workflow 再绿也只会稳定产出 `missing/missing/missing`
+
+- 当前最小正确修法因此也跟着变了：
+  - 保留 `tests/run_winssl_tests.ps1`
+    对 `test_winssl_unit_comprehensive.lpi` 的 marker 汇总
+  - 但必须先让实际被 broader suite 运行的：
+    - `tests/winssl/test_winssl_unit_comprehensive.pas`
+    输出稳定 callback truth：
     - `Verify callback set`
     - `Password callback unsupported as expected`
     - `Info callback set`
-  - 但 `tests/run_winssl_tests.ps1`
-    在 broader suite 成功时不会主动把这些单项 PASS 写成 artifact marker
-
-- 这意味着我们虽然已经有：
-  - callback capability/source truth
-  - setter fail-closed truth
-  - WinSSL partial-publication docs truth
-  但 Windows runtime transcript 仍不能直接回答：
-  - verify/info callback 是否在当前 broader suite 下被看作 published path
-  - password callback 是否仍按预期 unsupported
-
-- 这类问题不是新的 product bug，更像“验证链最后一公里没打通”：
-  - 没有稳定 marker 时，workflow 绿了也只能说明 suite 总体通过
-  - 不能把 callback 粒度 truth 写成可复用证据
-  - 后续会话还是得重新读源码/读测试，无法直接 grep artifact 收口
-
-- 当前最小正确修法因此不是再改 WinSSL callback 行为，而是：
-  - 让 `tests/run_winssl_tests.ps1`
-    从 `test_winssl_unit_comprehensive.lpi` 的 captured output 提取：
-    - verify
-    - password
-    - info
-    三条 callback 结论
-  - 汇总为稳定 marker：
-    - `[WINSSL-RUNTIME] callback_surface verify=... password=... info=...`
+  - 然后 artifact 才有可能收敛到：
+    - `[WINSSL-RUNTIME] callback_surface verify=pass password=unsupported info=pass`
 
 - 继续沿着“capability 先说支持、实现/控制面其实没发布”的线往下压后，又确认了一条更隐蔽但影响 selector/security score 的问题：
   - `src/fafafa.ssl.winssl.lib.pas`

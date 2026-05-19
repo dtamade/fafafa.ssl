@@ -13,9 +13,10 @@
 
 - 只处理 WinSSL runtime transcript evidence：
   - `tests/run_winssl_tests.ps1`
+  - `tests/winssl/test_winssl_unit_comprehensive.pas`
   - `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md`
   - focused shell contract
-- 不改 WinSSL callback runtime 行为
+- 不改 WinSSL library callback runtime 行为
 - 不改 callback capability/source truth
 - 不扩张 broader workflow 结构
 
@@ -24,6 +25,7 @@
 - Add: `docs/plans/2026-05-19-winssl-callback-runtime-proof-markers.md`
 - Add: `tests/scripts/test_winssl_runtime_callback_markers_contract.sh`
 - Modify: `tests/run_winssl_tests.ps1`
+- Modify: `tests/winssl/test_winssl_unit_comprehensive.pas`
 - Modify: `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md`
 - Modify: `task_plan.md`
 - Modify: `findings.md`
@@ -31,21 +33,36 @@
 
 ## Architecture Truth
 
-- `tests/unit/test_winssl_comprehensive.pas` 当前已经有稳定 callback 断言输出：
-  - `Verify callback set`
-  - `Password callback unsupported as expected`
-  - `Info callback set`
-- 但 `tests/run_winssl_tests.ps1` 成功时默认不会把这类单项 `[PASS]` 输出打印进 broader runtime transcript
-- 因而 workflow 即使整套通过，也缺一条可直接 grep 的 callback runtime proof marker
+- Windows broader suite 实际运行的 `test_winssl_unit_comprehensive.lpi`
+  对应的是：
+  - `tests/winssl/test_winssl_unit_comprehensive.pas`
+- 本批在下载 artifact 后确认：
+  - workflow `26092105397` 已经写出了：
+    - `[WINSSL-RUNTIME] callback_surface verify=missing password=missing info=missing`
+  - 这不是 marker 缺失，而是提取链路抓错了 truth source
+- 根因是：
+  - `tests/run_winssl_tests.ps1` 之前按 `test_winssl_unit_comprehensive.lpi` 去提取 callback truth
+  - 但该 LPI 对应的 Windows comprehensive test source 当时并不包含：
+    - `Verify callback set`
+    - `Password callback unsupported as expected`
+    - `Info callback set`
+- 因而最小正确修法不是继续改 marker 聚合格式，而是先让实际 Windows comprehensive unit test 产出这三条稳定 callback 断言，再由脚本汇总成 artifact marker
 
 ## Steps
 
-1. 给 `tests/run_winssl_tests.ps1` 增加 callback summary marker：
-   - 只在 `test_winssl_unit_comprehensive.lpi` 上从 captured output 提取
-   - 输出稳定的 `[WINSSL-RUNTIME] callback_surface ...` 行
-2. 补 focused shell contract，锁住 marker 提取逻辑和 Windows checklist 文案
-3. 跑本地 focused contract 与 diff hygiene
-4. 提交推送后 dispatch `Wave B B2 Manual Gate (Template)`，下载 Windows transcript，确认 callback marker 真正出现在 artifact 中
+1. 先用 artifact 反证当前 proof gap 是否真实存在：
+   - 下载 Windows transcript
+   - 确认当前 marker 不是缺失，而是 `missing/missing/missing`
+2. 补 focused shell contract，锁住：
+   - 实际 Windows comprehensive unit test source 必须包含 callback truth
+   - broader-suite script 继续对同一 LPI 的 captured output 汇总 marker
+3. 在 `tests/winssl/test_winssl_unit_comprehensive.pas` 增加 callback configuration tests，产出稳定的：
+   - `Verify callback set`
+   - `Password callback unsupported as expected`
+   - `Info callback set`
+4. 跑本地 focused contract 与 diff hygiene
+5. 提交推送后 dispatch `Wave B B2 Manual Gate (Template)`，再次下载 Windows transcript，确认 callback marker 回到真实值：
+   - `[WINSSL-RUNTIME] callback_surface verify=pass password=unsupported info=pass`
 
 ## Verification
 
