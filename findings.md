@@ -2,6 +2,36 @@
 
 ## 2026-05-19
 
+- session-resumption 这组方法此前也存在和 diagnostics 很像的中间态：
+  - active docs/tests 已经默认走 `ISSLSessionResumption`
+  - 但 `ISSLConnection.GetSession` / `SetSession` / `IsSessionReused`
+    还没有进入 compiler-level `deprecated`
+  - 这会让核心 `ISSLConnection` 在 source/doc 上继续像主入口，而不是 compatibility mirror
+
+- 当前 durable truth 已经收口为：
+  - `GetSession` / `SetSession` / `IsSessionReused`
+    在核心 `ISSLConnection` 上现在统一只是 compatibility mirror
+  - 这 3 个方法的源码声明已经进入编译期 `deprecated`
+  - ordinary docs/tests 默认应走 `ISSLSessionResumption` owner path
+  - `tests/contract/test_backend_contract.pas`
+    继续保留 direct-core session mirror proof
+
+- 这批 focused proof 也把“现在还剩什么”分得更清楚了：
+  - compiler-surface truth 缺口已经收掉
+  - 但 runtime/semantic 测试中仍有一批 direct-core session 调用残留
+  - 这些残留主要分布在：
+    - `tests/test_freepascal_client_session_resumption.pas`
+    - `tests/test_freepascal_server_session_resumption.pas`
+    - `tests/test_freepascal_tls13_early_data.pas`
+    - 以及少数 builder / mock / backend-specific semantic contracts
+  - 所以下一条高价值路线不再是继续补 `deprecated`，而是：
+    - 把 ordinary runtime tests 进一步迁到 `ISSLSessionResumption`
+    - 把真正需要验证 compatibility-core mirror 的测试明确收窄成 residual set
+
+- focused backend contract 重新编译后，`Session-resumption interface alignment`
+  在 `OpenSSL` / `WolfSSL` / `MbedTLS` / `FreePascal` 依旧保持全绿。
+  这说明我们这批修的是 compiler-surface/design truth，不是引入 runtime 回归。
+
 - diagnostics 这组方法此前确实还卡在一个容易误导新代码的中间态：
   - `ISSLDiagnostics` owner path 虽然已经是 active docs/tests 的默认入口
   - 但 `ISSLConnection.GetHealthStatus` / `IsHealthy` / `GetDiagnosticInfo` /

@@ -1685,6 +1685,7 @@ var
   LCorePerf: TSSLPerformanceMetrics;
   LCoreDiagInfo: TSSLDiagnosticInfo;
   LCoreHealthy: Boolean;
+  LCoreReused: Boolean;
   LExpectedHealthy: Boolean;
 begin
   PrintSubHeader(Format('Contract 18: Diagnostics interface alignment - %s',
@@ -1722,6 +1723,7 @@ begin
       LCorePerf := LConn.GetPerformanceMetrics;
       LCoreDiagInfo := LConn.GetDiagnosticInfo;
       LCoreHealthy := LConn.IsHealthy;
+      LCoreReused := LConn.IsSessionReused;
       {$POP}
       LExpectedHealthy := LHealth.IsConnected and LHealth.HandshakeComplete and
         (LHealth.LastError = sslErrNone);
@@ -1732,7 +1734,7 @@ begin
         AddResult('DiagnosticsInterfaceAligned', ABackend, False,
           'HealthStatus.IsConnected does not match ISSLConnection.IsConnected');
       end
-      else if LPerf.SessionReused <> LConn.IsSessionReused then
+      else if LPerf.SessionReused <> LCoreReused then
       begin
         WriteLn('  [FAIL] PerformanceMetrics.SessionReused does not match connection state');
         AddResult('DiagnosticsInterfaceAligned', ABackend, False,
@@ -1996,6 +1998,7 @@ var
   LCoreSessionCert: ISSLCertificate;
   LOptionalSessionCert: ISSLCertificate;
   LCoreInfo: TSSLConnectionInfo;
+  LCoreReused: Boolean;
 begin
   PrintSubHeader(Format('Contract 20: Session-resumption interface alignment - %s',
     [SSL_LIBRARY_NAMES[ABackend]]));
@@ -2021,7 +2024,13 @@ begin
         Exit;
       end;
 
+      // INTENTIONAL_CORE_SURFACE: keep these direct core session-resumption
+      // reads as compatibility-mirror proofs while ordinary docs/tests move to
+      // ISSLSessionResumption. These calls are compiler-deprecated on purpose.
+      {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
       LCoreSession := LConn.GetSession;
+      LCoreReused := LConn.IsSessionReused;
+      {$POP}
       LOptionalSession := LSessionResumption.GetSession;
 
       if (LCoreSession = nil) <> (LOptionalSession = nil) then
@@ -2030,7 +2039,7 @@ begin
         AddResult('SessionResumptionInterfaceAligned', ABackend, False,
           'ISSLSessionResumption.GetSession nil/non-nil result does not match ISSLConnection.GetSession');
       end
-      else if LSessionResumption.IsSessionReused <> LConn.IsSessionReused then
+      else if LSessionResumption.IsSessionReused <> LCoreReused then
       begin
         WriteLn('  [FAIL] Optional interface reused flag drifted from core getter');
         AddResult('SessionResumptionInterfaceAligned', ABackend, False,
@@ -2045,7 +2054,7 @@ begin
         LCoreInfo := LConn.GetConnectionInfo;
         {$POP}
 
-        if LCoreInfo.IsResumed <> LConn.IsSessionReused then
+        if LCoreInfo.IsResumed <> LCoreReused then
         begin
           WriteLn('  [FAIL] Connection-info resumed flag drifted from session getter');
           AddResult('SessionResumptionInterfaceAligned', ABackend, False,

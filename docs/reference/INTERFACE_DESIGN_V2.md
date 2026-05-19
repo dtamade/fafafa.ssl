@@ -252,8 +252,8 @@ if Supports(FSSLConn, ISSLSessionResumption, LSession) then
 | GetHealthStatus, IsHealthy | ISSLDiagnostics | 默认 owner 已切到 ISSLDiagnostics；core 侧仅兼容保留，源码声明已是编译期 deprecated |
 | GetPerformanceMetrics | ISSLDiagnostics | 默认 owner 已切到 ISSLDiagnostics；core 侧仅兼容保留，源码声明已是编译期 deprecated |
 | GetDiagnosticInfo | ISSLDiagnostics | 默认 owner 已切到 ISSLDiagnostics；core 侧仅兼容保留，源码声明已是编译期 deprecated |
-| GetSession, SetSession | ISSLSessionResumption | 会话扩展 |
-| IsSessionReused | ISSLSessionResumption | 会话扩展 |
+| GetSession, SetSession | ISSLSessionResumption | 默认 owner 已切到 ISSLSessionResumption；core 侧仅兼容保留，源码声明已是编译期 deprecated |
+| IsSessionReused | ISSLSessionResumption | 默认 owner 已切到 ISSLSessionResumption；core 侧仅兼容保留，源码声明已是编译期 deprecated |
 | GetPeerCertificateChain | ISSLCertificateVerification | 证书扩展 |
 | GetVerifyResult, GetVerifyResultString | ISSLCertificateVerification | 默认 owner 已切到 ISSLCertificateVerification；core 侧仅兼容保留，源码声明已是编译期 deprecated |
 | GetOCSP* | ISSLOCSPStapling | OCSP 扩展 |
@@ -294,6 +294,8 @@ if Supports(FSSLConn, ISSLSessionResumption, LSession) then
 其中 `GetVerifyResult` / `GetVerifyResultString` 在核心 `ISSLConnection` 上当前也只保留为 compatibility mirror，源码声明已经进入编译期 `deprecated`；后续仍可再评估是否把这组结果 surface 进一步完全收窄到 `ISSLCertificateVerification`。
 
 其中 `GetHealthStatus` / `IsHealthy` / `GetDiagnosticInfo` / `GetPerformanceMetrics` 在核心 `ISSLConnection` 上当前也只保留为 compatibility mirror，源码声明已经进入编译期 `deprecated`；后续仍可再评估是否进一步完全收窄到 `ISSLDiagnostics` owner surface。
+
+其中 `GetSession` / `SetSession` / `IsSessionReused` 在核心 `ISSLConnection` 上当前也只保留为 compatibility mirror，源码声明已经进入编译期 `deprecated`；后续仍可再评估是否进一步完全收窄到 `ISSLSessionResumption` owner surface。
 
 也就是说，这一版文档不再提前把 Stage-B/Stage-C 的选择写死。
 

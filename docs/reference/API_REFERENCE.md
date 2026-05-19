@@ -564,9 +564,9 @@ ISSLConnection = interface
   function GetVerifyResult: Integer; // 编译期 deprecated，仅兼容保留；新代码优先走 ISSLCertificateVerification owner surface
   function GetVerifyResultString: string; // 编译期 deprecated，仅兼容保留；新代码优先走 ISSLCertificateVerification owner surface
 
-  function GetSession: ISSLSession;
-  procedure SetSession(ASession: ISSLSession);
-  function IsSessionReused: Boolean;
+  function GetSession: ISSLSession; // 编译期 deprecated，仅兼容保留；新代码优先走 ISSLSessionResumption.GetSession
+  procedure SetSession(ASession: ISSLSession); // 编译期 deprecated，仅兼容保留；新代码优先走 ISSLSessionResumption.SetSession
+  function IsSessionReused: Boolean; // 编译期 deprecated，仅兼容保留；新代码优先走 ISSLSessionResumption.IsSessionReused
   function GetSelectedALPNProtocol: string; // 编译期 deprecated，仅兼容保留；新代码优先走 ISSLConnectionInfo.GetSelectedALPNProtocol
 
   function IsConnected: Boolean;
@@ -612,6 +612,7 @@ end;
 - `GetHealthStatus` / `IsHealthy` / `GetDiagnosticInfo` / `GetPerformanceMetrics` 也由 `ISSLDiagnostics` 暴露。
 - `GetHealthStatus` / `IsHealthy` / `GetDiagnosticInfo` / `GetPerformanceMetrics` 在 `ISSLConnection` 上当前也只作为 `v1.x` compatibility-core mirror 保留；当前源码声明已经是编译期 `deprecated`，需要诊断/健康/性能信息时，新代码优先通过 `ISSLDiagnostics` owner surface 访问。
 - `GetSession` / `SetSession` / `IsSessionReused` 也由 `ISSLSessionResumption` 暴露。
+- `GetSession` / `SetSession` / `IsSessionReused` 在 `ISSLConnection` 上当前也只作为 `v1.x` compatibility-core mirror 保留；当前源码声明已经是编译期 `deprecated`，需要保存/恢复会话或读取复用命中结果时，新代码优先通过 `ISSLSessionResumption` owner surface 访问。
 - `GetPeerCertificateChain` / `GetVerifyResult` / `GetVerifyResultString` 也由 `ISSLCertificateVerification` 暴露。
 - `GetVerifyResult` / `GetVerifyResultString` 在 `ISSLConnection` 上仅作为 `v1.x` compatibility-core mirror 保留；当前源码声明已经是编译期 `deprecated`，需要证书验证结果时，新代码优先通过 `ISSLCertificateVerification` 暴露的 owner surface 访问。
 - `GetOCSPStaplingEnabled` / `GetOCSPResponse` / `IsOCSPResponseVerified` / `GetOCSPResponseStatus` 在 `ISSLConnection` 上仅作为 `v1.x` compatibility-core mirrors 保留；新代码优先通过 `ISSLOCSPStapling` owner surface 访问。

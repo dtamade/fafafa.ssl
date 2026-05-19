@@ -1257,16 +1257,31 @@ type
       deprecated 'Use ISSLCertificateVerification.GetVerifyResultString';
 
     {** 获取当前会话（用于会话恢复）
+        @preferred-access 新代码优先通过 ISSLSessionResumption.GetSession 获取
+        @owner-note 默认 owner 为 ISSLSessionResumption.GetSession；此入口仅兼容保留
+        @compatibility-note v1.x compatibility-core mirror; not recommended as the primary entry for new code; Stage-A demotion target is ISSLSessionResumption
+        @deprecated 推荐使用 ISSLSessionResumption.GetSession
         @returns 会话接口 *}
     function GetSession: ISSLSession;
+      deprecated 'Use ISSLSessionResumption.GetSession';
 
     {** 设置要恢复的会话
+        @preferred-access 新代码优先通过 ISSLSessionResumption.SetSession 配置待恢复会话
+        @owner-note 默认 owner 为 ISSLSessionResumption.SetSession；此入口仅兼容保留
+        @compatibility-note v1.x compatibility-core mirror; not recommended as the primary entry for new code; Stage-A demotion target is ISSLSessionResumption
+        @deprecated 推荐使用 ISSLSessionResumption.SetSession
         @param ASession 之前保存的会话 *}
     procedure SetSession(ASession: ISSLSession);
+      deprecated 'Use ISSLSessionResumption.SetSession';
 
     {** 检查是否使用了会话恢复
+        @preferred-access 新代码优先通过 ISSLSessionResumption.IsSessionReused 判断握手是否实际复用
+        @owner-note 默认 owner 为 ISSLSessionResumption.IsSessionReused；此入口仅兼容保留
+        @compatibility-note v1.x compatibility-core mirror; not recommended as the primary entry for new code; Stage-A demotion target is ISSLSessionResumption
+        @deprecated 推荐使用 ISSLSessionResumption.IsSessionReused
         @returns True 如果会话被恢复 *}
     function IsSessionReused: Boolean;
+      deprecated 'Use ISSLSessionResumption.IsSessionReused';
 
     {** 获取 ALPN 协商结果
         @returns 协商的协议名称（如 "h2"），未协商返回空

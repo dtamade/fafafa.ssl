@@ -10,6 +10,44 @@
 
 ## Current Status
 
+- [completed] `ISSLSessionResumption` compiler deprecation alignment 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-isslsessionresumption-compiler-deprecation-alignment.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_isslsessionresumption_compiler_deprecated_contract.sh`
+  - 当前已修正的 source/doc/test truth：
+    - `src/fafafa.ssl.base.pas`
+      - `GetSession` / `SetSession` / `IsSessionReused`
+        现已补齐 `@preferred-access` / `@owner-note` / compiler `deprecated`
+    - `src/fafafa.ssl.connection.base.pas`
+      - session-resumption residual note 现已明确：
+        ordinary docs/tests 默认走 `ISSLSessionResumption` owner path
+    - `docs/reference/API_REFERENCE.md`
+      - session-resumption core 摘要签名现已明确为：
+        - 编译期 deprecated
+        - 仅兼容保留
+        - 新代码优先走 `ISSLSessionResumption`
+    - `docs/reference/INTERFACE_DESIGN_V2.md`
+      - session-resumption migration truth 现已提升到：
+        - 默认 owner 已切到 `ISSLSessionResumption`
+        - core 侧仅兼容保留
+        - 源码声明已是编译期 deprecated
+    - `tests/contract/test_backend_contract.pas`
+      - 保留一条 cross-backend direct-core session mirror proof
+      - direct-core `GetSession` / `IsSessionReused` 调用已做局部 warning quarantine
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_isslsessionresumption_compiler_deprecated_contract.sh`
+    - `bash tests/scripts/test_isslsessionresumption_compiler_deprecated_contract.sh`
+    - `bash tests/scripts/test_isslsessionresumption_active_guidance_contract.sh`
+    - `mkdir -p tmp/test_backend_contract_session_resumption_deprecation && fpc -B -Fu./src -Fu./tests -FUtmp/test_backend_contract_session_resumption_deprecation -FEtmp/test_backend_contract_session_resumption_deprecation -otmp/test_backend_contract_session_resumption_deprecation/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/test_backend_contract_session_resumption_deprecation/test_backend_contract`
+    - `git diff --check`
+  - 当前结论：
+    - session-resumption 这组方法已不再停留在“owner path 已存在但 core 还像主入口”的中间态
+    - source / docs / focused contracts / cross-backend compile proof 现已统一到
+      `ISSLSessionResumption owner-first + direct-core compatibility mirror only`
+  - 当前下一条真实剩余工作：
+    - runtime/semantic 测试里仍有一批 direct-core session calls 尚未完全迁移到 owner path
+    - 这批更像“runtime residual migration”，不再是 compiler-surface truth 缺口
 - [completed] `ISSLDiagnostics` compiler deprecation alignment 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-issldiagnostics-compiler-deprecation-alignment.md`

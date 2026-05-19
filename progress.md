@@ -2,6 +2,86 @@
 
 ## 2026-05-19
 
+### ISSLSessionResumption Compiler Deprecation Alignment
+
+- add `docs/plans/2026-05-19-isslsessionresumption-compiler-deprecation-alignment.md`
+  - change:
+    - define the bounded compiler-surface batch for session-resumption owner-path truth,
+      compatibility-mirror demotion, and focused compile proof
+
+- add `tests/scripts/test_isslsessionresumption_compiler_deprecated_contract.sh`
+  - change:
+    - lock that:
+      - session-resumption core declarations in `src/fafafa.ssl.base.pas`
+        are compiler-deprecated mirrors
+      - `src/fafafa.ssl.connection.base.pas` records the session-resumption residual note
+      - `API_REFERENCE.md` / `INTERFACE_DESIGN_V2.md` record
+        compiler-deprecated compatibility-mirror truth
+      - `tests/contract/test_backend_contract.pas` keeps the intended direct-core
+        mirror proof with warning quarantine
+
+- `bash -n tests/scripts/test_isslsessionresumption_compiler_deprecated_contract.sh`
+  - result: PASS
+  - summary:
+    - new session-resumption compiler-deprecation contract is syntactically valid
+
+- `bash tests/scripts/test_isslsessionresumption_compiler_deprecated_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - first run exposed that `src/fafafa.ssl.connection.base.pas`
+      was still missing the exact residual-note wording we wanted to lock
+    - GREEN after the wording fix proves source/docs/contracts are now aligned
+
+- update `src/fafafa.ssl.base.pas`
+  - change:
+    - mark `GetSession` / `SetSession` / `IsSessionReused` as compiler `deprecated`
+    - add `@preferred-access` / `@owner-note` / compatibility-mirror wording
+
+- update `src/fafafa.ssl.connection.base.pas`
+  - change:
+    - add session-resumption residual note stating that ordinary docs/tests now use
+      the `ISSLSessionResumption` owner path and direct-core session-resumption
+      remains a compatibility mirror plus backend/runtime residual surface
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - mark the session-resumption core summary signatures as compiler-deprecated
+      compatibility mirrors
+    - add active guidance that new code should prefer `ISSLSessionResumption`
+
+- update `docs/reference/INTERFACE_DESIGN_V2.md`
+  - change:
+    - promote session-resumption migration truth to:
+      default owner is `ISSLSessionResumption`, core side is compatibility-only,
+      source declarations are compiler-deprecated
+
+- update `tests/contract/test_backend_contract.pas`
+  - change:
+    - add local warning quarantine around direct-core `GetSession` / `IsSessionReused`
+      mirror proof
+    - also remove the newly introduced deprecated-warning noise from the
+      diagnostics contract by caching the direct-core reuse flag inside the same
+      local quarantine pattern
+
+- `bash tests/scripts/test_isslsessionresumption_active_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - active docs/tests still prefer `ISSLSessionResumption` for session-resumption surfaces
+
+- `mkdir -p tmp/test_backend_contract_session_resumption_deprecation && fpc -B -Fu./src -Fu./tests -FUtmp/test_backend_contract_session_resumption_deprecation -FEtmp/test_backend_contract_session_resumption_deprecation -otmp/test_backend_contract_session_resumption_deprecation/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/test_backend_contract_session_resumption_deprecation/test_backend_contract`
+  - result: PASS
+  - summary:
+    - focused backend contract compiled and ran successfully
+    - `Session-resumption interface alignment` remained green for
+      `OpenSSL` / `WolfSSL` / `MbedTLS` / `FreePascal`
+    - `Windows Schannel` stayed a platform skip on Linux, which is expected for
+      this focused static/compile proof batch
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - session-resumption compiler-deprecation alignment batch is whitespace-clean
+
 ### ISSLDiagnostics Compiler Deprecation Alignment
 
 - add `docs/plans/2026-05-19-issldiagnostics-compiler-deprecation-alignment.md`

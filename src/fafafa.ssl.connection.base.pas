@@ -72,6 +72,8 @@ type
  * - `GetHealthStatus` / `IsHealthy` / `GetDiagnosticInfo` / `GetPerformanceMetrics`
  *   当前共享同一组 diagnostics 基类实现；ordinary docs/tests 已转向 `ISSLDiagnostics` owner path，
  *   direct core diagnostics 当前只剩 contract mirror proof 和 WinSSL runtime residuals。
+ * - `GetSession` / `SetSession` / `IsSessionReused` 当前共享同一组会话复用基类实现；
+ *   ordinary docs/tests 已转向 `ISSLSessionResumption` owner path，direct core session-resumption 当前只剩 contract mirror proof 和 backend-specific runtime residuals。
  * - `GetOCSPStaplingEnabled` / `GetOCSPResponse` / `IsOCSPResponseVerified` /
  *   `GetOCSPResponseStatus` 当前共享同一组基类 bridge/stub 实现；ordinary guidance
  *   已转向 `ISSLOCSPStapling` owner path，direct core `GetOCSP*` 当前只剩
