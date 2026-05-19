@@ -40,8 +40,8 @@ require_match "$proof_file" \
   'WinSSL native probe quarantine depends on TProcess support'
 
 require_match "$proof_file" \
-  'function RunIsolatedNativeProbeWorker\(const AHost: string; AAttemptCount: Integer;.*?TProcess.*?ParamStr\(0\).*?poWaitOnExit.*?poUsePipes.*?poStderrToOutPut' \
-  'WinSSL native probe quarantine launches the current proof executable as an isolated worker with captured output'
+  'function RunIsolatedNativeProbeWorker\(const AHost: string; AAttemptCount: Integer;.*?TProcess.*?ParamStr\(0\).*?poUsePipes.*?poStderrToOutPut.*?while LProcess\.Running do.*?AppendAvailableProcessOutput\(LProcess,\s*AOutput\).*?Sleep\(10\)' \
+  'WinSSL native probe quarantine launches the current proof executable as an isolated worker and drains captured output while the child is still running'
 
 require_match "$proof_file" \
   'native_probe label=initial_handshake pending=true mode=isolated_worker' \

@@ -117,16 +117,19 @@ begin
   end;
 end;
 
-function LoadProcessOutput(AProcess: TProcess): string;
+procedure AppendAvailableProcessOutput(AProcess: TProcess; var AOutput: string);
 var
-  LOutput: TStringList;
+  LBuffer: array[0..2047] of Byte;
+  LBytesRead: LongInt;
+  LChunk: RawByteString;
 begin
-  LOutput := TStringList.Create;
-  try
-    LOutput.LoadFromStream(AProcess.Output);
-    Result := LOutput.Text;
-  finally
-    LOutput.Free;
+  while AProcess.Output.NumBytesAvailable > 0 do
+  begin
+    LBytesRead := AProcess.Output.Read(LBuffer, SizeOf(LBuffer));
+    if LBytesRead <= 0 then
+      Break;
+    SetString(LChunk, PAnsiChar(@LBuffer[0]), LBytesRead);
+    AOutput := AOutput + string(LChunk);
   end;
 end;
 
@@ -166,10 +169,15 @@ begin
   LProcess := TProcess.Create(nil);
   try
     LProcess.Executable := ParamStr(0);
-    LProcess.Options := [poWaitOnExit, poUsePipes, poStderrToOutPut];
+    LProcess.Options := [poUsePipes, poStderrToOutPut];
     LProcess.Execute;
+    while LProcess.Running do
+    begin
+      AppendAvailableProcessOutput(LProcess, AOutput);
+      Sleep(10);
+    end;
+    AppendAvailableProcessOutput(LProcess, AOutput);
     LProcess.WaitOnExit;
-    AOutput := LoadProcessOutput(LProcess);
     AExitCode := LProcess.ExitCode;
   except
     on E: Exception do
