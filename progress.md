@@ -2,6 +2,100 @@
 
 ## 2026-05-19
 
+### macOS Batch Loader Regression Closure
+
+- `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
+  - result: PASS
+  - summary:
+    - 当前会话继续沿用既有 planning files，不需要从头重建
+
+- `sed -n '1,260p' tmp/gh-run-26108902159/.../wave_b_macos_gate_summary_*.md`
+- `sed -n '1,220p' tmp/gh-run-26108902159/.../test_p2_{pkcs7,pkcs12,pkcs12_create_parse,cms,ocsp}_*.txt`
+  - result: PASS
+  - summary:
+    - 最新 macOS gate 明确只在 `modules` 步骤失败
+    - 失败集中到：
+      - `PKCS7` -> `LoadEVP` 失败
+      - `PKCS12` -> module loaded but core symbols not assigned
+      - `PEM` -> create/parse lane 直接报模块加载失败
+      - `CMS` / `OCSP` -> `LoadOpenSSLCMS` / `LoadOpenSSLOCSP` 返回 false
+
+- `sed -n '1,160p' tmp/gh-run-26048015976/.../wave_b_macos_loader_symbol_probe_*.json`
+- `sed -n '1,160p' tmp/gh-run-26108902159/.../wave_b_macos_loader_symbol_probe_*.json`
+  - result: PASS
+  - summary:
+    - 旧 run `26048015976` 已确认：
+      - same `OpenSSL 3.6.2 7 Apr 2026`
+      - `evp/pem/pkcs12/cms/ocsp/ts/ct/store` module truth 全绿
+    - 新 run `26108902159` 已确认：
+      - same version string
+      - direct symbols 仍是 `true`
+      - 但 `evp/pem/pkcs12/cms/ocsp` module truth 全部转成 `false`
+    - 这把当前问题从“历史能力缺失”收紧成了真实回归
+
+- `git log --oneline --since='2026-05-17' -- src/fafafa.ssl.openssl.loader.pas src/fafafa.ssl.openssl.api.evp.pas src/fafafa.ssl.openssl.api.pem.pas src/fafafa.ssl.openssl.api.pkcs12.pas src/fafafa.ssl.openssl.api.cms.pas src/fafafa.ssl.openssl.api.ocsp.pas tests/diagnostic/test_macos_openssl_loader_symbol_probe.pas`
+  - result: PASS
+  - summary:
+    - 红面的 batch-loader 模块文件自 2026-05-19 probe lane 落地后没有继续被改动
+    - 当前更像：
+      - shared runtime state / batch-loader diagnostics 缺失
+      - 或 batch binding storage 在 live macOS lane 的稳定性问题
+
+- add `docs/plans/2026-05-20-macos-batch-loader-regression-closure.md`
+  - change:
+    - 记录了这次 focused batch 的目标、边界、commands、expected outputs
+
+- add `tests/scripts/test_macos_batch_loader_regression_closure_contract.sh`
+  - change:
+    - 新增 focused shell contract，准备冻结：
+      - failing batch-binding tables 的 runtime-storage 形态
+      - loader diagnostics API
+      - macOS loader probe 的新 diagnostics 字段
+      - PEM loaded-state 的 read-surface 语义
+
+- `bash -n tests/scripts/test_macos_batch_loader_regression_closure_contract.sh`
+  - result: PASS
+  - summary:
+    - 新增 contract 语法有效
+
+- `bash tests/scripts/test_macos_batch_loader_regression_closure_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED 先证明 runtime-storage 正则与实际 source layout 还没完全对齐
+    - 把 comment / `var` 布局收紧后，GREEN 证明：
+      - `EVP/PEM/PKCS12/CMS/OCSP` batch bindings 已切到 runtime storage
+      - loader diagnostics API 已落地
+      - probe JSON 已记录新的 diagnostics 字段
+      - PEM loaded-state 已回到 read-surface 语义
+
+- `fpc -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_macos_batch_loader_probe_units -FEtmp/test_macos_batch_loader_probe_bin tests/diagnostic/test_macos_openssl_loader_symbol_probe.pas`
+  - result: FAIL -> PASS
+  - summary:
+    - 首次仅因输出目录不存在失败，不是源码错误
+    - 建立 `tmp/test_macos_batch_loader_probe_{units,bin}` 后重新编译通过
+
+- `./tmp/test_macos_batch_loader_probe_bin/test_macos_openssl_loader_symbol_probe tmp/test_macos_batch_loader_probe.json`
+  - result: PASS
+  - summary:
+    - 本机 probe 已成功产出新 JSON
+    - 关键字段结构已验证：
+      - `evp.load_functions_loaded_count = 98`
+      - `pem.load_functions_loaded_count = 60`
+      - `pkcs12.load_functions_loaded_count = 37`
+      - `cms.load_functions_loaded_count = 86`
+      - `ocsp.load_functions_loaded_count = 67`
+      - 五个模块的 `missing_required_bindings` 均为空字符串
+
+- `FAFAFA_FAST_LOCAL=1 FAFAFA_FPC_UNIT_OUTPUT_DIR=tmp/run_all_module_tests_units_macos_batch_loader_closure bash scripts/run_all_module_tests.sh --modules PKCS7,PKCS12,CMS,OCSP --stop-on-fail`
+  - result: PASS
+  - summary:
+    - focused module regression 全绿：
+      - `PKCS7`: 2/2
+      - `PKCS12`: 3/3
+      - `CMS`: 2/2
+      - `OCSP`: 3/3
+    - 总计 10/10 PASS
+
 ### Performance Guides Benchmark Truth
 
 - `git status --short --branch`

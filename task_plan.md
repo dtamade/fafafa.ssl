@@ -10,6 +10,41 @@
 
 ## Current Status
 
+- [in_progress] `macOS batch-loader regression closure`
+  当前 focused 目标：
+  - 不再把这次 macOS 新失败重判成旧的 loader/path 问题
+  - 直接围绕 `26108902159` 的真实回归面收口：
+    - `direct_symbols = true`
+    - `evp/pem/pkcs12/cms/ocsp module_results = false`
+  - 并把这条线写成 durable 记录，避免后面反复拉起同一段怀疑
+  已确认的新事实：
+  - `tmp/gh-run-26048015976/.../wave_b_macos_loader_symbol_probe_*.json`
+    证明同类 macOS gate 在 `2026-05-18` 曾经给出：
+    - `evp/pem/pkcs12/cms/ocsp` module truth 全绿
+  - `tmp/gh-run-26108902159/.../wave_b_macos_loader_symbol_probe_*.json`
+    现在却变成：
+    - same `OpenSSL 3.6.2 7 Apr 2026`
+    - same direct symbol truth
+    - but `evp/pem/pkcs12/cms/ocsp` 全部掉成 `false`
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-macos-batch-loader-regression-closure.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_macos_batch_loader_regression_closure_contract.sh`
+  - 准备落地的最小修法：
+    - 给 `TOpenSSLLoader.LoadFunctions(...)` 加 per-call diagnostics
+    - 把当前红面的 batch binding table 切到 runtime storage
+    - 把 `LoadOpenSSLPEM(...)` 的 loaded 判定收回到真实 read surface
+  当前已完成的 focused 验证：
+  - `bash -n tests/scripts/test_macos_batch_loader_regression_closure_contract.sh`
+  - `bash tests/scripts/test_macos_batch_loader_regression_closure_contract.sh`
+  - `fpc ... tests/diagnostic/test_macos_openssl_loader_symbol_probe.pas`
+  - `./tmp/test_macos_batch_loader_probe_bin/test_macos_openssl_loader_symbol_probe tmp/test_macos_batch_loader_probe.json`
+  - `FAFAFA_FAST_LOCAL=1 ... bash scripts/run_all_module_tests.sh --modules PKCS7,PKCS12,CMS,OCSP --stop-on-fail`
+  当前下一条真实工作：
+  - 做一次收口 review，然后 commit / push
+  - 用 GitHub 重新拉起 macOS gate，确认这批 runtime truth 在 CI 上真正复绿
+
 - [completed] `WinSSL session injection semantics` truth alignment
   已完成 focused 收口：
   - 新增计划：

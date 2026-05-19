@@ -2,6 +2,51 @@
 
 ## 2026-05-19
 
+- `26048015976` 和 `26108902159` 的对照把一个很重要的 triage 规则钉死了：
+  - 这次 macOS 红面不是“这个 runner 从来没支持过这些 OpenSSL 模块”
+  - 而是：
+    - 同一类 `OpenSSL 3.6.2 7 Apr 2026`
+    - direct symbol 仍然可见
+    - 但 `EVP/PEM/PKCS12/CMS/OCSP` 这批 wrapper/module truth 发生了回归
+  - 所以后续不该再从 path/root 层面重跑旧调查，而要直接盯 batch-loader lane 自己
+
+- 这次对照还暴露了一个比“依赖闭环”更尖锐的模式：
+  - `TS/CT/Store` 这类 direct assignment 路线在 probe 里继续是绿的
+  - 红掉的是 `LoadFunctions(...)` / batch-binding 路线
+  - 说明最先该加固的不是文档叙事，而是 batch loader 自身的 durable diagnostics 和 binding-table 存储形态
+
+- `LoadOpenSSLPEM(...)` 之前把模块 ready 判定绑在
+  - `PEM_read_bio_X509`
+  - `PEM_write_bio_X509`
+  这会把“写路径 helper 缺口”误升级成整个 PEM 模块失败。
+  对当前项目里大量真正使用的证书/私钥导入路径来说，更合理的 minimal ready surface
+  应该先回到：
+  - `PEM_read_bio_X509`
+  - `PEM_read_bio_PrivateKey`
+
+- `TOpenSSLLoader.LoadFunctions(...)` 之前缺少 durable per-call diagnostics，
+  导致我们只能看到：
+  - direct symbol 是真
+  - wrapper/module 结果是假
+  但看不到中间到底是：
+  - required symbol 缺失
+  - 还是 batch-binding 自己的命中数异常
+  给 loader 增加最近一次 `loaded_count + missing_required_bindings`
+  是后续避免反复拉起这条线的关键记录层。
+
+- 本机 focused probe 也帮这次批量修法补了一条很值钱的 baseline：
+  - `evp = 98`
+  - `pem = 60`
+  - `pkcs12 = 37`
+  - `cms = 86`
+  - `ocsp = 67`
+  - 且 `missing_required_bindings = ""`
+  以后如果 GitHub macOS lane 再掉，只要比对这几个 count 和 missing list，
+  就能更快判断是：
+  - symbol/export 真的少了
+  - required gating 过严
+  - 还是 batch-binding 命中数整体异常
+
 - `PERFORMANCE_GUIDE` / `PERFORMANCE_OPTIMIZATION_GUIDE` 这类历史型性能文档的 drift，
   其实不只是“数字过期”这么简单：
   - 一层是固定 benchmark / phase / threshold snapshot 被写成 current truth

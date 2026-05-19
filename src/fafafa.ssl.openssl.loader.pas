@@ -158,6 +158,8 @@ type
       FInitialized: Boolean;
       FVersionInfo: TOpenSSLVersionInfo;
       FLoadedModules: TOpenSSLModuleSet;  // 已加载的模块集合
+      FLastLoadFunctionsLoadedCount: Integer;
+      FLastLoadFunctionsMissingRequired: string;
 
     class procedure DetectVersion;
     class function TryLoadLibrary(const ANames: array of string): {$IFDEF WINDOWS}HMODULE{$ELSE}TLibHandle{$ENDIF};
@@ -205,6 +207,17 @@ type
      *}
     class function LoadFunctions(AHandle: {$IFDEF WINDOWS}HMODULE{$ELSE}TLibHandle{$ENDIF};
       const ABindings: array of TFunctionBinding): Integer;
+
+    {**
+     * 获取最近一次批量绑定命中的函数数量
+     *}
+    class function GetLastLoadFunctionsLoadedCount: Integer;
+
+    {**
+     * 获取最近一次批量绑定缺失的 required symbol 名单
+     * 列表为空字符串时表示没有 required-missing failure
+     *}
+    class function GetLastLoadFunctionsMissingRequired: string;
 
     {**
      * 清除函数指针（设置为 nil）
@@ -538,12 +551,16 @@ var
   I: Integer;
   LFunc: Pointer;
   LRequiredMissing: Boolean;
+  LMissingRequired: string;
 begin
   Result := 0;
+  FLastLoadFunctionsLoadedCount := 0;
+  FLastLoadFunctionsMissingRequired := '';
   if AHandle = 0 then
     Exit;
 
   LRequiredMissing := False;
+  LMissingRequired := '';
   for I := Low(ABindings) to High(ABindings) do
   begin
     if ABindings[I].FuncPtr <> nil then
@@ -554,15 +571,33 @@ begin
         Inc(Result);
 
       if (LFunc = nil) and ABindings[I].Required then
+      begin
         LRequiredMissing := True;
+        if LMissingRequired <> '' then
+          LMissingRequired := LMissingRequired + ',';
+        LMissingRequired := LMissingRequired + string(ABindings[I].Name);
+      end;
     end;
   end;
+
+  FLastLoadFunctionsLoadedCount := Result;
+  FLastLoadFunctionsMissingRequired := LMissingRequired;
 
   if LRequiredMissing then
   begin
     ClearFunctions(ABindings);
     Result := -1;
   end;
+end;
+
+class function TOpenSSLLoader.GetLastLoadFunctionsLoadedCount: Integer;
+begin
+  Result := FLastLoadFunctionsLoadedCount;
+end;
+
+class function TOpenSSLLoader.GetLastLoadFunctionsMissingRequired: string;
+begin
+  Result := FLastLoadFunctionsMissingRequired;
 end;
 
 class procedure TOpenSSLLoader.ClearFunctions(const ABindings: array of TFunctionBinding);
@@ -760,6 +795,8 @@ initialization
   TOpenSSLLoader.FLibSSL := 0;
   TOpenSSLLoader.FInitialized := False;
   TOpenSSLLoader.FLoadedModules := [];
+  TOpenSSLLoader.FLastLoadFunctionsLoadedCount := 0;
+  TOpenSSLLoader.FLastLoadFunctionsMissingRequired := '';
 
 finalization
   TOpenSSLLoader.UnloadLibraries;

@@ -357,8 +357,8 @@ function CMSDecryptData(AEncrypted: PCMS_ContentInfo; AKey: PEVP_PKEY;
 
 implementation
 
-const
-  // CMS 函数绑定数组
+// CMS 函数绑定数组（runtime storage, avoid fragile const procvar tables on macOS）
+var
   CMS_FUNCTION_BINDINGS: array[0..88] of TFunctionBinding = (
     // CMS 创建和释放
     (Name: 'CMS_ContentInfo_new'; FuncPtr: @CMS_ContentInfo_new; Required: False),

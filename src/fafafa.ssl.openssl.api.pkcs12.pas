@@ -239,8 +239,9 @@ uses
   fafafa.ssl.openssl.api.err,
   fafafa.ssl.openssl.loader;
 
-const
-  { PKCS12 函数绑定数组 }
+{ PKCS12 函数绑定数组
+  runtime storage keeps procvar targets writable across macOS batch-loader runs }
+var
   PKCS12_BINDINGS: array[0..47] of TFunctionBinding = (
     // 基本 PKCS12 函数
     (Name: 'PKCS12_new'; FuncPtr: @PKCS12_new; Required: False),

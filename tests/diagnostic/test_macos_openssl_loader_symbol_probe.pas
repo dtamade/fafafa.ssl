@@ -104,6 +104,16 @@ var
   LPEMLoaded: Boolean;
   LCMSLoaded: Boolean;
   LOCSPLoaded: Boolean;
+  LEVPLoadedCount: Integer;
+  LPEMLoadedCount: Integer;
+  LPKCS12LoadedCount: Integer;
+  LCMSLoadedCount: Integer;
+  LOCSPLoadedCount: Integer;
+  LEVPMissingRequired: string;
+  LPEMMissingRequired: string;
+  LPKCS12MissingRequired: string;
+  LCMSMissingRequired: string;
+  LOCSPMissingRequired: string;
 begin
   LOutputPath := '';
   if ParamCount >= 1 then
@@ -122,6 +132,16 @@ begin
   LPEMLoaded := False;
   LCMSLoaded := False;
   LOCSPLoaded := False;
+  LEVPLoadedCount := 0;
+  LPEMLoadedCount := 0;
+  LPKCS12LoadedCount := 0;
+  LCMSLoadedCount := 0;
+  LOCSPLoadedCount := 0;
+  LEVPMissingRequired := '';
+  LPEMMissingRequired := '';
+  LPKCS12MissingRequired := '';
+  LCMSMissingRequired := '';
+  LOCSPMissingRequired := '';
 
   try
     LoadOpenSSLCore;
@@ -132,10 +152,20 @@ begin
       LoadOpenSSLBIO;
       LoadOpenSSLX509;
       LEVPLoaded := LoadEVP(LCryptoHandle);
+      LEVPLoadedCount := TOpenSSLLoader.GetLastLoadFunctionsLoadedCount;
+      LEVPMissingRequired := TOpenSSLLoader.GetLastLoadFunctionsMissingRequired;
       LPEMLoaded := LoadOpenSSLPEM(LCryptoHandle);
+      LPEMLoadedCount := TOpenSSLLoader.GetLastLoadFunctionsLoadedCount;
+      LPEMMissingRequired := TOpenSSLLoader.GetLastLoadFunctionsMissingRequired;
       LoadPKCS12Module(LCryptoHandle);
+      LPKCS12LoadedCount := TOpenSSLLoader.GetLastLoadFunctionsLoadedCount;
+      LPKCS12MissingRequired := TOpenSSLLoader.GetLastLoadFunctionsMissingRequired;
       LCMSLoaded := LoadOpenSSLCMS(LCryptoHandle);
+      LCMSLoadedCount := TOpenSSLLoader.GetLastLoadFunctionsLoadedCount;
+      LCMSMissingRequired := TOpenSSLLoader.GetLastLoadFunctionsMissingRequired;
       LOCSPLoaded := LoadOpenSSLOCSP(LCryptoHandle);
+      LOCSPLoadedCount := TOpenSSLLoader.GetLastLoadFunctionsLoadedCount;
+      LOCSPMissingRequired := TOpenSSLLoader.GetLastLoadFunctionsMissingRequired;
       LoadTSFunctions;
       LoadCTFunctions;
       LoadSTOREFunctions;
@@ -160,10 +190,16 @@ begin
         JsonBool(DirectSymbolAvailable(LCryptoHandle, 'OpenSSL_version_num')));
       AppendJSONPair(LLines, '    ', 'EVP_MD_CTX_new',
         JsonBool(DirectSymbolAvailable(LCryptoHandle, 'EVP_MD_CTX_new')));
+      AppendJSONPair(LLines, '    ', 'EVP_CIPHER_CTX_new',
+        JsonBool(DirectSymbolAvailable(LCryptoHandle, 'EVP_CIPHER_CTX_new')));
       AppendJSONPair(LLines, '    ', 'PEM_read_bio_X509',
         JsonBool(DirectSymbolAvailable(LCryptoHandle, 'PEM_read_bio_X509')));
+      AppendJSONPair(LLines, '    ', 'PEM_write_bio_X509',
+        JsonBool(DirectSymbolAvailable(LCryptoHandle, 'PEM_write_bio_X509')));
       AppendJSONPair(LLines, '    ', 'PKCS12_new',
         JsonBool(DirectSymbolAvailable(LCryptoHandle, 'PKCS12_new')));
+      AppendJSONPair(LLines, '    ', 'PKCS12_parse',
+        JsonBool(DirectSymbolAvailable(LCryptoHandle, 'PKCS12_parse')));
       AppendJSONPair(LLines, '    ', 'CMS_sign',
         JsonBool(DirectSymbolAvailable(LCryptoHandle, 'CMS_sign')));
       AppendJSONPair(LLines, '    ', 'CMS_verify',
@@ -190,6 +226,9 @@ begin
       LLines.Add('    "evp": {');
       AppendJSONPair(LLines, '      ', 'load_result', JsonBool(LEVPLoaded));
       AppendJSONPair(LLines, '      ', 'module_loaded', JsonBool(TOpenSSLLoader.IsModuleLoaded(osmEVP)));
+      AppendJSONPair(LLines, '      ', 'load_functions_loaded_count', IntToStr(LEVPLoadedCount));
+      AppendJSONPair(LLines, '      ', 'missing_required_bindings',
+        '"' + JsonEscape(LEVPMissingRequired) + '"');
       AppendJSONPair(LLines, '      ', 'evp_md_ctx_new_assigned', JsonBool(Assigned(EVP_MD_CTX_new)));
       AppendJSONPair(LLines, '      ', 'evp_cipher_ctx_new_assigned',
         JsonBool(Assigned(EVP_CIPHER_CTX_new)), False);
@@ -198,6 +237,9 @@ begin
       LLines.Add('    "pem": {');
       AppendJSONPair(LLines, '      ', 'load_result', JsonBool(LPEMLoaded));
       AppendJSONPair(LLines, '      ', 'module_loaded', JsonBool(TOpenSSLLoader.IsModuleLoaded(osmPEM)));
+      AppendJSONPair(LLines, '      ', 'load_functions_loaded_count', IntToStr(LPEMLoadedCount));
+      AppendJSONPair(LLines, '      ', 'missing_required_bindings',
+        '"' + JsonEscape(LPEMMissingRequired) + '"');
       AppendJSONPair(LLines, '      ', 'pem_read_bio_x509_assigned', JsonBool(Assigned(PEM_read_bio_X509)));
       AppendJSONPair(LLines, '      ', 'pem_write_bio_x509_assigned',
         JsonBool(Assigned(PEM_write_bio_X509)), False);
@@ -205,6 +247,9 @@ begin
 
       LLines.Add('    "pkcs12": {');
       AppendJSONPair(LLines, '      ', 'module_loaded', JsonBool(TOpenSSLLoader.IsModuleLoaded(osmPKCS12)));
+      AppendJSONPair(LLines, '      ', 'load_functions_loaded_count', IntToStr(LPKCS12LoadedCount));
+      AppendJSONPair(LLines, '      ', 'missing_required_bindings',
+        '"' + JsonEscape(LPKCS12MissingRequired) + '"');
       AppendJSONPair(LLines, '      ', 'pkcs12_new_assigned', JsonBool(Assigned(PKCS12_new)));
       AppendJSONPair(LLines, '      ', 'pkcs12_create_assigned', JsonBool(Assigned(PKCS12_create)));
       AppendJSONPair(LLines, '      ', 'pkcs12_parse_assigned', JsonBool(Assigned(PKCS12_parse)), False);
@@ -213,6 +258,9 @@ begin
       LLines.Add('    "cms": {');
       AppendJSONPair(LLines, '      ', 'load_result', JsonBool(LCMSLoaded));
       AppendJSONPair(LLines, '      ', 'module_loaded', JsonBool(TOpenSSLLoader.IsModuleLoaded(osmCMS)));
+      AppendJSONPair(LLines, '      ', 'load_functions_loaded_count', IntToStr(LCMSLoadedCount));
+      AppendJSONPair(LLines, '      ', 'missing_required_bindings',
+        '"' + JsonEscape(LCMSMissingRequired) + '"');
       AppendJSONPair(LLines, '      ', 'cms_sign_assigned', JsonBool(Assigned(CMS_sign)));
       AppendJSONPair(LLines, '      ', 'cms_verify_assigned', JsonBool(Assigned(CMS_verify)), False);
       LLines.Add('    },');
@@ -220,6 +268,9 @@ begin
       LLines.Add('    "ocsp": {');
       AppendJSONPair(LLines, '      ', 'load_result', JsonBool(LOCSPLoaded));
       AppendJSONPair(LLines, '      ', 'module_loaded', JsonBool(TOpenSSLLoader.IsModuleLoaded(osmOCSP)));
+      AppendJSONPair(LLines, '      ', 'load_functions_loaded_count', IntToStr(LOCSPLoadedCount));
+      AppendJSONPair(LLines, '      ', 'missing_required_bindings',
+        '"' + JsonEscape(LOCSPMissingRequired) + '"');
       AppendJSONPair(LLines, '      ', 'ocsp_request_new_assigned', JsonBool(Assigned(OCSP_REQUEST_new)));
       AppendJSONPair(LLines, '      ', 'ocsp_response_new_assigned',
         JsonBool(Assigned(OCSP_RESPONSE_new)), False);

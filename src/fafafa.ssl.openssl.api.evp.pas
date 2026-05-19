@@ -887,8 +887,8 @@ implementation
 uses
   fafafa.ssl.openssl.api;
 
-const
-  // EVP function bindings for batch loading
+// Runtime storage avoids platform-specific regressions in const procvar binding tables.
+var
   EVP_BINDINGS: array[0..98] of TFunctionBinding = (
     // MD Context functions
     (Name: 'EVP_MD_CTX_new'; FuncPtr: @EVP_MD_CTX_new; Required: True),

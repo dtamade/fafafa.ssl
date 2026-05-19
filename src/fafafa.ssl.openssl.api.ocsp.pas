@@ -408,8 +408,9 @@ function VerifyOCSPResponseDER(const AResponseDER, ACertDER, AIssuerDER: TBytes;
 
 implementation
 
-const
-  { OCSP 函数绑定数组 }
+{ OCSP 函数绑定数组
+  runtime storage keeps procvar targets writable across macOS batch-loader runs }
+var
   OCSPBindings: array[0..83] of TFunctionBinding = (
     // OCSP 请求函数
     (Name: 'OCSP_REQUEST_new'; FuncPtr: @OCSP_REQUEST_new; Required: True),

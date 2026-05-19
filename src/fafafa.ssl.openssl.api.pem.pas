@@ -232,8 +232,9 @@ function LoadCertificateFromMemory(const AData: TBytes): PX509;
 
 implementation
 
-const
-  { PEM 函数绑定数组 }
+{ PEM 函数绑定数组
+  runtime storage keeps procvar targets writable across macOS batch-loader runs }
+var
   PEM_FUNCTION_BINDINGS: array[0..61] of TFunctionBinding = (
     // 基础 PEM 读写函数
     (Name: 'PEM_read_bio'; FuncPtr: @PEM_read_bio; Required: False),
@@ -345,8 +346,10 @@ begin
   // 使用批量加载模式
   TOpenSSLLoader.LoadFunctions(ACryptoLib, PEM_FUNCTION_BINDINGS);
 
-  // 检查必需函数是否加载成功
-  TOpenSSLLoader.SetModuleLoaded(osmPEM, Assigned(PEM_read_bio_X509) and Assigned(PEM_write_bio_X509));
+  // The common PEM owner path is certificate/private-key read; do not fail the whole
+  // module just because a write-side helper is unavailable on one platform image.
+  TOpenSSLLoader.SetModuleLoaded(osmPEM,
+    Assigned(PEM_read_bio_X509) and Assigned(PEM_read_bio_PrivateKey));
   Result := TOpenSSLLoader.IsModuleLoaded(osmPEM);
 end;
 
