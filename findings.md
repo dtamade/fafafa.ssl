@@ -2,6 +2,42 @@
 
 ## 2026-05-19
 
+- `PERFORMANCE_GUIDE` / `PERFORMANCE_OPTIMIZATION_GUIDE` 这类历史型性能文档的 drift，
+  其实不只是“数字过期”这么简单：
+  - 一层是固定 benchmark / phase / threshold snapshot 被写成 current truth
+  - 另一层是它们还会反向把旧的 direct-core session/diagnostics mirror 重新教给新读者
+  - 所以这批最值钱的修法不是单纯删数字，而是同时把 benchmark 真相源和 owner-path
+    设计一起重新钉牢
+
+- 当前更 durable 的性能 truth 已经很清楚：
+  - `scripts/run_phase2_performance_baseline.sh`
+  - `tests/benchmarks/run_all_benchmarks.sh`
+  - `tests/benchmarks/baselines/*.json`
+  - `docs/test_reports/PHASE2_PERFORMANCE_METRICS_TEMPLATE.md`
+  - 也就是说，文档应该教“去哪里跑、怎么比较、如何记录环境”，而不是继续背诵某次
+    `ops/s` / `ms` / `P99` / `倍率`
+
+- `benchmark_aesgcm_pool` 这类专项 benchmark 需要和默认 Phase 2 baseline lane 分开：
+  - 它可以继续作为辅助/手工 lane 存在
+  - 但不应该再被写成默认 shipped baseline 的一部分
+  - 这个边界如果不写清楚，后面就很容易把单点实验结果误升格成项目主结论
+
+- 性能文档现在也必须和接口设计真相保持一致：
+  - `ISSLConnection.GetSession` / `SetSession` / `IsSessionReused`
+    在 active guidance 里不该再当主入口
+  - `ISSLConnection.GetPerformanceMetrics`
+    也不该继续当默认性能采样入口
+  - 正确 owner path 是：
+    - `ISSLSessionResumption`
+    - `ISSLDiagnostics`
+
+- 这批还暴露了一个 workflow 级别的小经验：
+  - 对 markdown 正文做 contract 时，整句 literal 匹配很容易被 prettier 自动换行误伤
+  - 这类规则更稳的写法是：
+    - 关键短语 fragments
+    - 或跨换行的语义匹配
+  - 记住这一点可以减少之后重复返工 contract 本身
+
 - session-resumption residual 这条线现在终于可以稳定冻结了：
   - `tests/contract/test_backend_contract.pas`
     是 compatibility mirror proof

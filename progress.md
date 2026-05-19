@@ -2,6 +2,92 @@
 
 ## 2026-05-19
 
+### Performance Guides Benchmark Truth
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - batch started from a clean `master...origin/master` worktree
+
+- `rg -n "Phase|ops/s|ms|倍|完成|成功率|P99|benchmark|性能提升|完美支持|100%|250,000|600,000|1160|181|3\\.7|244|4574|587|3200|10000|500 ops" docs/guides/PERFORMANCE_GUIDE.md docs/guides/PERFORMANCE_OPTIMIZATION_GUIDE.md`
+  - result: PASS
+  - summary:
+    - static scan confirmed both performance guides still embedded fixed benchmark snapshots and completion-style wording
+    - the same scan also pointed back to the highest-value residual files:
+      - `docs/guides/PERFORMANCE_GUIDE.md`
+      - `docs/guides/PERFORMANCE_OPTIMIZATION_GUIDE.md`
+
+- `rg -n "GetSession|SetSession|IsSessionReused|ISSLSessionResumption|ISSLDiagnostics|GetPerformanceMetrics" docs/guides/PERFORMANCE_GUIDE.md docs/guides/PERFORMANCE_OPTIMIZATION_GUIDE.md`
+  - result: PASS
+  - summary:
+    - source/doc scan confirmed the performance guides still taught direct-core session and diagnostics mirrors
+    - this turned the batch into both benchmark-truth cleanup and owner-path guidance alignment
+
+- `sed -n '1,260p' scripts/run_phase2_performance_baseline.sh`
+- `sed -n '1,260p' tests/benchmarks/run_all_benchmarks.sh`
+- `find tests/benchmarks/baselines -maxdepth 2 -type f | sort`
+  - result: PASS
+  - summary:
+    - current durable performance truth sources were reconfirmed before editing:
+      - `scripts/run_phase2_performance_baseline.sh`
+      - `tests/benchmarks/run_all_benchmarks.sh`
+      - `tests/benchmarks/baselines/crypto_baseline.json`
+      - `tests/benchmarks/baselines/random_pool_baseline.json`
+      - `tests/benchmarks/baselines/tls_handshake_baseline.json`
+
+- add `docs/plans/2026-05-19-performance-guides-benchmark-truth.md`
+  - change:
+    - recorded the bounded docs-only plan for performance-guide benchmark truth
+      and owner-path guidance alignment
+
+- add `tests/scripts/test_performance_guides_benchmark_truth_contract.sh`
+  - change:
+    - added a focused shell contract that guards:
+      - current benchmark truth-source wording
+      - absence of hardcoded performance snapshots and phase-completion claims
+      - presence of `ISSLSessionResumption` / `ISSLDiagnostics` owner-path examples
+      - absence of old direct-core performance/session guidance
+
+- update docs:
+  - `docs/guides/PERFORMANCE_GUIDE.md`
+  - `docs/guides/PERFORMANCE_OPTIMIZATION_GUIDE.md`
+  - change:
+    - rewrote both guides around current benchmark entrypoints, baseline files,
+      success criteria, and result-interpretation boundaries
+    - demoted historical benchmark/phase snapshots
+    - moved TLS performance examples onto `ISSLSessionResumption`
+      and `ISSLDiagnostics`
+    - separated `benchmark_aesgcm_pool` from the default Phase 2 shipped baseline lane
+
+- `bash -n tests/scripts/test_performance_guides_benchmark_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new performance-guide truth contract syntax is valid
+
+- `bash tests/scripts/test_performance_guides_benchmark_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first proved that the new contract was still overfit to one literal
+      sentence layout and got broken by markdown line wrapping
+    - GREEN after switching those checks to wrap-safe semantic fragments proves
+      the guides now satisfy the intended benchmark-truth and owner-path rules
+
+- `bash tests/scripts/test_active_docs_no_ci_pipeline_contract.sh`
+  - result: PASS
+  - summary:
+    - the active-docs entrypoint contract stayed green after editing
+      `PERFORMANCE_OPTIMIZATION_GUIDE.md`
+
+- `npx prettier --write docs/guides/PERFORMANCE_GUIDE.md docs/guides/PERFORMANCE_OPTIMIZATION_GUIDE.md`
+  - result: PASS
+  - summary:
+    - both performance guides remain formatter-stable after the truth cleanup
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - the performance-guide benchmark-truth batch is whitespace-clean
+
 ### ISSLSessionResumption Runtime Residual Classification Tightening
 
 - add `docs/plans/2026-05-19-isslsessionresumption-runtime-residual-classification-tightening.md`

@@ -4419,3 +4419,53 @@
        - `docs/guides/PERFORMANCE_GUIDE.md`
        - `docs/guides/PERFORMANCE_OPTIMIZATION_GUIDE.md`
        - 以及其它仍保留 phase/baseline/benchmark 快照的历史型文档
+96. `performance guides benchmark truth` 已完成 focused 收口，并应作为当前性能文档主入口的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-performance-guides-benchmark-truth.md`
+   - 当前已确认的真实 drift：
+     - `docs/guides/PERFORMANCE_GUIDE.md`
+       - 仍把：
+         - `Phase B 优化成果`
+         - 固定 `ops/s`
+         - 固定 `ms`
+         - 固定 `目标值`
+         - 固定 `完成 Phase C`
+         直接写成当前正文 truth
+       - 还把 `benchmark_aesgcm_pool` 与默认 Phase 2 baseline lane 混成一个口径
+     - `docs/guides/PERFORMANCE_OPTIMIZATION_GUIDE.md`
+       - 仍把：
+         - `3.7ms`
+         - `1160ms`
+         - `181ms`
+         - `6.4 倍`
+         - `完美支持`
+         这类某次 TLS 运行快照写成当前结论
+       - 同时仍在示例里教：
+         - `ISSLConnection.GetSession`
+         - `ISSLConnection.SetSession`
+         - `ISSLConnection.IsSessionReused`
+         - `ISSLConnection.GetPerformanceMetrics`
+         但这些 core mirror 当前都已不是 active owner path
+   - 当前最小正确修法已落地：
+     - 不改生产实现
+     - 只把两份性能文档重新锚回当前 benchmark/source truth：
+       - 明确 `scripts/run_phase2_performance_baseline.sh`
+       - 明确 `tests/benchmarks/run_all_benchmarks.sh`
+       - 明确 `tests/benchmarks/baselines/*.json`
+       - 明确“成功标准 + 环境记录 + 以当前运行结果为准”
+       - 把 TLS 性能示例切回：
+         - `ISSLSessionResumption`
+         - `ISSLDiagnostics`
+       - 把 `benchmark_aesgcm_pool` 降回 manual/auxiliary lane，不再冒充默认 shipped baseline
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_performance_guides_benchmark_truth_contract.sh`
+     - `bash tests/scripts/test_performance_guides_benchmark_truth_contract.sh`
+     - `bash tests/scripts/test_active_docs_no_ci_pipeline_contract.sh`
+     - `npx prettier --write docs/guides/PERFORMANCE_GUIDE.md docs/guides/PERFORMANCE_OPTIMIZATION_GUIDE.md`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 继续审查其它历史型/专项型文档是否还保留：
+       - 固定 benchmark snapshot
+       - 固定 phase 完成度
+       - direct-core compatibility mirror 示例
+     - 但不再回头重开已经收口的高入口 docs truth 页面
