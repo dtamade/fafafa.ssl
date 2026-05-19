@@ -20,6 +20,7 @@
 | **SNI**                      | ✅         | ✅      | ✅     | ✅      | ✅      |
 | **PSK**                      | ✅         | ✅      | ⚠️     | ✅      | ✅      |
 | **PKCS#11**                  | ❌         | ✅      | ❌     | ❌      | ❌      |
+| **PKCS#12 / PFX**            | ❌         | ✅      | ⚠️     | ❌      | ❌      |
 | **Password-Protected Keys**  | ❌         | ✅      | ⚠️     | ✅      | ❌      |
 | **Context Callbacks**        | ❌         | ✅      | ⚠️     | ❌      | ❌      |
 
@@ -42,6 +43,11 @@
 - `OpenSSL` / `MbedTLS`: password-protected private-key path 当前已发布
 - `WinSSL`: 当前仅 password-protected PFX/P12 import path 已发布；PEM private-key password path 仍为 unsupported
 - `FreePascal` / `WolfSSL`: `SupportsPasswordProtectedKeys=False`；non-empty `APassword` 当前会 fail-closed
+
+`PKCS#12 / PFX` 这一行按当前 published/runtime truth 汇总：
+- `OpenSSL`: `SupportsPKCS12=True`；当前发布完整 PKCS#12 helper/API surface（create / parse / BIO I/O）
+- `WinSSL`: `SupportsPKCS12=True`；当前仅发布 PFX/P12 private-key/certificate bundle import path
+- `FreePascal` / `MbedTLS` / `WolfSSL`: `SupportsPKCS12=False`；当前没有 shipped PKCS#12 bundle create / parse / import surface
 
 ---
 

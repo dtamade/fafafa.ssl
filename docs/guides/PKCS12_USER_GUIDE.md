@@ -4,6 +4,12 @@
 
 PKCS#12 是一种用于存储和传输私钥、证书和其他敏感信息的标准格式。通常使用 `.p12` 或 `.pfx` 文件扩展名。fafafa.ssl 项目通过 OpenSSL 后端提供了完整的 PKCS#12 支持。
 
+本指南讨论的是 OpenSSL backend 暴露的 PKCS#12 helper/API surface，不代表所有 backend 都发布同等能力。
+
+- `OpenSSL`: 提供完整 PKCS#12 helper/API surface
+- `WinSSL`: 仅发布 PFX/P12 import path，不提供本指南中的 helper/API surface
+- `FreePascal` / `MbedTLS` / `WolfSSL`: 当前不发布 PKCS#12 bundle create / parse / import surface
+
 ## 功能特性
 
 ### ✅ 已实现功能

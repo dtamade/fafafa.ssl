@@ -512,7 +512,7 @@ begin
   // 证书和密钥格式支持
   Result.SupportsDERPrivateKey := True;
   Result.SupportsPKCS8PrivateKey := True;
-  Result.SupportsPKCS12 := True;
+  Result.SupportsPKCS12 := False;  // no shipped PKCS#12/PFX bundle create/parse/import surface on current WolfSSL runtime paths
   Result.SupportsPasswordProtectedKeys := False;  // no shipped password bridge consumes non-empty APassword on current WolfSSL runtime paths
 
   // 扩展性

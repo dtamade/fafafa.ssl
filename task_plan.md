@@ -3365,3 +3365,50 @@
      - 继续审查：
        - 是否还有其它 backend 在 `SupportsDERPrivateKey` / `SupportsPKCS8PrivateKey` / `SupportsPKCS12` 上也存在 partial-publication truth
        - 以及 active global docs 是否需要把 key-format capability matrix 系统化写清
+85. `optional backends PKCS12 capability truth` 已完成 focused 收口，并应作为当前 PKCS#12 backend truth 的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-optional-backends-pkcs12-capability-truth.md`
+   - 当前已确认的真实 drift：
+     - `MbedTLS` / `WolfSSL` 此前都把：
+       - `SupportsPKCS12`
+       发布为 `True`
+     - 但当前 shipped context path 只覆盖：
+       - `LoadCertificate*`
+       - `LoadPrivateKey*`
+       的 PEM / DER / PKCS#8 路径
+     - 当前看不到任何 public：
+       - PKCS#12 create
+       - PKCS#12 parse
+       - PFX/P12 bundle import
+       surface
+     - active docs 还存在全局口径冲突：
+       - `docs/guides/FAQ.md` 仍写“PKCS#12 支持计划中”
+       - `docs/guides/PKCS12_USER_GUIDE.md` 则写“通过 OpenSSL 后端提供完整支持”
+   - 当前最小正确修法已落地：
+     - 不补做 `MbedTLS` / `WolfSSL` 的 PKCS#12 runtime
+     - 只把：
+       - `src/fafafa.ssl.mbedtls.lib.pas`
+       - `src/fafafa.ssl.wolfssl.lib.pas`
+       的 `SupportsPKCS12` 收回到 `False`
+     - 并同步全局文档口径：
+       - `docs/BACKEND_CAPABILITY_MATRIX.md`
+       - `docs/guides/FAQ.md`
+       - `docs/guides/PKCS12_USER_GUIDE.md`
+       - `docs/reference/API_REFERENCE.md`
+       统一回到：
+       - `OpenSSL` = 完整 PKCS#12 helper/API
+       - `WinSSL` = PFX/P12 bundle import partial path
+       - `FreePascal` / `MbedTLS` / `WolfSSL` = 当前不发布 PKCS#12 bundle surface
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_optional_backends_pkcs12_capability_truth_contract.sh`
+     - `bash tests/scripts/test_optional_backends_pkcs12_capability_truth_contract.sh`
+     - `mkdir -p tmp/test_optional_backends_pkcs12_capability_truth && fpc -B -Fu./src -Fu./tests -FUtmp/test_optional_backends_pkcs12_capability_truth -FEtmp/test_optional_backends_pkcs12_capability_truth -otmp/test_optional_backends_pkcs12_capability_truth/test_optional_backends_pkcs12_capability_truth_contract tests/test_optional_backends_pkcs12_capability_truth_contract.pas && ./tmp/test_optional_backends_pkcs12_capability_truth/test_optional_backends_pkcs12_capability_truth_contract`
+     - `bash tests/scripts/test_password_protected_key_capability_truth_contract.sh`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 不再把 `MbedTLS` / `WolfSSL` 的 `SupportsPKCS12` 当作已发布 capability
+     - 继续审查：
+       - 是否还有其它 coarse-grained capability 在 global docs / matrix 里被写成“全 backend 通用支持”
+       - 以及 `SupportsPKCS12=True` 是否还需要在更多 active docs 中显式区分：
+         - OpenSSL helper/API
+         - WinSSL PFX/P12 import

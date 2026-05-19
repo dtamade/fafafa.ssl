@@ -258,6 +258,106 @@
       - fixed one contract string quoting issue for `LoadPrivateKeyPEM`
       - removed one trailing-space formatting issue from `API_REFERENCE`
     - GREEN after fix:
+
+### Optional Backends PKCS12 Capability Truth
+
+- add `docs/plans/2026-05-19-optional-backends-pkcs12-capability-truth.md`
+  - change:
+    - define the bounded capability/docs truth batch for `MbedTLS` / `WolfSSL` PKCS#12 publication drift
+
+- add `tests/scripts/test_optional_backends_pkcs12_capability_truth_contract.sh`
+  - change:
+    - lock source/docs truth for:
+      - `MbedTLS SupportsPKCS12=False`
+      - `WolfSSL SupportsPKCS12=False`
+      - backend-specific PKCS#12 docs wording
+
+- add `tests/test_optional_backends_pkcs12_capability_truth_contract.pas`
+  - change:
+    - lock runtime capability truth for:
+      - `FreePascal=False`
+      - `OpenSSL=True`
+      - `WinSSL=True`
+      - `MbedTLS=False`
+      - `WolfSSL=False`
+
+- read-only evidence triage
+  - summary:
+    - `src/fafafa.ssl.mbedtls.context.pas` / `src/fafafa.ssl.wolfssl.context.pas`
+      only exposed PEM / DER / PKCS#8 certificate/private-key load paths
+    - no public PKCS#12 create / parse / import surface was found in the MbedTLS / WolfSSL backend context paths
+    - active doc conflict was confirmed between:
+      - `docs/guides/FAQ.md`
+      - `docs/guides/PKCS12_USER_GUIDE.md`
+
+- `bash -n tests/scripts/test_optional_backends_pkcs12_capability_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new PKCS#12 capability truth shell contract syntax is valid
+
+- `bash tests/scripts/test_optional_backends_pkcs12_capability_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `src/fafafa.ssl.mbedtls.lib.pas` still published `SupportsPKCS12 := True`
+    - intermediate housekeeping:
+      - fixed shell-contract quoting on backtick-containing literal patterns so bash stops treating them as command substitution
+    - GREEN after fix:
+      - optional backend PKCS#12 source/docs truth now aligns with the intended backend-specific publication model
+
+- `mkdir -p tmp/test_optional_backends_pkcs12_capability_truth && fpc -B -Fu./src -Fu./tests -FUtmp/test_optional_backends_pkcs12_capability_truth -FEtmp/test_optional_backends_pkcs12_capability_truth -otmp/test_optional_backends_pkcs12_capability_truth/test_optional_backends_pkcs12_capability_truth_contract tests/test_optional_backends_pkcs12_capability_truth_contract.pas && ./tmp/test_optional_backends_pkcs12_capability_truth/test_optional_backends_pkcs12_capability_truth_contract`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - runtime contract failed at:
+        - `MbedTLS SupportsPKCS12 mismatch: expected=False actual=True`
+    - GREEN after fix:
+      - `OpenSSL=True`
+      - `MbedTLS=False`
+      - `WolfSSL=False`
+      - `FreePascal` / `WinSSL` were skipped on this Linux host when unavailable
+    - compile emitted existing unrelated warnings/notes only
+
+- update `src/fafafa.ssl.mbedtls.lib.pas`
+  - change:
+    - set `Result.SupportsPKCS12 := False`
+    - annotate that current MbedTLS runtime paths do not ship a PKCS#12/PFX bundle surface
+
+- update `src/fafafa.ssl.wolfssl.lib.pas`
+  - change:
+    - set `Result.SupportsPKCS12 := False`
+    - annotate that current WolfSSL runtime paths do not ship a PKCS#12/PFX bundle surface
+
+- update `docs/BACKEND_CAPABILITY_MATRIX.md`
+  - change:
+    - add quick-reference row for `PKCS#12 / PFX`
+    - spell out backend-specific truth:
+      - `OpenSSL` full helper/API
+      - `WinSSL` partial PFX/P12 import
+      - `FreePascal` / `MbedTLS` / `WolfSSL` unsupported
+
+- update `docs/guides/FAQ.md`
+  - change:
+    - replace stale “planned only” answer with backend-specific PKCS#12 truth
+
+- update `docs/guides/PKCS12_USER_GUIDE.md`
+  - change:
+    - clarify the guide is OpenSSL-backend scoped
+    - add backend-specific scope note for WinSSL and unsupported backends
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - add one-line canonical summary of current `SupportsPKCS12` truth across backends
+
+- `bash tests/scripts/test_password_protected_key_capability_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - adjacent private-key password truth remains aligned after the PKCS#12 docs/capability update
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current optional-backends PKCS#12 batch has no whitespace or patch-format issues
       - `ISSLLibrary` / `ISSLContext` code blocks now reflect current shipped source truth instead of the older narrowed subset
 
 - update `docs/reference/API_REFERENCE.md`

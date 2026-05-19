@@ -358,7 +358,11 @@ openssl ocsp -issuer ca.pem -cert cert.pem \
 
 ### Q: 支持PKCS#12 (.pfx/.p12)吗？
 
-**A**: 当前版本专注于PEM/DER，PKCS#12支持计划中。
+**A**: 支持，但当前是 backend-specific：
+
+- `OpenSSL`: 提供完整 PKCS#12 helper/API surface（创建、解析、BIO I/O）
+- `WinSSL`: 当前仅发布 PFX/P12 import path（用于加载证书+私钥 bundle）
+- `FreePascal` / `MbedTLS` / `WolfSSL`: 当前不发布 PKCS#12 bundle surface
 
 **转换方案**:
 ```bash

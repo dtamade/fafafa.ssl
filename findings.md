@@ -258,6 +258,56 @@
 
 - 这轮还顺手暴露了一类常被忽略、但实际会直接误导用户的真问题：
   - 活跃文档仍残留 `yourusername` / `your-repo` / `your.email@example.com`
+
+- 沿着上一批的 key-format / password-protected truth 继续压时，这次又挖出一条很典型的 coarse-grained capability 假阳性：
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  之前都仍发布：
+    - `SupportsPKCS12 := True`
+  - 但当前 shipped context surface 只看到：
+    - `LoadCertificate*`
+    - `LoadPrivateKey*`
+    的 PEM / DER / PKCS#8 路径
+  - 并没有任何 public PKCS#12 create / parse / import surface
+
+- 这条问题不只是 capability 字段写宽了，还会把全局文档心智一起带偏：
+  - `docs/guides/FAQ.md`
+    - 仍写“PKCS#12 支持计划中”
+  - `docs/guides/PKCS12_USER_GUIDE.md`
+    - 又写“通过 OpenSSL 后端提供完整支持”
+  - 如果不把 backend 粒度说清，调用方既可能误以为：
+    - 所有 backend 都支持 PKCS#12
+  - 也可能误以为：
+    - 当前版本完全不支持 PKCS#12
+
+- 这一批压实后的当前 truth 应明确分成三档：
+  - `OpenSSL`
+    - `SupportsPKCS12=True`
+    - 当前发布完整 PKCS#12 helper/API surface：
+      - create
+      - parse
+      - BIO I/O
+  - `WinSSL`
+    - `SupportsPKCS12=True`
+    - 当前只代表：
+      - `PFX/P12` certificate/private-key bundle import
+    - 不等于拥有 OpenSSL 风格的 PKCS#12 helper/API
+  - `FreePascal` / `MbedTLS` / `WolfSSL`
+    - `SupportsPKCS12=False`
+    - 当前没有 shipped PKCS#12 bundle create / parse / import surface
+
+- 因而这条线的最小正确修法也很清楚：
+  - 不补做 `MbedTLS` / `WolfSSL` PKCS#12 runtime
+  - 不把 scope 扩到 OpenSSL PKCS#12 helper 设计
+  - 只把 optional backends 的 `SupportsPKCS12` 收回到 `False`
+  - 再把 active global docs 统一回 backend-specific truth
+
+- 这批收口后的新基线应明确保留：
+  - `SupportsPKCS12=True`
+    - 不能再被误读成“所有 backend 都有同等 PKCS#12 能力”
+  - 当前 `OpenSSL` 与 `WinSSL` 虽然都为 `True`，但代表的是不同粒度的 published surface
+  - 后续若继续做 key-format / bundle capability 审查，应优先检查：
+    - coarse-grained bool 是否掩盖了 backend-specific surface 差异
   - 它们不是无害占位，而是错误导航入口
 
 - 本批收口后的新基线应明确保留：
