@@ -96,6 +96,55 @@
       - `OCSP`: 3/3
     - 总计 10/10 PASS
 
+- `gh run view 26110676557 --json status,conclusion,jobs`
+  - result: PASS
+  - summary:
+    - run 已完成且总体 `success`
+    - jobs:
+      - `setup`: success
+      - `linux-gate`: success
+      - `macos-gate`: success
+      - `windows-gate`: success
+      - `summary`: success
+    - 这次 closeout 已不再停留在本地 proof，GitHub 三平台 runtime truth 也已收口
+
+- `sed -n '1,220p' tmp/gh-run-26110676557/wave_b_macos_gate_summary_macos_batch_loader_closure_20260520_89c2a2e.md`
+  - result: PASS
+  - summary:
+    - macOS artifact summary 明确 `overall: PASS`
+    - `probe / loader-symbol-probe / path-check / compile / modules / examples`
+      六步全部 PASS
+    - examples metrics:
+      - `passed=71`
+      - `failed=0`
+      - `skipped=4`
+      - `pass_rate=100.0`
+
+- `sed -n '1,200p' tmp/gh-run-26110676557/wave_b_macos_loader_symbol_probe_macos_batch_loader_closure_20260520_89c2a2e.json`
+  - result: PASS
+  - summary:
+    - CI probe 已恢复到正确 runtime truth：
+      - same `OpenSSL 3.6.2 7 Apr 2026`
+      - `direct_symbols` 全 true
+      - `evp/pem/pkcs12/cms/ocsp` `module_loaded/load_result` 全 true
+    - 新增 durable diagnostics 在 CI 上也给出了稳定计数：
+      - `evp = 98`
+      - `pem = 60`
+      - `pkcs12 = 37`
+      - `cms = 86`
+      - `ocsp = 67`
+      - all `missing_required_bindings = ""`
+
+- `rg -n "^## |^### |mixed-scope|门面单元|能力矩阵存在双真相|ISSLServerConnection|SetServerName|deprecated" docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+- `rg -n "SetServerName\\(|SetSession\\(|SupportsSNI|SNISupport|LogLevel|LogCallback|BufferSize|HandshakeTimeout" src/fafafa.ssl.base.pas src/fafafa.ssl.factory.pas src/fafafa.ssl.pas src/fafafa.ssl.*lib.pas src/fafafa.ssl.connection.builder.pas src/fafafa.ssl.tls.pas`
+  - result: PASS
+  - summary:
+    - post-closeout static re-anchor shows:
+      - capability dual-truth lane 已有 shared normalization/helper/contract，不是当前最值钱缺口
+      - 下一条更真实的 active surface debt 在
+        `TSSLConfig` mixed-scope record 与 facade quick-entry 分层
+    - 这让总 goal 可以从平台 runtime triage 收回到 public surface truth 审查
+
 ### Performance Guides Benchmark Truth
 
 - `git status --short --branch`

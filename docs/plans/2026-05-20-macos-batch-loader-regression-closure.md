@@ -80,4 +80,26 @@ git diff --check
 - local probe 至少应继续产出 JSON，供我们检查新增 diagnostics 字段结构。
 
 ## Execution Result
-- in progress
+- completed
+- local proof:
+  - `bash -n tests/scripts/test_macos_batch_loader_regression_closure_contract.sh` PASS
+  - `bash tests/scripts/test_macos_batch_loader_regression_closure_contract.sh` PASS
+  - `fpc ... tests/diagnostic/test_macos_openssl_loader_symbol_probe.pas` PASS
+  - local probe JSON:
+    - `evp.load_functions_loaded_count = 98`
+    - `pem.load_functions_loaded_count = 60`
+    - `pkcs12.load_functions_loaded_count = 37`
+    - `cms.load_functions_loaded_count = 86`
+    - `ocsp.load_functions_loaded_count = 67`
+    - all `missing_required_bindings = ""`
+- GitHub proof:
+  - run `26110676557` finished `status=completed`, `conclusion=success`
+  - `linux-gate` / `macos-gate` / `windows-gate` / `summary` all `success`
+  - artifact `wave_b_macos_gate_summary_macos_batch_loader_closure_20260520_89c2a2e.md`
+    confirms `overall: PASS`
+  - artifact `wave_b_macos_loader_symbol_probe_macos_batch_loader_closure_20260520_89c2a2e.json`
+    confirms:
+    - same `OpenSSL 3.6.2 7 Apr 2026`
+    - `direct_symbols` all true
+    - `evp/pem/pkcs12/cms/ocsp` `module_loaded/load_result` all true
+    - per-module loaded-count diagnostics match the new durable baseline

@@ -258,6 +258,35 @@
   - 所以上一批 compiler `deprecated` 收口不是终点，它实际上帮我们把生产代码里
     还活着的旧调用面也抖了出来
 
+## 2026-05-20
+
+- `26110676557` 的最终结果把这条 macOS 线彻底钉死了：
+  - 不是“本地修了，CI 未必真好”
+  - 而是 GitHub 三平台 gate 已经一起全绿：
+    - `linux-gate = success`
+    - `macos-gate = success`
+    - `windows-gate = success`
+    - `summary = success`
+  - 所以这次 batch 可以作为真正 closeout，而不是半收口
+
+- macOS artifact 也证明这次修法命中的就是回归本体，而不是偶然绕过：
+  - same `OpenSSL 3.6.2 7 Apr 2026`
+  - `direct_symbols` 全 true
+  - `evp/pem/pkcs12/cms/ocsp` 又恢复全绿
+  - 且 CI probe 现在能稳定给出 `load_functions_loaded_count +
+    missing_required_bindings`，后续再掉线时不必回到旧日志猜谜
+
+- 这次 GitHub run 还顺带给出一条重要的 workflow 结论：
+  - 不该再把 macOS batch-loader 回归和旧 WinSSL/native-probe 线搅在一起
+  - 因为 `windows-gate` 在同一 run 里也已经成功
+  - 后续平台问题应继续按 artifact/contract 各自收口，不要再跨线串案
+
+- 当前“接口设计 + 各 backend 实现一致性”总 goal 的下一条高价值工作，
+  不再是平台 runtime triage，而是继续处理 active public surface debt：
+  - `TSSLConfig` mixed-scope public record
+  - facade/quick-entry 推荐入口与 compatibility 路径分层
+  也就是优先防止调用方继续被活跃入口误导，而不是重复验证已收口的平台门禁
+
 - 当前 durable truth 已进一步收口为：
   - ordinary runtime tests 现在优先通过 `ISSLSessionResumption`
   - `TSSLConnectionBuilder.WithSession(...)` 与 `TSSLConnector.WithSession(...)`

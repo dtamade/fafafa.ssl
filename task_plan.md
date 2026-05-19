@@ -10,7 +10,7 @@
 
 ## Current Status
 
-- [in_progress] `macOS batch-loader regression closure`
+- [completed] `macOS batch-loader regression closure`
   当前 focused 目标：
   - 不再把这次 macOS 新失败重判成旧的 loader/path 问题
   - 直接围绕 `26108902159` 的真实回归面收口：
@@ -41,9 +41,26 @@
   - `fpc ... tests/diagnostic/test_macos_openssl_loader_symbol_probe.pas`
   - `./tmp/test_macos_batch_loader_probe_bin/test_macos_openssl_loader_symbol_probe tmp/test_macos_batch_loader_probe.json`
   - `FAFAFA_FAST_LOCAL=1 ... bash scripts/run_all_module_tests.sh --modules PKCS7,PKCS12,CMS,OCSP --stop-on-fail`
+  当前最终收口证据：
+  - GitHub run `26110676557`
+    - `status=completed`
+    - `conclusion=success`
+    - `setup/linux-gate/macos-gate/windows-gate/summary` 全部 `success`
+  - artifact:
+    - `tmp/gh-run-26110676557/wave_b_macos_gate_summary_macos_batch_loader_closure_20260520_89c2a2e.md`
+      - `overall: PASS`
+    - `tmp/gh-run-26110676557/wave_b_macos_loader_symbol_probe_macos_batch_loader_closure_20260520_89c2a2e.json`
+      - same `OpenSSL 3.6.2 7 Apr 2026`
+      - direct symbols 全 true
+      - `evp/pem/pkcs12/cms/ocsp` module truth 全绿
+      - CI loaded-count diagnostics 与本机 baseline 对齐
+  当前结论：
+  - 这次问题已经被确认并收口为 batch-loader 回归修复，不再是旧的 path/root 怀疑。
+  - Windows lane 也随同这次 GitHub run 一并成功，不需要把旧 WinSSL probe 线重新拉起。
   当前下一条真实工作：
-  - 做一次收口 review，然后 commit / push
-  - 用 GitHub 重新拉起 macOS gate，确认这批 runtime truth 在 CI 上真正复绿
+  - 回到“接口设计 + 各 backend 实现一致性”总 goal
+  - 继续优先静态审查 `TSSLConfig` mixed-scope public record 与 facade 推荐入口，
+    只盯当前仍可能误导调用方的 active surface，而不是继续平台 runtime 排障
 
 - [completed] `WinSSL session injection semantics` truth alignment
   已完成 focused 收口：
