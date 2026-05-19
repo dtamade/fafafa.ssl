@@ -4743,3 +4743,38 @@
   - 它把 callback granularity truth 从“分散在几个 batch 结果里”
   - 变成“在 active capability 总览里直接可见”
   - 以后再继续 callback/completeness 审查时，就不需要每次从 `API_REFERENCE` 反向解释到 matrix docs
+
+- 顺着 callback 主线继续往 capability/source 里审时，又发现了另一条同构漂移：
+  - `FreePascal` / `WolfSSL` 当前都把 `SupportsPasswordProtectedKeys` 发布成 `True`
+  - 但实现侧并没有 published password-protected private-key runtime path
+  - 这不是“文档说得不够细”，而是 capability 真值本身已经偏宽
+
+- `FreePascal` 的问题最直接：
+  - `LoadPrivateKey(const AFileName, APassword)`
+  - `LoadPrivateKey(AStream, APassword)`
+  - `LoadPrivateKeyPEM(const APEM, APassword)`
+  这三条路径都只是存储 key material，`APassword` 之前直接落成 `if APassword <> '' then;`
+  - 也就是说 caller 明确提供了 non-empty password，但 backend 没有消费，也没有 fail-fast
+  - 这和之前 `SupportsCallbacks=False` backend 的 silent setter drift 属于同类错误：参数表面存在，但 runtime 不发布对应语义
+
+- `WolfSSL` 的问题形态稍有不同，但本质相同：
+  - `LoadPrivateKey*` 三条路径也没有真正消费 non-empty `APassword`
+  - 同时源码里还保留着“密码回调需要单独设置”的旧注释
+  - 但当前仓库已经明确：
+    - `SupportsCallbacks=False`
+    - password callback setter 对 non-nil 已 fail-closed
+  - 所以继续把 `SupportsPasswordProtectedKeys=True` 留着，只会强化错误心智模型
+
+- 这一批的最小正确结论因此不是“马上补齐 FreePascal/WolfSSL 的 encrypted key runtime”，而是先把真相收回：
+  - `FreePascal` / `WolfSSL`
+    - `SupportsPasswordProtectedKeys=False`
+    - non-empty `APassword` -> fail-closed `unsupported`
+  - `WinSSL`
+    - 继续保留 coarse-grained `SupportsPasswordProtectedKeys=True`
+    - 但 active docs 必须写清：
+      - 当前只有 password-protected PFX/P12 import path 已发布
+      - PEM private-key password path 仍 unsupported
+
+- 这样收口之后，这条能力线也和 callback 线统一了治理规则：
+  - 没有 published runtime path 的 capability，不再继续发布为 `True`
+  - 没有 published runtime path 的非空输入参数，不再 silent-ignore，而是 fail-closed

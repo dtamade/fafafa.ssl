@@ -79,6 +79,7 @@ type
     function HasEarlyDataCapability: Boolean;
     function HasClientOCSPCapability: Boolean;
     procedure RequireValidContext(const AMethodName: string);
+    procedure RejectUnsupportedPasswordProtectedKey(const AMethodName: string);
     procedure RejectUnsupportedCallbackAssignment(
       const AFeature, AMethodName: string);
 
@@ -592,7 +593,9 @@ begin
   if not Assigned(wolfSSL_CTX_use_PrivateKey_file) then
     raise ESSLCertError.Create('wolfSSL_CTX_use_PrivateKey_file not available');
 
-  // 注意：WolfSSL 密码回调需要单独设置
+  if APassword <> '' then
+    RejectUnsupportedPasswordProtectedKey('TWolfSSLContext.LoadPrivateKey');
+
   if wolfSSL_CTX_use_PrivateKey_file(FWolfSSLCtx, PAnsiChar(AnsiString(AFileName)),
     WOLFSSL_FILETYPE_PEM) <> WOLFSSL_SUCCESS then
     raise ESSLCertError.CreateFmt('Failed to load private key: %s', [AFileName]);
@@ -620,9 +623,11 @@ begin
       'Private key stream exceeds maximum allowed size (%d > %d bytes)',
       [Length(LBuffer), MAX_PRIVATE_KEY_SIZE]);
 
+  if APassword <> '' then
+    RejectUnsupportedPasswordProtectedKey('TWolfSSLContext.LoadPrivateKey(AStream)');
+
   AStream.ReadBuffer(LBuffer[0], Length(LBuffer));
 
-  // 注意：WolfSSL 密码回调需要单独设置，这里假设密钥未加密或已通过回调处理
   // 尝试 PEM 格式
   LRet := wolfSSL_CTX_use_PrivateKey_buffer(FWolfSSLCtx, @LBuffer[0],
     Length(LBuffer), WOLFSSL_FILETYPE_PEM);
@@ -677,7 +682,9 @@ begin
   // 转换 PEM 字符串为字节数组
   LBuffer := TEncoding.UTF8.GetBytes(APEM);
 
-  // 注意：WolfSSL 密码回调需要单独设置
+  if APassword <> '' then
+    RejectUnsupportedPasswordProtectedKey('TWolfSSLContext.LoadPrivateKeyPEM');
+
   LRet := wolfSSL_CTX_use_PrivateKey_buffer(FWolfSSLCtx, @LBuffer[0],
     Length(LBuffer), WOLFSSL_FILETYPE_PEM);
 
@@ -791,6 +798,19 @@ begin
     Format('%s is not published by the current WolfSSL backend runtime. ' +
       'Check ISSLLibrary.GetCapabilities.SupportsCallbacks before installing a non-nil callback.',
       [AFeature]),
+    sslErrUnsupported,
+    AMethodName,
+    0,
+    sslWolfSSL
+  );
+end;
+
+procedure TWolfSSLContext.RejectUnsupportedPasswordProtectedKey(
+  const AMethodName: string);
+begin
+  raise ESSLConfigurationException.CreateWithContext(
+    'Password-protected private key loading is not published by the current WolfSSL backend runtime. ' +
+    'Check ISSLLibrary.GetCapabilities.SupportsPasswordProtectedKeys before providing a non-empty private-key password.',
     sslErrUnsupported,
     AMethodName,
     0,

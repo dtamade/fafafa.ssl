@@ -3280,3 +3280,44 @@
      - 继续审查：
        - 是否还存在其它 active guide / reference 页面把 `SupportsCallbacks=True` 误读成“所有 callback 种类都已发布”
        - 以及单一 bool capability 是否最终需要拆解成 finer-grained publication surface
+83. `password-protected key capability truth` 已完成 focused 收口，并应作为当前 private-key password capability 的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-password-protected-key-capability-truth.md`
+   - 当前已确认的真实 drift：
+     - `FreePascal` / `WolfSSL` 此前都把 `SupportsPasswordProtectedKeys` 发布为 `True`
+     - 但当前实现并没有真正消费：
+       - `LoadPrivateKey(..., APassword)`
+       - `LoadPrivateKeyPEM(..., APassword)`
+       的 non-empty password path
+     - `FreePascal` 甚至直接以 `if APassword <> '' then;` 静默吞掉参数
+     - `WolfSSL` 也没有 shipped password bridge，且还留有“密码回调需要单独设置”的旧注释
+   - 当前最小正确修法已落地：
+     - 不补做 `FreePascal` / `WolfSSL` 的 encrypted private-key runtime
+     - 只把：
+       - `src/fafafa.ssl.freepascal.lib.pas`
+       - `src/fafafa.ssl.wolfssl.lib.pas`
+       的 `SupportsPasswordProtectedKeys` 收回到 `False`
+     - 并让 `FreePascal` / `WolfSSL` 的：
+       - file
+       - stream
+       - PEM
+       三条 private-key load path 在收到 non-empty `APassword` 时 fail-closed 为 `unsupported`
+     - 同时同步：
+       - `src/fafafa.ssl.base.pas`
+       - `docs/BACKEND_CAPABILITY_MATRIX.md`
+       - `docs/reference/API_REFERENCE.md`
+       - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+       - `docs/reference/WINSSL_DESIGN.md`
+       说明当前 WinSSL 仍只是 coarse-grained `True`：
+       - password-protected PFX/P12 import path 已发布
+       - PEM private-key password path 仍 unsupported
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_password_protected_key_capability_truth_contract.sh`
+     - `bash tests/scripts/test_password_protected_key_capability_truth_contract.sh`
+     - `mkdir -p tmp/test_password_protected_key_capability_truth && fpc -B -Fu./src -Fu./tests -FUtmp/test_password_protected_key_capability_truth -FEtmp/test_password_protected_key_capability_truth -otmp/test_password_protected_key_capability_truth/test_backend_password_protected_key_capability_truth_contract tests/test_backend_password_protected_key_capability_truth_contract.pas && ./tmp/test_password_protected_key_capability_truth/test_backend_password_protected_key_capability_truth_contract`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 不再重复拉起 `FreePascal` / `WolfSSL` password-protected key capability 假阳性
+     - 继续审查：
+       - 是否还有其它 coarse-grained capability 在某个 backend 上只发布了 partial surface，却在 active docs / source comments 里说得过宽
+       - 或是否需要把 `SupportsPasswordProtectedKeys` 最终细化成更明确的 per-format / per-path capability

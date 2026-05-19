@@ -960,6 +960,9 @@ type
         @raises ESSLKeyException 加载失败时 *}
     procedure LoadPrivateKeyPEM(const APEM: string; const APassword: string = '');
 
+    {** 私钥密码可用性说明
+        在向 LoadPrivateKey(..., APassword) / LoadPrivateKeyPEM(..., APassword) 传入非空密码前，先检查 ISSLLibrary.GetCapabilities.SupportsPasswordProtectedKeys；对 SupportsPasswordProtectedKeys=False 的 backend，non-empty APassword 应抛出 unsupported，而不是 silent ignore。 *}
+
     {** 加载 CA 证书文件（用于验证对端证书）
         @param AFileName CA 证书文件路径 *}
     procedure LoadCAFile(const AFileName: string);

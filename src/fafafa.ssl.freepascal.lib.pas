@@ -1522,7 +1522,7 @@ begin
   Result.SupportsDERPrivateKey := True;
   Result.SupportsPKCS8PrivateKey := True;
   Result.SupportsPKCS12 := False;
-  Result.SupportsPasswordProtectedKeys := True;
+  Result.SupportsPasswordProtectedKeys := False;  // non-empty APassword is not consumed by the current FreePascal runtime path yet
 
   Result.SupportsCustomCipherSuites := True;
   Result.SupportsCallbacks := False;  // verify/password/info setters are storage-only today; no runtime callback wiring is published

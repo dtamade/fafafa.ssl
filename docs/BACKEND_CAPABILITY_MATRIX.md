@@ -20,6 +20,7 @@
 | **SNI**                      | ✅         | ✅      | ✅     | ✅      | ✅      |
 | **PSK**                      | ✅         | ✅      | ⚠️     | ✅      | ✅      |
 | **PKCS#11**                  | ❌         | ✅      | ❌     | ❌      | ❌      |
+| **Password-Protected Keys**  | ❌         | ✅      | ⚠️     | ✅      | ❌      |
 | **Context Callbacks**        | ❌         | ✅      | ⚠️     | ❌      | ❌      |
 
 **图例**:
@@ -36,6 +37,11 @@
 - `OpenSSL`: verify/password/info callback 都已发布并具备 runtime wiring
 - `WinSSL`: 仅 verify/info callback 已发布；password callback 当前仍为 unsupported
 - `FreePascal` / `WolfSSL` / `MbedTLS`: `SupportsCallbacks=False`，verify/password/info setter 当前都已 fail-closed
+
+`Password-Protected Keys` 这一行按当前 published/runtime truth 汇总：
+- `OpenSSL` / `MbedTLS`: password-protected private-key path 当前已发布
+- `WinSSL`: 当前仅 password-protected PFX/P12 import path 已发布；PEM private-key password path 仍为 unsupported
+- `FreePascal` / `WolfSSL`: `SupportsPasswordProtectedKeys=False`；non-empty `APassword` 当前会 fail-closed
 
 ---
 

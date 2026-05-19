@@ -107,6 +107,7 @@ Ctx := TSSLContextBuilder.Create
 | 重协商 | ✅ 支持 | 安全重协商 |
 | 客户端证书 | ✅ 支持 | 双向 TLS |
 | Context callbacks | ⚠️ 部分 | 当前仅 verify/info runtime path 已发布；password callback 仍为 unsupported |
+| Password-protected private keys | ⚠️ 部分 | 当前仅 password-protected PFX/P12 import path 已发布；PEM private-key password path 仍为 unsupported |
 | 智能卡 / PKCS#11 | ❌ 当前 capability 不发布 | Windows 平台底层可接触硬件密钥，但 fafafa.ssl 当前 WinSSL backend 没有 shipped PKCS#11 URI / smart-card 私钥加载 surface |
 | TPM | ❌ 当前 capability 不发布 | Schannel/CNG 的平台潜在能力不等于 fafafa.ssl 已发布 TPM loading/runtime contract |
 

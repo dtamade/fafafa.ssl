@@ -92,6 +92,7 @@ type
     function TicketKey(const ATicket: TBytes): string;
     procedure PruneResumptionCache;
     procedure EnforceResumptionCacheLimit;
+    procedure RejectUnsupportedPasswordProtectedKey(const AMethodName: string);
     procedure RejectUnsupportedCallbackAssignment(
       const AFeature, AMethodName: string);
   public
@@ -447,7 +448,8 @@ begin
     LStream.Free;
   end;
 
-  if APassword <> '' then;
+  if APassword <> '' then
+    RejectUnsupportedPasswordProtectedKey('TFreePascalContext.LoadPrivateKey');
 end;
 
 procedure TFreePascalContext.LoadPrivateKey(AStream: TStream; const APassword: string);
@@ -459,7 +461,8 @@ begin
       'Private key stream exceeds maximum allowed size (%d > %d bytes)',
       [AStream.Size - AStream.Position, MAX_PRIVATE_KEY_SIZE]);
   FPrivateKeyData := ReadStreamToBytes(AStream);
-  if APassword <> '' then;
+  if APassword <> '' then
+    RejectUnsupportedPasswordProtectedKey('TFreePascalContext.LoadPrivateKey(AStream)');
 end;
 
 procedure TFreePascalContext.LoadCertificatePEM(const APEM: string);
@@ -481,7 +484,8 @@ begin
   if Length(LAnsi) > 0 then
     Move(LAnsi[1], FPrivateKeyData[0], Length(LAnsi));
 
-  if APassword <> '' then;
+  if APassword <> '' then
+    RejectUnsupportedPasswordProtectedKey('TFreePascalContext.LoadPrivateKeyPEM');
 end;
 
 procedure TFreePascalContext.LoadCAFile(const AFileName: string);
@@ -548,6 +552,19 @@ end;
 function TFreePascalContext.GetVerifyDepth: Integer;
 begin
   Result := FVerifyDepth;
+end;
+
+procedure TFreePascalContext.RejectUnsupportedPasswordProtectedKey(
+  const AMethodName: string);
+begin
+  raise ESSLConfigurationException.CreateWithContext(
+    'Password-protected private key loading is not published by the current FreePascal backend runtime. ' +
+    'Check ISSLLibrary.GetCapabilities.SupportsPasswordProtectedKeys before providing a non-empty private-key password.',
+    sslErrUnsupported,
+    AMethodName,
+    0,
+    sslFreePascal
+  );
 end;
 
 procedure TFreePascalContext.RejectUnsupportedCallbackAssignment(

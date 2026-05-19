@@ -612,7 +612,7 @@ begin
   Result.SupportsDERPrivateKey := True;
   Result.SupportsPKCS8PrivateKey := True;
   Result.SupportsPKCS12 := True;   // WinSSL 的首选格式
-  Result.SupportsPasswordProtectedKeys := True;
+  Result.SupportsPasswordProtectedKeys := True;  // current published path is password-protected PFX/P12 import; PEM private-key password path remains unsupported
 
   // 扩展性
   Result.SupportsCallbacks := True;  // verify/info callback runtime paths are consumed by the WinSSL connection layer

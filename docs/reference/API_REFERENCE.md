@@ -1473,6 +1473,13 @@ function CreateSSLLibrary(aType: TSSLLibraryType = sslOpenSSL): ISSLLibrary;
 
 ---
 
+## 私钥密码支持
+
+在向 LoadPrivateKey(..., APassword) / LoadPrivateKeyPEM(..., APassword) 传入非空密码前，先检查 `ISSLLibrary.GetCapabilities.SupportsPasswordProtectedKeys`；对 `SupportsPasswordProtectedKeys=False` 的 backend，non-empty `APassword` 应抛出 unsupported，而不是 silent ignore。
+当前 WinSSL 仅发布 password-protected PFX/P12 import path；PEM private-key password path 仍为 unsupported。
+
+---
+
 ## 回调类型
 
 在安装非 nil 的 Verify/Password/Info callback 前，先检查 `ISSLLibrary.GetCapabilities.SupportsCallbacks`；对 `SupportsCallbacks=False` 的 backend，non-nil 赋值应抛出 unsupported，`nil` 仅用于清除并回到默认行为。

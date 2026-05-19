@@ -9995,3 +9995,89 @@
   - result: PASS
   - summary:
     - current callback publication matrix batch has no whitespace or patch-format issues
+
+### Password-Protected Key Capability Truth
+
+- `rg -n "SupportsPasswordProtectedKeys|APassword|password-protected|LoadPrivateKey" src/fafafa.ssl.*context.pas src/fafafa.ssl.*lib.pas docs/BACKEND_CAPABILITY_MATRIX.md docs/reference/* tests`
+  - result: PASS
+  - summary:
+    - static audit exposed a new capability/source drift family:
+      - `FreePascal` / `WolfSSL` still published `SupportsPasswordProtectedKeys=True`
+      - `FreePascal` silently ignored non-empty `APassword`
+      - `WolfSSL` had no shipped password bridge and still carried stale “密码回调需要单独设置” comments
+
+- add `docs/plans/2026-05-19-password-protected-key-capability-truth.md`
+  - change:
+    - record the bounded plan for capability truth + fail-closed remediation on password-protected private-key paths
+
+- add `tests/scripts/test_password_protected_key_capability_truth_contract.sh`
+  - change:
+    - add a focused shell contract that guards:
+      - `FreePascal` / `WolfSSL` capability truth
+      - non-empty `APassword` fail-closed guards on file/stream/PEM loaders
+      - active doc truth in backend matrix / API reference / WinSSL matrix
+
+- add `tests/test_backend_password_protected_key_capability_truth_contract.pas`
+  - change:
+    - add a focused runtime contract that checks:
+      - `SupportsPasswordProtectedKeys=False` for `FreePascal` / `WolfSSL`
+      - `SupportsPasswordProtectedKeys=True` for `MbedTLS` and `WinSSL` when available
+      - `FreePascal` / `WolfSSL` reject non-empty private-key passwords on file/stream/PEM load paths
+
+- `bash -n tests/scripts/test_password_protected_key_capability_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new password-protected-key shell contract syntax is valid
+
+- `bash tests/scripts/test_password_protected_key_capability_truth_contract.sh`
+  - result: FAIL -> FAIL -> PASS
+  - summary:
+    - RED first exposed the missing base/API/docs truth
+    - the first green attempt was blocked by a self-inflicted script helper mistake (`_rg_pcre.py` did not exist)
+    - the second attempt hit the known backtick-in-double-quoted-string shell quoting pitfall
+    - GREEN after inlining the PCRE helper and switching the affected fixed strings to single quotes:
+      - source/docs truth is now locked for this capability family
+
+- update source:
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.freepascal.context.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - `src/fafafa.ssl.wolfssl.context.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - change:
+    - add public interface guidance for non-empty private-key passwords
+    - set `FreePascal` / `WolfSSL` `SupportsPasswordProtectedKeys=False`
+    - fail-close `FreePascal` / `WolfSSL` file/stream/PEM private-key loaders on non-empty `APassword`
+    - annotate current WinSSL coarse-grained truth in source comment
+
+- update docs:
+  - `docs/BACKEND_CAPABILITY_MATRIX.md`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  - `docs/reference/WINSSL_DESIGN.md`
+  - change:
+    - add password-protected private-key quick-reference truth
+    - record false-backend fail-closed semantics
+    - record current WinSSL partial publication (`PFX/P12` only; PEM path still unsupported)
+
+- `mkdir -p tmp/test_password_protected_key_capability_truth && fpc -B -Fu./src -Fu./tests -FUtmp/test_password_protected_key_capability_truth -FEtmp/test_password_protected_key_capability_truth -otmp/test_password_protected_key_capability_truth/test_backend_password_protected_key_capability_truth_contract tests/test_backend_password_protected_key_capability_truth_contract.pas && ./tmp/test_password_protected_key_capability_truth/test_backend_password_protected_key_capability_truth_contract`
+  - result: FAIL -> PASS
+  - summary:
+    - first compile failed because the new test used `TProc` / anonymous-proc syntax that this FPC mode does not provide
+    - GREEN after rewriting to explicit helper procedures:
+      - `FreePascal Native` capability now reports `False`
+      - `WolfSSL` capability now reports `False`
+      - `MbedTLS` remains `True`
+      - `WinSSL` correctly skips on Linux host
+      - `FreePascal` / `WolfSSL` runtime contracts now reject non-empty private-key passwords as unsupported
+
+- `gh run list --limit 8 --json databaseId,displayTitle,event,headSha,status,conclusion,workflowName`
+  - result: PASS
+  - summary:
+    - previous callback-doc batch `24e4d91` `docs(callbacks): align publication matrices` is now fully green in GitHub CI
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current password-protected-key capability batch has no whitespace or patch-format issues

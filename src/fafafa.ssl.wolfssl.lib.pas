@@ -513,7 +513,7 @@ begin
   Result.SupportsDERPrivateKey := True;
   Result.SupportsPKCS8PrivateKey := True;
   Result.SupportsPKCS12 := True;
-  Result.SupportsPasswordProtectedKeys := True;
+  Result.SupportsPasswordProtectedKeys := False;  // no shipped password bridge consumes non-empty APassword on current WolfSSL runtime paths
 
   // 扩展性
   Result.SupportsCallbacks := False;  // verify/password/info setters are not wired into WolfSSL runtime paths yet
