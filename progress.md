@@ -2,6 +2,68 @@
 
 ## 2026-05-19
 
+### WinSSL Session-Reuse Benchmark Truth Alignment
+
+- `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
+  - result: PASS
+  - summary:
+    - no unsynced catchup output was needed before the WinSSL benchmark truth batch
+
+- `sed -n '1,320p' tests/winssl/test_winssl_session_reuse_benchmark.pas`
+  - result: PASS
+  - summary:
+    - confirmed the benchmark still used direct core session mirrors
+    - confirmed the report logic overwrote the first metrics record with the second benchmark result
+
+- `sed -n '1,280p' tests/winssl/SESSION_REUSE_BENCHMARK_GUIDE.md`
+  - result: PASS
+  - summary:
+    - confirmed the guide still promised `70-90%`, `>95%`, and “快速握手”
+    - confirmed the guide still treated timing delta as if native reuse were already runtime-proven
+
+- add `docs/plans/2026-05-19-winssl-session-reuse-benchmark-truth-alignment.md`
+  - change:
+    - define the bounded WinSSL benchmark truth/harness batch
+
+- add `tests/scripts/test_winssl_session_reuse_benchmark_truth_contract.sh`
+  - change:
+    - lock the WinSSL benchmark program/guide away from stale high-reuse/high-gain claims
+    - require owner-path `ISSLSessionResumption` usage plus metrics-merge truth
+
+- `bash -n tests/scripts/test_winssl_session_reuse_benchmark_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - WinSSL benchmark truth contract syntax is valid
+
+- `bash tests/scripts/test_winssl_session_reuse_benchmark_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED:
+      - benchmark guide still promised runtime-proven high reuse/performance truth
+    - GREEN:
+      - benchmark program and guide now align with conservative WinSSL session-resumption truth
+
+- update benchmark truth sources:
+  - `tests/winssl/test_winssl_session_reuse_benchmark.pas`
+  - `tests/winssl/SESSION_REUSE_BENCHMARK_GUIDE.md`
+  - change:
+    - switch the benchmark program to `ISSLSessionResumption`
+    - record `SessionConfiguredCount` separately from `ObservedReuseCount`
+    - fix the metrics overwrite bug by merging both benchmark result records
+    - harden percentage/report output against zero-success scenarios
+    - remove stale `70-90%` / “快速握手” claims from the guide and replace them with `observed_reuse=false / session_configured=true`
+
+- `mkdir -p tmp/winssl_session_reuse_benchmark_win64 && fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/winssl_session_reuse_benchmark_win64 -FEtmp/winssl_session_reuse_benchmark_win64 -otmp/winssl_session_reuse_benchmark_win64/test_winssl_session_reuse_benchmark.exe tests/winssl/test_winssl_session_reuse_benchmark.pas`
+  - result: PASS
+  - summary:
+    - Win64 cross-target benchmark program still compiles after the owner-path/truth alignment changes
+    - compile completed with the repo's existing warning baseline only
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current WinSSL benchmark truth batch has no whitespace or patch-format issues
+
 ### Session-Resumption Guide Old-Name Truth Freeze
 
 - `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`

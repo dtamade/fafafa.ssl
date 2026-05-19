@@ -2,6 +2,43 @@
 
 ## 2026-05-19
 
+- WinSSL session-resumption 这条线在 active guides 收口后，剩下最像“还会继续误导后续实现判断”的 residual，并不是普通文档，而是专项 benchmark 程序与 benchmark guide：
+  - `tests/winssl/test_winssl_session_reuse_benchmark.pas`
+  - `tests/winssl/SESSION_REUSE_BENCHMARK_GUIDE.md`
+
+- 这批 residual 的问题也不只是 wording：
+  - benchmark 程序还直接使用 `LConn.GetSession / SetSession / IsSessionReused`
+  - benchmark guide 仍承诺 `70-90%` / “快速握手”
+  - benchmark 程序本身还存在一条真实逻辑 bug：
+    - `RunSessionReuseBenchmark` 先拿无 session 结果
+    - 紧接着又整条覆盖成 with-session 结果
+    - comparison report 实际拿不到完整双侧 metrics
+
+- 因而这批最小正确动作也不是继续谈 WinSSL native 实现，而是先把 benchmark truth/harness 自身收口：
+  - 程序切到 `ISSLSessionResumption`
+  - 分开记录：
+    - `session_configured`
+    - `observed_reuse`
+  - 指南明确写回当前 dedicated Windows CI truth：
+    - `observed_reuse=false`
+    - `session_configured=true`
+  - 同时修掉 metrics 覆盖和除零风险
+
+- focused 结果说明这批边界已经正确收住：
+  - 新 contract 先 RED 在旧的高复用/高收益承诺
+  - 修复后 contract 转绿
+  - Win64 cross-target compile 继续 PASS
+  - `git diff --check` 继续 PASS
+
+- 这也让 WinSSL session 路线当前的状态更清楚了：
+  - 普通 docs/guides truth 已经收口
+  - benchmark residual truth 也不再继续夸大 native reuse 现状
+  - 真正剩下的高风险问题已经继续收缩到：
+    - native resumed-handshake / session tickets 行为本身
+    - 而不是 owner-path guidance、benchmark wording 或 harness 统计 bug
+
+- 因而下一刀若继续沿 WinSSL session 路线推进，就不应再回头清 guide/benchmark wording，而应直接进入 native resumed-handshake / session tickets 行为调查。
+
 - `ISSLSessionResumption` 之前虽然已经在 `API_REFERENCE` / `API_DOCUMENTATION` / `INTEGRATION_GUIDE` / generic E2E 场景收过一轮 ordinary guidance，但这次重新审 active guides 仍压出了一组高可见漏网：
   - `docs/guides/QUICKSTART.md`
   - `docs/guides/TROUBLESHOOTING.md`

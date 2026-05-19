@@ -10,6 +10,30 @@
 
 ## Current Status
 
+- [completed] WinSSL session-reuse benchmark truth alignment 已完成 focused 收口：
+  - 新增计划：`docs/plans/2026-05-19-winssl-session-reuse-benchmark-truth-alignment.md`
+  - 新增 focused source contract：`tests/scripts/test_winssl_session_reuse_benchmark_truth_contract.sh`
+  - `tests/winssl/test_winssl_session_reuse_benchmark.pas`
+    - 现已改走 `ISSLSessionResumption` owner path
+    - 现已区分：
+      - `SessionConfiguredCount`
+      - `ObservedReuseCount`
+    - 现已修掉 benchmark metrics 被整条覆盖的真实逻辑 bug
+    - 现已修掉 success-count 为 `0` 时的除零/异常展示风险
+  - `tests/winssl/SESSION_REUSE_BENCHMARK_GUIDE.md`
+    - 现已对齐当前 conservative WinSSL runtime truth：
+      - `observed_reuse=false`
+      - `session_configured=true`
+    - 不再把 timing delta 或历史 `70-90%` 目标当作 native resumed-handshake 已证实结论
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_winssl_session_reuse_benchmark_truth_contract.sh`
+    - `bash tests/scripts/test_winssl_session_reuse_benchmark_truth_contract.sh`
+    - `fpc -Twin64 ... tests/winssl/test_winssl_session_reuse_benchmark.pas`
+    - `git diff --check`: PASS
+  - 当前结论：
+    - WinSSL benchmark residual lane 已不再继续传播旧 public/core session 语义
+    - 如果继续沿 WinSSL session 路线推进，下一刀更适合直接进入 native resumed-handshake / session tickets 行为调查
+    - 如果回到更高价值主线，则应继续横向审其它 backend implementation completeness / runtime truth
 - [completed] session-resumption guide old-name truth freeze 已完成 focused 收口：
   - 新增计划：`docs/plans/2026-05-19-session-resumption-guide-old-name-freeze.md`
   - 新增 focused source contract：`tests/scripts/test_session_resumption_guide_old_name_truth_contract.sh`

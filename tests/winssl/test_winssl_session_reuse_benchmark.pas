@@ -12,6 +12,7 @@ uses
 type
   TSessionReuseMetrics = record
     WithoutSessionReuse: record
+      AttemptCount: Integer;
       TotalTime: Double;
       AvgTime: Double;
       MinTime: Double;
@@ -19,18 +20,79 @@ type
       SuccessCount: Integer;
     end;
     WithSessionReuse: record
+      AttemptCount: Integer;
       TotalTime: Double;
       AvgTime: Double;
       MinTime: Double;
       MaxTime: Double;
       SuccessCount: Integer;
-      ReuseCount: Integer;
+      SessionConfiguredCount: Integer;
+      ObservedReuseCount: Integer;
     end;
     ImprovementPercent: Double;
   end;
 
 var
   Frequency: Int64;
+
+function ResolveBenchmarkHost: string;
+begin
+  Result := Trim(GetEnvironmentVariable('FAFAFA_WINSSL_SESSION_HOST'));
+  if Result = '' then
+    Result := 'www.cloudflare.com';
+end;
+
+function ResolveIterationCount: Integer;
+begin
+  Result := StrToIntDef(Trim(GetEnvironmentVariable('FAFAFA_WINSSL_BENCH_ITERATIONS')), 50);
+  if Result < 1 then
+    Result := 1;
+end;
+
+function SafePercentage(ANumerator, ADenominator: Integer): Double;
+begin
+  if ADenominator <= 0 then
+    Exit(0.0);
+  Result := (ANumerator * 100.0) / ADenominator;
+end;
+
+procedure NormalizeMetrics(var AMetrics: TSessionReuseMetrics);
+begin
+  if AMetrics.WithoutSessionReuse.SuccessCount = 0 then
+  begin
+    AMetrics.WithoutSessionReuse.MinTime := 0;
+    AMetrics.WithoutSessionReuse.MaxTime := 0;
+  end;
+
+  if AMetrics.WithSessionReuse.SuccessCount = 0 then
+  begin
+    AMetrics.WithSessionReuse.MinTime := 0;
+    AMetrics.WithSessionReuse.MaxTime := 0;
+  end;
+
+  if (AMetrics.WithoutSessionReuse.AvgTime > 0) and
+     (AMetrics.WithSessionReuse.AvgTime > 0) then
+    AMetrics.ImprovementPercent :=
+      ((AMetrics.WithoutSessionReuse.AvgTime - AMetrics.WithSessionReuse.AvgTime) /
+       AMetrics.WithoutSessionReuse.AvgTime) * 100
+  else
+    AMetrics.ImprovementPercent := 0;
+end;
+
+procedure MergeMetrics(var ADest: TSessionReuseMetrics; const ASource: TSessionReuseMetrics);
+begin
+  if (ASource.WithoutSessionReuse.AttemptCount > 0) or
+     (ASource.WithoutSessionReuse.SuccessCount > 0) then
+    ADest.WithoutSessionReuse := ASource.WithoutSessionReuse;
+
+  if (ASource.WithSessionReuse.AttemptCount > 0) or
+     (ASource.WithSessionReuse.SuccessCount > 0) or
+     (ASource.WithSessionReuse.SessionConfiguredCount > 0) or
+     (ASource.WithSessionReuse.ObservedReuseCount > 0) then
+    ADest.WithSessionReuse := ASource.WithSessionReuse;
+
+  NormalizeMetrics(ADest);
+end;
 
 function GetTimestamp: Int64;
 var
@@ -112,6 +174,7 @@ var
   LTime: Double;
 begin
   FillChar(Result, SizeOf(Result), 0);
+  Result.WithoutSessionReuse.AttemptCount := aIterations;
   Result.WithoutSessionReuse.MinTime := MaxDouble;
   Result.WithoutSessionReuse.MaxTime := 0;
 
@@ -133,7 +196,7 @@ begin
 
     // 每次创建新的 Context（不复用凭据）
     LContext := LLib.CreateContext(sslCtxClient);
-    LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
+    LContext.SetProtocolVersions([sslProtocolTLS12]);
     LContext.SetVerifyMode([]);
 
     if ConnectToHost(aHost, 443, LSocket) then
@@ -169,6 +232,7 @@ begin
 
   if Result.WithoutSessionReuse.SuccessCount > 0 then
     Result.WithoutSessionReuse.AvgTime := Result.WithoutSessionReuse.TotalTime / Result.WithoutSessionReuse.SuccessCount;
+  NormalizeMetrics(Result);
 
   WriteLn('完成: ', Result.WithoutSessionReuse.SuccessCount, '/', aIterations, ' 次成功');
   WriteLn('平均握手时间: ', Format('%.2f ms', [Result.WithoutSessionReuse.AvgTime]));
@@ -180,6 +244,7 @@ var
   LLib: ISSLLibrary;
   LContext: ISSLContext;
   LConn: ISSLConnection;
+  LResumption: ISSLSessionResumption;
   LSocket: TSocket;
   LSession: ISSLSession;
   i: Integer;
@@ -187,10 +252,11 @@ var
   LTime: Double;
 begin
   FillChar(Result, SizeOf(Result), 0);
+  Result.WithSessionReuse.AttemptCount := aIterations;
   Result.WithSessionReuse.MinTime := MaxDouble;
   Result.WithSessionReuse.MaxTime := 0;
 
-  WriteLn('【测试 2】有 Session 复用 - 快速握手');
+  WriteLn('【测试 2】同 Context + 配置待恢复 Session');
   WriteLn('测试服务器: ', aHost);
   WriteLn('迭代次数: ', aIterations);
   WriteLn('---');
@@ -204,7 +270,7 @@ begin
 
   // 复用同一个 Context（复用凭据句柄）
   LContext := LLib.CreateContext(sslCtxClient);
-  LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
+  LContext.SetProtocolVersions([sslProtocolTLS12]);
   LContext.SetVerifyMode([]);
 
   // 首次连接获取 Session
@@ -215,8 +281,16 @@ begin
     (LConn as ISSLClientConnection).SetServerName(aHost);
     if LConn.Connect then
     begin
-      LSession := LConn.GetSession;
-      WriteLn('首次连接成功，获取 Session');
+      if Supports(LConn, ISSLSessionResumption, LResumption) then
+      begin
+        LSession := LResumption.GetSession;
+        if Assigned(LSession) then
+          WriteLn('首次连接成功，保存 Session metadata')
+        else
+          WriteLn('首次连接成功，但当前未拿到可恢复 Session metadata');
+      end
+      else
+        WriteLn('首次连接成功，但当前连接未暴露 ISSLSessionResumption');
       LConn.Shutdown;
     end;
     closesocket(LSocket);
@@ -231,10 +305,13 @@ begin
     begin
       LConn := LContext.CreateConnection(LSocket);
 
-      // 设置 Session 以启用复用
-      if Assigned(LSession) then
-        LConn.SetSession(LSession);
       (LConn as ISSLClientConnection).SetServerName(aHost);
+      if Supports(LConn, ISSLSessionResumption, LResumption) and
+         Assigned(LSession) and LSession.IsValid and LSession.IsResumable then
+      begin
+        LResumption.SetSession(LSession);
+        Inc(Result.WithSessionReuse.SessionConfiguredCount);
+      end;
 
       LStart := GetTimestamp;
       if LConn.Connect then
@@ -250,9 +327,9 @@ begin
         if LTime > Result.WithSessionReuse.MaxTime then
           Result.WithSessionReuse.MaxTime := LTime;
 
-        // 检查是否真的复用了 Session
-        if LConn.IsSessionReused then
-          Inc(Result.WithSessionReuse.ReuseCount);
+        if Supports(LConn, ISSLSessionResumption, LResumption) and
+           LResumption.IsSessionReused then
+          Inc(Result.WithSessionReuse.ObservedReuseCount);
 
         LConn.Shutdown;
       end;
@@ -268,10 +345,15 @@ begin
 
   if Result.WithSessionReuse.SuccessCount > 0 then
     Result.WithSessionReuse.AvgTime := Result.WithSessionReuse.TotalTime / Result.WithSessionReuse.SuccessCount;
+  NormalizeMetrics(Result);
 
   WriteLn('完成: ', Result.WithSessionReuse.SuccessCount, '/', aIterations, ' 次成功');
-  WriteLn('Session 复用: ', Result.WithSessionReuse.ReuseCount, '/', Result.WithSessionReuse.SuccessCount, ' 次 (',
-    Format('%.1f%%', [Result.WithSessionReuse.ReuseCount * 100.0 / Result.WithSessionReuse.SuccessCount]), ')');
+  WriteLn('Session 已配置: ', Result.WithSessionReuse.SessionConfiguredCount, '/', Result.WithSessionReuse.SuccessCount, ' 次 (',
+    Format('%.1f%%', [SafePercentage(Result.WithSessionReuse.SessionConfiguredCount,
+      Result.WithSessionReuse.SuccessCount)]), ')');
+  WriteLn('观测到复用: ', Result.WithSessionReuse.ObservedReuseCount, '/', Result.WithSessionReuse.SuccessCount, ' 次 (',
+    Format('%.1f%%', [SafePercentage(Result.WithSessionReuse.ObservedReuseCount,
+      Result.WithSessionReuse.SuccessCount)]), ')');
   WriteLn('平均握手时间: ', Format('%.2f ms', [Result.WithSessionReuse.AvgTime]));
   WriteLn;
 end;
@@ -281,11 +363,11 @@ var
   LImprovement: Double;
 begin
   WriteLn('=========================================');
-  WriteLn('Session 复用性能对比报告');
+  WriteLn('WinSSL Session 基准对比报告');
   WriteLn('=========================================');
   WriteLn;
 
-  WriteLn('【无 Session 复用】');
+  WriteLn('【无 Session 配置（每次新 Context）】');
   WriteLn('  成功连接: ', aMetrics.WithoutSessionReuse.SuccessCount);
   WriteLn('  平均时间: ', Format('%.2f ms', [aMetrics.WithoutSessionReuse.AvgTime]));
   WriteLn('  最小时间: ', Format('%.2f ms', [aMetrics.WithoutSessionReuse.MinTime]));
@@ -293,10 +375,14 @@ begin
   WriteLn('  总时间: ', Format('%.2f ms', [aMetrics.WithoutSessionReuse.TotalTime]));
   WriteLn;
 
-  WriteLn('【有 Session 复用】');
+  WriteLn('【同 Context + 配置待恢复 Session】');
   WriteLn('  成功连接: ', aMetrics.WithSessionReuse.SuccessCount);
-  WriteLn('  Session 复用: ', aMetrics.WithSessionReuse.ReuseCount, ' 次 (',
-    Format('%.1f%%', [aMetrics.WithSessionReuse.ReuseCount * 100.0 / aMetrics.WithSessionReuse.SuccessCount]), ')');
+  WriteLn('  Session 已配置: ', aMetrics.WithSessionReuse.SessionConfiguredCount, ' 次 (',
+    Format('%.1f%%', [SafePercentage(aMetrics.WithSessionReuse.SessionConfiguredCount,
+      aMetrics.WithSessionReuse.SuccessCount)]), ')');
+  WriteLn('  观测到复用: ', aMetrics.WithSessionReuse.ObservedReuseCount, ' 次 (',
+    Format('%.1f%%', [SafePercentage(aMetrics.WithSessionReuse.ObservedReuseCount,
+      aMetrics.WithSessionReuse.SuccessCount)]), ')');
   WriteLn('  平均时间: ', Format('%.2f ms', [aMetrics.WithSessionReuse.AvgTime]));
   WriteLn('  最小时间: ', Format('%.2f ms', [aMetrics.WithSessionReuse.MinTime]));
   WriteLn('  最大时间: ', Format('%.2f ms', [aMetrics.WithSessionReuse.MaxTime]));
@@ -305,20 +391,22 @@ begin
 
   if (aMetrics.WithoutSessionReuse.AvgTime > 0) and (aMetrics.WithSessionReuse.AvgTime > 0) then
   begin
-    LImprovement := ((aMetrics.WithoutSessionReuse.AvgTime - aMetrics.WithSessionReuse.AvgTime) /
-                     aMetrics.WithoutSessionReuse.AvgTime) * 100;
+    LImprovement := aMetrics.ImprovementPercent;
 
-    WriteLn('【性能提升】');
+    WriteLn('【同 Context 延迟差异】');
     WriteLn('  时间减少: ', Format('%.2f ms', [aMetrics.WithoutSessionReuse.AvgTime - aMetrics.WithSessionReuse.AvgTime]));
     WriteLn('  性能提升: ', Format('%.1f%%', [LImprovement]));
     WriteLn;
 
-    if LImprovement >= 70 then
-      WriteLn('✓ 达到预期性能提升目标（70-90%）')
-    else if LImprovement >= 50 then
-      WriteLn('⚠ 性能提升显著但低于预期（50-70%）')
+    if aMetrics.WithSessionReuse.ObservedReuseCount > 0 then
+      WriteLn('✓ 当前基准至少观测到了一部分 owner-path reuse 命中；仍应结合目标服务器与 Windows runner 单独复核')
+    else if aMetrics.WithSessionReuse.SessionConfiguredCount > 0 then
+    begin
+      WriteLn('⚠ 当前 conservative truth: observed_reuse=false / session_configured=true');
+      WriteLn('  timing delta alone is not proof of native resumed-handshake');
+    end
     else
-      WriteLn('✗ 性能提升低于预期（< 50%）');
+      WriteLn('⚠ 当前没有配置到可恢复 Session，本次只代表 repeated handshake timing');
   end;
 
   WriteLn('=========================================');
@@ -336,20 +424,22 @@ begin
   WriteLn('=========================================');
   WriteLn;
 
-  LHost := 'www.google.com';
-  LIterations := 50;
+  FillChar(LMetrics, SizeOf(LMetrics), 0);
+  LHost := ResolveBenchmarkHost;
+  LIterations := ResolveIterationCount;
 
   WriteLn('测试配置:');
   WriteLn('  目标服务器: ', LHost);
   WriteLn('  迭代次数: ', LIterations);
-  WriteLn('  协议版本: TLS 1.2 / TLS 1.3');
+  WriteLn('  协议版本: TLS 1.2');
+  WriteLn('  结果解释: 区分 session_configured 与 observed_reuse');
   WriteLn;
 
   // 测试 1: 无 Session 复用
-  LMetrics := BenchmarkWithoutSessionReuse(LHost, LIterations);
+  MergeMetrics(LMetrics, BenchmarkWithoutSessionReuse(LHost, LIterations));
 
   // 测试 2: 有 Session 复用
-  LMetrics := BenchmarkWithSessionReuse(LHost, LIterations);
+  MergeMetrics(LMetrics, BenchmarkWithSessionReuse(LHost, LIterations));
 
   // 打印对比报告
   PrintComparisonReport(LMetrics);
