@@ -44,6 +44,7 @@ Wave B/B2 跨平台手动门禁（`workflow_dispatch`）
 
 - 用途：Linux/macOS/Windows 证据回填 + cross summary + closure/consistency
 - Windows lane 现在会先安装并验证 Lazarus / `lazbuild`，再跑 quick smoke、Wave B Windows gate、broader WinSSL suite transcript
+- 可选输入 `winssl_session_host` 可把 Windows broader WinSSL runtime suite 的 session-resumption 调查切到指定 host；留空时继续使用测试程序内置默认 host
 - 最新已确认真相：manual run `25989095571` 在 head `b95044d` 上的 `windows-gate` / `macos-gate` / `linux-gate` / `summary` 全部 `SUCCESS`
 - 当前不应为“再确认一次”重复派发这条 workflow；只有当提交改动可能影响它的运行时边界时才重新 dispatch
 - 产物：`test-reports/`（各平台摘要 + 汇总）

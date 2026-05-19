@@ -15,6 +15,10 @@ on:
         description: Fail workflow if Wave B/B2 handoff is not fully closed and consistent
         required: false
         default: "false"
+      winssl_session_host:
+        description: Optional host override for WinSSL session resumption runtime probe (e.g. www.google.com)
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -231,6 +235,13 @@ jobs:
           New-Item -ItemType Directory -Force -Path test-reports | Out-Null
           $runtimeLog = "test-reports/winssl_runtime_suite_${runId}.log"
           $runtimeOutput = @()
+          $sessionHost = "${{ github.event.inputs.winssl_session_host }}"
+          if (-not [string]::IsNullOrWhiteSpace($sessionHost)) {
+            $env:FAFAFA_WINSSL_SESSION_HOST = $sessionHost
+            Write-Host ("[INFO] Using WinSSL session resumption host override: " + $sessionHost)
+          } else {
+            Write-Host "[INFO] Using default WinSSL session resumption host from test program"
+          }
           pwsh -NoProfile -ExecutionPolicy Bypass -File tests/run_winssl_tests.ps1 *>&1 | Tee-Object -Variable runtimeOutput
           $runtimeExitCode = $LASTEXITCODE
           @($runtimeOutput) | Out-File -FilePath $runtimeLog -Encoding utf8

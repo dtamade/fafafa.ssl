@@ -2,6 +2,37 @@
 
 ## 2026-05-19
 
+- 当前 WinSSL session-resumption 这条线，普通 guide / benchmark wording 已经不是主问题；真正还会阻碍后续判断的一层，是 GitHub Actions manual lane 里还没有一个 repo 内建的“换 host 做真实调查”入口。
+
+- 这个缺口的性质也已经确认清楚：
+  - `tests/winssl/test_winssl_session_resumption.pas` 其实早就支持 `FAFAFA_WINSSL_SESSION_HOST`
+  - `tests/run_winssl_tests.ps1` 也不会覆盖这个变量
+  - 缺的是：
+    - `wave-b-b2-manual.yml` 没有 `workflow_dispatch` 输入
+    - `.github/README.md` 没有把这条调查通道记录成正式 workflow truth
+
+- 因而这批最小正确动作不是改 WinSSL 生产实现，而是把 host-override 调查 lane 提升成 workflow 的一等入口：
+  - 增加可选 `winssl_session_host`
+  - Windows broader runtime step 只在输入非空时才注入 `FAFAFA_WINSSL_SESSION_HOST`
+  - 默认留空时继续使用测试程序当前默认 host，不把手动调查 lane 变成默认风险面
+
+- 这批 focused contract 也顺手压出一条真实 residual：
+  - `tests/scripts/test_wave_b_b2_optional_runner_artifact_download_workflow_contract.sh`
+    仍钉死 `actions/download-artifact@v4`
+  - 但当前 workflow 真相已经是 pinned `download-artifact` v7
+  - 这属于验证面本身的漂移，而不是 runtime 行为问题
+
+- 所以这次除了补新 host-override contract，也顺手把旧 artifact-download contract 收回到 action-pinned truth，避免未来每次碰 workflow 都被假红噪音打断。
+
+- focused 结果说明这批边界已经正确收住：
+  - 新增 host-override contract 先 RED 在缺失输入
+  - workflow / README 修复后转 GREEN
+  - strict input description contract 继续 GREEN
+  - artifact-download contract 在 truth 对齐后恢复 GREEN
+  - `gh auth status` 继续 PASS，说明后续可以直接 dispatch GitHub runner 做真实 host 调查
+
+- 因而下一步不该再继续猜 `observed_reuse=false` 是 host 问题还是 Schannel 行为，而应直接用这条 manual lane 派发一次非默认 host 调查，拿 dedicated Windows artifact 再说。
+
 - WinSSL session-resumption 这条线在 active guides 收口后，剩下最像“还会继续误导后续实现判断”的 residual，并不是普通文档，而是专项 benchmark 程序与 benchmark guide：
   - `tests/winssl/test_winssl_session_reuse_benchmark.pas`
   - `tests/winssl/SESSION_REUSE_BENCHMARK_GUIDE.md`

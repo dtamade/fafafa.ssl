@@ -10,6 +10,31 @@
 
 ## Current Status
 
+- [completed] WinSSL session runtime host-override investigation lane 已完成本地收口：
+  - 新增计划：`docs/plans/2026-05-19-winssl-session-runtime-host-override-investigation.md`
+  - 新增 focused workflow/source contract：`tests/scripts/test_wave_b_b2_winssl_session_host_input_contract.sh`
+  - `wave-b-b2-manual.yml` / `.github/workflows/wave-b-b2-manual.yml.disabled`
+    - 当前已新增可选 `workflow_dispatch` 输入：
+      - `winssl_session_host`
+    - Windows `Run broader WinSSL runtime suite` step 现在只会在输入非空时注入：
+      - `FAFAFA_WINSSL_SESSION_HOST`
+    - 留空时继续打印并使用测试程序默认 host，不改变既有默认 lane
+  - `.github/README.md`
+    - 当前已明确记录 `winssl_session_host` 的调查用途与默认空值语义
+  - 同批顺手修掉一条真实 workflow contract 漂移：
+    - `tests/scripts/test_wave_b_b2_optional_runner_artifact_download_workflow_contract.sh`
+      不再错误钉死 `actions/download-artifact@v4`
+    - 现在改为锁住 pinned action truth，而不是旧版本标签
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_wave_b_b2_winssl_session_host_input_contract.sh`
+    - `bash tests/scripts/test_wave_b_b2_winssl_session_host_input_contract.sh`
+    - `bash tests/scripts/test_wave_b_b2_strict_input_description_contract.sh`
+    - `bash tests/scripts/test_wave_b_b2_optional_runner_artifact_download_workflow_contract.sh`
+    - `git diff --check`: PASS
+    - `gh auth status`: PASS
+  - 当前结论：
+    - repo 已具备 bounded、可复用的 GitHub Windows runner host-override 调查入口
+    - 下一步最值钱的是 push 后派发一次 manual workflow，确认 UI/runner/artifact 路径都真实接通
 - [completed] WinSSL session-reuse benchmark truth alignment 已完成 focused 收口：
   - 新增计划：`docs/plans/2026-05-19-winssl-session-reuse-benchmark-truth-alignment.md`
   - 新增 focused source contract：`tests/scripts/test_winssl_session_reuse_benchmark_truth_contract.sh`

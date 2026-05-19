@@ -41,16 +41,16 @@ for workflow in "${WORKFLOWS[@]}"; do
 
   label="$(basename "$workflow")"
 
-  require_match "$workflow" "$label" 'Download Linux evidence[\s\S]*uses: actions/download-artifact@v4' \
+  require_match "$workflow" "$label" 'Download Linux evidence[\s\S]*uses: actions/download-artifact@' \
     'workflow should keep the Linux artifact download step for required summary truth'
 
   require_no_match "$workflow" "$label" '- name: Download Linux evidence\s*\n\s*continue-on-error: true' \
     'workflow should not soften missing Linux artifacts because Linux summary remains required'
 
-  require_match "$workflow" "$label" 'Download macOS evidence[\s\S]*continue-on-error: true[\s\S]*uses: actions/download-artifact@v4' \
+  require_match "$workflow" "$label" 'Download macOS evidence[\s\S]*continue-on-error: true[\s\S]*uses: actions/download-artifact@' \
     'workflow should tolerate missing macOS artifacts so prepare can render missing-evidence handoff truth'
 
-  require_match "$workflow" "$label" 'Download Windows evidence[\s\S]*continue-on-error: true[\s\S]*uses: actions/download-artifact@v4' \
+  require_match "$workflow" "$label" 'Download Windows evidence[\s\S]*continue-on-error: true[\s\S]*uses: actions/download-artifact@' \
     'workflow should tolerate missing Windows artifacts so prepare can render missing-evidence handoff truth'
 done
 

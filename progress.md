@@ -2,6 +2,104 @@
 
 ## 2026-05-19
 
+### WinSSL Session Runtime Host-Override Investigation Lane
+
+- `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
+  - result: PASS
+  - summary:
+    - no unsynced catchup output was needed before the WinSSL host-override workflow batch
+
+- `sed -n '1,260p' .github/workflows/wave-b-b2-manual.yml`
+  - result: PASS
+  - summary:
+    - confirmed `workflow_dispatch` still exposed only `run_id`, `openssl_root_macos`, and `strict_closure`
+    - confirmed the Windows broader WinSSL runtime step did not yet accept a manual host override
+
+- `sed -n '1,260p' .github/workflows/wave-b-b2-manual.yml.disabled`
+  - result: PASS
+  - summary:
+    - confirmed the dormant template matched the active workflow and would need the same host-override input change
+
+- `sed -n '1,260p' tests/run_winssl_tests.ps1`
+  - result: PASS
+  - summary:
+    - confirmed the WinSSL session-resumption lane only injects `FAFAFA_RUN_NETWORK_TESTS=1` and `FAFAFA_WINSSL_SESSION_ATTEMPTS=4`
+    - confirmed workflow-step env injection can safely provide `FAFAFA_WINSSL_SESSION_HOST`
+
+- `sed -n '1,520p' tests/winssl/test_winssl_session_resumption.pas`
+  - result: PASS
+  - summary:
+    - confirmed `ResolveSessionHost` already supports `FAFAFA_WINSSL_SESSION_HOST`
+    - confirmed session summary markers already emit `host=<value>` for artifact inspection
+
+- `sed -n '1,260p' .github/README.md`
+  - result: PASS
+  - summary:
+    - confirmed the workflow README still described `wave-b-b2-manual.yml` without any host-override investigation input
+
+- add `docs/plans/2026-05-19-winssl-session-runtime-host-override-investigation.md`
+  - change:
+    - define the bounded workflow/manual-investigation batch for optional WinSSL session host override
+
+- add `tests/scripts/test_wave_b_b2_winssl_session_host_input_contract.sh`
+  - change:
+    - lock the manual workflow to an optional blank-default `winssl_session_host` input
+    - require Windows broader runtime-step host injection truth plus README documentation
+
+- `bash -n tests/scripts/test_wave_b_b2_winssl_session_host_input_contract.sh`
+  - result: PASS
+  - summary:
+    - host-override contract syntax is valid
+
+- `bash tests/scripts/test_wave_b_b2_winssl_session_host_input_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED:
+      - `wave-b-b2-manual.yml` and `.disabled` did not yet expose `winssl_session_host`
+    - GREEN:
+      - both workflow files now expose the optional host-override input
+      - the Windows broader runtime step now records whether it uses the default host or a manual override
+      - `.github/README.md` now documents the investigation lane
+
+- update workflow host-override truth sources:
+  - `.github/workflows/wave-b-b2-manual.yml`
+  - `.github/workflows/wave-b-b2-manual.yml.disabled`
+  - `.github/README.md`
+  - change:
+    - add optional `workflow_dispatch.inputs.winssl_session_host`
+    - inject `FAFAFA_WINSSL_SESSION_HOST` only when the manual input is non-empty
+    - log fallback-to-default-host truth for artifact review
+    - document the new manual investigation input in the workflow README
+
+- `bash tests/scripts/test_wave_b_b2_optional_runner_artifact_download_workflow_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED:
+      - the existing contract still hard-coded `actions/download-artifact@v4`
+      - current workflow truth had already moved to pinned `download-artifact` v7
+    - GREEN:
+      - the contract now locks the required Linux/macOS/Windows artifact-download semantics without baking in a stale action version label
+
+- update workflow artifact-download contract truth:
+  - `tests/scripts/test_wave_b_b2_optional_runner_artifact_download_workflow_contract.sh`
+  - change:
+    - replace stale `@v4` matching with generic pinned `actions/download-artifact@` truth
+
+- `bash tests/scripts/test_wave_b_b2_strict_input_description_contract.sh`
+  - result: PASS
+  - summary:
+    - the existing strict-closure input description truth remained aligned after adding the new manual investigation input
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current workflow host-override batch has no whitespace or patch-format issues
+
+- `gh auth status`
+  - result: PASS
+  - summary:
+    - GitHub CLI is logged in with `workflow` scope, so the new manual lane can be dispatched after push for real Windows-runner evidence
+
 ### WinSSL Session-Reuse Benchmark Truth Alignment
 
 - `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
