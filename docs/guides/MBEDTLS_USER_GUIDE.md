@@ -52,26 +52,31 @@ MyApp (210 KB)
 
 #### 3. ✅ 安全认证
 
-- **FIPS 140-2** 认证（特定版本）
-- **PSA Certified** Level 2
-- 定期安全审计
-- 活跃的安全响应团队
+- 上游 Mbed TLS 生态有安全认证 / PSA / 商业支持路线
+- 但 fafafa.ssl 当前 MbedTLS backend 仍以当前 shipped public surface 为准
+- 当前 `SupportsFIPSMode=False`：不要把上游认证能力直接外推成 fafafa.ssl 当前 backend truth
 
 #### 4. ✅ 统一 API
 
-MbedTLS 实现了与 OpenSSL/WinSSL 后端**完全相同的接口**:
+MbedTLS 与其它 backend 共享统一核心接口，但具体 published capability 仍以后端的 `ISSLLibrary.GetCapabilities` 为准。
+
+当前需要特别记住的 MbedTLS truth：
+
+- 当前 `SupportsCallbacks=False`：verify / password / info callback 的 non-nil assignment 会 fail-closed `unsupported`。
+- 当前 `SupportsFIPSMode=False`：不要把上游 Mbed TLS 的认证/商业版本能力当成 fafafa.ssl 当前 backend truth。
+- 当前不发布 `ISSLEarlyDataContext / ISSLEarlyDataConnection` public surface；0-RTT 应视为 current capability none。
+- 当前 `SupportsPKCS12=False`：没有 shipped PKCS#12 bundle create / parse / import surface。
 
 ```pascal
-// 代码完全相同，只需改变库类型
+// 核心调用形状相近，但 capability 需要按 backend 重新核对
 {$IFDEF EMBEDDED}
 Lib := CreateSSLLibrary(sslMbedTLS);   // 嵌入式: 轻量级
 {$ELSE}
 Lib := CreateSSLLibrary(sslOpenSSL);   // 桌面: 功能完整
 {$ENDIF}
 
-// 其余代码完全相同
-Context := Lib.CreateContext;
-Context.LoadCertificateFromFile('cert.pem');
+Context := Lib.CreateContext(sslCtxClient);
+Context.LoadCertificate('cert.pem');
 ```
 
 ---
@@ -153,25 +158,30 @@ var
   Lib: ISSLLibrary;
   Context: ISSLContext;
   Connection: ISSLConnection;
+  ClientConn: ISSLClientConnection;
   Request, Response: string;
+  Socket: THandle;
 begin
   // 1. 初始化 MbedTLS 库
   Lib := CreateSSLLibrary(sslMbedTLS);
   
   // 2. 创建上下文
-  Context := Lib.CreateContext;
+  Context := Lib.CreateContext(sslCtxClient);
   
   // 3. 配置为客户端模式
-  Context.SetVerifyMode(sslVerifyPeer);
+  Context.SetVerifyMode([sslVerifyPeer]);
+  Context.LoadCAFile('/etc/ssl/certs/ca-certificates.crt');
   
-  // 4. 创建连接
-  Connection := Context.CreateConnection;
-  Connection.SetHostname('www.example.com');
+  // 4. 创建连接（示意：Socket 代表已建立的 TCP 连接）
+  Socket := { already-connected TCP socket };
+  Connection := Context.CreateConnection(Socket);
+  if Supports(Connection, ISSLClientConnection, ClientConn) then
+    ClientConn.SetServerName('www.example.com');
   
   // 5. 连接到服务器
-  if not Connection.Connect('www.example.com', 443) then
+  if not Connection.Connect then
   begin
-    WriteLn('连接失败: ', Connection.GetLastError);
+    WriteLn('连接失败: ', Connection.GetLastErrorString);
     Exit;
   end;
   
@@ -179,11 +189,11 @@ begin
   Request := 'GET / HTTP/1.1' + #13#10 +
              'Host: www.example.com' + #13#10 +
              'Connection: close' + #13#10 + #13#10;
-  Connection.Write(Request);
+  Connection.WriteString(Request);
   
   // 7. 读取响应
-  Response := Connection.ReadAll;
-  WriteLn(Response);
+  if Connection.ReadString(Response) then
+    WriteLn(Response);
   
   // 8. 清理（自动）
   Connection := nil;
@@ -217,35 +227,32 @@ var
   Lib: ISSLLibrary;
   Context: ISSLContext;
   Connection: ISSLConnection;
+  ClientConn: ISSLClientConnection;
+  Socket: THandle;
 begin
   Lib := CreateSSLLibrary(sslMbedTLS);
-  Context := Lib.CreateContext;
+  Context := Lib.CreateContext(sslCtxClient);
   
   // 加载 CA 证书
-  if not Context.LoadCAFromFile('/etc/ssl/certs/ca-certificates.crt') then
-  begin
-    WriteLn('加载 CA 证书失败');
-    Exit;
-  end;
+  Context.LoadCAFile('/etc/ssl/certs/ca-certificates.crt');
   
   // 启用严格验证
-  Context.SetVerifyMode(sslVerifyPeer);
+  Context.SetVerifyMode([sslVerifyPeer]);
   Context.SetVerifyDepth(5);
   
-  Connection := Context.CreateConnection;
-  Connection.SetHostname('www.google.com');
+  Socket := { already-connected TCP socket };
+  Connection := Context.CreateConnection(Socket);
+  if Supports(Connection, ISSLClientConnection, ClientConn) then
+    ClientConn.SetServerName('www.google.com');
   
-  if Connection.Connect('www.google.com', 443) then
+  if Connection.Connect then
   begin
     WriteLn('连接成功');
     WriteLn('协议版本: ', Connection.GetProtocolVersion);
-    WriteLn('密码套件: ', Connection.GetCipherSuite);
+    WriteLn('密码套件: ', Connection.GetCipherName);
     
-    // 验证证书
-    if Connection.VerifyPeerCertificate then
-      WriteLn('证书验证通过')
-    else
-      WriteLn('证书验证失败');
+    // 对端验证结果请通过 connection info / verify-result API 获取
+    WriteLn('对端验证已在握手阶段按 verify mode 执行');
   end;
 end.
 ```
@@ -265,33 +272,28 @@ var
   Lib: ISSLLibrary;
   Context: ISSLContext;
   Connection: ISSLConnection;
+  ClientConn: ISSLClientConnection;
+  Socket: THandle;
 begin
   Lib := CreateSSLLibrary(sslMbedTLS);
-  Context := Lib.CreateContext;
+  Context := Lib.CreateContext(sslCtxClient);
   
   // 加载客户端证书和私钥
-  if not Context.LoadCertificateFromFile('client-cert.pem') then
-  begin
-    WriteLn('加载客户端证书失败');
-    Exit;
-  end;
-  
-  if not Context.LoadPrivateKeyFromFile('client-key.pem', '') then
-  begin
-    WriteLn('加载私钥失败');
-    Exit;
-  end;
+  Context.LoadCertificate('client-cert.pem');
+  Context.LoadPrivateKey('client-key.pem', '');
   
   // 加载 CA 证书
-  Context.LoadCAFromFile('ca-cert.pem');
+  Context.LoadCAFile('ca-cert.pem');
   
   // 启用双向认证
-  Context.SetVerifyMode(sslVerifyPeer);
+  Context.SetVerifyMode([sslVerifyPeer]);
   
-  Connection := Context.CreateConnection;
-  Connection.SetHostname('secure.example.com');
+  Socket := { already-connected TCP socket };
+  Connection := Context.CreateConnection(Socket);
+  if Supports(Connection, ISSLClientConnection, ClientConn) then
+    ClientConn.SetServerName('secure.example.com');
   
-  if Connection.Connect('secure.example.com', 443) then
+  if Connection.Connect then
     WriteLn('双向认证成功');
 end.
 ```
@@ -304,18 +306,17 @@ end.
 
 ```pascal
 // 仅允许 TLS 1.2 和 TLS 1.3
-Context.SetMinProtocolVersion(sslProtocolTLS12);
-Context.SetMaxProtocolVersion(sslProtocolTLS13);
-
-// 或使用便捷方法
 Context.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
 ```
 
 ### 密码套件配置
 
 ```pascal
-// 使用安全的默认配置
-Context.ConfigureSecureDefaults;
+// 推荐: 用 builder 生成安全默认配置
+Context := TSSLContextBuilder.Create
+  .WithBackend(sslMbedTLS)
+  .WithSafeDefaults
+  .BuildClient;
 
 // 或手动配置密码套件
 Context.SetCipherList('TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256');
@@ -369,28 +370,31 @@ Context.SetCipherList('TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256');
 
 ```pascal
 // ✅ 推荐: 始终验证服务器证书
-Context.SetVerifyMode(sslVerifyPeer);
-Context.LoadCAFromFile('/etc/ssl/certs/ca-certificates.crt');
+Context.SetVerifyMode([sslVerifyPeer]);
+Context.LoadCAFile('/etc/ssl/certs/ca-certificates.crt');
 
 // ❌ 不推荐: 禁用验证（仅用于测试）
-Context.SetVerifyMode(sslVerifyNone);
+Context.SetVerifyMode([sslVerifyNone]);
 ```
 
 ### 2. 协议版本
 
 ```pascal
 // ✅ 推荐: 仅使用 TLS 1.2+
-Context.SetMinProtocolVersion(sslProtocolTLS12);
+Context.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
 
 // ❌ 不推荐: 允许旧协议
-Context.SetMinProtocolVersion(sslProtocolTLS10);
+Context.SetProtocolVersions([sslProtocolTLS10, sslProtocolTLS12]);
 ```
 
 ### 3. 密码套件
 
 ```pascal
-// ✅ 推荐: 使用安全默认配置
-Context.ConfigureSecureDefaults;
+// ✅ 推荐: 使用 builder 的安全默认配置
+Context := TSSLContextBuilder.Create
+  .WithBackend(sslMbedTLS)
+  .WithSafeDefaults
+  .BuildClient;
 
 // ❌ 不推荐: 允许弱密码套件
 Context.SetCipherList('ALL');
@@ -400,7 +404,8 @@ Context.SetCipherList('ALL');
 
 ```pascal
 // ✅ 推荐: 设置主机名进行 SNI 和验证
-Connection.SetHostname('www.example.com');
+if Supports(Connection, ISSLClientConnection, ClientConn) then
+  ClientConn.SetServerName('www.example.com');
 
 // ❌ 不推荐: 不设置主机名
 // (可能导致证书验证失败)
@@ -439,13 +444,14 @@ Certificate verification failed: -0x2700
 **解决方案**:
 ```pascal
 // 1. 确保加载了正确的 CA 证书
-Context.LoadCAFromFile('/etc/ssl/certs/ca-certificates.crt');
+Context.LoadCAFile('/etc/ssl/certs/ca-certificates.crt');
 
 // 2. 检查系统时间是否正确
 // 证书有效期依赖系统时间
 
 // 3. 验证主机名是否匹配
-Connection.SetHostname('www.example.com');  // 必须与证书匹配
+if Supports(Connection, ISSLClientConnection, ClientConn) then
+  ClientConn.SetServerName('www.example.com');  // 必须与证书匹配
 ```
 
 ### 问题 3: 连接超时
@@ -499,14 +505,12 @@ function CreateSSLLibrary(LibType: TSSLLibraryType): ISSLLibrary;
 
 ```pascal
 interface ISSLContext
-  function CreateConnection: ISSLConnection;
-  function LoadCertificateFromFile(const FileName: string): Boolean;
-  function LoadPrivateKeyFromFile(const FileName, Password: string): Boolean;
-  function LoadCAFromFile(const FileName: string): Boolean;
-  procedure SetVerifyMode(Mode: TSSLVerifyMode);
-  procedure SetMinProtocolVersion(Version: TSSLProtocolVersion);
-  procedure SetMaxProtocolVersion(Version: TSSLProtocolVersion);
-  procedure ConfigureSecureDefaults;
+  procedure LoadCertificate(const AFileName: string); overload;
+  procedure LoadPrivateKey(const AFileName: string; const APassword: string = ''); overload;
+  procedure LoadCAFile(const AFileName: string);
+  procedure SetVerifyMode(AMode: TSSLVerifyModes);
+  procedure SetProtocolVersions(AVersions: TSSLProtocolVersions);
+  function CreateConnection(ASocket: THandle): ISSLConnection; overload;
 end;
 ```
 
@@ -514,16 +518,16 @@ end;
 
 ```pascal
 interface ISSLConnection
-  function Connect(const Host: string; Port: Word): Boolean;
-  procedure SetHostname(const Hostname: string);
-  procedure SetTimeout(TimeoutMs: Integer);
-  function Write(const Data: string): Integer;
-  function Read(var Buffer; Size: Integer): Integer;
-  function ReadAll: string;
+  function Connect: Boolean;
+  function WriteString(const AStr: string): Boolean;
+  function ReadString(out AStr: string): Boolean;
   function GetProtocolVersion: string;
-  function GetCipherSuite: string;
-  function VerifyPeerCertificate: Boolean;
-  function GetLastError: string;
+  function GetCipherName: string;
+  function GetLastErrorString: string;
+end;
+
+interface ISSLClientConnection
+  procedure SetServerName(const AServerName: string);
 end;
 ```
 

@@ -9,6 +9,8 @@
 
 MbedTLS 是一个轻量级、可移植的 TLS 库，特别适合嵌入式系统和资源受限环境。fafafa.ssl 提供 MbedTLS 后端作为 OpenSSL 的替代选项。
 
+> 这份矩阵描述的是 **fafafa.ssl 当前 published public surface**，不直接等于上游 Mbed TLS 原始库理论能力。
+
 ## 后端标识
 
 ```pascal
@@ -20,6 +22,7 @@ sslMbedTLS  // TSSLBackend.sslMbedTLS
 // 使用示例
 Ctx := TSSLContextBuilder.Create
   .WithBackend(sslMbedTLS)
+  .WithCAFile('/etc/ssl/certs/ca-certificates.crt')
   .BuildClient;
 ```
 
@@ -85,7 +88,7 @@ Ctx := TSSLContextBuilder.Create
 | CRL 检查 | ✅ 支持 | 本地 CRL |
 | OCSP | ⚠️ 部分 | 需手动实现 |
 | OCSP Stapling | ❌ 不支持 | 需外部实现 |
-| 证书固定 | ✅ 支持 | 通过回调 |
+| 证书固定 | ✅ 支持 | 使用 context pinning API（AddCertificatePin / SetCertificatePinningEnabled），不是 callback surface |
 | SNI | ✅ 支持 | 客户端/服务器 |
 
 ### Session 管理
@@ -95,7 +98,7 @@ Ctx := TSSLContextBuilder.Create
 | Session 复用 | ✅ 支持 | 完整支持 |
 | Session Ticket | ✅ 支持 | TLS 1.2+ |
 | Session Cache | ✅ 支持 | 内置缓存 |
-| 0-RTT | ⚠️ 部分 | TLS 1.3 早期数据（C 库层面有限；fafafa.ssl 封装层不暴露 ISSLEarlyDataContext） |
+| 0-RTT | ❌ 当前 capability 不发布 | 当前 backend 不暴露 ISSLEarlyDataContext / ISSLEarlyDataConnection public surface |
 
 ### 高级功能
 
@@ -104,7 +107,7 @@ Ctx := TSSLContextBuilder.Create
 | ALPN | ✅ 支持 | 完整支持 |
 | 重协商 | ⚠️ 可选 | 安全重协商 |
 | 客户端证书 | ✅ 支持 | 双向 TLS |
-| 自定义 I/O | ✅ 支持 | 回调函数 |
+| 自定义 I/O | ❌ 当前 public callback surface 不发布 | 当前 transport path 仅使用内置 socket/stream BIO wiring，不提供 caller-supplied I/O callback seam |
 | 异步操作 | ⚠️ 部分 | 非阻塞 I/O |
 
 ## 与 OpenSSL 对比
@@ -173,7 +176,7 @@ begin
     .WithBackend(sslMbedTLS)
     .WithTLS12And13
     .WithVerifyPeer
-    .WithSystemRoots
+    .WithCAFile('/etc/ssl/certs/ca-certificates.crt')
     .BuildClient;
 
   // 创建连接
@@ -189,29 +192,21 @@ begin
 end.
 ```
 
-### 自定义 I/O 回调
+### 传输层说明
 
-```pascal
-// MbedTLS 使用回调函数进行 I/O
-function MySendCallback(ctx: Pointer; const buf: PByte; len: NativeUInt): Integer; cdecl;
-begin
-  // 自定义发送逻辑
-  Result := MySocket.Send(buf^, len);
-end;
+当前 MbedTLS backend 通过内部 `mbedtls_ssl_set_bio` 把 socket / stream 连接接到 TLS 层。
 
-function MyRecvCallback(ctx: Pointer; buf: PByte; len: NativeUInt): Integer; cdecl;
-begin
-  // 自定义接收逻辑
-  Result := MySocket.Recv(buf^, len);
-end;
-```
+- 已发布给调用方的 transport public surface：
+  - `ISSLContext.CreateConnection(ASocket: THandle)`
+  - `ISSLContext.CreateConnection(AStream: TStream)`
+- 当前没有 published caller-supplied custom I/O callback seam
 
 ## 限制与注意事项
 
 1. **OCSP Stapling**: MbedTLS 不内置 OCSP Stapling，需要应用层实现
 2. **硬件加速**: 需要编译时启用特定平台的硬件加速
-3. **FIPS 模式**: MbedTLS 没有 FIPS 认证版本
-4. **API 差异**: 与 OpenSSL API 不兼容，需要通过 fafafa.ssl 抽象层使用
+3. **FIPS 模式**: 当前 `SupportsFIPSMode=False`，不要把上游特定商业/认证版本能力当成 fafafa.ssl 当前 backend truth
+4. **API 差异**: 与 OpenSSL backend 共享统一核心接口，但 published capability 仍然 backend-specific
 
 ## 相关文档
 

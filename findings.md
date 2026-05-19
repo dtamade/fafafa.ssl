@@ -308,6 +308,63 @@
   - 当前 `OpenSSL` 与 `WinSSL` 虽然都为 `True`，但代表的是不同粒度的 published surface
   - 后续若继续做 key-format / bundle capability 审查，应优先检查：
     - coarse-grained bool 是否掩盖了 backend-specific surface 差异
+
+- 沿着 capability / active guidance 真相继续往下压时，这次 `MbedTLS` 暴露出来的主要问题已经不是源码 capability 本身，而是高入口文档比当前 public API 和 published surface 更宽：
+  - `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+    - 之前仍把：
+      - `0-RTT`
+      - `证书固定`
+      - `自定义 I/O`
+      写成“部分支持 / 通过回调 / 回调函数”
+  - 但当前源码真相是：
+    - `SupportsCallbacks=False`
+    - `TMbedTLSContext.SetVerifyCallback/SetPasswordCallback/SetInfoCallback`
+      对 non-nil assignment 都会 fail-closed `unsupported`
+    - `MbedTLS` 当前不暴露：
+      - `ISSLEarlyDataContext`
+      - `ISSLEarlyDataConnection`
+    - 证书固定走的是：
+      - `AddCertificatePin`
+      - `AddCertificatePinBase64`
+      - `SetCertificatePinningEnabled`
+    - transport 连接面对调用方只发布：
+      - `CreateConnection(ASocket)`
+      - `CreateConnection(AStream)`
+      而不是 caller-supplied custom I/O callback seam
+
+- `docs/guides/MBEDTLS_USER_GUIDE.md` 的漂移更直接，会让调用方照抄就撞到旧接口：
+  - 它之前仍保留：
+    - `LoadCertificateFromFile`
+    - `LoadPrivateKeyFromFile`
+    - `LoadCAFromFile`
+    - `Connection.SetHostname`
+    - `Connection.Connect(host, port)`
+    - `ReadAll`
+    - `GetCipherSuite`
+    - `GetLastError: string`
+  - 这些都已经不是当前 `ISSLContext` / `ISSLConnection` 的 shipped source truth
+
+- 这条问题的风险不只是“文档有点旧”，而是会把两层真相一起带偏：
+  - 一层是接口名和签名本身已经过时
+  - 另一层是 backend-specific capability 被文档讲成了“完全相同的接口”
+  - 结果会让后续审查反复误判：
+    - 以为 MbedTLS 已发布 callback / 0-RTT / custom I/O surface
+    - 或以为 user-guide 里的旧方法名仍是当前 source truth
+
+- 这批重新压实后的当前 truth 应明确保留：
+  - `MbedTLS` 与其它 backend 共享统一核心接口，但 published capability 明显 backend-specific
+  - 当前：
+    - `SupportsCallbacks=False`
+    - `SupportsPKCS12=False`
+    - `SupportsFIPSMode=False`
+    - 0-RTT current public capability = none
+  - MbedTLS 高入口 guide/reference 应该优先教授：
+    - 当前 `CreateContext(sslCtxClient)` 形状
+    - `LoadCertificate` / `LoadPrivateKey` / `LoadCAFile`
+    - `ISSLClientConnection.SetServerName`
+    - `ReadString(out ...)`
+    - `GetCipherName`
+    - `GetLastErrorString`
   - 它们不是无害占位，而是错误导航入口
 
 - 本批收口后的新基线应明确保留：

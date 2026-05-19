@@ -3412,3 +3412,46 @@
        - 以及 `SupportsPKCS12=True` 是否还需要在更多 active docs 中显式区分：
          - OpenSSL helper/API
          - WinSSL PFX/P12 import
+86. `MbedTLS active docs capability truth` 已完成 focused 收口，并应作为当前 MbedTLS 高入口文档的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-mbedtls-active-docs-capability-truth.md`
+   - 当前已确认的真实 drift：
+     - `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+       之前仍把：
+       - `0-RTT`
+       - `证书固定`
+       - `自定义 I/O`
+       讲得比当前 published surface 更宽
+     - `docs/guides/MBEDTLS_USER_GUIDE.md`
+       之前仍保留大量过时 API 名称与旧签名：
+       - `LoadCertificateFromFile`
+       - `LoadPrivateKeyFromFile`
+       - `LoadCAFromFile`
+       - `Connection.SetHostname`
+       - `Connection.Connect(host, port)`
+       - `ReadAll`
+       - `GetCipherSuite`
+       - `GetLastError: string`
+     - 同时还把 MbedTLS 说成与其它 backend “完全相同的接口”，并把 callback / FIPS / 0-RTT truth 讲宽
+   - 当前最小正确修法已落地：
+     - 不补做新的 MbedTLS runtime 能力
+     - 只把：
+       - `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+       - `docs/guides/MBEDTLS_USER_GUIDE.md`
+       收回到当前 public API / capability truth
+     - 同步后的当前心智为：
+       - `SupportsCallbacks=False`
+       - `SupportsPKCS12=False`
+       - `SupportsFIPSMode=False`
+       - `0-RTT` current public capability = none
+       - 证书固定走 context pinning API，不是 callback surface
+       - transport public surface 只发布 socket / stream `CreateConnection(...)`
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+     - `bash tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 不再把旧的 MbedTLS 指南/矩阵当成 current source truth
+     - 继续审查：
+       - 其它 backend 专属 active guide/reference 是否也残留同类“旧方法名 + 过宽 capability 叙事”
+       - 以及还有哪些高入口文档仍把 backend-specific truth 写成“统一等价接口”

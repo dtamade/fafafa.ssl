@@ -358,6 +358,79 @@
   - result: PASS
   - summary:
     - current optional-backends PKCS#12 batch has no whitespace or patch-format issues
+
+### MbedTLS Active Docs Capability Truth
+
+- add `docs/plans/2026-05-19-mbedtls-active-docs-capability-truth.md`
+  - change:
+    - define the bounded MbedTLS docs-truth batch for active capability/reference/user-guide drift
+
+- add `tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+  - change:
+    - lock that active MbedTLS docs now match current published capability/API truth
+
+- read-only evidence triage
+  - summary:
+    - `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md` still overstated:
+      - `0-RTT`
+      - pinning-via-callback
+      - custom I/O callback publication
+    - `docs/guides/MBEDTLS_USER_GUIDE.md` still taught stale API names/signatures:
+      - `LoadCertificateFromFile`
+      - `LoadPrivateKeyFromFile`
+      - `LoadCAFromFile`
+      - `Connection.SetHostname`
+      - `Connection.Connect(host, port)`
+      - `ReadAll`
+      - `GetCipherSuite`
+      - `GetLastError: string`
+    - source truth was confirmed in:
+      - `src/fafafa.ssl.base.pas`
+      - `src/fafafa.ssl.mbedtls.context.pas`
+      - `src/fafafa.ssl.mbedtls.connection.pas`
+
+- `bash -n tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new MbedTLS docs-truth shell contract syntax is valid
+
+- `bash tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed one contract-helper quoting issue:
+      - backtick-containing fixed strings were still wrapped in double quotes, causing bash command substitution
+    - GREEN after switching those literal patterns to single quotes:
+      - MbedTLS active capability/reference/user-guide docs now align with current published truth
+
+- update `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+  - change:
+    - mark the document as describing current fafafa.ssl published surface
+    - change pinning row from callback wording to current context pinning APIs
+    - change `0-RTT` row to current capability none
+    - change custom-I/O row to “public callback surface not published”
+    - replace `WithSystemRoots` example with explicit `WithCAFile(...)`
+    - replace custom-I/O callback section with transport-surface explanation
+
+- update `docs/guides/MBEDTLS_USER_GUIDE.md`
+  - change:
+    - replace “完全相同的接口” with backend-specific capability guidance
+    - record current callback / FIPS / PKCS12 / 0-RTT truth
+    - update high-entry examples to current API names/signatures:
+      - `CreateContext(sslCtxClient)`
+      - `LoadCertificate`
+      - `LoadPrivateKey`
+      - `LoadCAFile`
+      - `ISSLClientConnection.SetServerName`
+      - `Connection.Connect`
+      - `ReadString(out ...)`
+      - `GetCipherName`
+      - `GetLastErrorString`
+    - update the interface summary at the end of the guide to the current public surface
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current MbedTLS active-docs batch has no whitespace or patch-format issues
       - `ISSLLibrary` / `ISSLContext` code blocks now reflect current shipped source truth instead of the older narrowed subset
 
 - update `docs/reference/API_REFERENCE.md`
