@@ -2,6 +2,99 @@
 
 ## 2026-05-19
 
+### ISSLDiagnostics Compiler Deprecation Alignment
+
+- add `docs/plans/2026-05-19-issldiagnostics-compiler-deprecation-alignment.md`
+  - change:
+    - define the bounded compiler-surface batch for diagnostics owner-path truth,
+      residual direct-core allowlist, and focused compile proof
+
+- add `tests/scripts/test_issldiagnostics_compiler_deprecated_contract.sh`
+  - change:
+    - lock that:
+      - diagnostics core getter declarations in `src/fafafa.ssl.base.pas`
+        are compiler-deprecated mirrors
+      - `src/fafafa.ssl.connection.base.pas` records the diagnostics residual note
+      - `API_REFERENCE.md` / `INTERFACE_DESIGN_V2.md` record
+        compiler-deprecated compatibility-mirror truth
+      - `tests/contract/test_backend_contract.pas` keeps the intended direct-core
+        mirror proof with warning quarantine
+      - residual direct-core diagnostics usage is limited to the approved file set
+      - `tests/winssl/test_winssl_session_resumption.pas`
+        no longer uses direct core `GetPerformanceMetrics`
+
+- `bash -n tests/scripts/test_issldiagnostics_compiler_deprecated_contract.sh`
+  - result: PASS
+  - summary:
+    - new diagnostics compiler-deprecation contract is syntactically valid
+
+- `bash tests/scripts/test_issldiagnostics_compiler_deprecated_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed that `src/fafafa.ssl.base.pas`
+      had not yet marked the four diagnostics core getters as compiler-deprecated
+    - GREEN after the fix proves source/docs/tests/residual allowlist are now aligned
+
+- update `src/fafafa.ssl.base.pas`
+  - change:
+    - mark `GetHealthStatus` / `IsHealthy` / `GetDiagnosticInfo` /
+      `GetPerformanceMetrics` as compiler `deprecated`
+    - add `@preferred-access` / `@owner-note` / compatibility-mirror wording
+
+- update `src/fafafa.ssl.connection.base.pas`
+  - change:
+    - add diagnostics residual note stating that ordinary docs/tests now use the
+      `ISSLDiagnostics` owner path and direct-core diagnostics only remain for
+      contract mirror proof plus WinSSL runtime residuals
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - mark the diagnostics core getter summary signatures as compiler-deprecated
+      compatibility mirrors
+    - add active guidance that new code should prefer `ISSLDiagnostics`
+
+- update `docs/reference/INTERFACE_DESIGN_V2.md`
+  - change:
+    - promote diagnostics migration truth to:
+      default owner is `ISSLDiagnostics`, core side is compatibility-only,
+      source declarations are compiler-deprecated
+
+- update `tests/contract/test_backend_contract.pas`
+  - change:
+    - add direct-core diagnostics mirror proof against `ISSLDiagnostics`
+    - quarantine deprecated-warning reads locally so the intended mirror proof
+      stays explicit without polluting broader compiles
+
+- update WinSSL residual/runtime tests:
+  - `tests/winssl/test_winssl_connection_edge_cases.pas`
+  - `tests/winssl/test_winssl_monitoring.pas`
+  - `tests/winssl/test_winssl_session_resumption.pas`
+  - change:
+    - add local deprecated-warning quarantine for intentional direct-core
+      diagnostics runtime residuals
+    - move session resumption metrics proof to `ISSLDiagnostics` owner path
+
+- `bash tests/scripts/test_issldiagnostics_active_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - active docs/tests still prefer `ISSLDiagnostics` for diagnostics surfaces
+
+- `mkdir -p tmp/test_backend_contract_diagnostics_deprecation && fpc -B -Fu./src -Fu./tests -FUtmp/test_backend_contract_diagnostics_deprecation -FEtmp/test_backend_contract_diagnostics_deprecation -otmp/test_backend_contract_diagnostics_deprecation/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/test_backend_contract_diagnostics_deprecation/test_backend_contract`
+  - result: PASS
+  - summary:
+    - focused backend contract compiled and ran successfully
+    - `Diagnostics interface alignment`, `Connection-info interface alignment`,
+      `Session-resumption interface alignment`, and
+      `Certificate-verification interface alignment` remained green for
+      `OpenSSL` / `WolfSSL` / `MbedTLS` / `FreePascal`
+    - `Windows Schannel` stayed a platform skip on Linux, which is expected for
+      this focused static/compile proof batch
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - diagnostics compiler-deprecation alignment batch is whitespace-clean
+
 ### WinSSL Callback Runtime Proof Markers
 
 - add `docs/plans/2026-05-19-winssl-callback-runtime-proof-markers.md`

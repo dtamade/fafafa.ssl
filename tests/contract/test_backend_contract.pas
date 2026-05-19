@@ -1681,6 +1681,10 @@ var
   LHealth: TSSLHealthStatus;
   LPerf: TSSLPerformanceMetrics;
   LInfo: TSSLDiagnosticInfo;
+  LCoreHealth: TSSLHealthStatus;
+  LCorePerf: TSSLPerformanceMetrics;
+  LCoreDiagInfo: TSSLDiagnosticInfo;
+  LCoreHealthy: Boolean;
   LExpectedHealthy: Boolean;
 begin
   PrintSubHeader(Format('Contract 18: Diagnostics interface alignment - %s',
@@ -1710,6 +1714,15 @@ begin
       LHealth := LDiag.GetHealthStatus;
       LPerf := LDiag.GetPerformanceMetrics;
       LInfo := LDiag.GetDiagnosticInfo;
+      // INTENTIONAL_CORE_SURFACE: keep these direct core diagnostics reads as
+      // compatibility-mirror proofs while ordinary docs/tests move to
+      // ISSLDiagnostics. These calls are compiler-deprecated on purpose.
+      {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
+      LCoreHealth := LConn.GetHealthStatus;
+      LCorePerf := LConn.GetPerformanceMetrics;
+      LCoreDiagInfo := LConn.GetDiagnosticInfo;
+      LCoreHealthy := LConn.IsHealthy;
+      {$POP}
       LExpectedHealthy := LHealth.IsConnected and LHealth.HandshakeComplete and
         (LHealth.LastError = sslErrNone);
 
@@ -1724,6 +1737,56 @@ begin
         WriteLn('  [FAIL] PerformanceMetrics.SessionReused does not match connection state');
         AddResult('DiagnosticsInterfaceAligned', ABackend, False,
           'PerformanceMetrics.SessionReused does not match ISSLConnection.IsSessionReused');
+      end
+      else if LCoreHealth.IsConnected <> LHealth.IsConnected then
+      begin
+        WriteLn('  [FAIL] Core GetHealthStatus mirror drifted from ISSLDiagnostics owner');
+        AddResult('DiagnosticsInterfaceAligned', ABackend, False,
+          'ISSLConnection.GetHealthStatus does not mirror ISSLDiagnostics.GetHealthStatus');
+      end
+      else if LCoreHealth.HandshakeComplete <> LHealth.HandshakeComplete then
+      begin
+        WriteLn('  [FAIL] Core GetHealthStatus handshake mirror drifted from ISSLDiagnostics owner');
+        AddResult('DiagnosticsInterfaceAligned', ABackend, False,
+          'ISSLConnection.GetHealthStatus.HandshakeComplete does not mirror ISSLDiagnostics.GetHealthStatus');
+      end
+      else if LCoreHealth.LastError <> LHealth.LastError then
+      begin
+        WriteLn('  [FAIL] Core GetHealthStatus error mirror drifted from ISSLDiagnostics owner');
+        AddResult('DiagnosticsInterfaceAligned', ABackend, False,
+          'ISSLConnection.GetHealthStatus.LastError does not mirror ISSLDiagnostics.GetHealthStatus');
+      end
+      else if LCorePerf.SessionReused <> LPerf.SessionReused then
+      begin
+        WriteLn('  [FAIL] Core GetPerformanceMetrics reuse mirror drifted from ISSLDiagnostics owner');
+        AddResult('DiagnosticsInterfaceAligned', ABackend, False,
+          'ISSLConnection.GetPerformanceMetrics.SessionReused does not mirror ISSLDiagnostics.GetPerformanceMetrics');
+      end
+      else if LCorePerf.TotalBytesTransferred <> LPerf.TotalBytesTransferred then
+      begin
+        WriteLn('  [FAIL] Core GetPerformanceMetrics bytes mirror drifted from ISSLDiagnostics owner');
+        AddResult('DiagnosticsInterfaceAligned', ABackend, False,
+          'ISSLConnection.GetPerformanceMetrics.TotalBytesTransferred does not mirror ISSLDiagnostics.GetPerformanceMetrics');
+      end
+      else if LCoreDiagInfo.HealthStatus.IsConnected <> LInfo.HealthStatus.IsConnected then
+      begin
+        WriteLn('  [FAIL] Core GetDiagnosticInfo health mirror drifted from ISSLDiagnostics owner');
+        AddResult('DiagnosticsInterfaceAligned', ABackend, False,
+          'ISSLConnection.GetDiagnosticInfo.HealthStatus.IsConnected does not mirror ISSLDiagnostics.GetDiagnosticInfo');
+      end
+      else if LCoreDiagInfo.PerformanceMetrics.TotalBytesTransferred <>
+        LInfo.PerformanceMetrics.TotalBytesTransferred then
+      begin
+        WriteLn('  [FAIL] Core GetDiagnosticInfo metrics mirror drifted from ISSLDiagnostics owner');
+        AddResult('DiagnosticsInterfaceAligned', ABackend, False,
+          'ISSLConnection.GetDiagnosticInfo.PerformanceMetrics.TotalBytesTransferred does not mirror ISSLDiagnostics.GetDiagnosticInfo');
+      end
+      // direct core mirror proof: LDiag.IsHealthy <> LConn.IsHealthy
+      else if LDiag.IsHealthy <> LCoreHealthy then
+      begin
+        WriteLn('  [FAIL] Core IsHealthy mirror drifted from ISSLDiagnostics owner');
+        AddResult('DiagnosticsInterfaceAligned', ABackend, False,
+          'ISSLConnection.IsHealthy does not mirror ISSLDiagnostics.IsHealthy');
       end
       else if LDiag.IsHealthy <> LExpectedHealthy then
       begin

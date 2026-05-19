@@ -2,6 +2,42 @@
 
 ## 2026-05-19
 
+- diagnostics 这组方法此前确实还卡在一个容易误导新代码的中间态：
+  - `ISSLDiagnostics` owner path 虽然已经是 active docs/tests 的默认入口
+  - 但 `ISSLConnection.GetHealthStatus` / `IsHealthy` / `GetDiagnosticInfo` /
+    `GetPerformanceMetrics` 还没有进入 compiler-level `deprecated`
+  - 这会让 core surface 在 source/doc 上继续看起来像主入口，而不是 compatibility mirror
+
+- 当前 durable truth 已经收口为：
+  - `GetHealthStatus` / `IsHealthy` / `GetDiagnosticInfo` / `GetPerformanceMetrics`
+    在核心 `ISSLConnection` 上现在统一只是 compatibility mirror
+  - 这 4 个 getter 的源码声明已经进入编译期 `deprecated`
+  - ordinary docs/tests 默认应走 `ISSLDiagnostics` owner path
+  - direct-core diagnostics 只保留：
+    - `tests/contract/test_backend_contract.pas` 的 cross-backend mirror proof
+    - `tests/winssl/test_winssl_connection_edge_cases.pas`
+    - `tests/winssl/test_winssl_monitoring.pas`
+      这两份 WinSSL runtime residual proofs
+
+- `tests/winssl/test_winssl_session_resumption.pas` 之前继续用 `AConn.GetPerformanceMetrics`
+  是这条 residual 集合里最不该继续活着的一处：
+  - 它不是 contract mirror proof
+  - 也不是 WinSSL diagnostics runtime residual 的专门验证
+  - 所以这次正确的最小修法就是把它切回 `ISSLDiagnostics` owner path
+
+- 这批 focused proof 也说明 diagnostics 这条线当前不需要再反复拉起“大审查”：
+  - 新 shell contract 已锁住：
+    - source/compiler `deprecated`
+    - docs truth
+    - residual direct-core allowlist
+    - `session_resumption` 不再偷走 direct-core metrics path
+  - `tests/contract/test_backend_contract.pas`
+    focused 编译运行后，`OpenSSL` / `WolfSSL` / `MbedTLS` / `FreePascal`
+    的 diagnostics / connection-info / session-resumption / cert-verify
+    contract 都继续保持全绿
+  - `Windows Schannel` 在 Linux 上依旧是 platform skip；这不再构成 blocker，
+    因为该 runtime 证据链已经由 GitHub Windows CI 闭环
+
 - 第三轮 Windows CI (`26093405878`) 证明这条 callback runtime proof 链已经真正闭环：
   - `windows-gate` / `linux-gate` / `macos-gate` / `summary` 全部 `success`
   - 成功 artifact `wave-b-windows-winssl_callback_markers_fix2_20260519_191025`

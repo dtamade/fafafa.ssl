@@ -368,13 +368,24 @@ end;
 procedure ValidateReuseTruth(const ALabel: string; const AConn: ISSLConnection;
   out AReused: Boolean);
 var
+  LDiag: ISSLDiagnostics;
   LResumption: ISSLSessionResumption;
   LInfo: TSSLConnectionInfo;
   LPerf: TSSLPerformanceMetrics;
 begin
   AReused := AConn.IsSessionReused;
   LInfo := AConn.GetConnectionInfo;
-  LPerf := AConn.GetPerformanceMetrics;
+
+  Check(ALabel + ' exposes ISSLDiagnostics',
+    Supports(AConn, ISSLDiagnostics, LDiag));
+  if not Supports(AConn, ISSLDiagnostics, LDiag) then
+  begin
+    EmitResumeMarker(Format(
+      'signal label=%s diagnostics_surface=missing',
+      [ALabel]));
+    Exit;
+  end;
+  LPerf := LDiag.GetPerformanceMetrics;
 
   Check(ALabel + ' exposes ISSLSessionResumption',
     Supports(AConn, ISSLSessionResumption, LResumption));

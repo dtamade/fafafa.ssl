@@ -466,7 +466,9 @@ begin
       LConnection := TWinSSLConnection.Create(LContext, LSocket);
 
       // 获取健康状态
+      {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
       LHealthStatus := LConnection.GetHealthStatus;
+      {$POP}
       Assert(not LHealthStatus.IsConnected, '健康状态：未连接');
       Assert(not LHealthStatus.HandshakeComplete, '健康状态：握手未完成');
       Assert(LHealthStatus.LastError = sslErrNone, '健康状态：无错误');
@@ -478,7 +480,9 @@ begin
         on E: Exception do
         begin
           // 再次获取健康状态
+          {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
           LHealthStatus := LConnection.GetHealthStatus;
+          {$POP}
           Assert(True, '错误后可以获取健康状态');
         end;
       end;
@@ -626,6 +630,10 @@ begin
     try
       LConnection := TWinSSLConnection.Create(LContext, LSocket);
 
+      // INTENTIONAL_CORE_SURFACE: keep this direct core diagnostics path as a
+      // WinSSL runtime residual proof while ordinary docs/tests move to
+      // ISSLDiagnostics.
+      {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
       // 获取性能指标
       LMetrics := LConnection.GetPerformanceMetrics;
       Assert(LMetrics.HandshakeTime = 0, '未连接时握手时间为 0');
@@ -639,6 +647,7 @@ begin
 
       // 测试健康检查
       Assert(not LConnection.IsHealthy, '未连接时健康检查返回 False');
+      {$POP}
 
     finally
       LConnection := nil;

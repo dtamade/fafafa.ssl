@@ -1326,20 +1326,40 @@ type
     // Phase 3.3: 监控和诊断接口
 
     {** 获取连接健康状态
-        @returns 健康状态记录 *}
+        @returns 健康状态记录
+        @preferred-access 新代码优先通过 ISSLDiagnostics.GetHealthStatus 获取
+        @owner-note 默认 owner 为 ISSLDiagnostics.GetHealthStatus；此入口仅兼容保留
+        @compatibility-note v1.x compatibility-core mirror; not recommended as the primary entry for new code; Stage-A demotion target is ISSLDiagnostics
+        @deprecated 推荐使用 ISSLDiagnostics.GetHealthStatus *}
     function GetHealthStatus: TSSLHealthStatus;
+      deprecated 'Use ISSLDiagnostics.GetHealthStatus';
 
     {** 检查连接是否健康
-        @returns True 如果连接健康（已连接且无严重错误） *}
+        @returns True 如果连接健康（已连接且无严重错误）
+        @preferred-access 新代码优先通过 ISSLDiagnostics.IsHealthy 获取
+        @owner-note 默认 owner 为 ISSLDiagnostics.IsHealthy；此入口仅兼容保留
+        @compatibility-note v1.x compatibility-core mirror; not recommended as the primary entry for new code; Stage-A demotion target is ISSLDiagnostics
+        @deprecated 推荐使用 ISSLDiagnostics.IsHealthy *}
     function IsHealthy: Boolean;
+      deprecated 'Use ISSLDiagnostics.IsHealthy';
 
     {** 获取完整的诊断信息
-        @returns 诊断信息记录，包含连接信息、健康状态、性能指标和错误历史 *}
+        @returns 诊断信息记录，包含连接信息、健康状态、性能指标和错误历史
+        @preferred-access 新代码优先通过 ISSLDiagnostics.GetDiagnosticInfo 获取
+        @owner-note 默认 owner 为 ISSLDiagnostics.GetDiagnosticInfo；此入口仅兼容保留
+        @compatibility-note v1.x compatibility-core mirror; not recommended as the primary entry for new code; Stage-A demotion target is ISSLDiagnostics
+        @deprecated 推荐使用 ISSLDiagnostics.GetDiagnosticInfo *}
     function GetDiagnosticInfo: TSSLDiagnosticInfo;
+      deprecated 'Use ISSLDiagnostics.GetDiagnosticInfo';
 
     {** 获取性能指标
-        @returns 性能指标记录 *}
+        @returns 性能指标记录
+        @preferred-access 新代码优先通过 ISSLDiagnostics.GetPerformanceMetrics 获取
+        @owner-note 默认 owner 为 ISSLDiagnostics.GetPerformanceMetrics；此入口仅兼容保留
+        @compatibility-note v1.x compatibility-core mirror; not recommended as the primary entry for new code; Stage-A demotion target is ISSLDiagnostics
+        @deprecated 推荐使用 ISSLDiagnostics.GetPerformanceMetrics *}
     function GetPerformanceMetrics: TSSLPerformanceMetrics;
+      deprecated 'Use ISSLDiagnostics.GetPerformanceMetrics';
     
     // OCSP Stapling support
     

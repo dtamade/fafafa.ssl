@@ -69,6 +69,9 @@ type
  * - `GetContext` 当前通过一条共享基类实现同时服务于 core mirror 和
  *   `ISSLConnectionInfo` owner；active docs 已转向 `ISSLConnectionInfo.GetContext`，
  *   direct core `GetContext` 只剩 contract mirror proof。
+ * - `GetHealthStatus` / `IsHealthy` / `GetDiagnosticInfo` / `GetPerformanceMetrics`
+ *   当前共享同一组 diagnostics 基类实现；ordinary docs/tests 已转向 `ISSLDiagnostics` owner path，
+ *   direct core diagnostics 当前只剩 contract mirror proof 和 WinSSL runtime residuals。
  * - `GetOCSPStaplingEnabled` / `GetOCSPResponse` / `IsOCSPResponseVerified` /
  *   `GetOCSPResponseStatus` 当前共享同一组基类 bridge/stub 实现；ordinary guidance
  *   已转向 `ISSLOCSPStapling` owner path，direct core `GetOCSP*` 当前只剩

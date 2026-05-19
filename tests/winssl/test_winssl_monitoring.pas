@@ -223,6 +223,10 @@ begin
   // 创建连接（使用无效 socket 仅用于测试接口）
   LConn := LContext.CreateConnection(INVALID_SOCKET);
 
+  // INTENTIONAL_CORE_SURFACE: keep this direct core diagnostics path as a
+  // WinSSL runtime residual proof while ordinary docs/tests move to
+  // ISSLDiagnostics.
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   // 测试健康状态接口
   LHealthStatus := LConn.GetHealthStatus;
   Assert(not LHealthStatus.IsConnected, '未连接状态正确');
@@ -243,6 +247,7 @@ begin
   LDiagInfo := LConn.GetDiagnosticInfo;
   Assert(not LDiagInfo.HealthStatus.IsConnected, '诊断信息中连接状态正确');
   Assert(Length(LDiagInfo.ErrorHistory) = 0, '初始错误历史为空');
+  {$POP}
 
   LLib.Finalize;
   WriteLn;

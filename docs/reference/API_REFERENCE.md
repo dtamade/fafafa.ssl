@@ -578,10 +578,10 @@ ISSLConnection = interface
   function GetBlocking: Boolean;
   function GetContext: ISSLContext; // 编译期 deprecated，仅兼容保留；新代码优先走 ISSLConnectionInfo.GetContext
 
-  function GetHealthStatus: TSSLHealthStatus;
-  function IsHealthy: Boolean;
-  function GetDiagnosticInfo: TSSLDiagnosticInfo;
-  function GetPerformanceMetrics: TSSLPerformanceMetrics;
+  function GetHealthStatus: TSSLHealthStatus; // 编译期 deprecated，仅兼容保留；新代码优先走 ISSLDiagnostics.GetHealthStatus
+  function IsHealthy: Boolean; // 编译期 deprecated，仅兼容保留；新代码优先走 ISSLDiagnostics.IsHealthy
+  function GetDiagnosticInfo: TSSLDiagnosticInfo; // 编译期 deprecated，仅兼容保留；新代码优先走 ISSLDiagnostics.GetDiagnosticInfo
+  function GetPerformanceMetrics: TSSLPerformanceMetrics; // 编译期 deprecated，仅兼容保留；新代码优先走 ISSLDiagnostics.GetPerformanceMetrics
 
   function GetOCSPStaplingEnabled: Boolean;
   function GetOCSPResponse: TBytes;
@@ -610,6 +610,7 @@ end;
 - `SetTimeout` / `GetTimeout` 继续作为 `v1.x` connection-adjacent convenience surface 保留；新代码优先在构建阶段使用 `TSSLConnectionBuilder.WithTimeout(...)` / `TSSLConnector.WithTimeout(...)` / `TSSLAcceptor.WithTimeout(...)`。
 - `SetBlocking` / `GetBlocking` 继续作为 `v1.x` connection-adjacent convenience surface 保留；新代码优先在构建阶段使用 `TSSLConnectionBuilder.WithBlocking(...)`。
 - `GetHealthStatus` / `IsHealthy` / `GetDiagnosticInfo` / `GetPerformanceMetrics` 也由 `ISSLDiagnostics` 暴露。
+- `GetHealthStatus` / `IsHealthy` / `GetDiagnosticInfo` / `GetPerformanceMetrics` 在 `ISSLConnection` 上当前也只作为 `v1.x` compatibility-core mirror 保留；当前源码声明已经是编译期 `deprecated`，需要诊断/健康/性能信息时，新代码优先通过 `ISSLDiagnostics` owner surface 访问。
 - `GetSession` / `SetSession` / `IsSessionReused` 也由 `ISSLSessionResumption` 暴露。
 - `GetPeerCertificateChain` / `GetVerifyResult` / `GetVerifyResultString` 也由 `ISSLCertificateVerification` 暴露。
 - `GetVerifyResult` / `GetVerifyResultString` 在 `ISSLConnection` 上仅作为 `v1.x` compatibility-core mirror 保留；当前源码声明已经是编译期 `deprecated`，需要证书验证结果时，新代码优先通过 `ISSLCertificateVerification` 暴露的 owner surface 访问。
@@ -1331,6 +1332,7 @@ end;
 - 通过 `ISSLConnection.GetHealthStatus` 获取连接健康状态
 - 用于快速诊断连接问题和监控连接状态
 - `ConnectionAge` 从连接创建时开始计算
+- 在 `ISSLConnection` 上当前只是编译期 `deprecated` 的 compatibility mirror。
 - 对新代码，优先通过 `ISSLDiagnostics.GetHealthStatus` 获取该结构，而不是直接走核心 `ISSLConnection` mirror。
 
 #### TSSLPerformanceMetrics
@@ -1350,6 +1352,7 @@ end;
 - 通过 `ISSLConnection.GetPerformanceMetrics` 获取性能指标
 - 用于性能分析和优化
 - `HandshakeTime` 使用高精度计时器测量
+- 在 `ISSLConnection` 上当前只是编译期 `deprecated` 的 compatibility mirror。
 - 对新代码，优先通过 `ISSLDiagnostics.GetPerformanceMetrics` 获取该结构，而不是直接走核心 `ISSLConnection` mirror。
 
 #### TSSLErrorRecord
@@ -1383,6 +1386,7 @@ end;
 - 通过 `ISSLConnection.GetDiagnosticInfo` 获取完整诊断信息
 - 包含连接的所有监控和诊断数据
 - 用于故障排查和性能分析
+- 在 `ISSLConnection` 上当前只是编译期 `deprecated` 的 compatibility mirror。
 - 对新代码，优先通过 `ISSLDiagnostics.GetDiagnosticInfo` 获取该结构，而不是直接走核心 `ISSLConnection` mirror。
 
 ---
