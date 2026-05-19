@@ -4,6 +4,63 @@
 
 ## 2026-05-20
 
+### Facade Optional Owner Surface Export Alignment
+
+- `rg -n "uses .*fafafa\\.ssl;|uses\\s+fafafa\\.ssl,|uses\\s+.*fafafa\\.ssl" tests examples docs src -g '!tests/scripts/**'`
+- `rg -n "ISSLConnectionInfo|ISSLDiagnostics|ISSLSessionResumption|ISSLCertificateVerification|ISSLOCSPStapling" tests examples docs -g '!tests/scripts/**'`
+- `sed -n '1,170p' src/fafafa.ssl.pas`
+  - result: PASS
+  - summary:
+    - confirmed a real facade completeness gap:
+      - active docs already treated `uses fafafa.ssl;` as the main entry
+      - but the facade still did not explicitly re-export multiple live optional owner surfaces
+
+- add `docs/plans/2026-05-20-facade-optional-owner-surface-export-alignment.md`
+- add `tests/contract/test_facade_optional_owner_surface_entry.pas`
+- add `tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+  - change:
+    - recorded a bounded facade-export batch
+    - added a focused shell contract plus a facade-only compile proof for the main entry unit
+
+- `bash -n tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+  - result: PASS
+  - summary:
+    - new focused facade-export contract syntax is valid
+
+- `bash tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first proved the live gap:
+      - `src/fafafa.ssl.pas`
+        did not re-export
+        `TSSLHealthStatus`
+    - after patching the facade aliases,
+      the first compile-proof attempt exposed contract-side issues, not a product regression:
+      - the proof test overreached into `Supports(...)` imports and concrete record field names
+    - after narrowing the proof to pure facade type-resolution,
+      GREEN proves:
+      - `fafafa.ssl`
+        now re-exports:
+        `ISSLConnectionInfo`
+        `ISSLDiagnostics`
+        `ISSLSessionResumption`
+        `ISSLCertificateVerification`
+        `ISSLOCSPStapling`
+        `ISSLCertificateTransparency`
+        `ISSLCertificateTransparencyValidation`
+        `TSSLHealthStatus`
+        `TSSLPerformanceMetrics`
+        `TSSLDiagnosticInfo`
+        `TSSLCertificateArray`
+      - a consumer source that only `uses fafafa.ssl;`
+        now compiles against these owner surfaces
+
+- update source:
+  - `src/fafafa.ssl.pas`
+  - change:
+    - added the missing connection-side optional owner surface aliases
+    - added the missing supporting-type aliases required by diagnostics and certificate-verification owner surfaces
+
 ### API Reference Optional Public Interface Coverage
 
 - `rg -n "^ISSL(NativeHandleAccess|HttpHooksAccess|ConnectionInfo|Diagnostics|SessionResumption|CertificateVerification|OCSPStapling|ServerOCSPStaplingContext|EarlyDataContext|EarlyDataConnection)\\s*=\\s*interface" docs/reference/API_REFERENCE.md docs/reference/API_DOCUMENTATION.md`

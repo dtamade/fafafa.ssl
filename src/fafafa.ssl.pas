@@ -73,12 +73,16 @@ type
   
   TSSLCertificateInfo = fafafa.ssl.base.TSSLCertificateInfo;
   PSSLCertificateInfo = fafafa.ssl.base.PSSLCertificateInfo;
+  TSSLCertificateArray = fafafa.ssl.base.TSSLCertificateArray;
   TSSLConnectionInfo = fafafa.ssl.base.TSSLConnectionInfo;
   PSSLConnectionInfo = fafafa.ssl.base.PSSLConnectionInfo;
   TSSLConfig = fafafa.ssl.base.TSSLConfig;
   PSSLConfig = fafafa.ssl.base.PSSLConfig;
   TSSLStatistics = fafafa.ssl.base.TSSLStatistics;
   PSSLStatistics = fafafa.ssl.base.PSSLStatistics;
+  TSSLHealthStatus = fafafa.ssl.base.TSSLHealthStatus;
+  TSSLPerformanceMetrics = fafafa.ssl.base.TSSLPerformanceMetrics;
+  TSSLDiagnosticInfo = fafafa.ssl.base.TSSLDiagnosticInfo;
   
   // Result types (Rust-like error handling)
   TSSLOperationResult = fafafa.ssl.base.TSSLOperationResult;
@@ -105,6 +109,13 @@ type
   ISSLContext = fafafa.ssl.base.ISSLContext;
   ISSLConnection = fafafa.ssl.base.ISSLConnection;
   ISSLClientConnection = fafafa.ssl.base.ISSLClientConnection;
+  ISSLConnectionInfo = fafafa.ssl.base.ISSLConnectionInfo;
+  ISSLDiagnostics = fafafa.ssl.base.ISSLDiagnostics;
+  ISSLSessionResumption = fafafa.ssl.base.ISSLSessionResumption;
+  ISSLCertificateVerification = fafafa.ssl.base.ISSLCertificateVerification;
+  ISSLOCSPStapling = fafafa.ssl.base.ISSLOCSPStapling;
+  ISSLCertificateTransparency = fafafa.ssl.base.ISSLCertificateTransparency;
+  ISSLCertificateTransparencyValidation = fafafa.ssl.base.ISSLCertificateTransparencyValidation;
   ISSLEarlyDataContext = fafafa.ssl.base.ISSLEarlyDataContext;
   ISSLEarlyDataConnection = fafafa.ssl.base.ISSLEarlyDataConnection;
   ISSLCertificate = fafafa.ssl.base.ISSLCertificate;

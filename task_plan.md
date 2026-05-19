@@ -10,6 +10,86 @@
 
 ## Current Status
 
+- [completed] `facade optional owner surface export alignment`
+  当前 focused 目标：
+  - 让 `uses fafafa.ssl;` 这个主门面入口，
+    真正显式重导出当前活跃文档已教学的
+    connection-side optional owner surfaces
+  - 同时补齐这些 surface 依赖的 supporting types，
+    避免 facade 入口继续停在“文档说能用，
+    实际还得回退到 `fafafa.ssl.base`”的半完成状态
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-facade-optional-owner-surface-export-alignment.md`
+  - 新增 focused contract / compile proof：
+    - `tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+    - `tests/contract/test_facade_optional_owner_surface_entry.pas`
+  - 收口源码：
+    - `src/fafafa.ssl.pas`
+  当前预判：
+  - `docs/README.md` / `guides/QUICKSTART.md`
+    以及多条活跃 guide
+    已经把 `uses fafafa.ssl;`
+    当成主入口
+  - 但主门面仍缺：
+    - `ISSLConnectionInfo`
+    - `ISSLDiagnostics`
+    - `ISSLSessionResumption`
+    - `ISSLCertificateVerification`
+    - `ISSLOCSPStapling`
+    - `ISSLCertificateTransparency`
+    - `ISSLCertificateTransparencyValidation`
+    以及 supporting types：
+    - `TSSLHealthStatus`
+    - `TSSLPerformanceMetrics`
+    - `TSSLDiagnosticInfo`
+    - `TSSLCertificateArray`
+  当前验证策略：
+  - 先新增 focused shell contract + facade-only compile proof 做 RED
+  - 然后只补：
+    - 主门面 alias
+    - focused plan / findings / progress
+    - `git diff --check`
+  - 不拉大门禁
+  当前最终收口证据：
+  - focused shell contract 先红后绿：
+    - 初始 RED：
+      `src/fafafa.ssl.pas`
+      中没有
+      `TSSLHealthStatus = fafafa.ssl.base.TSSLHealthStatus;`
+      这条 alias
+    - GREEN 后：
+      `fafafa.ssl`
+      已显式重导出：
+      - `ISSLConnectionInfo`
+      - `ISSLDiagnostics`
+      - `ISSLSessionResumption`
+      - `ISSLCertificateVerification`
+      - `ISSLOCSPStapling`
+      - `ISSLCertificateTransparency`
+      - `ISSLCertificateTransparencyValidation`
+      - `TSSLHealthStatus`
+      - `TSSLPerformanceMetrics`
+      - `TSSLDiagnosticInfo`
+      - `TSSLCertificateArray`
+  focused verification 已通过：
+  - `bash -n tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+  - `bash tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - 这不是“文档措辞有点散”的问题，
+    而是主门面的真实 public completeness gap
+  - 这批之后，
+    活跃文档把 `fafafa.ssl`
+    作为主入口的说法，
+    才重新和源码 façade truth 对齐
+  当前下一条真实工作：
+  - 回到 server-side optional surface cross-backend truth audit
+  - 优先继续核对：
+    - 总 capability matrix
+    - direct-library / builder replay-store 语义
+    - backend contract
+    之间是否还有 symmetry / completeness 漂移
 - [completed] `API reference optional public interface coverage`
   当前 focused 目标：
   - 补齐 `docs/reference/API_REFERENCE.md`

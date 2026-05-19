@@ -2,6 +2,43 @@
 
 ## 2026-05-20
 
+- `src/fafafa.ssl.pas` 这次暴露的是一种很容易被“源码里明明 `uses fafafa.ssl.base` 了”
+  这种错觉掩盖掉的门面缺口：
+  - 活跃文档把 `uses fafafa.ssl;`
+    当成主入口
+  - 主单元头部注释也写着“导出所有公共接口和类型”
+  - 但真正的 alias 集却没有把一整组 live optional owner surfaces
+    和 supporting types 挂出来
+
+- 这说明“主门面已经 uses 了 base/factory/tls 单元”
+  不等于外部调用方就能直接看到那些符号。
+  对 Pascal 门面而言，
+  真正决定 public surface 的仍然是：
+  - interface section 里的显式 alias / declaration
+  - 而不是门面内部自己依赖了哪些 unit
+
+- 这批里最容易漏掉的不是接口本身，
+  而是 supporting types：
+  - `TSSLHealthStatus`
+  - `TSSLPerformanceMetrics`
+  - `TSSLDiagnosticInfo`
+  - `TSSLCertificateArray`
+  如果只补
+  `ISSLDiagnostics` /
+  `ISSLCertificateVerification`
+  这些 interface 名字，
+  facade 仍然会停在“表面可见，实际不完整”的状态
+
+- 这也补出了一条更稳的 façade contract 写法：
+  - 对“主入口是否完整”这类问题，
+    最好的 focused compile proof
+    不是去碰 runtime 字段或具体行为
+  - 而是只验证：
+    `uses fafafa.ssl;`
+    能否独立解析这批 alias/type
+  - 这样既能精准钉 public completeness，
+    又不会把 product truth 和测试代码自己的实现细节混在一起
+
 - `API_REFERENCE.md` 这次暴露的是另一类比“错误文案”更隐蔽的 completeness gap：
   - 活跃 guide / `API_DOCUMENTATION.md` 已经在教学
     `ISSLConnectionInfo` / `ISSLDiagnostics` /

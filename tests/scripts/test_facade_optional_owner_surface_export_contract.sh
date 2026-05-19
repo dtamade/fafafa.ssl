@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$repo_root"
+
+pass() {
+  printf '[PASS] %s\n' "$1"
+}
+
+fail() {
+  printf '[FAIL] %s\n' "$1"
+  if [[ $# -ge 2 ]]; then
+    printf '       %s\n' "$2"
+  fi
+  exit 1
+}
+
+require_fixed() {
+  local file="$1"
+  local expected="$2"
+  local name="$3"
+  if grep -Fq -- "$expected" "$file"; then
+    pass "$name"
+  else
+    fail "$name" "expected text not found in $file: $expected"
+  fi
+}
+
+facade="src/fafafa.ssl.pas"
+contract_src="tests/contract/test_facade_optional_owner_surface_entry.pas"
+build_root="tmp/test_facade_optional_owner_surface_entry"
+units_dir="$build_root/units"
+bin_dir="$build_root/bin"
+binary="$bin_dir/test_facade_optional_owner_surface_entry"
+
+printf '[TEST] facade optional owner surface export contract\n'
+
+require_fixed "$facade" "TSSLHealthStatus = fafafa.ssl.base.TSSLHealthStatus;" \
+  "main facade re-exports TSSLHealthStatus"
+require_fixed "$facade" "TSSLPerformanceMetrics = fafafa.ssl.base.TSSLPerformanceMetrics;" \
+  "main facade re-exports TSSLPerformanceMetrics"
+require_fixed "$facade" "TSSLDiagnosticInfo = fafafa.ssl.base.TSSLDiagnosticInfo;" \
+  "main facade re-exports TSSLDiagnosticInfo"
+require_fixed "$facade" "TSSLCertificateArray = fafafa.ssl.base.TSSLCertificateArray;" \
+  "main facade re-exports TSSLCertificateArray"
+require_fixed "$facade" "ISSLConnectionInfo = fafafa.ssl.base.ISSLConnectionInfo;" \
+  "main facade re-exports ISSLConnectionInfo"
+require_fixed "$facade" "ISSLDiagnostics = fafafa.ssl.base.ISSLDiagnostics;" \
+  "main facade re-exports ISSLDiagnostics"
+require_fixed "$facade" "ISSLSessionResumption = fafafa.ssl.base.ISSLSessionResumption;" \
+  "main facade re-exports ISSLSessionResumption"
+require_fixed "$facade" "ISSLCertificateVerification = fafafa.ssl.base.ISSLCertificateVerification;" \
+  "main facade re-exports ISSLCertificateVerification"
+require_fixed "$facade" "ISSLOCSPStapling = fafafa.ssl.base.ISSLOCSPStapling;" \
+  "main facade re-exports ISSLOCSPStapling"
+require_fixed "$facade" "ISSLCertificateTransparency = fafafa.ssl.base.ISSLCertificateTransparency;" \
+  "main facade re-exports ISSLCertificateTransparency"
+require_fixed "$facade" "ISSLCertificateTransparencyValidation = fafafa.ssl.base.ISSLCertificateTransparencyValidation;" \
+  "main facade re-exports ISSLCertificateTransparencyValidation"
+
+mkdir -p "$units_dir" "$bin_dir"
+fpc -B -Fu./src -Fu./tests -FU"$units_dir" -FE"$bin_dir" -o"$binary" "$contract_src" >/dev/null
+if [[ -x "$binary" ]]; then
+  pass "facade-only contract source compiles via uses fafafa.ssl"
+else
+  fail "facade-only contract source compiles via uses fafafa.ssl" "expected binary missing: $binary"
+fi
+
+printf '[PASS] facade optional owner surface export contract passed\n'
