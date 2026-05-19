@@ -313,10 +313,10 @@ end;
 
 这条路径当前有四个边界：
 
-- `ServerEarlyDataReplayStoreFile` 只对 FreePascal server path 生效；未配置或空串时，默认仍然使用 in-memory single-process anti-replay ledger
-- 这只是 file-backed replay-store 的 opt-in seam，不代表默认已经提供 durability；默认 shipped path 仍然是单进程内存 anti-replay
+- `ServerEarlyDataReplayStoreFile` 只对 FreePascal server path 生效；未配置或空串时，默认 shipped path 仍会落到本地持久化 replay-store 目录，默认路径不可用或不可写时 fail-closed reject resumed early data
+- 这只是 caller-controlled path placement 的 opt-in seam；默认 shipped path 已经提供本地持久化 replay truth，但这不表示 distributed readiness 已完成
 - callback / file-backed 路径上的本地 `enabled` / `capacity` toggle 用来控制当前 ledger gate，不应理解成会隐式 wipe 已共享或已持久化的 replay truth
-- 这条 opt-in 也不会把 `experimental` capability wording 自动升级成更强承诺；当前 shipped prototype 先验证 file-backed seam 与 config/factory parity，如果你需要更重的 provider/durability 语义，应单独评估
+- 这条 opt-in 也不会把 `experimental` capability wording 自动升级成更强承诺；当前 shipped path 已经是 local persistent anti-replay replay-store，但如果你需要更重的 provider/distributed durability 语义，应单独评估
 
 ---
 

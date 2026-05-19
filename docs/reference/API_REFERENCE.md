@@ -210,7 +210,7 @@ Ctx := TSSLContextBuilder.Create
   .BuildServer;
 ```
 
-这条 public opt-in 只暴露单机可控的 replay-store seam，不代表默认路径已经改成持久化，也不表示 distributed readiness 已完成。
+这条 public opt-in 只暴露单机可控的 replay-store seam；它解决的是 caller-controlled path placement，不表示 distributed readiness 已完成。
 
 ---
 

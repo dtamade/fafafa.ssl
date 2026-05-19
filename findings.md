@@ -2,6 +2,53 @@
 
 ## 2026-05-20
 
+- FreePascal early-data 这次暴露的不是实现没跟上，
+  而是 durable-default 实现先落地后，
+  active docs / focused contract 没有一起追上：
+  - `TFreePascalContext`
+    server 默认 ledger
+    已经是
+    `TFreePascalDefaultPersistentEarlyDataReplayLedger`
+  - `KnownIssues`
+    runtime truth
+    也已经是
+    `local persistent ... fail-closed`
+  - 但活跃文档里仍有地方继续教学
+    `in-memory single-process anti-replay ledger`
+
+- 这说明“旧 focused contract 仍然是绿的 / 还没被看见”
+  不等于它锁住的是当前真相。
+  这次旧 contract 本身已经变成 drift source：
+  - 它不只是没覆盖新真相
+  - 而是在主动要求 README 保留 retired wording
+
+- 对这种“实现先变，docs/contract 迟到”的批次，
+  最值钱的不是继续补实现证据，
+  而是把四层 truth 一起重连：
+  - source constructor truth
+  - runtime capability truth
+  - active docs truth
+  - focused contract truth
+
+- `API_REFERENCE.md` 这次还暴露了另一种更隐蔽的活跃文档问题：
+  - 同一节前面已经写
+    默认 shipped path
+    改成了持久化 replay-store
+  - 结尾却又写
+    “不代表默认路径已经改成持久化”
+  - 这种“同页自相矛盾”比单纯漏写更危险，
+    因为它会让调用方以为 durable-default 仍然只是 opt-in 讨论
+
+- `INTEGRATION_GUIDE` / `security-best-practices`
+  这次也说明：
+  - 活跃 guide
+    不只是“能跑的示例集合”
+  - 它们本身也在对外定义 capability 心智模型
+  - 所以当 capability 剩余 caveat 改了，
+    这些 guide 里的一句旧边界描述
+    也算真实接口设计漂移，
+    不是可忽略的文案尾巴
+
 - `src/fafafa.ssl.pas` 这次暴露的是一种很容易被“源码里明明 `uses fafafa.ssl.base` 了”
   这种错觉掩盖掉的门面缺口：
   - 活跃文档把 `uses fafafa.ssl;`

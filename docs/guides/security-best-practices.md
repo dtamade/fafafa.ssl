@@ -479,7 +479,7 @@ begin
 end;
 ```
 
-这里的最佳实践是把三件事分开看：client stapled-response request/consume、可选的 client online OCSP check，以及服务端 caller-provided stapled-response issuance。当前 public server-side path 已经可以通过 `WithServerOCSPStapledResponseFile(...)` 或 `ISSLServerOCSPStaplingContext` 配置材料，但它仍然不负责在线抓取或刷新 OCSP response。就 FreePascal backend capability 而言，`KnownIssues` 已不再把 OCSP / CT / resumption 列为剩余缺口，当前只剩 `0-RTT / early data is experimental and currently uses an in-memory single-process anti-replay ledger.` 这条边界。
+这里的最佳实践是把三件事分开看：client stapled-response request/consume、可选的 client online OCSP check，以及服务端 caller-provided stapled-response issuance。当前 public server-side path 已经可以通过 `WithServerOCSPStapledResponseFile(...)` 或 `ISSLServerOCSPStaplingContext` 配置材料，但它仍然不负责在线抓取或刷新 OCSP response。就 FreePascal backend capability 而言，`KnownIssues` 已不再把 OCSP / CT / resumption 列为剩余缺口，当前只剩 `0-RTT / early data is experimental and currently relies on a local persistent anti-replay replay-store path; if the path is unavailable or unwritable, resumed early data is rejected fail-closed.` 这条边界。
 
 ### 4. 使用会话恢复
 

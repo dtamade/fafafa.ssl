@@ -4,6 +4,70 @@
 
 ## 2026-05-20
 
+### FreePascal Default Durable Replay Doc Truth Alignment
+
+- `rg -n "default.*replay|replay truth|single-process|persistent replay|Install.*Replay|GetEarlyDataReplayLedger|ActiveEarlyDataReplayLedger|Create.*Replay|default path" src docs tests -S`
+- `sed -n '230,280p' src/fafafa.ssl.freepascal.context.pas`
+- `sed -n '1500,1540p' src/fafafa.ssl.freepascal.lib.pas`
+- `sed -n '145,220p' docs/reference/API_REFERENCE.md`
+- `sed -n '300,340p' docs/INTEGRATION_GUIDE.md`
+- `sed -n '460,500p' docs/guides/security-best-practices.md`
+  - result: PASS
+  - summary:
+    - confirmed the default durable replay-store implementation had already landed:
+      - FreePascal server context defaults to
+        `TFreePascalDefaultPersistentEarlyDataReplayLedger`
+      - capability `KnownIssues`
+        already says
+        `local persistent anti-replay replay-store path ... fail-closed`
+    - the live drift was in active docs / focused contract:
+      - `API_REFERENCE.md`
+        contradicted itself
+      - `INTEGRATION_GUIDE.md`
+        still taught the old in-memory default path
+      - `security-best-practices.md`
+        still quoted the retired `KnownIssues` wording
+      - the existing focused docs contract still expected README to keep the retired wording
+
+- add `docs/plans/2026-05-20-freepascal-default-durable-replay-doc-truth-alignment.md`
+  - change:
+    - recorded a bounded active-doc truth-alignment batch for the default durable replay-store path
+
+- `bash tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first proved the contract itself had become a drift source:
+      - it still required README to keep
+        `in-memory single-process anti-replay ledger`
+    - GREEN after the doc/contract updates proves:
+      - the focused docs contract now freezes the durable-default truth
+      - API reference no longer contradicts itself on whether the default path is persistent
+      - integration/security guides no longer teach the retired in-memory default truth
+
+- update docs / contract:
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/INTEGRATION_GUIDE.md`
+  - `docs/guides/security-best-practices.md`
+  - `tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+  - change:
+    - aligned active docs with the durable default replay-store path
+    - removed the self-contradictory API-reference sentence
+    - upgraded the focused docs contract to check source/capability truth instead of the retired README wording
+
+- `bash -n tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+  - result: PASS
+  - summary:
+    - upgraded durable-default docs contract syntax is valid
+
+- `mkdir -p tmp/capability_cache_units tmp/capability_cache_bin && fpc -B -Fu./src -Fu./tests -FUtmp/capability_cache_units -FEtmp/capability_cache_bin -otmp/capability_cache_bin/test_capability_cache tests/test_capability_cache.pas && ./tmp/capability_cache_bin/test_capability_cache`
+  - result: PASS
+  - summary:
+    - runtime capability evidence still matches the aligned docs:
+      - FreePascal `KnownIssues`
+        prints
+        `0-RTT / early data is experimental and currently relies on a local persistent anti-replay replay-store path; if the path is unavailable or unwritable, resumed early data is rejected fail-closed.`
+      - the existing capability runtime test still verifies the old in-memory caveat is gone
+
 ### Facade Optional Owner Surface Export Alignment
 
 - `rg -n "uses .*fafafa\\.ssl;|uses\\s+fafafa\\.ssl,|uses\\s+.*fafafa\\.ssl" tests examples docs src -g '!tests/scripts/**'`

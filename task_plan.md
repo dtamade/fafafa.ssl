@@ -10,6 +10,98 @@
 
 ## Current Status
 
+- [completed] `freepascal default durable replay doc truth alignment`
+  当前 focused 目标：
+  - 把 FreePascal server-side early-data 默认 durable replay-store
+    这条 live truth，
+    在 active docs 与 focused contract 中重新对齐
+  - 收掉
+    “源码 / runtime capability 已经是 durable-by-default，
+    但活跃文档和旧 contract 仍把 default path
+    写成 in-memory single-process”
+    这条 drift
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-freepascal-default-durable-replay-doc-truth-alignment.md`
+  - 收口文档 / contract：
+    - `docs/reference/API_REFERENCE.md`
+    - `docs/INTEGRATION_GUIDE.md`
+    - `docs/guides/security-best-practices.md`
+    - `tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+  当前预判：
+  - source truth 已经明确：
+    - `TFreePascalContext`
+      server path 默认创建
+      `TFreePascalDefaultPersistentEarlyDataReplayLedger`
+    - `TFreePascalSSLLibrary.GetCapabilities.KnownIssues`
+      已改成
+      `local persistent anti-replay replay-store path ... fail-closed`
+  - 但 active docs / focused contract
+    仍残留旧真相：
+    - `docs/INTEGRATION_GUIDE.md`
+      还在说 default path 是
+      `in-memory single-process anti-replay ledger`
+    - `docs/guides/security-best-practices.md`
+      还在引用旧的
+      `KnownIssues`
+      句子
+    - `docs/reference/API_REFERENCE.md`
+      前后自相矛盾：
+      前面说默认 shipped path 已改为持久化，
+      后面又说
+      “不代表默认路径已经改成持久化”
+    - 旧 focused contract
+      还要求 README 保留 retired wording
+  当前验证策略：
+  - 先用现有 docs contract 做 RED
+  - 然后只改：
+    - active docs wording
+    - focused contract truth
+    - planning files
+  - 再补一条现有 capability runtime test 作为 source/runtime truth 证据
+  当前最终收口证据：
+  - focused shell contract 先红后绿：
+    - 初始 RED：
+      `README.md must keep the default in-memory single-process anti-replay wording`
+      直接证明旧 contract
+      还在反向冻结 retired truth
+    - GREEN 后：
+      - docs contract
+        现在冻结的是 durable-default truth，
+        不是旧的 in-memory wording
+      - `API_REFERENCE`
+        不再自相矛盾
+      - `INTEGRATION_GUIDE`
+        不再把 default path
+        写成单进程内存 anti-replay
+      - `security-best-practices`
+        已改用当前
+        `KnownIssues`
+        真值
+  focused verification 已通过：
+  - `bash -n tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+  - `bash tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+  - `fpc ... tests/test_capability_cache.pas && ./tmp/capability_cache_bin/test_capability_cache`
+  - `git diff --check`
+  当前结论：
+  - 这批收掉的不是 replay-store 实现缺口，
+    而是 durable-default 落地后的
+    active-doc / focused-contract 残余 drift
+  - 当前 FreePascal server-side early-data
+    default shipped path 的 live truth
+    已经重新统一到：
+    - source constructor
+    - runtime capability `KnownIssues`
+    - active docs
+    - focused docs contract
+  当前下一条真实工作：
+  - 回到 server-side optional surface cross-backend truth audit
+  - 继续核对：
+    - `ISSLServerOCSPStaplingContext`
+    - `ISSLEarlyDataContext`
+    - `ISSLEarlyDataConnection`
+    - builder / factory / matrix / guide
+    是否还有其它 active truth 漂移
 - [completed] `facade optional owner surface export alignment`
   当前 focused 目标：
   - 让 `uses fafafa.ssl;` 这个主门面入口，
