@@ -1,13 +1,22 @@
 # fafafa.ssl 接口设计审查
 
-**状态:** DRAFT  
+**状态:** REFRESHED_STATIC_AUDIT
 **范围:** 公开 Pascal 接口、工厂、builder、门面单元与文档对齐  
-**方式:** 静态审查，未改实现
+**方式:** 静态审查，已按 2026-05-19 当前源码/活跃文档真相刷新
 
 ## 结论
-当前接口层不是“能不能用”的问题，而是“边界已经开始失真”。
+当前接口层不是“能不能用”的问题，而是“历史兼容表面和当前推荐路径并存，容易把设计判断带偏”。
 
-最大的问题有四个：核心 `ISSLConnection` 太胖、`TSSLConfig` 把不同层级的配置混在一起、SNI 仍然通过被弃用的上下文入口传播、文档里还承诺了源码里没有的 `ISSLServerConnection`。
+相比最初审计，context-level SNI 传播和 `ISSLServerConnection` 文档失真这两条 live drift 已明显收窄。
+当前最值得继续压的活跃问题，主要集中在四类：
+- 核心 `ISSLConnection` 仍然太胖
+- `TSSLConfig` 仍然是 mixed-scope public record
+- 能力矩阵仍然存在双真相
+- 门面单元仍同时导出多条历史路径
+
+另外还有两条已经从 live drift 收成 compatibility / asymmetry baggage 的边界，仍需要在路线判断里明确记住：
+- context-level SNI 家族当前已经是 warning/reject/ignore 的 frozen compatibility surface
+- `ISSLServerConnection` 当前不再是活跃文档失真，但 server-side 对称扩展仍然缺位
 
 ## 主要问题
 
@@ -40,47 +49,72 @@
   - 当前应先完成 classification / recommendation truth 收口，而不是把它们误报成“源码已经移除”
   - 如果未来真的要把它们退出 core，应作为单独的 v2 API surgery 批次推进
 
-### 2. context-level SNI 已弃用，但高层入口仍在主动写入
+### 2. context-level SNI 已冻结成 compatibility-only surface，但 public API 仍背着历史包袱
 **证据**
 - `src/fafafa.ssl.base.pas:1042-1052`
-- `src/fafafa.ssl.factory.pas:933-938`
-- `src/fafafa.ssl.factory.pas:996-997`
-- `src/fafafa.ssl.context.builder.pas:1117-1120`
-- `src/fafafa.ssl.context.builder.pas:1280-1284`
-- `src/fafafa.ssl.context.builder.pas:1389-1400`
+- `src/fafafa.ssl.factory.pas:495-528, 1145-1193`
+- `src/fafafa.ssl.context.builder.pas:73-77, 1514-1523`
+- `src/fafafa.ssl.openssl.backed.pas:1315-1382`
+- `src/fafafa.ssl.winssl.lib.pas:803-852`
+- `src/fafafa.ssl.mbedtls.lib.pas:641-688`
+- `src/fafafa.ssl.wolfssl.lib.pas:607-663`
+- `src/fafafa.ssl.freepascal.lib.pas:1616-1663`
 
 `ISSLContext.SetServerName` 已经明确标成 deprecated，推荐路径是 `ISSLClientConnection.SetServerName`。
-但 factory 和 builder 仍然把 `ServerName` 写回 context，甚至 server context 也会收到这个值。builder 只是在验证阶段给警告，没有真正切断旧语义。
+但当前高层主路径已经不是“继续主动传播旧语义”：
+- `TSSLFactory.CreateContext(...)` 对 `TSSLConfig.ServerName` 现在是 warning + ignore
+- `TSSLContextBuilder.WithSNI(...)` 已经是 compile-time deprecated compatibility-only fluent surface
+- `BuildClient` / `BuildServer` 当前都是 warning + ignore
+- direct-library `CreateContext(...)` 当前也已经统一成：
+  - server-side reject
+  - client-side warning + ignore
+
+高层 factory / builder 主路径现在已经是 warning + ignore，不再把 `ServerName` 写回新建 context。
 
 **影响**
-- 推荐路径和实际高层入口不一致。
-- 同一个字段在 client/server context 上语义不同，容易让调用方误判。
-- 迁移期会一直拖着旧心智模型走。
+- 这条线已经不再是 live drift，但 public surface 仍然带着一整家 deprecated compatibility API。
+- 新调用方如果只看类型名，仍然可能误以为 context-level SNI 是普通配置路径。
+- 路线讨论时如果忽略最近几轮收口，很容易把已经冻结的 compatibility surface 误判成“当前实现缺口”。
 
 **建议**
-- 高层 API 不再默认写 context-level SNI。
-- 若要兼容，只保留显式兼容入口或单独的 migration shim。
-- server context 不应再把这个字段当成正常配置项。
+- 把这条线视为 `v1.x` frozen compatibility surface，而不是当前待恢复的推荐入口。
+- 新代码继续统一走：
+  - `ISSLClientConnection.SetServerName(...)`
+  - `TSSLConnectionBuilder.WithHostname(...)`
+  - `TSSLConnector.Connect*(..., ServerName)`
+- 如果未来要继续收紧，应该作为独立 `v2` public-surface surgery 处理，而不是回头重开“factory/builder 还在主动传播”的旧问题。
 
-### 3. 文档承诺了 `ISSLServerConnection`，源码里没有
+### 3. 对称 server 扩展仍缺位，但活跃文档已不再假装 `ISSLServerConnection` 存在
 **证据**
-- `docs/ARCHITECTURE.md:136-146`
-- `docs/reference/INTERFACE_DESIGN_V2.md:13-18`
+- `docs/ARCHITECTURE.md:141-150`
+- `docs/reference/INTERFACE_DESIGN_V2.md:17-28`
 - 源码搜索没有发现任何 `ISSLServerConnection` 声明或实现
 
-架构图把 `ISSLConnection` 分成 client / server 两个扩展，但 public Pascal surface 只有 `ISSLClientConnection`。
+当前 public Pascal surface 仍然只有 `ISSLClientConnection`。
+但与最初审计不同，活跃架构/设计文档已经不再承诺这个接口“应该已经存在”：
+- `docs/ARCHITECTURE.md` 已明确写出当前只声明了 `ISSLClientConnection`
+- `docs/reference/INTERFACE_DESIGN_V2.md` 也已明确注明当前 public source 尚未声明 `ISSLServerConnection`
+
+活跃架构/设计文档现在已经显式说明当前 public Pascal source 尚未声明 `ISSLServerConnection`。
 
 **影响**
-- 架构文档比代码更对称，容易误导调用方。
-- server 侧能力只能散落在 context 扩展、工厂逻辑或隐式行为里。
+- 这已经不再是“文档比代码更对称”的 active docs drift。
+- 但 public surface 仍然只有 client-side 显式扩展，server 侧能力继续散落在 context 扩展、工厂逻辑和 backend-specific surface 里。
+- 如果未来还想让 client/server story 更对称，当前真正要解决的是接口建模，而不是文档更正。
 
 **建议**
-- 要么补出真实的 server 扩展接口，要么把文档改成“client 扩展 + 若干能力型 context 扩展”，别再画不存在的对称层次。
+- 当前版本线继续保持文档与源码一致，不要再把不存在的 server 扩展画回活跃图里。
+- 如果未来要补 server-side 对称扩展，应先明确它到底承载：
+  - handshake role
+  - accepted-connection metadata
+  - server-only policy hooks
+- 否则就继续把模型表述成“client 扩展 + 若干 server-side context/owner surface”，不要为了对称而对称。
 
-### 4. `TSSLConfig` 不是可靠的单一配置契约
+### 4. `TSSLConfig` 仍是 mixed-scope public record，但部分边界已经显式 reject / warn
 **证据**
 - `src/fafafa.ssl.base.pas:382-428`
 - `src/fafafa.ssl.factory.pas:426-528`
+- `src/fafafa.ssl.context.config.pas:80-101`
 - `src/fafafa.ssl.factory.pas:900-1005`
 - `src/fafafa.ssl.pas:228-314`
 - `src/fafafa.ssl.debug.utils.pas:323-324`
@@ -93,17 +127,26 @@
 
 此外：
 - `LogLevel` / `LogCallback` 在 factory 路径里会被直接拒绝
-- `BufferSize` / `HandshakeTimeout` 只在默认值/调试里出现，主创建路径没有看到实际消费
+- `ServerName` 在 factory / builder / direct-library create-path 上当前已经降格成 warning / reject / ignore 的 compatibility field
+- `BufferSize` / `HandshakeTimeout` 在 factory / direct-library 路径上当前是显式 reject，不是 silent inert。
 
 **影响**
 - 看起来像一个万能配置，实际上不是。
-- 调用方很容易以为某个字段会生效，结果被静默忽略或直接报错。
+- 调用方仍然需要知道哪些字段是：
+  - context truth
+  - compatibility bridge
+  - library-scoped reject
+  - connection-scoped reject
 - 配置层次和生命周期边界都不清晰。
 
 **建议**
-- 拆成至少四类：library / context / client-context / server-context，必要时再加 connection config。
-- 不要让 factory 接受会被直接拒绝的字段。
-- inert 字段要么落地，要么删掉，别挂在公共 record 里充当幻觉开关。
+- 短期内继续把 source comment / API reference 维持成当前这套显式 scope 说明，不要让这些字段重新漂回“普通推荐配置”。
+- 中长期如果要做 public-surface surgery，仍建议拆成至少四类：
+  - library
+  - context
+  - client-context
+  - server-context
+- 当前最该避免的不是“所有字段立刻重构”，而是让 mixed-scope record 再次长出新的幻觉字段。
 
 ### 5. 能力矩阵存在双真相
 **证据**

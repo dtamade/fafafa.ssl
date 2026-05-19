@@ -10,6 +10,29 @@
 
 ## Current Status
 
+- [completed] Interface audit current truth refresh 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-interface-audit-current-truth-refresh.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_interface_audit_current_truth_contract.sh`
+  - 当前已修正的权威静态审计输出：
+    - `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+  - 当前已收掉的真问题：
+    - 审计报告不再继续误写：
+      - factory / builder 仍主动把 `ServerName` 写回 context
+      - 活跃文档仍承诺 `ISSLServerConnection` 存在
+      - `BufferSize` / `HandshakeTimeout` 只是“看起来像 inert 字段”
+    - 当前审计基线现在重新回到：
+      - 高层 SNI family = `warning/reject/ignore` 的 frozen compatibility surface
+      - 活跃 docs 已明确说明当前 public source 尚未声明 `ISSLServerConnection`
+      - `TSSLConfig` 仍是 mixed-scope public record，但 `BufferSize` / `HandshakeTimeout` 在 create-path 上是显式 reject
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_interface_audit_current_truth_contract.sh`
+    - `bash tests/scripts/test_interface_audit_current_truth_contract.sh`
+    - `git diff --check`
+  - 当前结论：
+    - 这批修掉的是“路线判断依然被旧审计结论带偏”的控制面问题，不是 runtime 缺口
+    - 后续再讨论接口设计优先级时，不应再把这三条已收口事实当成当前 live blocker
 - [completed] Public unit/import guidance truth 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-public-unit-import-guidance-truth.md`

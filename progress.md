@@ -2,6 +2,55 @@
 
 ## 2026-05-19
 
+### Interface Audit Current Truth Refresh
+
+- add `docs/plans/2026-05-19-interface-audit-current-truth-refresh.md`
+  - change:
+    - define the bounded static-audit refresh batch for stale SNI / `ISSLServerConnection` / `TSSLConfig` conclusions
+
+- add `tests/scripts/test_interface_audit_current_truth_contract.sh`
+  - change:
+    - lock current source/doc truth that:
+      - factory paths are `warning + ignore` for `TSSLConfig.ServerName`
+      - builder `WithSNI(...)` is deprecated and ignored by `BuildClient` / `BuildServer`
+      - active docs now explicitly state `ISSLServerConnection` is absent
+      - the audit report no longer preserves stale live-drift claims
+
+- read-only evidence triage
+  - summary:
+    - the current highest-value drift was in the durable audit report itself, not in runtime
+    - source re-check confirmed:
+      - `TSSLFactory.CreateContext(...)` now warns and ignores `TSSLConfig.ServerName`
+      - `TSSLContextBuilder.WithSNI(...)` is compile-time deprecated and runtime ignored
+      - direct-library `CreateContext(...)` now rejects server-side `ServerName` and warns+ignores client-side `ServerName`
+      - active architecture/design docs already explicitly say `ISSLServerConnection` is absent
+      - `BufferSize` / `HandshakeTimeout` are explicitly rejected on factory/direct-library create paths
+
+- `bash -n tests/scripts/test_interface_audit_current_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new interface-audit truth contract syntax is valid
+
+- `bash tests/scripts/test_interface_audit_current_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - initial RED first exposed the stale audit-report wording
+    - an intermediate RED also exposed shell quoting noise in the new contract, which was fixed before final verification
+    - GREEN after fix proves the audit report now matches current source/doc truth
+
+- update `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+  - change:
+    - refresh the top conclusion from “live drift everywhere” to “compatibility baggage + remaining structural design debt”
+    - reclassify context-level SNI from active propagation drift to frozen compatibility-only surface
+    - reclassify `ISSLServerConnection` from active-doc mismatch to current server-side asymmetry
+    - reclassify `TSSLConfig.BufferSize` / `HandshakeTimeout` from “possibly inert” to explicit reject semantics
+
+- `git diff --check`
+  - result: FAIL -> PASS
+  - summary:
+    - initial FAIL was limited to one trailing space on the refreshed audit status line
+    - PASS after cleanup confirms the batch is whitespace-clean
+
 ### Public Unit Import Guidance Truth
 
 - add `docs/plans/2026-05-19-public-unit-import-guidance-truth.md`

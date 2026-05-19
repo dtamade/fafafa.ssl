@@ -2,6 +2,39 @@
 
 ## 2026-05-19
 
+- 继续往“接口设计 / 开发路线 / 审计结论是否还讲真话”这条线上压时，当前最有价值的新问题不是 runtime，而是静态权威审计报告本身已经落后于最近几轮真实收口：
+  - `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+    仍然把下面三条写成当前 live drift：
+    - factory / builder 仍主动把 `ServerName` 写回 context
+    - 活跃文档还承诺 `ISSLServerConnection` 存在
+    - `BufferSize` / `HandshakeTimeout` 只是“看起来像 inert 字段”
+
+- 重新核对当前 source / active-doc truth 后，这三条都已经不是原来的状态：
+  - `TSSLFactory.CreateContext(...)` 对 `TSSLConfig.ServerName` 现在是 warning + ignore
+  - `TSSLContextBuilder.WithSNI(...)` 已经是 compile-time deprecated compatibility-only surface，`BuildClient` / `BuildServer` 都是 warning + ignore
+  - 各 direct-library `CreateContext(...)` 当前也已经统一成：
+    - server-side reject
+    - client-side warning + ignore
+  - `docs/ARCHITECTURE.md` / `docs/reference/INTERFACE_DESIGN_V2.md` 现在都已显式说明当前 public Pascal source 尚未声明 `ISSLServerConnection`
+  - `TSSLConfig.BufferSize` / `HandshakeTimeout` 当前在 factory / direct-library create-path 上是显式 reject，不是 silent inert
+
+- 这条问题的风险非常实际：
+  - 旧审计如果继续当成路线图锚点，会把已经冻结的 compatibility baggage 误判成当前 live blocker
+  - 也会让我们反复把精力投回已经收掉的 drift，而不是继续看真正剩余的接口设计问题
+
+- 因而当前最小正确修法不是改 runtime，而是刷新这份审计报告的事实层：
+  - 把 context-level SNI 从“仍在传播”改成“已冻结但仍是 public baggage”
+  - 把 `ISSLServerConnection` 从“活跃文档失真”改成“当前 docs 已说清楚，但 server-side 对称扩展仍缺位”
+  - 把 `TSSLConfig` 从“部分字段疑似 inert”改成“mixed-scope 仍是问题，但部分边界已显式 reject/warn”
+
+- 当前这批收口后的新基线应明确保留：
+  - `INTERFACE_DESIGN_AUDIT_V1.5.0.md` 现在重新回到当前源码/活跃文档真相
+  - 这意味着“路线判断控制面”比上一轮更干净了
+  - 后续继续做接口设计优先级时，应优先盯：
+    - `ISSLConnection` core slimming / owner-surface demotion
+    - `TSSLConfig` mixed-scope public surface surgery
+    - capability matrix dual-truth cleanup
+    - facade main entry slimming
 - 继续沿着“高入口文档是否还在教授旧 public entrypoint”往下压时，这次压实的是另一组更前排、也更容易让用户第一步就走错的导入/创建路径漂移：
   - `docs/guides/USER_GUIDE.md`
   - `docs/guides/WINSSL_QUICKSTART.md`
