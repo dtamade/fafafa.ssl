@@ -63,8 +63,8 @@ begin
     DefaultConfig.PreferredVersion := sslProtocolTLS13;
     DefaultConfig.VerifyMode := [sslVerifyPeer, sslVerifyFailIfNoPeerCert];
     DefaultConfig.VerifyDepth := 2;
-    DefaultConfig.CipherList := 'TLS_AES_256_GCM_SHA384';
-    DefaultConfig.CipherSuites := 'TLS_AES_128_GCM_SHA256';
+    DefaultConfig.CipherList := SSL_DEFAULT_CIPHER_LIST;
+    DefaultConfig.CipherSuites := SSL_DEFAULT_TLS13_CIPHERSUITES;
     DefaultConfig.SessionCacheSize := 17;
     DefaultConfig.SessionTimeout := 240;
     DefaultConfig.ALPNProtocols := 'h2,http/1.1';
@@ -81,10 +81,10 @@ begin
       'direct-library client context applies VerifyMode from default config');
     Assert(Ctx.GetVerifyDepth = 2,
       'direct-library client context applies VerifyDepth from default config');
-    Assert(Ctx.GetCipherList = 'TLS_AES_256_GCM_SHA384',
-      'direct-library client context applies CipherList from default config');
-    Assert(Ctx.GetCipherSuites = 'TLS_AES_128_GCM_SHA256',
-      'direct-library client context applies CipherSuites from default config');
+    Assert(Ctx.GetCipherList = SSL_DEFAULT_CIPHER_LIST,
+      'direct-library client context keeps shipped CipherList baseline on unpublished custom-cipher backends');
+    Assert(Ctx.GetCipherSuites = SSL_DEFAULT_TLS13_CIPHERSUITES,
+      'direct-library client context keeps shipped CipherSuites baseline on unpublished custom-cipher backends');
     Assert(Ctx.GetSessionCacheSize = 17,
       'direct-library client context applies SessionCacheSize from default config');
     Assert(Ctx.GetSessionTimeout = 240,

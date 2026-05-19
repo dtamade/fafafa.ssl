@@ -36,6 +36,16 @@ begin
   Inc(GFailCount);
 end;
 
+function IsUnsupportedCipherMessage(const AMessage: string): Boolean;
+var
+  LLower: string;
+begin
+  LLower := LowerCase(AMessage);
+  Result := (Pos('unsupported', LLower) > 0) or
+    (Pos('supportscustomciphersuites', LLower) > 0) or
+    (Pos('不支持', AMessage) > 0);
+end;
+
 function TTestCallbacks.VerifyCallback(const ACertificate: TSSLCertificateInfo;
   const AErrorCode: Integer; const AErrorMessage: string): Boolean;
 begin
@@ -439,7 +449,7 @@ procedure Test_Cipher_Suites;
 var
   LLib: ISSLLibrary;
   LContext: ISSLContext;
-  LSuites: string;
+  LRejected: Boolean;
 begin
   WriteLn('Test 10: Cipher Suites Configuration');
   
@@ -447,21 +457,39 @@ begin
     LLib := TSSLFactory.GetLibraryInstance(sslWinSSL);
     LContext := LLib.CreateContext(sslCtxClient);
     
-    // Test 10.1: TLS 1.3 cipher suites
-    LContext.SetCipherSuites('TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384');
-    LSuites := LContext.GetCipherSuites;
-    if LSuites = 'TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384' then
-      Pass('TLS 1.3 cipher suites set')
+    // Test 10.1: TLS 1.3 custom cipher suites should be rejected on WinSSL
+    LRejected := False;
+    try
+      LContext.SetCipherSuites('TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384');
+    except
+      on E: ESSLException do
+      begin
+        if not IsUnsupportedCipherMessage(E.Message) then
+          raise;
+        LRejected := True;
+      end;
+    end;
+    if LRejected then
+      Pass('TLS 1.3 custom cipher suites rejected')
     else
-      Fail('Cipher suites', 'Expected specific suites, got "' + LSuites + '"');
+      Fail('Cipher suites', 'Expected WinSSL to reject custom non-default TLS 1.3 cipher suites');
     
-    // Test 10.2: Single cipher
-    LContext.SetCipherSuites('TLS_AES_256_GCM_SHA384');
-    LSuites := LContext.GetCipherSuites;
-    if LSuites = 'TLS_AES_256_GCM_SHA384' then
-      Pass('Single cipher suite set')
+    // Test 10.2: Single cipher override should also be rejected
+    LRejected := False;
+    try
+      LContext.SetCipherSuites('TLS_AES_256_GCM_SHA384');
+    except
+      on E: ESSLException do
+      begin
+        if not IsUnsupportedCipherMessage(E.Message) then
+          raise;
+        LRejected := True;
+      end;
+    end;
+    if LRejected then
+      Pass('Single cipher suite override rejected')
     else
-      Fail('Cipher suites', 'Expected single suite, got "' + LSuites + '"');
+      Fail('Cipher suites', 'Expected WinSSL to reject single custom cipher suite override');
     
   except
     on E: Exception do

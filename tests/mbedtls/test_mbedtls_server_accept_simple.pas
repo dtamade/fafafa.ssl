@@ -70,9 +70,9 @@ begin
     WriteLn('[Server] Creating context...');
     LCtx := FLib.CreateContext(sslCtxServer);
 
-    WriteLn('[Server] Setting cipher suites...');
-    LCtx.SetCipherList('AES256-GCM-SHA384:AES128-GCM-SHA256:CHACHA20-POLY1305-SHA256');
-    WriteLn('[Server] ✅ Cipher suites set');
+    WriteLn('[Server] Keeping shipped cipher baseline...');
+    LCtx.SetCipherList(SSL_DEFAULT_CIPHER_LIST);
+    WriteLn('[Server] ✅ Shipped cipher baseline kept');
 
     WriteLn('[Server] Loading certificate...');
     LCtx.LoadCertificate(TEST_CERT_PATH);

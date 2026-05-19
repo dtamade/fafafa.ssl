@@ -282,6 +282,33 @@ begin
     );
 end;
 
+function IsCustomCipherListOverride(const ACipherList: string): Boolean;
+begin
+  Result := (Trim(ACipherList) <> '') and
+    (not SameText(Trim(ACipherList), SSL_DEFAULT_CIPHER_LIST));
+end;
+
+function IsCustomCipherSuitesOverride(const ACipherSuites: string): Boolean;
+begin
+  Result := (Trim(ACipherSuites) <> '') and
+    (not SameText(Trim(ACipherSuites), SSL_DEFAULT_TLS13_CIPHERSUITES));
+end;
+
+procedure RequirePublishedOpenSSLContextCustomCipherSurface(
+  const AFeature, AMethodName: string);
+begin
+  if not OpenSSLPublishedCustomCipherSurfaceReady then
+    raise ESSLInitializationException.CreateWithContext(
+      Format('OpenSSL custom cipher surface is incomplete in this runtime build; ' +
+        '%s publication remains unsupported until both TLS 1.2 and TLS 1.3 cipher helpers are available.',
+        [AFeature]),
+      sslErrUnsupported,
+      AMethodName,
+      0,
+      sslOpenSSL
+    );
+end;
+
 function OpenSSLOCSPResponseAlloc(ASize: size_t): PByte;
 var
   LCryptoMalloc: TCRYPTO_malloc;
@@ -1938,9 +1965,14 @@ procedure TOpenSSLContext.SetCipherList(const ACipherList: string);
 var
   CipherListA: AnsiString;
 begin
+  if IsCustomCipherListOverride(ACipherList) then
+    RequirePublishedOpenSSLContextCustomCipherSurface(
+      'Cipher-list override',
+      'TOpenSSLContext.SetCipherList'
+    );
   FCipherList := ACipherList;
   
-  if (FSSLContext <> nil) and Assigned(SSL_CTX_set_cipher_list) then
+  if (Trim(ACipherList) <> '') and (FSSLContext <> nil) and Assigned(SSL_CTX_set_cipher_list) then
   begin
     CipherListA := AnsiString(ACipherList);
     SSL_CTX_set_cipher_list(FSSLContext, PAnsiChar(CipherListA));
@@ -1956,9 +1988,14 @@ procedure TOpenSSLContext.SetCipherSuites(const ACipherSuites: string);
 var
   CipherSuitesA: AnsiString;
 begin
+  if IsCustomCipherSuitesOverride(ACipherSuites) then
+    RequirePublishedOpenSSLContextCustomCipherSurface(
+      'Cipher-suite override',
+      'TOpenSSLContext.SetCipherSuites'
+    );
   FCipherSuites := ACipherSuites;
   
-  if (FSSLContext <> nil) and Assigned(SSL_CTX_set_ciphersuites) then
+  if (Trim(ACipherSuites) <> '') and (FSSLContext <> nil) and Assigned(SSL_CTX_set_ciphersuites) then
   begin
     CipherSuitesA := AnsiString(ACipherSuites);
     SSL_CTX_set_ciphersuites(FSSLContext, PAnsiChar(CipherSuitesA));

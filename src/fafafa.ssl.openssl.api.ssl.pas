@@ -297,6 +297,7 @@ var
 function LoadOpenSSLSSL: Boolean;
 procedure UnloadOpenSSLSSL;
 function OpenSSLPublishedContextCallbackSurfaceReady: Boolean;
+function OpenSSLPublishedCustomCipherSurfaceReady: Boolean;
 
 { Helper function - SSL_set_tlsext_host_name is a macro in OpenSSL, not a real function }
 function SSL_set_tlsext_host_name_impl(ssl: PSSL; const name: PAnsiChar): Integer; cdecl;
@@ -651,6 +652,12 @@ begin
     Assigned(SSL_CTX_set_default_passwd_cb) and
     Assigned(SSL_CTX_set_default_passwd_cb_userdata) and
     Assigned(SSL_CTX_set_info_callback);
+end;
+
+function OpenSSLPublishedCustomCipherSurfaceReady: Boolean;
+begin
+  Result := Assigned(SSL_CTX_set_cipher_list) and
+    Assigned(SSL_CTX_set_ciphersuites);
 end;
 
 procedure UnloadOpenSSLSSL;

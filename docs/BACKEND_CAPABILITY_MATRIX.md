@@ -22,6 +22,7 @@
 | **PKCS#11**                  | ❌         | ✅      | ❌     | ❌      | ❌      |
 | **PKCS#12 / PFX**            | ❌         | ✅      | ⚠️     | ❌      | ❌      |
 | **Password-Protected Keys**  | ❌         | ✅      | ⚠️     | ✅      | ❌      |
+| **Custom Cipher Suites**      | ❌         | ✅      | ❌     | ❌      | ❌      |
 | **Context Callbacks**        | ❌         | ✅      | ⚠️     | ❌      | ❌      |
 
 **图例**:
@@ -46,6 +47,10 @@
 - `OpenSSL` / `MbedTLS`: password-protected private-key path 当前已发布
 - `WinSSL`: 当前仅 password-protected PFX/P12 import path 已发布；PEM private-key password path 仍为 unsupported
 - `FreePascal` / `WolfSSL`: `SupportsPasswordProtectedKeys=False`；non-empty `APassword` 当前会 fail-closed
+
+`Custom Cipher Suites` 这一行按当前 published/runtime truth 汇总：
+- `OpenSSL`: `SupportsCustomCipherSuites=True` 仅在 TLS 1.2 / TLS 1.3 custom-cipher helper 都就绪时发布；custom cipher override 当前具备 runtime apply
+- `FreePascal` / `WinSSL` / `MbedTLS` / `WolfSSL`: `SupportsCustomCipherSuites=False`；custom non-default `SetCipherList` / `SetCipherSuites` 当前会 fail-closed，empty clear / shipped baseline defaults 仅保留 compatibility/default-context path
 
 `PKCS#12 / PFX` 这一行按当前 published/runtime truth 汇总：
 - `OpenSSL`: `SupportsPKCS12=True`；当前发布完整 PKCS#12 helper/API surface（create / parse / BIO I/O）

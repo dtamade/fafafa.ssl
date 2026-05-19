@@ -314,10 +314,9 @@ Context := TSSLContextBuilder.Create
   .WithBackend(sslMbedTLS)
   .WithSafeDefaults
   .BuildClient;
-
-// 或手动配置密码套件
-Context.SetCipherList('TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256');
 ```
+
+当前 `SupportsCustomCipherSuites=False`：`SetCipherList` / `SetCipherSuites` 的 custom non-default assignment 会 fail-closed `unsupported`；如需安全基线，请使用 builder / default-context path。
 
 ### 内存优化（嵌入式）
 
@@ -392,10 +391,9 @@ Context := TSSLContextBuilder.Create
   .WithBackend(sslMbedTLS)
   .WithSafeDefaults
   .BuildClient;
-
-// ❌ 不推荐: 允许弱密码套件
-Context.SetCipherList('ALL');
 ```
+
+不要尝试通过 `SetCipherList('ALL')` 放宽当前 MbedTLS backend 的 cipher policy；custom non-default override 当前不会被发布。
 
 ### 4. 主机名验证
 

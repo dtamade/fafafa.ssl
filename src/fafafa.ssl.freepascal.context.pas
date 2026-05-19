@@ -95,6 +95,8 @@ type
     procedure RejectUnsupportedPasswordProtectedKey(const AMethodName: string);
     procedure RejectUnsupportedCallbackAssignment(
       const AFeature, AMethodName: string);
+    procedure RejectUnsupportedCustomCipherAssignment(
+      const AFeature, AMethodName: string);
   public
     constructor Create(ALibrary: ISSLLibrary; AType: TSSLContextType);
     destructor Destroy; override;
@@ -581,6 +583,32 @@ begin
   );
 end;
 
+function IsCustomCipherListOverride(const ACipherList: string): Boolean;
+begin
+  Result := (Trim(ACipherList) <> '') and
+    (not SameText(Trim(ACipherList), SSL_DEFAULT_CIPHER_LIST));
+end;
+
+function IsCustomCipherSuitesOverride(const ACipherSuites: string): Boolean;
+begin
+  Result := (Trim(ACipherSuites) <> '') and
+    (not SameText(Trim(ACipherSuites), SSL_DEFAULT_TLS13_CIPHERSUITES));
+end;
+
+procedure TFreePascalContext.RejectUnsupportedCustomCipherAssignment(
+  const AFeature, AMethodName: string);
+begin
+  raise ESSLConfigurationException.CreateWithContext(
+    Format('%s is not published by the current FreePascal backend runtime. ' +
+      'Check ISSLLibrary.GetCapabilities.SupportsCustomCipherSuites before installing a custom non-default cipher override.',
+      [AFeature]),
+    sslErrUnsupported,
+    AMethodName,
+    0,
+    sslFreePascal
+  );
+end;
+
 procedure TFreePascalContext.SetVerifyCallback(ACallback: TSSLVerifyCallback);
 begin
   if Assigned(ACallback) then
@@ -590,6 +618,8 @@ end;
 
 procedure TFreePascalContext.SetCipherList(const ACipherList: string);
 begin
+  if IsCustomCipherListOverride(ACipherList) then
+    RejectUnsupportedCustomCipherAssignment('Cipher list', 'TFreePascalContext.SetCipherList');
   FCipherList := ACipherList;
 end;
 
@@ -600,6 +630,8 @@ end;
 
 procedure TFreePascalContext.SetCipherSuites(const ACipherSuites: string);
 begin
+  if IsCustomCipherSuitesOverride(ACipherSuites) then
+    RejectUnsupportedCustomCipherAssignment('Cipher suites', 'TFreePascalContext.SetCipherSuites');
   FCipherSuites := ACipherSuites;
 end;
 

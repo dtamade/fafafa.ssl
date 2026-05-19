@@ -39,22 +39,15 @@ LContext.LoadCAPath('/etc/ssl/certs');  // Linux
 
 ### 2. 使用强密码套件
 
+当前 WinSSL backend 不发布 custom cipher suite override；不要把 `SetCipherSuites(...)` 当成 Schannel 调优手段。
+
 **❌ 错误做法**:
-```pascal
-// 允许弱密码套件
-LContext.SetCipherSuites('ALL');
-```
+- 在应用层调用 `SetCipherSuites('ALL')` 以为可以放宽 Schannel 的实际 cipher order
+- 通过 `SetCipherList(...)` / `SetCipherSuites(...)` 尝试覆盖系统 TLS 策略
 
 **✅ 正确做法**:
-```pascal
-// 只使用强密码套件
-LContext.SetCipherSuites(
-  'TLS_AES_128_GCM_SHA256:' +
-  'TLS_AES_256_GCM_SHA384:' +
-  'ECDHE-RSA-AES128-GCM-SHA256:' +
-  'ECDHE-RSA-AES256-GCM-SHA384'
-);
-```
+- 通过 Windows / Schannel 系统策略维护强密码套件顺序
+- 在应用层只收紧 TLS 协议版本、证书、ALPN 等已发布能力
 
 ### 3. 使用最新的 TLS 版本
 

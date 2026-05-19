@@ -36,6 +36,7 @@ uses
   {$ENDIF}
   SysUtils, Classes,
   fafafa.ssl.base,
+  fafafa.ssl.exceptions,
   fafafa.ssl.factory,
   fafafa.ssl.winssl.base;
 
@@ -55,6 +56,16 @@ begin
     Inc(GTestsFailed);
     WriteLn('  ✗ FAILED: ', AMessage);
   end;
+end;
+
+function IsUnsupportedCipherMessage(const AMessage: string): Boolean;
+var
+  LLower: string;
+begin
+  LLower := LowerCase(AMessage);
+  Result := (Pos('unsupported', LLower) > 0) or
+    (Pos('supportscustomciphersuites', LLower) > 0) or
+    (Pos('不支持', AMessage) > 0);
 end;
 
 procedure TestContextCreation;
@@ -194,7 +205,7 @@ procedure TestCipherConfiguration;
 var
   LContext: ISSLContext;
   LConfig: TSSLConfig;
-  LCipherList: string;
+  LRejected: Boolean;
 begin
   WriteLn('【测试 4】密码套件配置');
   WriteLn('---');
@@ -207,14 +218,31 @@ begin
 
     LContext := TSSLFactory.CreateContext(LConfig);
 
-    // 测试设置密码列表
-    LContext.SetCipherList('HIGH:!aNULL:!MD5');
-    LCipherList := LContext.GetCipherList;
-    Assert(LCipherList = 'HIGH:!aNULL:!MD5', '密码列表设置成功');
+    LRejected := False;
+    try
+      LContext.SetCipherList('HIGH:!aNULL:!MD5');
+    except
+      on E: ESSLException do
+      begin
+        Assert(IsUnsupportedCipherMessage(E.Message),
+          'WinSSL custom cipher-list rejection reports unsupported semantics');
+        LRejected := True;
+      end;
+    end;
+    Assert(LRejected, 'WinSSL custom cipher-list override is rejected');
 
-    // 测试设置密码套件
-    LContext.SetCipherSuites('TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256');
-    Assert(LContext.GetCipherSuites <> '', '密码套件设置成功');
+    LRejected := False;
+    try
+      LContext.SetCipherSuites('TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256');
+    except
+      on E: ESSLException do
+      begin
+        Assert(IsUnsupportedCipherMessage(E.Message),
+          'WinSSL custom cipher-suites rejection reports unsupported semantics');
+        LRejected := True;
+      end;
+    end;
+    Assert(LRejected, 'WinSSL custom cipher-suites override is rejected');
 
   except
     on E: Exception do

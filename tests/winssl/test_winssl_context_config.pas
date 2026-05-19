@@ -9,6 +9,7 @@ uses
   SysUtils, Classes,
 
   fafafa.ssl.base,
+  fafafa.ssl.exceptions,
   fafafa.ssl.winssl.lib;
 
 var
@@ -25,6 +26,16 @@ procedure TestFail(const ATestName, AReason: string);
 begin
   Inc(TestsFailed);
   WriteLn('[FAIL] ', ATestName, ': ', AReason);
+end;
+
+function IsUnsupportedCipherMessage(const AMessage: string): Boolean;
+var
+  LLower: string;
+begin
+  LLower := LowerCase(AMessage);
+  Result := (Pos('unsupported', LLower) > 0) or
+    (Pos('supportscustomciphersuites', LLower) > 0) or
+    (Pos('不支持', AMessage) > 0);
 end;
 
 // ============================================================================
@@ -100,7 +111,7 @@ procedure TestSetCipherListBasic;
 var
   LLib: ISSLLibrary;
   LContext: ISSLContext;
-  LCipherList: string;
+  LRejected: Boolean;
 begin
   WriteLn('=== Test: SetCipherList 基本功能 ===');
 
@@ -114,16 +125,22 @@ begin
 
     LContext := LLib.CreateContext(sslCtxClient);
 
-    // 设置密码套件列表
-    LContext.SetCipherList('TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384');
+    LRejected := False;
+    try
+      LContext.SetCipherList('TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384');
+    except
+      on E: ESSLException do
+      begin
+        if not IsUnsupportedCipherMessage(E.Message) then
+          raise;
+        LRejected := True;
+      end;
+    end;
 
-    // 获取密码套件列表
-    LCipherList := LContext.GetCipherList;
-
-    if LCipherList = 'TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384' then
-      TestPass('SetCipherList 基本功能 - 设置和获取成功')
+    if LRejected then
+      TestPass('SetCipherList 基本功能 - custom non-default override 正确拒绝')
     else
-      TestFail('SetCipherList 基本功能', '返回值不符合预期');
+      TestFail('SetCipherList 基本功能', 'WinSSL 应拒绝 custom non-default cipher-list override');
 
   except
     on E: Exception do
@@ -138,7 +155,7 @@ procedure TestSetCipherSuitesBasic;
 var
   LLib: ISSLLibrary;
   LContext: ISSLContext;
-  LCipherSuites: string;
+  LRejected: Boolean;
 begin
   WriteLn('=== Test: SetCipherSuites 基本功能 ===');
 
@@ -152,16 +169,22 @@ begin
 
     LContext := LLib.CreateContext(sslCtxClient);
 
-    // 设置 TLS 1.3 密码套件
-    LContext.SetCipherSuites('TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256');
+    LRejected := False;
+    try
+      LContext.SetCipherSuites('TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256');
+    except
+      on E: ESSLException do
+      begin
+        if not IsUnsupportedCipherMessage(E.Message) then
+          raise;
+        LRejected := True;
+      end;
+    end;
 
-    // 获取密码套件
-    LCipherSuites := LContext.GetCipherSuites;
-
-    if LCipherSuites = 'TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256' then
-      TestPass('SetCipherSuites 基本功能 - 设置和获取成功')
+    if LRejected then
+      TestPass('SetCipherSuites 基本功能 - custom non-default override 正确拒绝')
     else
-      TestFail('SetCipherSuites 基本功能', '返回值不符合预期');
+      TestFail('SetCipherSuites 基本功能', 'WinSSL 应拒绝 custom non-default cipher-suites override');
 
   except
     on E: Exception do
@@ -304,17 +327,17 @@ begin
     LContext := LLib.CreateContext(sslCtxClient);
 
     // 组合配置
-    LContext.SetCipherList('TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384');
+    LContext.SetCipherList(SSL_DEFAULT_CIPHER_LIST);
     LContext.SetALPNProtocols('h2,http/1.1');
     LContext.SetSessionCacheSize(500);
     LContext.SetSessionTimeout(7200);
 
     // 验证所有配置
-    if (LContext.GetCipherList = 'TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384') and
+    if (LContext.GetCipherList = SSL_DEFAULT_CIPHER_LIST) and
        (LContext.GetALPNProtocols = 'h2,http/1.1') and
        (LContext.GetSessionCacheSize = 500) and
        (LContext.GetSessionTimeout = 7200) then
-      TestPass('配置方法组合 - 所有配置正确应用')
+      TestPass('配置方法组合 - shipped baseline 与其它已发布配置正确应用')
     else
       TestFail('配置方法组合', '部分配置未正确应用');
 
@@ -331,6 +354,7 @@ procedure TestSecureCipherConfiguration;
 var
   LLib: ISSLLibrary;
   LContext: ISSLContext;
+  LRejected: Boolean;
 begin
   WriteLn('=== Test: 密码套件安全配置 ===');
 
@@ -344,18 +368,33 @@ begin
 
     LContext := LLib.CreateContext(sslCtxClient);
 
-    // 配置强密码套件（仅 TLS 1.2+ 和 AES-GCM）
-    LContext.SetCipherList(
-      'TLS_AES_128_GCM_SHA256:' +
-      'TLS_AES_256_GCM_SHA384:' +
-      'ECDHE-RSA-AES128-GCM-SHA256:' +
-      'ECDHE-RSA-AES256-GCM-SHA384'
-    );
+    LRejected := False;
+    try
+      LContext.SetCipherList(
+        'TLS_AES_128_GCM_SHA256:' +
+        'TLS_AES_256_GCM_SHA384:' +
+        'ECDHE-RSA-AES128-GCM-SHA256:' +
+        'ECDHE-RSA-AES256-GCM-SHA384'
+      );
+    except
+      on E: ESSLException do
+      begin
+        if not IsUnsupportedCipherMessage(E.Message) then
+          raise;
+        LRejected := True;
+      end;
+    end;
+
+    if not LRejected then
+    begin
+      TestFail('密码套件安全配置', 'WinSSL 应拒绝 custom non-default cipher-list override');
+      Exit;
+    end;
 
     // 配置现代协议
     LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
 
-    TestPass('密码套件安全配置 - 强加密配置成功');
+    TestPass('密码套件安全配置 - custom override 正确拒绝，协议收紧仍可用');
 
   except
     on E: Exception do

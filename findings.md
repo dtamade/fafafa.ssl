@@ -2,6 +2,72 @@
 
 ## 2026-05-19
 
+- 继续从 callback/runtime drift 往下压后，又确认了一条同样属于“capability 先说支持、实现其实没接通”的问题族：
+  - `SupportsCustomCipherSuites`
+  - `SetCipherList(...)`
+  - `SetCipherSuites(...)`
+
+- 这条问题的关键不只是：
+  - `FreePascal` 之前把 `SupportsCustomCipherSuites` 发成了 `True`
+  - 而是 coarse-grained custom-cipher truth 在多个 backend 上都不一致：
+  - `OpenSSL` 虽然有 runtime apply，但仍依赖：
+    - `SSL_CTX_set_cipher_list`
+    - `SSL_CTX_set_ciphersuites`
+    helper 是否真的存在
+  - `FreePascal` / `WinSSL` / `MbedTLS` / `WolfSSL`
+    则都只是 storage-only / system-policy-only 路径，custom non-default override 没有真实 runtime wiring
+
+- 如果继续保持旧语义，风险非常实际：
+  - 调用方先看到：
+    - `ISSLLibrary.GetCapabilities.SupportsCustomCipherSuites=True`
+  - 然后在 custom override 时要么 silent ignore，要么 storage-only，要么 helper 不全时悄悄降级
+  - 这等于把“能力是否真发布”变成了 runtime 猜谜
+
+- 这批里最重要的 nuance 不是“一刀切禁掉所有 setter”，而是把：
+  - shipped baseline defaults
+  - caller 自定义 override
+  真正分开
+
+- 当前最小正确修法因此是：
+  - `OpenSSL` 新增 shared runtime gate：
+    - `OpenSSLPublishedCustomCipherSurfaceReady`
+  - `OpenSSL` 只有在 TLS 1.2 / TLS 1.3 两条 helper 都齐时，才发布：
+    - `SupportsCustomCipherSuites=True`
+  - `FreePascal` / `WinSSL` / `MbedTLS` / `WolfSSL`
+    当前统一发布：
+    - `SupportsCustomCipherSuites=False`
+  - 各 backend setter 统一回到：
+    - custom non-default override -> fail-closed `unsupported`
+    - empty clear / shipped baseline defaults -> 继续允许作为 compatibility/default-context path
+
+- 这里保留 shipped baseline defaults 是有必要的：
+  - 否则 factory / direct-library / builder 的默认安全基线会被这批修法误伤
+  - 但保留 baseline defaults 不等于继续对外承诺：
+    - “支持 caller 自定义 cipher override”
+
+- focused runtime proof 也已经补上，避免以后又回到静态猜测：
+  - `OpenSSL` 正常 helper 完整时：
+    - `SupportsCustomCipherSuites=True`
+    - custom non-default override 可用
+  - 动态去掉：
+    - `SSL_CTX_set_ciphersuites`
+    后：
+    - `SupportsCustomCipherSuites` 会回落为 `False`
+    - custom non-default TLS 1.2 / TLS 1.3 override 都会 fail-closed
+    - shipped baseline defaults 仍然可走 compatibility path
+  - `FreePascal` / `MbedTLS` / `WolfSSL`
+    当前 runtime proof 也已压实：
+    - capability false
+    - custom non-default override rejected
+    - baseline defaults retained
+
+- 这批收口后的新基线应明确保留：
+  - `SupportsCustomCipherSuites` 不再是 coarse bool 撒谎源
+  - default-context shipped baseline 与 custom override 已被区分
+  - WinSSL / MbedTLS 专项文档和旧测试也不再继续误教：
+    - `SetCipherList(...)`
+    - `SetCipherSuites(...)`
+    作为当前已发布的 backend tuning 手段
 - 继续从文档收尾切回 implementation completeness 后，当前最有价值的新问题已经从“表述漂移”升级成了真正的 capability/runtime 撒谎：
   - `src/fafafa.ssl.openssl.backed.pas`
     之前无条件发布：

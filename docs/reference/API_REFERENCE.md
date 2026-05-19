@@ -322,6 +322,7 @@ ISSLContext = interface
   procedure SetVerifyCallback(aCallback: TSSLVerifyCallback);
 
   // 密码套件
+  // 在调用 `SetCipherList(...)` / `SetCipherSuites(...)` 传入 custom non-default cipher override 前，先检查 `ISSLLibrary.GetCapabilities.SupportsCustomCipherSuites`；对 `SupportsCustomCipherSuites=False` 的 backend，custom non-default 赋值应抛出 `unsupported`，empty clear 与 shipped baseline defaults 仅作为 compatibility/default-context path。
   procedure SetCipherList(const aCipherList: string);
   function GetCipherList: string;
   procedure SetCipherSuites(const aCipherSuites: string);

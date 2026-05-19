@@ -46,6 +46,8 @@ Ctx := TSSLContextBuilder.Create
 | 3DES | ⚠️ 可选 | 不推荐 |
 | RC4 | ❌ 禁用 | 安全原因 |
 
+| Custom cipher configuration | ❌ 不支持 | 当前由系统 Schannel policy / Windows cipher order 决定；custom non-default `SetCipherList` / `SetCipherSuites` 会 fail-closed 为 unsupported |
+
 ### 密钥交换
 
 | 算法 | 支持状态 | 说明 |

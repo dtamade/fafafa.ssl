@@ -1138,7 +1138,7 @@ begin
   Result.SupportsPasswordProtectedKeys := LPasswordProtectedKeysReady;
 
   // ----- 扩展性 -----
-  Result.SupportsCustomCipherSuites := True;
+  Result.SupportsCustomCipherSuites := OpenSSLPublishedCustomCipherSurfaceReady;
   Result.SupportsCallbacks := OpenSSLPublishedContextCallbackSurfaceReady;
 
   // ----- 兼容性和质量 -----

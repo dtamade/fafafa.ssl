@@ -615,6 +615,7 @@ begin
   Result.SupportsPasswordProtectedKeys := True;  // current published path is password-protected PFX/P12 import; PEM private-key password path remains unsupported
 
   // 扩展性
+  Result.SupportsCustomCipherSuites := False;  // current WinSSL runtime follows Schannel/system policy and does not publish custom non-default cipher overrides
   Result.SupportsCallbacks := True;  // verify/info callback runtime paths are consumed by the WinSSL connection layer
 
   // 兼容性（WinSSL 行为依赖 Windows 版本）

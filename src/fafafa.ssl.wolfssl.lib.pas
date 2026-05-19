@@ -516,6 +516,7 @@ begin
   Result.SupportsPasswordProtectedKeys := False;  // no shipped password bridge consumes non-empty APassword on current WolfSSL runtime paths
 
   // 扩展性
+  Result.SupportsCustomCipherSuites := False;  // custom non-default cipher overrides are not wired into the current WolfSSL runtime path
   Result.SupportsCallbacks := False;  // verify/password/info setters are not wired into WolfSSL runtime paths yet
 
   // 兼容性（WolfSSL 与 OpenSSL 兼容性较好）

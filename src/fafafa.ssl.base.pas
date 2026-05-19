@@ -997,6 +997,8 @@ type
         @param ACallback 验证回调函数 *}
     procedure SetVerifyCallback(ACallback: TSSLVerifyCallback);
 
+    {** 自定义密码套件可用性说明
+        在调用 SetCipherList(...) / SetCipherSuites(...) 传入 custom non-default cipher override 前，先检查 ISSLLibrary.GetCapabilities.SupportsCustomCipherSuites；对 SupportsCustomCipherSuites=False 的 backend，custom non-default 赋值应抛出 unsupported，empty clear 与 shipped baseline defaults 仅作为 compatibility/default-context path。 *}
     {** 设置密码套件列表（TLS 1.2 及以下）
         @param ACipherList OpenSSL 格式的密码套件字符串 *}
     procedure SetCipherList(const ACipherList: string);

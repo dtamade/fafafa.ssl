@@ -2,6 +2,145 @@
 
 ## 2026-05-19
 
+### Custom Cipher Capability Truth Alignment
+
+- add `docs/plans/2026-05-19-custom-cipher-capability-truth-alignment.md`
+  - change:
+    - define the bounded implementation batch for custom-cipher capability truth, setter fail-closed semantics, and shipped-baseline compatibility retention
+
+- add `tests/scripts/test_custom_cipher_capability_truth_contract.sh`
+  - change:
+    - lock that:
+      - base/API docs record the current custom-cipher fail-closed rule
+      - OpenSSL published truth now follows shared runtime helper readiness
+      - FreePascal / WinSSL / MbedTLS / WolfSSL publish `SupportsCustomCipherSuites=False`
+      - unpublished custom-cipher backends reject custom non-default setter assignments
+      - WinSSL / MbedTLS active docs no longer teach unsupported custom-cipher tuning
+
+- add `tests/test_backend_custom_cipher_capability_truth_contract.pas`
+  - change:
+    - prove:
+      - current OpenSSL ready path still publishes custom-cipher support and accepts custom non-default overrides
+      - unpublished backends keep shipped baseline defaults but reject custom non-default overrides
+      - factory/direct-library config paths also reject custom non-default overrides while capability is unpublished
+      - removing `SSL_CTX_set_ciphersuites` drops OpenSSL back to fail-closed capability truth
+
+- update `src/fafafa.ssl.openssl.api.ssl.pas`
+  - change:
+    - add shared `OpenSSLPublishedCustomCipherSurfaceReady` helper
+
+- update `src/fafafa.ssl.openssl.backed.pas`
+  - change:
+    - replace unconditional `SupportsCustomCipherSuites=True` publication with the shared runtime custom-cipher gate
+
+- update `src/fafafa.ssl.openssl.context.pas`
+  - change:
+    - distinguish shipped baseline defaults from custom non-default overrides
+    - gate custom non-default `SetCipherList` / `SetCipherSuites` assignments behind the published custom-cipher surface
+    - keep empty clear / shipped baseline defaults available as compatibility/default-context path
+
+- update `src/fafafa.ssl.freepascal.lib.pas`
+  - change:
+    - publish `SupportsCustomCipherSuites=False`
+
+- update `src/fafafa.ssl.freepascal.context.pas`
+  - change:
+    - reject custom non-default cipher-list / cipher-suites overrides as unsupported
+    - keep empty clear / shipped baseline defaults as compatibility/default-context path
+
+- update `src/fafafa.ssl.winssl.lib.pas`
+  - change:
+    - publish `SupportsCustomCipherSuites=False`
+
+- update `src/fafafa.ssl.winssl.context.pas`
+  - change:
+    - reject custom non-default cipher-list / cipher-suites overrides as unsupported
+    - keep empty clear / shipped baseline defaults as compatibility/default-context path
+
+- update `src/fafafa.ssl.mbedtls.lib.pas`
+  - change:
+    - publish `SupportsCustomCipherSuites=False`
+
+- update `src/fafafa.ssl.mbedtls.context.pas`
+  - change:
+    - reject custom non-default cipher-list / cipher-suites overrides as unsupported
+    - keep empty clear / shipped baseline defaults as compatibility/default-context path
+
+- update `src/fafafa.ssl.wolfssl.lib.pas`
+  - change:
+    - publish `SupportsCustomCipherSuites=False`
+
+- update `src/fafafa.ssl.wolfssl.context.pas`
+  - change:
+    - reject custom non-default cipher-list / cipher-suites overrides as unsupported
+    - keep empty clear / shipped baseline defaults as compatibility/default-context path
+
+- update `src/fafafa.ssl.base.pas`
+  - change:
+    - document the current `SupportsCustomCipherSuites` fail-closed rule directly on the public interface surface
+
+- update docs:
+  - `docs/BACKEND_CAPABILITY_MATRIX.md`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  - `docs/reference/WINSSL_PERFORMANCE_TUNING.md`
+  - `docs/guides/WINSSL_BEST_PRACTICES.md`
+  - `docs/guides/MBEDTLS_USER_GUIDE.md`
+  - change:
+    - record current custom-cipher truth
+    - remove WinSSL / MbedTLS active examples that still taught unsupported backend-specific custom-cipher tuning
+
+- update focused tests/doc-truth residues:
+  - `tests/test_direct_library_default_config_parity.pas`
+  - `tests/mbedtls/test_mbedtls_server_accept_simple.pas`
+  - `tests/winssl/test_winssl_context_config.pas`
+  - `tests/winssl/test_winssl_context_comprehensive.pas`
+  - `tests/unit/test_winssl_comprehensive.pas`
+  - change:
+    - stop assuming WinSSL / FreePascal / MbedTLS custom non-default cipher overrides are published capabilities
+    - keep shipped baseline defaults where that is the real compatibility/default-context path
+
+- `bash -n tests/scripts/test_custom_cipher_capability_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new custom-cipher truth contract syntax is valid
+
+- `bash tests/scripts/test_custom_cipher_capability_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - initial RED first exposed that `API_REFERENCE` still lacked the exact custom-cipher fail-closed wording required by the new contract
+    - a second RED exposed shell command-substitution noise on backtick-containing literal patterns inside the new contract, which was fixed before final verification
+    - GREEN after fix proves source/docs truth now locks runtime-gated OpenSSL publication, false-backend fail-closed setter semantics, and corrected WinSSL / MbedTLS active docs
+
+- `fpc -B -Fu./src -Fu./tests -FUtmp/test_custom_cipher_truth -FEtmp/test_custom_cipher_truth -otmp/test_custom_cipher_truth/test_backend_custom_cipher_capability_truth_contract tests/test_backend_custom_cipher_capability_truth_contract.pas`
+  - result: PASS with existing repository warnings
+  - summary:
+    - focused custom-cipher runtime contract compiled successfully after capability/setter truth alignment
+
+- `./tmp/test_custom_cipher_truth/test_backend_custom_cipher_capability_truth_contract`
+  - result: PASS
+  - summary:
+    - runtime proof now confirms:
+      - current OpenSSL ready path still publishes custom-cipher support and accepts custom non-default overrides
+      - FreePascal / MbedTLS / WolfSSL reject custom non-default overrides while keeping shipped baseline defaults
+      - factory/direct-library config paths reject custom non-default overrides when capability is unpublished
+      - removing `SSL_CTX_set_ciphersuites` drops OpenSSL back to fail-closed custom-cipher publication truth
+
+- `fpc -B -Fu./src -Fu./tests -FUtmp/test_direct_library_default_config_parity -FEtmp/test_direct_library_default_config_parity -otmp/test_direct_library_default_config_parity/test_direct_library_default_config_parity tests/test_direct_library_default_config_parity.pas`
+  - result: PASS with existing repository warnings
+  - summary:
+    - updated direct-library default-config parity contract still compiles after narrowing FreePascal custom-cipher publication
+
+- `./tmp/test_direct_library_default_config_parity/test_direct_library_default_config_parity`
+  - result: PASS
+  - summary:
+    - direct-library default-config parity now explicitly keeps shipped cipher baselines on unpublished custom-cipher backends while preserving the rest of the default-config projection
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - custom-cipher truth batch is whitespace-clean after final source/doc/test sync
+
 ### OpenSSL Callback Publication Runtime Gate
 
 - add `docs/plans/2026-05-19-openssl-callback-publication-runtime-gate.md`

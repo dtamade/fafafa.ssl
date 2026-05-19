@@ -82,6 +82,8 @@ type
     function PEMToDER(const APEM: string): TBytes;
     procedure RejectUnsupportedCallbackAssignment(
       const AFeature, AMethodName: string);
+    procedure RejectUnsupportedCustomCipherAssignment(
+      const AFeature, AMethodName: string);
 
   public
     constructor Create(ALibrary: ISSLLibrary; AType: TSSLContextType);
@@ -1038,8 +1040,13 @@ end;
 // ISSLContext - 密码套件配置
 // ============================================================================
 
+function IsCustomCipherListOverride(const ACipherList: string): Boolean; forward;
+function IsCustomCipherSuitesOverride(const ACipherSuites: string): Boolean; forward;
+
 procedure TWinSSLContext.SetCipherList(const ACipherList: string);
 begin
+  if IsCustomCipherListOverride(ACipherList) then
+    RejectUnsupportedCustomCipherAssignment('Cipher list', 'TWinSSLContext.SetCipherList');
   FCipherList := ACipherList;
 end;
 
@@ -1050,6 +1057,8 @@ end;
 
 procedure TWinSSLContext.SetCipherSuites(const ACipherSuites: string);
 begin
+  if IsCustomCipherSuitesOverride(ACipherSuites) then
+    RejectUnsupportedCustomCipherAssignment('Cipher suites', 'TWinSSLContext.SetCipherSuites');
   FCipherSuites := ACipherSuites;
   // TLS 1.3 密码套件在Windows 10/Server 2019+支持
   // Schannel会自动选择合适的密码套件
@@ -1164,6 +1173,32 @@ begin
   raise ESSLConfigurationException.CreateWithContext(
     Format('%s is not published by the current WinSSL backend runtime. ' +
       'The current WinSSL callback surface only publishes verify/info paths.',
+      [AFeature]),
+    sslErrUnsupported,
+    AMethodName,
+    0,
+    sslWinSSL
+  );
+end;
+
+function IsCustomCipherListOverride(const ACipherList: string): Boolean;
+begin
+  Result := (Trim(ACipherList) <> '') and
+    (not SameText(Trim(ACipherList), SSL_DEFAULT_CIPHER_LIST));
+end;
+
+function IsCustomCipherSuitesOverride(const ACipherSuites: string): Boolean;
+begin
+  Result := (Trim(ACipherSuites) <> '') and
+    (not SameText(Trim(ACipherSuites), SSL_DEFAULT_TLS13_CIPHERSUITES));
+end;
+
+procedure TWinSSLContext.RejectUnsupportedCustomCipherAssignment(
+  const AFeature, AMethodName: string);
+begin
+  raise ESSLConfigurationException.CreateWithContext(
+    Format('%s is not published by the current WinSSL backend runtime. ' +
+      'Check ISSLLibrary.GetCapabilities.SupportsCustomCipherSuites before installing a custom non-default cipher override.',
       [AFeature]),
     sslErrUnsupported,
     AMethodName,

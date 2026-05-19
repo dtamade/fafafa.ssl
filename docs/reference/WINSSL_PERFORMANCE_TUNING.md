@@ -270,29 +270,20 @@ end;
 
 ### 配置建议
 
-**高性能配置**（优先 AES-GCM）:
-```pascal
-LContext.SetCipherSuites('TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384');
-```
+当前 WinSSL backend 不发布 custom cipher suite override；应通过 Windows cipher order / TLS policy 调整，而不是调用 `SetCipherSuites(...)` / `SetCipherList(...)`。
 
-**平衡配置**（兼容性 + 性能）:
-```pascal
-LContext.SetCipherSuites(
-  'TLS_AES_128_GCM_SHA256:' +
-  'TLS_AES_256_GCM_SHA384:' +
-  'ECDHE-RSA-AES128-GCM-SHA256:' +
-  'ECDHE-RSA-AES256-GCM-SHA384'
-);
-```
+**高性能调优**:
+- 在 Windows / Schannel 层优先启用 AES-GCM
+- 保持 TLS 1.2 / TLS 1.3 为主
+- 让系统 cipher order 与目标主机 CPU 能力一致
 
-**移动设备配置**（ChaCha20 优先）:
-```pascal
-// 移动设备通常没有 AES 硬件加速
-LContext.SetCipherSuites(
-  'TLS_CHACHA20_POLY1305_SHA256:' +
-  'TLS_AES_128_GCM_SHA256'
-);
-```
+**平衡配置**:
+- 通过系统策略同时保留 TLS 1.3 AES-GCM 与常见 ECDHE AES-GCM 套件
+- 不要在应用层试图覆盖 WinSSL 的 cipher order
+
+**移动设备兼容**:
+- 如果目标主要是移动端，优先确认系统是否已启用 ChaCha20-Poly1305
+- 仍通过系统策略 / OS 配置完成，而不是通过 `SetCipherSuites(...)`
 
 ---
 

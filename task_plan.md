@@ -10,6 +10,58 @@
 
 ## Current Status
 
+- [completed] Custom cipher capability truth alignment 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-custom-cipher-capability-truth-alignment.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_custom_cipher_capability_truth_contract.sh`
+    - `tests/test_backend_custom_cipher_capability_truth_contract.pas`
+  - 当前已修正的真实 implementation/capability drift：
+    - `src/fafafa.ssl.openssl.backed.pas`
+      不再无条件发布：
+      - `SupportsCustomCipherSuites=True`
+    - `OpenSSL` custom-cipher capability 现在统一跟随共享 runtime gate：
+      - `SSL_CTX_set_cipher_list`
+      - `SSL_CTX_set_ciphersuites`
+    - `src/fafafa.ssl.freepascal.lib.pas`
+      不再继续误发：
+      - `SupportsCustomCipherSuites=True`
+    - `src/fafafa.ssl.freepascal.context.pas`
+      - `src/fafafa.ssl.winssl.context.pas`
+      - `src/fafafa.ssl.mbedtls.context.pas`
+      - `src/fafafa.ssl.wolfssl.context.pas`
+      的 `SetCipherList` / `SetCipherSuites` 现在统一回到：
+      - custom non-default override -> fail-closed `unsupported`
+      - empty clear / shipped baseline defaults -> 继续允许作为 compatibility/default-context path
+  - 当前已同步收口的 docs/test truth：
+    - `docs/BACKEND_CAPABILITY_MATRIX.md`
+    - `docs/reference/API_REFERENCE.md`
+    - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+    - `docs/reference/WINSSL_PERFORMANCE_TUNING.md`
+    - `docs/guides/WINSSL_BEST_PRACTICES.md`
+    - `docs/guides/MBEDTLS_USER_GUIDE.md`
+    - 以及被旧心智污染的：
+      - `tests/test_direct_library_default_config_parity.pas`
+      - `tests/mbedtls/test_mbedtls_server_accept_simple.pas`
+      - `tests/winssl/test_winssl_context_config.pas`
+      - `tests/winssl/test_winssl_context_comprehensive.pas`
+      - `tests/unit/test_winssl_comprehensive.pas`
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_custom_cipher_capability_truth_contract.sh`
+    - `bash tests/scripts/test_custom_cipher_capability_truth_contract.sh`
+    - `fpc -B -Fu./src -Fu./tests -FUtmp/test_custom_cipher_truth -FEtmp/test_custom_cipher_truth -otmp/test_custom_cipher_truth/test_backend_custom_cipher_capability_truth_contract tests/test_backend_custom_cipher_capability_truth_contract.pas`
+    - `./tmp/test_custom_cipher_truth/test_backend_custom_cipher_capability_truth_contract`
+    - `fpc -B -Fu./src -Fu./tests -FUtmp/test_direct_library_default_config_parity -FEtmp/test_direct_library_default_config_parity -otmp/test_direct_library_default_config_parity/test_direct_library_default_config_parity tests/test_direct_library_default_config_parity.pas`
+    - `./tmp/test_direct_library_default_config_parity/test_direct_library_default_config_parity`
+    - `git diff --check`
+  - 当前结论：
+    - 这批收掉的是一个真实 implementation/capability drift，不是文档措辞问题
+    - 关键新基线不是“所有 cipher setter 都彻底禁掉”，而是：
+      - custom non-default override 必须跟 capability/public truth 对齐
+      - shipped baseline defaults 继续作为 default-context compatibility path
+    - 后续继续扫接口/后端完整性时，应优先找这种：
+      - capability 已发布
+      - 但 setter/runtime 还在 storage-only / helper-missing / system-policy-only 路径上
 - [completed] OpenSSL callback publication runtime gate 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-openssl-callback-publication-runtime-gate.md`

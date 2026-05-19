@@ -555,6 +555,7 @@ begin
   Result.SupportsPasswordProtectedKeys := True;
 
   // 扩展性
+  Result.SupportsCustomCipherSuites := False;  // custom non-default cipher overrides are not wired into the current MbedTLS runtime path
   Result.SupportsCallbacks := False;  // verify/password/info setters are not wired into MbedTLS runtime paths yet
 
   // 兼容性（MbedTLS 与 OpenSSL 兼容性中等，部分功能需要适配）
