@@ -427,8 +427,8 @@ begin
                 ((FWindowsVersion.Major = 6) and (FWindowsVersion.Minor >= 1));  // Win 7+
       
     sslProtocolTLS13:
-      // TLS 1.3 在 Windows 10 Build 20348+ 和 Windows 11 支持
-      Result := (FWindowsVersion.Major >= 10) and (FWindowsVersion.Build >= 20348);
+      // TLS 1.3 在 Windows 10 Build 18362+ / Windows 11+ 支持
+      Result := (FWindowsVersion.Major >= 10) and (FWindowsVersion.Build >= 18362);
       
     sslProtocolDTLS10,
     sslProtocolDTLS12:

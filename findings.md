@@ -2,6 +2,67 @@
 
 ## 2026-05-20
 
+- `WinSSL TLS 1.3`
+  这次暴露的不是 docs drift，
+  而是
+  同一 backend
+  内部两个 truth source
+  已经直接分叉：
+  - `GetCapabilities.SupportsTLS13`
+  - `IsProtocolSupported(sslProtocolTLS13)`
+
+- 这类问题比单文件文档漂移更危险，
+  因为它会让：
+  - backend selector
+  - capability-based branching
+  - runtime feature checks
+  在同一运行环境里
+  得到互相冲突的结论
+
+- 也就是说，
+  backend 审查
+  不能只看
+  docs/source
+  是否一致，
+  还要看
+  source 内部
+  的多个 published truth channel
+  是否一致：
+  - bool capability field
+  - runtime probe API
+  - 测试叙事
+
+- `SupportsTLS13`
+  和
+  `IsProtocolSupported(sslProtocolTLS13)`
+  这种组合
+  尤其关键，
+  因为顶层文档已经明确：
+  - `SupportsTLS13`
+    就是当前
+    `TLS 1.3`
+    的主 bool truth
+  如果 runtime protocol probe
+  继续用另一套门槛，
+  那么调用方即使完全按文档使用，
+  也会得到自相矛盾结果
+
+- 这批也说明，
+  测试文案本身
+  也是开发路线的一部分。
+  当
+  `test_winssl_unit_comprehensive.pas`
+  还在说
+  `Windows 11`
+  才支持
+  `TLS 1.3`
+  时，
+  它会把后来的人继续带回旧认知，
+  即使 capability docs
+  和一半 source
+  已经走到
+  `Windows 10 1903+`
+
 - `MbedTLS TLS 1.3`
   这次暴露的是
   dedicated backend page

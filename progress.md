@@ -4,6 +4,69 @@
 
 ## 2026-05-20
 
+### WinSSL TLS 1.3 Capability Consistency Alignment
+
+- `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py /home/dtamade/projects/fafafa.ssl`
+  - result: PASS
+  - summary:
+    - no catchup output surfaced
+    - current batch could proceed from the live worktree without session-recovery repair
+
+- `mcp__ace_tool__.search_context(...)`
+- `sed -n '40,170p' docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+- `rg -n "SupportsTLS13 := \\(FWindowsVersion\\.Major >= 10\\) and \\(FWindowsVersion\\.Build >= 18362\\)|sslProtocolTLS13:|20348|18362|1903" src/fafafa.ssl.winssl.lib.pas tests docs/BACKEND_CAPABILITY_MATRIX.md docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md -S`
+- `sed -n '418,438p' src/fafafa.ssl.winssl.lib.pas`
+- `sed -n '500,540p' src/fafafa.ssl.winssl.lib.pas`
+- `sed -n '132,148p' tests/winssl/test_winssl_unit_comprehensive.pas`
+  - result: PASS
+  - summary:
+    - confirmed a real source-level inconsistency:
+      - `SupportsTLS13` already used `Build >= 18362`
+      - dedicated/canonical docs already anchored WinSSL TLS 1.3 to `Windows 10 1903+`
+      - but `IsProtocolSupported(sslProtocolTLS13)` still used the stricter `Build >= 20348`
+      - the comprehensive WinSSL unit test still carried a stale
+        `Windows 11`
+        TLS 1.3 narrative
+
+- add `docs/plans/2026-05-20-winssl-tls13-capability-consistency-alignment.md`
+- add `tests/scripts/test_winssl_tls13_capability_consistency_contract.sh`
+  - change:
+    - recorded a bounded WinSSL TLS 1.3 consistency batch
+    - added a focused contract freezing:
+      - capability-record TLS 1.3 gate
+      - runtime protocol-probe TLS 1.3 gate
+      - canonical/dedicated doc 1903+ truth
+      - unit-test wording truth
+
+- `bash -n tests/scripts/test_winssl_tls13_capability_consistency_contract.sh`
+  - result: PASS
+  - summary:
+    - new WinSSL TLS 1.3 consistency contract syntax was valid
+
+- `bash tests/scripts/test_winssl_tls13_capability_consistency_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - first RED proved the live source drift:
+      - `IsProtocolSupported(sslProtocolTLS13)` still carried the older stricter gate
+    - GREEN after the source/test update proves:
+      - `SupportsTLS13`
+        and
+        `IsProtocolSupported(sslProtocolTLS13)`
+        now share the same `Build >= 18362` truth
+      - WinSSL unit-test wording no longer misclassifies TLS 1.3 as Windows 11-only
+
+- update source/test:
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `tests/winssl/test_winssl_unit_comprehensive.pas`
+  - change:
+    - rewrote the TLS 1.3 runtime protocol gate from `20348` to `18362`
+    - rewrote the WinSSL comprehensive test comments/labels to `Windows 10 1903+`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remain after the WinSSL TLS 1.3 consistency closeout
+
 ### MbedTLS TLS 1.3 Capability Doc Truth Alignment
 
 - `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py /home/dtamade/projects/fafafa.ssl`

@@ -134,12 +134,12 @@ begin
   // Test 7: Check TLS 1.2 support
   Test('TLS 1.2 supported', LLib.IsProtocolSupported(sslProtocolTLS12));
 
-  // Test 8: Check TLS 1.3 support (Windows 11+)
-  // Note: This may fail on Windows 10, which is acceptable
+  // Test 8: Check TLS 1.3 support (Windows 10 1903+)
+  // Note: This may fail on pre-1903 Windows 10 or older releases, which is acceptable
   if LLib.IsProtocolSupported(sslProtocolTLS13) then
-    Test('TLS 1.3 supported (Windows 11)', True)
+    Test('TLS 1.3 supported (Windows 10 1903+ or later)', True)
   else
-    Test('TLS 1.3 not supported (Windows 10 or earlier)', True);
+    Test('TLS 1.3 not supported (pre-1903 Windows 10 or older)', True);
 
   // Test 9: Multiple initialize calls should be safe
   Test('Re-initialize is safe', LLib.Initialize);

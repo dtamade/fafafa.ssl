@@ -10,6 +10,107 @@
 
 ## Current Status
 
+- [completed] `winssl tls13 capability consistency alignment`
+  当前 focused 目标：
+  - 收掉
+    `WinSSL`
+    在同一能力主题下
+    自己互相打架的 source truth：
+    - `SupportsTLS13`
+      走
+      `18362`
+    - `IsProtocolSupported(sslProtocolTLS13)`
+      却走
+      `20348`
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-winssl-tls13-capability-consistency-alignment.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_winssl_tls13_capability_consistency_contract.sh`
+  - 收口源码：
+    - `src/fafafa.ssl.winssl.lib.pas`
+  - 收口测试说明：
+    - `tests/winssl/test_winssl_unit_comprehensive.pas`
+  当前预判：
+  - canonical matrix
+    与
+    dedicated WinSSL page
+    都已经把
+    `TLS 1.3`
+    写成
+    `Windows 10 1903+`
+    这条条件 truth
+  - 但 source 内部
+    却分叉成：
+    - capability record
+      `18362`
+    - runtime protocol probe
+      `20348`
+  - 这说明问题已经不是 docs drift，
+    而是 backend 实现
+    自己破坏了
+    `GetCapabilities`
+    和
+    `IsProtocolSupported(...)`
+    的一致性约束
+  当前验证策略：
+  - 用 focused shell contract
+    同时冻结：
+    - `SupportsTLS13`
+      的
+      `18362`
+      truth
+    - `sslProtocolTLS13`
+      的门槛必须和前者一致
+    - canonical / dedicated docs
+      继续锚定
+      `1903+`
+    - WinSSL comprehensive unit test
+      不能再保留
+      `Windows 11-only`
+      旧叙事
+  当前最终收口证据：
+  - 新 contract 第一次 RED
+    就直接打在：
+    - `IsProtocolSupported(sslProtocolTLS13)`
+      旁边的旧注释
+    说明当前 source
+    仍沿用旧的更严格 TLS 1.3 门槛
+  - GREEN 后证明：
+    - `SupportsTLS13`
+      与
+      `IsProtocolSupported(sslProtocolTLS13)`
+      已统一回到
+      `Build >= 18362`
+    - WinSSL unit test
+      也不再继续暗示
+      只有
+      `Windows 11`
+      才支持
+      `TLS 1.3`
+  focused verification 已通过：
+  - `bash -n tests/scripts/test_winssl_tls13_capability_consistency_contract.sh`
+  - `bash tests/scripts/test_winssl_tls13_capability_consistency_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - 这批收掉的是
+    WinSSL backend
+    的真实 capability/runtime inconsistency，
+    不是单纯文档措辞问题
+  当前下一条真实工作：
+  - 继续审查剩余 candidate
+    是否还有
+    “docs 已经对了，
+    但 source / test / capability probe
+    彼此分叉”
+    的问题
+  - 下一优先队列：
+    - `MbedTLS`:
+      `Ed25519`
+      `异步操作`
+    - `WinSSL`:
+      `Windows 7 SP1`
+      平台支持表
 - [completed] `mbedtls tls13 capability doc truth alignment`
   当前 focused 目标：
   - 收掉
