@@ -2,6 +2,128 @@
 
 ## 2026-05-19
 
+### WinSSL Native-Probe Handle Metadata
+
+- add `docs/plans/2026-05-19-winssl-native-probe-handle-metadata.md`
+  - change:
+    - define the bounded follow-up batch that records backend/validity/raw-handle metadata before the risky Schannel query
+
+- add `tests/scripts/test_winssl_native_probe_handle_metadata_contract.sh`
+  - change:
+    - lock readable backend-type evidence
+    - lock `IsNativeHandleValid`
+    - lock `dwLower` / `dwUpper` logging
+
+- `bash -n tests/scripts/test_winssl_native_probe_handle_metadata_contract.sh`
+  - result: PASS
+  - summary:
+    - new handle-metadata contract syntax is valid
+
+- `bash tests/scripts/test_winssl_native_probe_handle_metadata_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED:
+      - the probe helper still lacked readable backend/validity/raw-handle metadata
+    - GREEN:
+      - the risky probe path now records backend and handle metadata before the query boundary
+
+- update `tests/winssl/test_winssl_session_resumption.pas`
+  - change:
+    - add `BackendTypeText(...)`
+    - emit `native_probe ... stage=handle_metadata backend=%s handle_valid=%s lower=%s upper=%s`
+
+- `bash tests/scripts/test_winssl_native_probe_stage_markers_contract.sh`
+  - result: PASS
+  - summary:
+    - earlier stage-marker truth remained aligned after adding handle metadata
+
+- `bash tests/scripts/test_winssl_native_probe_worker_quarantine_contract.sh`
+  - result: PASS
+  - summary:
+    - isolated-worker quarantine truth remained aligned after adding handle metadata
+
+- `mkdir -p tmp/winssl_native_probe_handle_metadata_win64 && fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/winssl_native_probe_handle_metadata_win64 -FEtmp/winssl_native_probe_handle_metadata_win64 -otmp/winssl_native_probe_handle_metadata_win64/test_winssl_session_resumption.exe tests/winssl/test_winssl_session_resumption.pas`
+  - result: PASS
+  - summary:
+    - Win64 cross-target compile remained green after adding handle metadata
+    - warning pool increased only by the new `BackendTypeText(...)` case helper unreachable-code warning; no fresh compile failure surfaced
+
+### Live GitHub Follow-up: Closure Truth + Stage Markers
+
+- `gh workflow run wave-b-b2-manual.yml --ref master -f run_id=winssl_closure_truth_20260519_postfix -f strict_closure=false -f winssl_session_host=www.google.com -f winssl_enable_native_probe=true`
+  - result: PASS
+  - summary:
+    - dispatched the first post-fix live run for commit `9a47c33`
+
+- `gh run view 26071188795 --json status,conclusion,headSha,updatedAt,url`
+  - result: PASS
+  - summary:
+    - run `26071188795` completed as `failure`
+    - headSha matched closure-truth fix commit `9a47c33`
+
+- `gh api repos/dtamade/fafafa.ssl/actions/runs/26071188795/jobs`
+  - result: PASS
+  - summary:
+    - confirmed `windows-gate` failed in `Run broader WinSSL runtime suite`
+    - confirmed `summary` still completed successfully, so summary artifact was authoritative for report-chain verification
+
+- `gh run download 26071188795 -n wave-b-summary-winssl_closure_truth_20260519_postfix -D tmp/gh-run-26071188795/summary`
+  - result: PASS
+  - summary:
+    - downloaded the live summary artifact bundle for the closure-truth verification run
+
+- `sed -n '1,220p' tmp/gh-run-26071188795/summary/wave_b_b2_closure_readiness_winssl_closure_truth_20260519_postfix.md`
+  - result: PASS
+  - summary:
+    - live closure report now truthfully shows:
+      - `windows | FAIL | ... suite_end_status=FAIL`
+      - `closure_status: IN_PROGRESS`
+
+- `sed -n '1,220p' tmp/gh-run-26071188795/summary/wave_b_cross_platform_summary_winssl_closure_truth_20260519_postfix.md`
+  - result: PASS
+  - summary:
+    - live cross summary still truthfully promotes Windows to `FAIL`
+
+- `sed -n '1,220p' tmp/gh-run-26071188795/summary/wave_b_b2_handoff_bundle_winssl_closure_truth_20260519_postfix.md`
+  - result: PASS
+  - summary:
+    - live handoff bundle stays aligned:
+      - `handoff_state: NEEDS_GATE_REPAIR`
+      - `consistency_status: CONSISTENT`
+
+- `gh workflow run wave-b-b2-manual.yml --ref master -f run_id=winssl_stage_markers_20260519_google -f strict_closure=false -f winssl_session_host=www.google.com -f winssl_enable_native_probe=true`
+  - result: PASS
+  - summary:
+    - dispatched the first live Windows evidence run for commit `c99fd07`
+
+- `gh run view 26071361489 --json status,conclusion,headSha,updatedAt,url`
+  - result: PASS
+  - summary:
+    - captured live run `26071361489` on stage-marker commit `c99fd07`
+
+- `gh api repos/dtamade/fafafa.ssl/actions/runs/26071361489/jobs`
+  - result: PASS
+  - summary:
+    - confirmed `windows-gate` failed again in `Run broader WinSSL runtime suite`
+    - confirmed Windows progressed through dependency install, quick smoke, and Windows gate before the broader runtime failure
+
+- `gh run download 26071361489 -n wave-b-windows-winssl_stage_markers_20260519_google -D tmp/gh-run-26071361489/windows`
+  - result: PASS
+  - summary:
+    - downloaded the live Windows evidence bundle for the stage-marker run
+
+- `rg -n "native_probe .*stage=|native_probe_worker exit_code|isolated native probe worker exits cleanly|signal label=initial_handshake|summary host=www.google.com" tmp/gh-run-26071361489/windows/winssl_runtime_suite_winssl_stage_markers_20260519_google.log`
+  - result: PASS
+  - summary:
+    - live Windows transcript now proves the worker reaches:
+      - `stage=before_supports`
+      - `stage=after_supports`
+      - `stage=before_get_native_handle`
+      - `stage=after_get_native_handle handle_nil=false`
+      - `stage=before_query_context_attributes`
+    - then fails with:
+      - `native_probe_worker exit_code=-1073741819 ... last_marker=native_probe label=initial_handshake stage=before_query_context_attributes`
+
 ### WinSSL Native-Probe Stage Markers
 
 - `sed -n '1,220p' tests/winssl/test_winssl_session_resumption.pas`

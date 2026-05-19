@@ -67,6 +67,20 @@ begin
     Result := 'false';
 end;
 
+function BackendTypeText(ABackend: TSSLLibraryType): string;
+begin
+  case ABackend of
+    sslAutoDetect: Result := 'auto_detect';
+    sslOpenSSL: Result := 'openssl';
+    sslWolfSSL: Result := 'wolfssl';
+    sslMbedTLS: Result := 'mbedtls';
+    sslWinSSL: Result := 'winssl';
+    sslFreePascal: Result := 'freepascal';
+  else
+    Result := 'unknown';
+  end;
+end;
+
 function EnvEnabled(const AName: string): Boolean;
 var
   LValue: string;
@@ -312,6 +326,12 @@ begin
 
   FillChar(LSessionInfo, SizeOf(LSessionInfo), 0);
   try
+    EmitResumeMarker(Format(
+      'native_probe label=%s stage=handle_metadata backend=%s handle_valid=%s lower=%s upper=%s',
+      [ALabel, BackendTypeText(LNativeAccess.GetBackendType),
+       BoolText(LNativeAccess.IsNativeHandleValid),
+       IntToHex(QWord(LCtxtHandle^.dwLower), SizeOf(LCtxtHandle^.dwLower) * 2),
+       IntToHex(QWord(LCtxtHandle^.dwUpper), SizeOf(LCtxtHandle^.dwUpper) * 2)]));
     EmitResumeMarker(Format(
       'native_probe label=%s stage=before_query_context_attributes',
       [ALabel]));

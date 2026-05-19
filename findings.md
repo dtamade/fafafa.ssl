@@ -2,6 +2,45 @@
 
 ## 2026-05-19
 
+- `26071188795` 的真实 summary artifact 现在已经把 closure-truth 这条流程修复彻底坐实了：
+  - `closure readiness` 不再把 Windows 写成 `PASS`
+  - `cross summary` / `handoff bundle` / `closure readiness`
+    在 live GitHub run 上已经对齐
+  - 所以 Wave B/B2 报告链这一刀，现在可以从“怀疑修好”升级成“真实 runner 上已证实修好”
+
+- `26071361489` 的 Windows artifact 又把 WinSSL native-probe 这条技术线向前推进了一大步：
+  - 当前 worker 已明确走过：
+    - `stage=before_supports`
+    - `stage=after_supports`
+    - `stage=before_get_native_handle`
+    - `stage=after_get_native_handle handle_nil=false`
+    - `stage=before_query_context_attributes`
+  - 然后才以 `exit_code=-1073741819` 退出
+
+- 这条结果的含义已经非常强：
+  - crash 不在 owner-surface `Supports(...)` 之前
+  - crash 也不在 `GetNativeHandle` 之前
+  - 当前第一嫌疑点已经收缩到：
+    - `QueryContextAttributesW(SECPKG_ATTR_SESSION_INFO, ...)`
+    - 或它刚被调用时依赖的句柄内容
+
+- 但当前 `handle_nil=false` 仍然只是“指针地址非空”，不足以说明 `CtxtHandle` 内容本身有效：
+  - `TWinSSLConnection.DoGetNativeHandle` 返回的是 `@FCtxtHandle`
+  - `ISSLNativeHandleAccess` 还同时提供：
+    - `GetBackendType`
+    - `IsNativeHandleValid`
+  - 所以下一批最小正确动作不是马上猜测 Schannel bug，而是把这层 metadata 一起打进 worker artifact
+
+- 这也正是刚完成的 `handle metadata` 本地批次要解决的问题：
+  - probe helper 现在会在 `before_query_context_attributes` 前额外输出：
+    - `backend`
+    - `handle_valid`
+    - `dwLower`
+    - `dwUpper`
+  - 因而下一轮 Windows artifact 将能直接回答：
+    - 是“WinSSL 自己也认为句柄有效，但调用 `SECPKG_ATTR_SESSION_INFO` 仍会崩”
+    - 还是“句柄内容本身已经可疑”
+
 - 在 closure truth 收口后，当前 WinSSL native-probe 这条线最高价值的残留已经进一步缩成“probe body 内部没有阶段性 marker”：
   - `pending=true` 只能证明已经进入 isolated worker
   - 但它无法区分 crash 是发生在：

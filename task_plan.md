@@ -10,6 +10,54 @@
 
 ## Current Status
 
+- [completed] WinSSL native-probe handle metadata 已完成本地收口：
+  - 新增计划：`docs/plans/2026-05-19-winssl-native-probe-handle-metadata.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_winssl_native_probe_handle_metadata_contract.sh`
+  - `tests/winssl/test_winssl_session_resumption.pas`
+    - 当前已新增 `BackendTypeText(...)`
+    - native probe 在 `before_query_context_attributes` 前现在还会额外输出：
+      - `backend`
+      - `handle_valid`
+      - `dwLower`
+      - `dwUpper`
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_winssl_native_probe_handle_metadata_contract.sh`
+    - `bash tests/scripts/test_winssl_native_probe_handle_metadata_contract.sh`
+    - `bash tests/scripts/test_winssl_native_probe_stage_markers_contract.sh`
+    - `bash tests/scripts/test_winssl_native_probe_worker_quarantine_contract.sh`
+    - `fpc -Twin64 ... tests/winssl/test_winssl_session_resumption.pas`
+    - `git diff --check`: PASS
+  - 当前结论：
+    - 下一轮 Windows artifact 不仅会告诉我们 crash 在 `QueryContextAttributesW(...)` 边界前后
+    - 还会直接告诉我们当时的 native handle 是否被 WinSSL 自己视为 valid，以及句柄双字内容长什么样
+- [completed] Wave B/B2 closure Windows runtime truth 已完成 live GitHub 复核：
+  - manual run `26071188795` 已完成，head=`9a47c33`
+  - summary artifact 已确认：
+    - `closure readiness`
+      - `windows | FAIL | ... suite_end_status=FAIL`
+      - `closure_status: IN_PROGRESS`
+    - `cross summary`
+      - `windows | FAIL`
+    - `handoff bundle`
+      - `handoff_state: NEEDS_GATE_REPAIR`
+      - `consistency_status: CONSISTENT`
+  - 当前结论：
+    - closure/cross/handoff 四层 truth 现在在真实 GitHub workflow 上已经重新对齐
+- [completed] WinSSL native-probe stage markers 已完成第一轮 live Windows 取证：
+  - manual run `26071361489`，head=`c99fd07`
+  - 当前已下载 Windows artifact：
+    - `tmp/gh-run-26071361489/windows/winssl_runtime_suite_winssl_stage_markers_20260519_google.log`
+  - 新证据已明确收窄 crash boundary：
+    - `stage=before_supports`
+    - `stage=after_supports`
+    - `stage=before_get_native_handle`
+    - `stage=after_get_native_handle handle_nil=false`
+    - `stage=before_query_context_attributes`
+    - 随后 `native_probe_worker exit_code=-1073741819`
+  - 当前结论：
+    - crash 现在已经明确不在 `Supports(...)` / `GetNativeHandle` 之前
+    - 当前最高价值边界已收窄到 `QueryContextAttributesW(SECPKG_ATTR_SESSION_INFO, ...)` 调用本身
 - [completed] WinSSL native-probe stage markers 已完成本地收口：
   - 新增计划：`docs/plans/2026-05-19-winssl-native-probe-stage-markers.md`
   - 新增 focused contract：
