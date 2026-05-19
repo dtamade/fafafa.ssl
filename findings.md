@@ -5960,3 +5960,31 @@
 - 这也让高入口路线图继续收敛：
   - `QUICKSTART_30SEC` / `5_MINUTE_QUICKSTART` 已经和前面的 WinSSL quickstart / user guide 一样回到“命令 + 证据入口 + 成功标准”的文档角色
   - 当前明显残余的高入口 truth drift 已经主要收敛到 `ARCHITECTURE.md`
+
+- 顺着通用 quickstart 线继续往下收时，又确认了 `ARCHITECTURE.md` 里的一个角色混淆问题：
+  - 它已经在页首声明“当前执行顺序和阶段判断以 `docs/ROADMAP.md` 为准”
+  - 但 backend 状态表自己又继续写：
+    - `✅ 生产就绪`
+    - `100% 完成`
+  - 这会把 architecture 页重新变成另一种 release/status 面板
+
+- 这批收口后，架构页的稳定原则也更清楚了：
+  - architecture 应回答：
+    - backend 如何分层
+    - 哪些是默认/可选/当前主线
+    - current truth source 去哪里看
+  - 但不应该再直接承担：
+    - shipped status 公告
+    - runtime proof 公告
+    - “百分百完成”式完成度表达
+
+- 这也意味着我们这一轮高入口文档主线已经形成一个比较完整的 truth pattern：
+  - specialized guides 不再直接示范错 API
+  - specialized guides 不再把历史统计快照当 current truth
+  - WinSSL high-entry docs 不再把阶段完成度和 benchmark snapshot 写成当前 truth
+  - architecture 参考页也不再把 backend 讲成 release 公告牌
+
+- 路线图因此出现了一个明显拐点：
+  - 最危险的 high-entry drift 已经大幅下降
+  - 接下来更值钱的工作会逐步从“第一页 / 入口页 truth 修正”
+  - 转向“性能/历史型文档里仍残留的 phase / baseline / benchmark 快照清理”

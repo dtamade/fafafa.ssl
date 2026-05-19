@@ -12276,3 +12276,56 @@
     - current obvious high-entry truth drift is now mainly concentrated in:
       - `docs/reference/ARCHITECTURE.md`
     - the two general quickstart entry pages have been pulled back to command-and-success-criteria truth
+
+### Architecture Backend Status Truth
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - batch started from a clean `master...origin/master` worktree
+
+- `rg -n "100% 完成|生产就绪|WinSSL|OpenSSL 实现（Linux/macOS 默认）|状态" docs/reference/ARCHITECTURE.md`
+  - result: PASS
+  - summary:
+    - static scan confirmed the final obvious high-entry doc drift had become the backend-status wording inside `ARCHITECTURE.md`
+
+- add `docs/plans/2026-05-19-architecture-backend-status-truth.md`
+  - change:
+    - recorded the bounded docs-only plan for architecture backend-status truth cleanup
+
+- add `tests/scripts/test_architecture_backend_status_truth_contract.sh`
+  - change:
+    - added a focused shell contract that guards:
+      - presence of current backend truth-source wording
+      - presence of bounded OpenSSL/WinSSL backend status wording
+      - absence of `生产就绪` / `100% 完成` release-style backend table wording
+
+- update docs:
+  - `docs/reference/ARCHITECTURE.md`
+  - change:
+    - added a backend-truth-source note ahead of the table
+    - rewrote OpenSSL status as the current default active backend
+    - rewrote WinSSL status as bounded Windows client-baseline truth with status-report handoff
+
+- `bash -n tests/scripts/test_architecture_backend_status_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new architecture backend-status truth contract syntax is valid
+
+- `bash tests/scripts/test_architecture_backend_status_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed contract self-injury from shell backticks inside quoted patterns
+    - second adjustment also narrowed a brittle full-row table match to stable fragments after markdown column reflow
+    - GREEN after both fixes:
+      - architecture backend-status truth now matches the bounded wording we actually want to preserve
+
+- `npx prettier --write docs/reference/ARCHITECTURE.md`
+  - result: PASS
+  - summary:
+    - architecture reference formatting remains stable
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current architecture backend-status truth batch has no whitespace or patch-format issues

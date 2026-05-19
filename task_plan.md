@@ -4386,3 +4386,36 @@
          - 仍保留 `WinSSL ... 100% 完成`
          - 还保留 `OpenSSL ... 生产就绪` 这类阶段化 status wording
      - 性能类文档继续排在这条高入口参考页之后
+95. `architecture backend-status truth` 已完成 focused 收口，并应作为当前架构参考页的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-architecture-backend-status-truth.md`
+   - 当前已确认的真实 drift：
+     - `docs/reference/ARCHITECTURE.md`
+       - backend 状态表仍把：
+         - `OpenSSL ... ✅ 生产就绪`
+         - `WinSSL ... 100% 完成`
+         写成当前 truth
+       - 但这页本身已经承认：
+         - 当前执行顺序和阶段判断应看 `docs/ROADMAP.md`
+   - 当前最小正确修法已落地：
+     - 不改生产实现
+     - 只把 `ARCHITECTURE` 的 backend 状态表改回当前架构页口径：
+       - `OpenSSL` = 当前默认 active backend
+       - `WinSSL` = Windows 零依赖客户端 baseline 已验证；更细 runtime truth 见状态报告
+       - 并在表前显式声明 shipped/runtime truth source 不以本表的完成度措辞为准
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_architecture_backend_status_truth_contract.sh`
+     - `bash tests/scripts/test_architecture_backend_status_truth_contract.sh`
+     - `npx prettier --write docs/reference/ARCHITECTURE.md`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 当前高入口 docs truth 主线已从：
+       - WinSSL quickstart / user guide
+       - 通用 quickstart
+       - PKCS7 / CMS / PKCS12 guide
+       - architecture backend status
+       基本收口
+     - 后续优先队列转向：
+       - `docs/guides/PERFORMANCE_GUIDE.md`
+       - `docs/guides/PERFORMANCE_OPTIMIZATION_GUIDE.md`
+       - 以及其它仍保留 phase/baseline/benchmark 快照的历史型文档
