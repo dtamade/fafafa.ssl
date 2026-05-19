@@ -10,6 +10,22 @@
 
 ## Current Status
 
+- [completed] WinSSL session-info probe allowlist 已完成本地收口：
+  - 新增计划：`docs/plans/2026-05-19-winssl-session-info-probe-allowlist.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_winssl_session_info_probe_allowlist_contract.sh`
+  - 当前 guard 已锁住：
+    - 允许的受控 probe site：
+      - `src/fafafa.ssl.winssl.connection.pas`
+      - `tests/winssl/test_winssl_session_resumption.pas`
+    - 明确禁止 residual shim：
+      - `src/fafafa.ssl.winssl.session.pas`
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_winssl_session_info_probe_allowlist_contract.sh`
+    - `bash tests/scripts/test_winssl_session_info_probe_allowlist_contract.sh`
+    - `git diff --check`: PASS
+  - 当前结论：
+    - 以后如果又有新的未隔离 `SECPKG_ATTR_SESSION_INFO` query 混进 repo，会被 source contract 直接打红
 - [completed] WinSSL native-probe handle metadata 已完成第一轮 live Windows 取证：
   - manual run `26071754477`，head=`0751afc`
   - `linux-gate`: `success`

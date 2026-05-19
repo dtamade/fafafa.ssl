@@ -2,6 +2,35 @@
 
 ## 2026-05-19
 
+### WinSSL Session-Info Probe Allowlist
+
+- add `docs/plans/2026-05-19-winssl-session-info-probe-allowlist.md`
+  - change:
+    - define a repo-level allowlist guard for direct `SECPKG_ATTR_SESSION_INFO` query sites
+
+- add `tests/scripts/test_winssl_session_info_probe_allowlist_contract.sh`
+  - change:
+    - lock the controlled allowlist to:
+      - `src/fafafa.ssl.winssl.connection.pas`
+      - `tests/winssl/test_winssl_session_resumption.pas`
+    - explicitly exclude `src/fafafa.ssl.winssl.session.pas`
+
+- `bash -n tests/scripts/test_winssl_session_info_probe_allowlist_contract.sh`
+  - result: PASS
+  - summary:
+    - new allowlist contract syntax is valid
+
+- `bash tests/scripts/test_winssl_session_info_probe_allowlist_contract.sh`
+  - result: PASS
+  - summary:
+    - controlled probe allowlist is currently aligned with the repo state
+    - compatibility shim stays outside the direct session-info query boundary
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - allowlist-guard batch has no whitespace or patch-format issues
+
 ### Live GitHub Follow-up: Handle Metadata
 
 - `gh workflow run wave-b-b2-manual.yml --ref master -f run_id=winssl_handle_metadata_20260519_google -f strict_closure=false -f winssl_session_host=www.google.com -f winssl_enable_native_probe=true`

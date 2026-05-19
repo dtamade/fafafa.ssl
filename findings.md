@@ -2,6 +2,22 @@
 
 ## 2026-05-19
 
+- 这次 `winssl.session.pas` 漂移暴露出来之后，最该补的并不是更多解释，而是 repo 级 allowlist guard：
+  - 因为只要 `SECPKG_ATTR_SESSION_INFO` 还可以在别的 WinSSL 文件里悄悄出现
+  - 我们就可能不断重复抓到“新的未隔离 probe 残留”
+
+- 现在这条 guard 已经补上：
+  - 允许的受控 site 只剩：
+    - canonical helper in `winssl.connection.pas`
+    - dedicated proof in `test_winssl_session_resumption.pas`
+  - `winssl.session.pas` 已被明确排除在 allowlist 之外
+
+- 这让当前 WinSSL session-info probe 的仓库边界终于形成闭环：
+  - shared path：保守 truth
+  - compatibility shim：保守 fallback
+  - dedicated proof：opt-in isolated worker
+  - repo guard：禁止新的未隔离 probe 再偷偷长出来
+
 - `26071754477` 现在给了这条 WinSSL 线目前最强的一组 live 证据：
   - `backend=winssl`
   - `handle_valid=true`
