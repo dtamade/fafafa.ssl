@@ -248,6 +248,7 @@ var
   VerifyRes: Integer;
   VerifyStr: string;
   ClientConn: ISSLClientConnection;
+  SessionResumption: ISSLSessionResumption;
 begin
   AConnection := nil;
   
@@ -306,7 +307,16 @@ begin
     
     // Set session for reuse
     if FSessionReuse and (FSession <> nil) then
-      AConnection.SetSession(FSession);
+    begin
+      if not Supports(AConnection, ISSLSessionResumption, SessionResumption) then
+      begin
+        AConnection := nil;
+        Result := TSSLOperationResult.Err(sslErrUnsupported,
+          'Backend does not expose ISSLSessionResumption for session reuse');
+        Exit;
+      end;
+      SessionResumption.SetSession(FSession);
+    end;
     
     // Perform client handshake
     if not AConnection.Connect then

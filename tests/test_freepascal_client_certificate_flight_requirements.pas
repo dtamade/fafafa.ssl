@@ -431,6 +431,7 @@ procedure TestResumedHandshakeStillAllowsCertificateOmission;
 var
   LCtx: ISSLContext;
   LConn: ISSLConnection;
+  LResumption: ISSLSessionResumption;
   LStream: TScriptedServerFlightStream;
   LSession: ISSLSession;
 begin
@@ -444,12 +445,14 @@ begin
   try
     LConn := LCtx.CreateConnection(LStream);
     AssertTrue(LConn <> nil, 'Resumed connection should be created');
-    LConn.SetSession(LSession);
+    AssertTrue(Supports(LConn, ISSLSessionResumption, LResumption),
+      'Resumed connection should expose ISSLSessionResumption');
+    LResumption.SetSession(LSession);
     (LConn as ISSLClientConnection).SetServerName('example.com');
 
     AssertTrue(LConn.Connect,
       'Resumed PSK handshake should still succeed without Certificate/CertificateVerify');
-    AssertTrue(LConn.IsSessionReused,
+    AssertTrue(LResumption.IsSessionReused,
       'Resumed PSK handshake should report session reuse');
     AssertTrue(LStream.ObservedPskClientHello,
       'Resumed PSK handshake should send pre_shared_key in ClientHello');

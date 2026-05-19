@@ -159,6 +159,7 @@ var
   LCtx: ISSLContext;
   LEarlyCtx: ISSLEarlyDataContext;
   LConn: ISSLConnection;
+  LResumption: ISSLSessionResumption;
   LEarlyConn: ISSLEarlyDataConnection;
   LStream: TMemoryStream;
   LResult: TSSLOperationResult;
@@ -276,7 +277,12 @@ begin
     CheckOperationError(LName + ' SetEarlyData requires configured resumable session',
       LResult, sslErrInvalidParam);
 
-    LConn.SetSession(TMockSession.Create('mock-session'));
+    CheckTrue(LName + ' connection exposes ISSLSessionResumption',
+      Supports(LConn, ISSLSessionResumption, LResumption),
+      'client connection should expose ISSLSessionResumption');
+    if not Supports(LConn, ISSLSessionResumption, LResumption) then
+      Exit;
+    LResumption.SetSession(TMockSession.Create('mock-session'));
     LResult := LEarlyConn.SetEarlyData(BytesOfText('PING'));
     CheckOperationError(LName + ' SetEarlyData rejects session without usable native early-data limit',
       LResult, sslErrInvalidParam);

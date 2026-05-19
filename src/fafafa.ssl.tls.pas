@@ -260,6 +260,7 @@ end;
 procedure TSSLConnector.ApplyClientOptions(AConn: ISSLConnection; const AServerName: string);
 var
   ClientConn: ISSLClientConnection;
+  SessionResumption: ISSLSessionResumption;
 begin
   if AConn = nil then
     Exit;
@@ -268,7 +269,15 @@ begin
   AConn.SetBlocking(FBlocking);
 
   if FSessionReuse and (FSession <> nil) then
-    AConn.SetSession(FSession);
+  begin
+    if not Supports(AConn, ISSLSessionResumption, SessionResumption) then
+      raise ESSLException.CreateWithContext(
+        'Backend does not expose ISSLSessionResumption for session reuse',
+        sslErrUnsupported,
+        'TSSLConnector.ApplyClientOptions'
+      );
+    SessionResumption.SetSession(FSession);
+  end;
 
   if Supports(AConn, ISSLClientConnection, ClientConn) then
     ClientConn.SetServerName(AServerName)

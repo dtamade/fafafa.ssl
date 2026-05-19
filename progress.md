@@ -2,6 +2,101 @@
 
 ## 2026-05-19
 
+### ISSLSessionResumption Runtime Owner-Path Migration Wave 1
+
+- add `docs/plans/2026-05-19-isslsessionresumption-runtime-owner-path-migration-wave1.md`
+  - change:
+    - define the bounded runtime-owner-path batch for selected ordinary tests plus
+      the builder / connector production call sites
+
+- add `tests/scripts/test_isslsessionresumption_runtime_owner_path_contract.sh`
+  - change:
+    - lock that:
+      - selected runtime tests no longer use direct core
+        `GetSession` / `SetSession` / `IsSessionReused`
+      - `src/fafafa.ssl.connection.builder.pas`
+        now applies configured sessions via `ISSLSessionResumption`
+      - `src/fafafa.ssl.tls.pas`
+        now applies configured sessions via `ISSLSessionResumption`
+
+- update runtime / production files:
+  - `src/fafafa.ssl.connection.builder.pas`
+  - `src/fafafa.ssl.tls.pas`
+  - `tests/test_connection_builder_hostname_precedence.pas`
+  - `tests/test_freepascal_client_certificate_flight_requirements.pas`
+  - `tests/test_freepascal_client_session_resumption.pas`
+  - `tests/test_freepascal_server_session_resumption.pas`
+  - `tests/test_openssl_wolfssl_early_data_connection_contract.pas`
+  - change:
+    - migrate ordinary session-resumption usage from direct core mirrors to
+      `ISSLSessionResumption`
+    - after compile-time deprecation landed, also move builder / connector
+      production application of `WithSession(...)` onto the owner path
+
+- `bash -n tests/scripts/test_isslsessionresumption_runtime_owner_path_contract.sh`
+  - result: PASS
+  - summary:
+    - new runtime owner-path contract is syntactically valid
+
+- `bash tests/scripts/test_isslsessionresumption_runtime_owner_path_contract.sh`
+  - result: PASS
+  - summary:
+    - selected runtime tests plus builder / connector now all prefer
+      `ISSLSessionResumption`
+
+- `fpc -B ... tests/test_connection_builder_hostname_precedence.pas && ./.../test_connection_builder_hostname_precedence`
+  - result: PASS
+  - summary:
+    - builder hostname precedence contract still passes
+    - the earlier new warning from `src/fafafa.ssl.connection.builder.pas`
+      direct core `SetSession` disappeared after the production owner-path fix
+
+- `fpc -B ... tests/test_freepascal_client_certificate_flight_requirements.pas && ./.../test_freepascal_client_certificate_flight_requirements`
+  - result: PASS
+  - summary:
+    - resumed certificate-omission boundary still passes through
+      `ISSLSessionResumption`
+
+- `fpc -B ... tests/test_freepascal_client_session_resumption.pas && ./.../test_freepascal_client_session_resumption`
+  - result: PASS
+  - summary:
+    - offline capture/resume plus CT / OCSP resumed-boundary checks still pass
+      through `ISSLSessionResumption`
+
+- `fpc -B ... tests/test_freepascal_server_session_resumption.pas && ./.../test_freepascal_server_session_resumption`
+  - result: PASS
+  - summary:
+    - server-side resumed / tampered-binder checks still pass while reading
+      reuse truth through `ISSLSessionResumption`
+
+- `fpc -B ... tests/test_openssl_wolfssl_early_data_connection_contract.pas && ./.../test_openssl_wolfssl_early_data_connection_contract`
+  - result: PASS
+  - summary:
+    - OpenSSL/WolfSSL early-data contract still passes after moving the configured
+      resumable session injection to `ISSLSessionResumption`
+
+- `fpc -B ... tests/test_tls_connector_early_data_contract.pas && ./.../test_tls_connector_early_data_contract`
+  - result: PASS
+  - summary:
+    - connector early-data convenience contract still preserves the expected order:
+      `session -> servername -> earlydata -> connect`
+
+- `rg -lP ... tests --glob '!tests/scripts/**' | sort`
+  - result: PASS
+  - summary:
+    - remaining direct-core session residual set shrank to:
+      - `tests/contract/test_backend_contract.pas`
+      - `tests/test_freepascal_tls13_early_data.pas`
+      - `tests/test_mbedtls_connection_session_reused_contract.pas`
+      - `tests/test_openssl_connection_session_reused_contract.pas`
+      - `tests/winssl/test_session_save_logic.pas`
+      - `tests/winssl/test_winssl_session_resumption.pas`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - session-resumption runtime owner-path migration wave 1 is whitespace-clean
+
 ### ISSLSessionResumption Compiler Deprecation Alignment
 
 - add `docs/plans/2026-05-19-isslsessionresumption-compiler-deprecation-alignment.md`

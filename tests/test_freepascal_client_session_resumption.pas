@@ -569,6 +569,8 @@ var
   LCtx2: ISSLContext;
   LConn1: ISSLConnection;
   LConn2: ISSLConnection;
+  LResumption1: ISSLSessionResumption;
+  LResumption2: ISSLSessionResumption;
   LInfo: TSSLConnectionInfo;
   LStream1: TOfflineTLS13ServerStream;
   LStream2: TOfflineTLS13ServerStream;
@@ -594,7 +596,9 @@ begin
       'Initial offline handshake should negotiate TLS 1.3');
     AssertTrue(LConn1.GetCipherName = 'TLS_CHACHA20_POLY1305_SHA256',
       'Initial offline handshake should negotiate CHACHA20');
-    AssertTrue(not LConn1.IsSessionReused,
+    AssertTrue(Supports(LConn1, ISSLSessionResumption, LResumption1),
+      'Initial connection should expose ISSLSessionResumption');
+    AssertTrue(not LResumption1.IsSessionReused,
       'Initial handshake must not report session reuse');
 
     LRead := LConn1.Read(LBuf, SizeOf(LBuf));
@@ -602,7 +606,7 @@ begin
     AssertTrue((LBuf[0] = $50) and (LBuf[1] = $4F) and (LBuf[2] = $4E) and (LBuf[3] = $47),
       'Offline app data should be PONG');
 
-    LSession := LConn1.GetSession;
+    LSession := LResumption1.GetSession;
     AssertTrue(LSession <> nil, 'GetSession should return resumable session after NewSessionTicket');
     AssertTrue(LSession.IsResumable, 'Captured session should be resumable');
     AssertTrue(Supports(LSession, IFreePascalResumptionSession, LSessionInfo),
@@ -635,11 +639,13 @@ begin
   try
     LConn2 := LCtx2.CreateConnection(LStream2);
     AssertTrue(LConn2 <> nil, 'Resumed connection should be created');
-    LConn2.SetSession(LSession);
+    AssertTrue(Supports(LConn2, ISSLSessionResumption, LResumption2),
+      'Resumed connection should expose ISSLSessionResumption');
+    LResumption2.SetSession(LSession);
     (LConn2 as ISSLClientConnection).SetServerName('example.com');
 
     AssertTrue(LConn2.Connect, 'Resumed offline TLS 1.3 handshake should succeed');
-    AssertTrue(LConn2.IsSessionReused, 'Resumed handshake should report session reuse');
+    AssertTrue(LResumption2.IsSessionReused, 'Resumed handshake should report session reuse');
     AssertTrue(LStream2.ObservedPskClientHello,
       'Resumed client handshake should send pre_shared_key in ClientHello');
     AssertTrue(LStream2.ObservedTicketIdentityMatch,
@@ -664,6 +670,8 @@ var
   LCtx2: ISSLContext;
   LConn1: ISSLConnection;
   LConn2: ISSLConnection;
+  LResumption1: ISSLSessionResumption;
+  LResumption2: ISSLSessionResumption;
   LStream1: TOfflineTLS13ServerStream;
   LStream2: TOfflineTLS13ServerStream;
   LSession: ISSLSession;
@@ -684,7 +692,9 @@ begin
     AssertTrue(LConn1.Connect, 'Initial offline handshake should succeed before CT boundary check');
     LRead := LConn1.Read(LBuf, SizeOf(LBuf));
     AssertEqualsInt(4, LRead, 'Initial handshake should still read post-handshake app data');
-    LSession := LConn1.GetSession;
+    AssertTrue(Supports(LConn1, ISSLSessionResumption, LResumption1),
+      'Initial CT-boundary connection should expose ISSLSessionResumption');
+    LSession := LResumption1.GetSession;
     AssertTrue(LSession <> nil, 'Initial handshake should still capture a resumable session');
   finally
     LStream1.Free;
@@ -700,12 +710,14 @@ begin
   try
     LConn2 := LCtx2.CreateConnection(LStream2);
     AssertTrue(LConn2 <> nil, 'Resumed CT-boundary connection should be created');
-    LConn2.SetSession(LSession);
+    AssertTrue(Supports(LConn2, ISSLSessionResumption, LResumption2),
+      'Resumed CT-boundary connection should expose ISSLSessionResumption');
+    LResumption2.SetSession(LSession);
     (LConn2 as ISSLClientConnection).SetServerName('example.com');
 
     AssertTrue(LConn2.Connect,
       'CT required should not block resumed TLS 1.3 handshakes without certificate/SCT flight');
-    AssertTrue(LConn2.IsSessionReused,
+    AssertTrue(LResumption2.IsSessionReused,
       'CT-boundary resumed handshake should still report session reuse');
     AssertTrue(LStream2.ObservedPskClientHello,
       'CT-boundary resumed handshake should still send pre_shared_key');
@@ -722,6 +734,8 @@ var
   LCtx2: ISSLContext;
   LConn1: ISSLConnection;
   LConn2: ISSLConnection;
+  LResumption1: ISSLSessionResumption;
+  LResumption2: ISSLSessionResumption;
   LStream1: TOfflineTLS13ServerStream;
   LStream2: TOfflineTLS13ServerStream;
   LSession: ISSLSession;
@@ -742,7 +756,9 @@ begin
     AssertTrue(LConn1.Connect, 'Initial offline handshake should succeed before OCSP boundary check');
     LRead := LConn1.Read(LBuf, SizeOf(LBuf));
     AssertEqualsInt(4, LRead, 'Initial handshake should still read post-handshake app data');
-    LSession := LConn1.GetSession;
+    AssertTrue(Supports(LConn1, ISSLSessionResumption, LResumption1),
+      'Initial OCSP-boundary connection should expose ISSLSessionResumption');
+    LSession := LResumption1.GetSession;
     AssertTrue(LSession <> nil, 'Initial handshake should still capture a resumable session');
   finally
     LStream1.Free;
@@ -758,12 +774,14 @@ begin
   try
     LConn2 := LCtx2.CreateConnection(LStream2);
     AssertTrue(LConn2 <> nil, 'Resumed OCSP-boundary connection should be created');
-    LConn2.SetSession(LSession);
+    AssertTrue(Supports(LConn2, ISSLSessionResumption, LResumption2),
+      'Resumed OCSP-boundary connection should expose ISSLSessionResumption');
+    LResumption2.SetSession(LSession);
     (LConn2 as ISSLClientConnection).SetServerName('example.com');
 
     AssertTrue(LConn2.Connect,
       'Required OCSP stapling should not block resumed TLS 1.3 handshakes without certificate/stapled-response flight');
-    AssertTrue(LConn2.IsSessionReused,
+    AssertTrue(LResumption2.IsSessionReused,
       'OCSP-boundary resumed handshake should still report session reuse');
     AssertTrue(LStream2.ObservedPskClientHello,
       'OCSP-boundary resumed handshake should still send pre_shared_key');

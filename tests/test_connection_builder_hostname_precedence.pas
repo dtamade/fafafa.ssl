@@ -943,6 +943,7 @@ var
   Ctx: ISSLContext;
   Builder: ISSLConnectionBuilder;
   Conn: ISSLConnection;
+  Resumption: ISSLSessionResumption;
   Res: TSSLOperationResult;
   ClientConn: ISSLClientConnection;
   Info: TSSLConnectionInfo;
@@ -1014,7 +1015,9 @@ begin
     .WithHostname('peer.example.com');
   Res := Builder.TryBuildClient(Conn);
   Check(Res.Success, 'TryBuildClient should succeed');
-  Conn.SetSession(TMockSession.Create(
+  Check(Supports(Conn, ISSLSessionResumption, Resumption),
+    'Connection supports ISSLSessionResumption');
+  Resumption.SetSession(TMockSession.Create(
     'session-123',
     TMockCertificate.Create('CN=peer.example.com', 'CN=Mock Root CA', '01')
   ));

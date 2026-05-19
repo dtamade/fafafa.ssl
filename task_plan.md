@@ -10,6 +10,44 @@
 
 ## Current Status
 
+- [completed] `ISSLSessionResumption` runtime owner-path migration wave 1 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-isslsessionresumption-runtime-owner-path-migration-wave1.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_isslsessionresumption_runtime_owner_path_contract.sh`
+  - 当前已迁移的 ordinary runtime / production 用法：
+    - `src/fafafa.ssl.connection.builder.pas`
+    - `src/fafafa.ssl.tls.pas`
+    - `tests/test_connection_builder_hostname_precedence.pas`
+    - `tests/test_freepascal_client_certificate_flight_requirements.pas`
+    - `tests/test_freepascal_client_session_resumption.pas`
+    - `tests/test_freepascal_server_session_resumption.pas`
+    - `tests/test_openssl_wolfssl_early_data_connection_contract.pas`
+  - 当前已补的直接证据：
+    - `tests/test_tls_connector_early_data_contract.pas`
+      已重新编译运行，证明 `TSSLConnector.WithSession(...)` 仍按
+      `session -> servername -> earlydata -> connect` 顺序工作
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_isslsessionresumption_runtime_owner_path_contract.sh`
+    - `bash tests/scripts/test_isslsessionresumption_runtime_owner_path_contract.sh`
+    - `fpc + run tests/test_connection_builder_hostname_precedence.pas`
+    - `fpc + run tests/test_freepascal_client_certificate_flight_requirements.pas`
+    - `fpc + run tests/test_freepascal_client_session_resumption.pas`
+    - `fpc + run tests/test_freepascal_server_session_resumption.pas`
+    - `fpc + run tests/test_openssl_wolfssl_early_data_connection_contract.pas`
+    - `fpc + run tests/test_tls_connector_early_data_contract.pas`
+    - `git diff --check`
+  - 当前 residual snapshot 已进一步收窄为：
+    - `tests/contract/test_backend_contract.pas`
+    - `tests/test_freepascal_tls13_early_data.pas`
+    - `tests/test_mbedtls_connection_session_reused_contract.pas`
+    - `tests/test_openssl_connection_session_reused_contract.pas`
+    - `tests/winssl/test_winssl_session_resumption.pas`
+    - `tests/winssl/test_session_save_logic.pas`（mock/save-logic helper，不是公共接口 owner-path truth）
+  - 当前下一条真实剩余工作：
+    - 先处理体量最大的 `tests/test_freepascal_tls13_early_data.pas`
+    - 再逐项判断 `mbedtls/openssl` semantic contracts 和 `WinSSL` runtime proof
+      是否属于 intentional residual
 - [completed] `ISSLSessionResumption` compiler deprecation alignment 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-isslsessionresumption-compiler-deprecation-alignment.md`

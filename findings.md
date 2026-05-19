@@ -2,6 +2,41 @@
 
 ## 2026-05-19
 
+- session-resumption 这条线继续往下压后，又暴露了一个更值钱的事实：
+  - 不只是 ordinary runtime tests 在直接走 core mirror
+  - `src/fafafa.ssl.connection.builder.pas`
+  - `src/fafafa.ssl.tls.pas`
+    这两条普通生产路径也还在直接调用 `ISSLConnection.SetSession`
+  - 所以上一批 compiler `deprecated` 收口不是终点，它实际上帮我们把生产代码里
+    还活着的旧调用面也抖了出来
+
+- 当前 durable truth 已进一步收口为：
+  - ordinary runtime tests 现在优先通过 `ISSLSessionResumption`
+  - `TSSLConnectionBuilder.WithSession(...)` 与 `TSSLConnector.WithSession(...)`
+    的真实应用路径，也都已改成 owner path
+  - `tests/test_tls_connector_early_data_contract.pas`
+    重新证明了 connector 仍保持：
+    - `session -> servername -> earlydata -> connect`
+    的应用顺序
+
+- 最新 residual snapshot 现在已经足够小，可以作为下一阶段路线图：
+  - 真正还留着 direct-core session mirrors 的主要是：
+    - `tests/contract/test_backend_contract.pas`
+    - `tests/test_freepascal_tls13_early_data.pas`
+    - `tests/test_mbedtls_connection_session_reused_contract.pas`
+    - `tests/test_openssl_connection_session_reused_contract.pas`
+    - `tests/winssl/test_winssl_session_resumption.pas`
+  - `tests/winssl/test_session_save_logic.pas`
+    里虽然还有 `GetSession` 名字，但它是 mock/save-logic helper，不是公共接口
+    owner-path 漂移的主战场
+
+- 这也把下一步工作变得更清楚了：
+  - `tests/test_freepascal_tls13_early_data.pas`
+    是剩余 ordinary runtime owner-path migration 的最大块
+  - `mbedtls/openssl` 这两份 `session_reused_contract`
+    更像 backend semantic truth proof，是否保留 direct-core mirror 需要单独判定
+  - `WinSSL` 那条则更接近 runtime proof residual，不应和普通文档/示例路径混在一起
+
 - session-resumption 这组方法此前也存在和 diagnostics 很像的中间态：
   - active docs/tests 已经默认走 `ISSLSessionResumption`
   - 但 `ISSLConnection.GetSession` / `SetSession` / `IsSessionReused`

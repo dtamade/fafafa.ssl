@@ -588,6 +588,8 @@ var
   LCtx: ISSLContext;
   LConn1: ISSLConnection;
   LConn2: ISSLConnection;
+  LResumption1: ISSLSessionResumption;
+  LResumption2: ISSLSessionResumption;
   LStream1: TOfflineTLS13ClientStream;
   LStream2: TOfflineTLS13ClientStream;
   LSession: ISSLSession;
@@ -605,8 +607,10 @@ begin
   try
     LConn1 := LCtx.CreateConnection(LStream1);
     AssertTrue(LConn1 <> nil, 'Initial server connection should be created');
+    AssertTrue(Supports(LConn1, ISSLSessionResumption, LResumption1),
+      'Initial server connection should expose ISSLSessionResumption');
     AssertTrue(LConn1.Accept, 'Initial server accept should succeed');
-    AssertTrue(not LConn1.IsSessionReused, 'Initial server accept must not report session reuse');
+    AssertTrue(not LResumption1.IsSessionReused, 'Initial server accept must not report session reuse');
     AssertTrue(LStream1.ObservedTicketIssued, 'Initial server accept should issue a NewSessionTicket');
     LSession := LStream1.CapturedSession;
     AssertTrue(LSession <> nil, 'Initial server accept should yield a resumable client-captured session');
@@ -619,8 +623,10 @@ begin
   try
     LConn2 := LCtx.CreateConnection(LStream2);
     AssertTrue(LConn2 <> nil, 'Resumed server connection should be created');
+    AssertTrue(Supports(LConn2, ISSLSessionResumption, LResumption2),
+      'Resumed server connection should expose ISSLSessionResumption');
     AssertTrue(LConn2.Accept, 'Resumed server accept should succeed');
-    AssertTrue(LConn2.IsSessionReused, 'Resumed server accept should report session reuse');
+    AssertTrue(LResumption2.IsSessionReused, 'Resumed server accept should report session reuse');
     AssertTrue(LStream2.ObservedServerSelectedPSK,
       'Resumed server accept should emit pre_shared_key(selected_identity=0) in ServerHello');
   finally
@@ -633,6 +639,8 @@ var
   LCtx: ISSLContext;
   LConn1: ISSLConnection;
   LConn2: ISSLConnection;
+  LResumption1: ISSLSessionResumption;
+  LResumption2: ISSLSessionResumption;
   LStream1: TOfflineTLS13ClientStream;
   LStream2: TOfflineTLS13ClientStream;
   LSession: ISSLSession;
@@ -650,6 +658,8 @@ begin
   try
     LConn1 := LCtx.CreateConnection(LStream1);
     AssertTrue(LConn1 <> nil, 'Initial server connection should be created');
+    AssertTrue(Supports(LConn1, ISSLSessionResumption, LResumption1),
+      'Initial server connection should expose ISSLSessionResumption');
     AssertTrue(LConn1.Accept, 'Initial server accept should succeed');
     LSession := LStream1.CapturedSession;
     AssertTrue(LSession <> nil, 'Initial server accept should yield a resumable client-captured session');
@@ -661,8 +671,10 @@ begin
   try
     LConn2 := LCtx.CreateConnection(LStream2);
     AssertTrue(LConn2 <> nil, 'Tampered-binder server connection should be created');
+    AssertTrue(Supports(LConn2, ISSLSessionResumption, LResumption2),
+      'Tampered-binder server connection should expose ISSLSessionResumption');
     AssertTrue(not LConn2.Accept, 'Server accept with tampered PSK binder should fail closed');
-    AssertTrue(not LConn2.IsSessionReused, 'Failed PSK accept must not report session reuse');
+    AssertTrue(not LResumption2.IsSessionReused, 'Failed PSK accept must not report session reuse');
     AssertTrue(LConn2.GetError(-1) = sslErrHandshake,
       'Tampered PSK binder should surface handshake error');
   finally
