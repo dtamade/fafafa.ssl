@@ -10,6 +10,50 @@
 
 ## Current Status
 
+- [completed] `helper surface classification truth`
+  当前 focused 目标：
+  - 把 shipped helper surfaces 的权威分级说明收回到同一张图
+  - 修正 `API_REFERENCE` 对 WinSSL enterprise helper 主路径的漂移
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-helper-surface-classification-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_helper_surface_classification_truth_contract.sh`
+  - 同步更新：
+    - `docs/reference/API_REFERENCE.md`
+    - `src/fafafa.ssl.pas`
+    - `src/fafafa.ssl.factory.pas`
+  当前最终收口证据：
+  - canonical `API_REFERENCE` 现在明确：
+    - `TSSLFactory.GetLibraryInstance(...)` / `TSSLConnector` / `TSSLAcceptor` /
+      `TSSLStream` 是 TLS bootstrap 主入口
+    - `CreateDefaultConfig` / `TSSLHelper` / `QuickServer` /
+      `CreateOCSPClient` / `CreateCRLManager` 是 convenience helper surface
+  - `WinSSL enterprise` 当前主路径已和活跃 guides/source 对齐到：
+    - `TSSLEnterpriseConfig.IsFIPSEnabled`
+    - `GetTrustedRoots`
+    - `GetAllPolicies`
+  - old globals:
+    - `IsFIPSModeEnabled(...)`
+    - `GetEnterpriseTrustedRoots(...)`
+    现在只作为 legacy convenience wrappers 记录
+  focused verification 已通过：
+  - `bash tests/scripts/test_helper_surface_classification_truth_contract.sh`
+  - `bash tests/scripts/test_migration_guide_active_truth_contract.sh`
+  - `bash tests/scripts/test_active_fips_docs_truth_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - 这次暴露的不是 helper 被删了，而是 exported helper surface 如果不分级，
+    调用方会把 facade 里“仍然 shipped”的所有 helper 误判成同等级主入口。
+  - canonical API docs 现在已经把 bootstrap main entry、convenience helpers、
+    以及 WinSSL enterprise legacy wrappers 分开讲清楚。
+  当前下一条真实工作：
+  - 继续回到接口/实现完整性：
+    - 审 `ISSLConnection` 里 remaining convenience-core / compatibility-core
+      residual 是否还有高可见 active docs 漂移
+    - 特别是 `ReadString` / `WriteString` / `SetTimeout` 这类仍 shipped 的
+      convenience-core surface 是否已经在 active docs 里被正确 classification
+
 - [completed] `integration guide canonical path truth`
   当前 focused 目标：
   - 把 active integration guide truth 收回到唯一权威路径

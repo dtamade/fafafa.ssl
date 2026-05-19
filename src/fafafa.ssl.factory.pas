@@ -303,7 +303,7 @@ type
     // class property AvailableLibraries: TSSLLibraryTypes read GetAvailableLibraries;
   end;
 
-  { TSSLHelper - SSL辅助类，提供更简单的API }
+  { TSSLHelper - 证书/随机/early-data 便捷辅助类；不作为 TLS bootstrap 主入口 }
   TSSLHelper = class
   public
     // 证书验证

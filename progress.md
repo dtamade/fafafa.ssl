@@ -4,6 +4,58 @@
 
 ## 2026-05-20
 
+### Helper Surface Classification Truth
+
+- `rg -n "TSSLHelper|QuickServer|CreateOCSPClient|CreateCRLManager|GetLibraryInstance|推荐入口|helper" docs/reference/API_REFERENCE.md RELEASE_NOTES_V1.5.0.md docs/README.md docs/guides/GETTING_STARTED.md docs/guides/USER_GUIDE.md docs/guides/MIGRATION_GUIDE.md src/fafafa.ssl.pas src/fafafa.ssl.factory.pas`
+- `rg -n "IsFIPSModeEnabled|GetEnterpriseTrustedRoots|IsFIPSEnabled|GetTrustedRoots|GetAllPolicies|TSSLEnterpriseConfig" src docs tests/scripts`
+  - result: PASS
+  - summary:
+    - confirmed a real active-docs gap:
+      - exported facade helpers were still shipped, but canonical docs had not yet
+        classified them as main-entry vs convenience surfaces
+    - also confirmed a sharper canonical drift:
+      - `docs/reference/API_REFERENCE.md` still presented old WinSSL enterprise globals
+        as the visible helper surface
+      - while current source / migration guide / user guide already treated
+        `TSSLEnterpriseConfig.IsFIPSEnabled / GetTrustedRoots / GetAllPolicies`
+        as the main path
+
+- add `docs/plans/2026-05-20-helper-surface-classification-truth.md`
+  - change:
+    - recorded the bounded docs+contract batch for helper-surface layering truth
+
+- add `tests/scripts/test_helper_surface_classification_truth_contract.sh`
+  - change:
+    - added a focused shell contract that freezes:
+      - TLS bootstrap main-entry vs convenience-helper classification
+      - WinSSL enterprise main-path names vs legacy wrapper demotion
+
+- update docs/source:
+  - `docs/reference/API_REFERENCE.md`
+  - `src/fafafa.ssl.pas`
+  - `src/fafafa.ssl.factory.pas`
+  - change:
+    - classified `CreateDefaultConfig` / `TSSLHelper` / `QuickServer` /
+      `CreateOCSPClient` / `CreateCRLManager` as convenience helpers
+    - kept `TSSLFactory.GetLibraryInstance(...)` / connector surfaces as bootstrap main entry
+    - rewrote `WinSSL 企业工具` to use `TSSLEnterpriseConfig` current helper names
+    - demoted old enterprise globals to legacy convenience wrappers
+
+- `bash -n tests/scripts/test_helper_surface_classification_truth_contract.sh`
+- `bash tests/scripts/test_helper_surface_classification_truth_contract.sh`
+- `bash tests/scripts/test_migration_guide_active_truth_contract.sh`
+- `bash tests/scripts/test_active_fips_docs_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - helper-surface classification now agrees across canonical API docs, source comments,
+      migration guide, and active FIPS docs
+    - WinSSL enterprise helper naming drift is closed without removing shipped wrappers
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - the helper-surface classification batch is whitespace-clean
+
 ### Integration Guide Canonical Path Truth
 
 - `ls -l docs/INTEGRATION_GUIDE.md docs/guides/INTEGRATION_GUIDE.md`

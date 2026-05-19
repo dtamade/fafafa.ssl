@@ -1486,11 +1486,25 @@ class function TPKCS12Manager.LoadFromPKCS12File(
 ### WinSSL 企业工具
 
 ```pascal
-function IsFIPSModeEnabled: Boolean;
-function GetEnterpriseTrustedRoots: TStringArray;
+var
+  LConfig: TSSLEnterpriseConfig;
+begin
+  LConfig := TSSLEnterpriseConfig.Create;
+  try
+    LConfig.LoadFromSystem;
+    if LConfig.IsFIPSEnabled then
+      WriteLn('FIPS mode enabled');
+    WriteLn('Trusted roots: ', Length(LConfig.GetTrustedRoots));
+    WriteLn('Policies loaded: ', LConfig.GetAllPolicies.Count);
+  finally
+    LConfig.Free;
+  end;
+end;
 ```
 
+`TSSLEnterpriseConfig` 当前 helper 主路径是 `IsFIPSEnabled` / `GetTrustedRoots` / `GetAllPolicies`。
 这些 WinSSL 企业 helper 当前提供的是 Windows FIPS policy / 企业证书 / GPO 检测能力，不等于 `ISSLLibrary.GetCapabilities.SupportsFIPSMode=True`。
+`IsFIPSModeEnabled(...)` / `GetEnterpriseTrustedRoots(...)` 仍然存在，但当前只应视为 legacy convenience wrappers。
 
 ---
 
@@ -1504,6 +1518,20 @@ class function TSSLFactory.GetLibraryInstance(ALibType: TSSLLibraryType = sslAut
 
 `TSSLFactory.GetLibraryInstance(...)` 是当前高入口 public library-entrypoint。
 `CreateOpenSSLLibrary` / `CreateWinSSLLibrary` 仍存在，但它们属于 backend-specific low-level creators，不应再作为普通 guide/reference 的默认入口。
+
+### 门面便捷 helper（非 TLS bootstrap 主入口）
+
+`TSSLFactory.GetLibraryInstance(...)` / `TSSLConnector` / `TSSLAcceptor` / `TSSLStream` 仍是当前 TLS bootstrap 主入口。
+
+- `CreateDefaultConfig(...)` 当前只是 fresh default-config convenience helper。
+  如果你需要 library-owned defaults、持续的 logging policy，或 direct-library default-config truth，
+  优先通过 `ISSLLibrary.GetDefaultConfig(...)` / `SetDefaultConfig(...)` 访问。
+- `TSSLHelper` 当前保留为证书文件检查 / 随机与摘要工具 / early-data optional-interface convenience helper。
+  它不代替 `TSSLFactory` / `TSSLContextBuilder` / `TSSLConnector` 这条主入口。
+- `QuickServer(...)` 当前只是 `TSSLFactory.CreateServerContext(...)` 的 convenience bootstrap。
+  它只返回配置好的 `ISSLContext`，不负责 socket bind/listen/accept。
+- `CreateOCSPClient(...)` / `CreateCRLManager(...)` 当前是证书工具 facade re-export，不是 TLS 连接/bootstrap 入口。
+  只有在你显式需要 OCSP/CRL workflow 时，才直接走它们；普通 TLS client/server 建立流程仍然优先通过 context/builder/connector path。
 
 ---
 

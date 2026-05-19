@@ -260,6 +260,38 @@
 
 ## 2026-05-20
 
+- helper surface 这次又暴露了一个不同于“接口不存在/文档写错”的模式：
+  - exported API 继续 shipped 并不等于它还是当前主入口
+  - 如果权威 API 文档不主动分级，
+    调用方就会把 `仍导出` 误解成 `仍推荐`
+
+- 对 `fafafa.ssl` 当前最该分开的 helper 至少有三层：
+  - TLS bootstrap main entry
+    - `TSSLFactory.GetLibraryInstance(...)`
+    - `TSSLConnector` / `TSSLAcceptor` / `TSSLStream`
+  - facade convenience helpers
+    - `CreateDefaultConfig`
+    - `TSSLHelper`
+    - `QuickServer`
+    - `CreateOCSPClient`
+    - `CreateCRLManager`
+  - backend-specific / legacy convenience wrappers
+    - 例如 WinSSL enterprise 的
+      `IsFIPSModeEnabled(...)`
+      `GetEnterpriseTrustedRoots(...)`
+
+- 这次 `WinSSL 企业工具` 小节说明了一条很重要的文档原则：
+  - 即使旧全局函数还活着，
+  - canonical docs 也不该再把它们摆在主入口代码块里，
+  - 否则它们就会重新压过真正的当前 helper 主路径
+    `TSSLEnterpriseConfig.IsFIPSEnabled / GetTrustedRoots / GetAllPolicies`
+
+- 所以对这类长期兼容项目，最稳的写法不是“把旧 surface 从文档里抹掉”，
+  而是：
+  - 保留 shipped 事实
+  - 但显式降级成 convenience / compatibility wrapper
+  - 同时把主入口路径钉到 canonical guide/reference 里
+
 - `INTEGRATION_GUIDE` 这次证明了一个很典型的文档/工作流问题：
   - 漂移不一定来自“同一页内部有错”
   - 也可能来自“同一个主题有两份 active 文件，同时被不同 contract 当真”

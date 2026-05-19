@@ -230,13 +230,13 @@ function ProtocolVersionToString(AVersion: TSSLProtocolVersion): string;
 function LibraryTypeToString(ALibType: TSSLLibraryType): string;
 
 // ============================================================================
-// 便捷API
+// 便捷API（仍然 shipped，但不替代 TSSLFactory / TSSLConnector 主入口）
 // ============================================================================
 
-{ 初始化默认配置 }
+{ 初始化默认配置（fresh default-config convenience helper；若需要 library-owned defaults，请优先走 ISSLLibrary.GetDefaultConfig/SetDefaultConfig） }
 function CreateDefaultConfig(AContextType: TSSLContextType = sslCtxClient): TSSLConfig;
 
-{ 快速创建服务端 }
+{ 快速创建服务端 context（只返回配置好的 ISSLContext；socket bind/listen/accept 仍由应用层负责） }
 function QuickServer(const ACertFile, AKeyFile: string;
   APort: Integer = 443): ISSLContext;
 
@@ -244,12 +244,12 @@ function QuickServer(const ACertFile, AKeyFile: string;
 function CheckSSLSupport: Boolean;
 function GetSSLSupportInfo: string;
 
-{ 证书工具 }
+{ 证书工具 convenience helpers }
 function LoadCertificate(const AFileName: string): ISSLCertificate;
 function ValidateCertificate(const AFileName: string): Boolean;
 function GetCertificateDetails(const AFileName: string): TSSLCertificateInfo;
 
-{ OCSP/CRL 验证工具 }
+{ OCSP/CRL 证书工具 facade re-export（非 TLS bootstrap 入口） }
 function CreateOCSPClient: IOCSPClient;
 function CreateCRLManager: ICRLManager;
 function DefaultPKCS12Options: TPKCS12Options;
