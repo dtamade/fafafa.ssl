@@ -1,8 +1,15 @@
-# fafafa.ssl v1.0.0 - Release Notes
+# fafafa.ssl Release Notes
 
-**发布日期**: 2025-12-16
-**版本**: 1.0.0 (Production Ready)
-**状态**: ✅ 生产环境就绪 (99.5%)
+**当前稳定版本**: `v1.5.0`（已发布）
+**当前发布入口**: [当前路线图](ROADMAP.md) · [Release Readiness v1.5.0](test_reports/RELEASE_READINESS_V1.5.0.md)
+
+> 说明：本页保留 `v1.0.0` 的历史发布快照，方便回看早期里程碑；如果你要判断当前 stable release、workflow 或平台真相，请以上述 `v1.5.0` 入口为准。
+
+## 历史快照：v1.0.0
+
+**历史发布日期**: 2025-12-16
+**历史版本**: 1.0.0
+**历史状态**: 已归档的早期发布快照
 
 ---
 
@@ -148,7 +155,7 @@ sudo apt-get install libssl-dev fpc
 brew install openssl freepascal
 
 # 2. 克隆项目
-git clone https://github.com/yourusername/fafafa.ssl.git
+git clone https://github.com/dtamade/fafafa.ssl.git
 cd fafafa.ssl
 
 # 3. 运行测试
@@ -419,13 +426,12 @@ Phase 1-7 完整技术追踪
 
 ### 问题反馈
 
-- GitHub Issues: https://github.com/yourusername/fafafa.ssl/issues
-- 邮件: your.email@example.com
+- GitHub Issues: https://github.com/dtamade/fafafa.ssl/issues
 
 ### 社区
 
-- Discussions: https://github.com/yourusername/fafafa.ssl/discussions
-- Wiki: https://github.com/yourusername/fafafa.ssl/wiki
+- Discussions: https://github.com/dtamade/fafafa.ssl/discussions
+- Wiki: https://github.com/dtamade/fafafa.ssl/wiki
 
 ---
 
@@ -468,9 +474,10 @@ SOFTWARE.
 
 ---
 
-**版本**: v1.0.0
-**发布日期**: 2025-12-16
-**状态**: ✅ 生产环境就绪
-**下载**: [GitHub Releases](https://github.com/yourusername/fafafa.ssl/releases/tag/v1.0.0)
+**当前稳定版本**: v1.5.0
+**当前发布状态**: 已发布
+**当前权威入口**: [ROADMAP](ROADMAP.md) · [RELEASE_READINESS_V1.5.0](test_reports/RELEASE_READINESS_V1.5.0.md)
+**当前下载**: [GitHub Releases](https://github.com/dtamade/fafafa.ssl/releases/tag/v1.5.0)
 
-**立即开始**: `git clone https://github.com/yourusername/fafafa.ssl.git`
+**历史快照**: v1.0.0（2025-12-16）
+**立即开始**: `git clone https://github.com/dtamade/fafafa.ssl.git`

@@ -1,7 +1,7 @@
 # 平台支持文档
 
-**最后更新**: 2026-03-25
-**版本**: 1.0
+**最后更新**: 2026-05-19
+**版本**: 1.5
 
 ---
 
@@ -11,13 +11,14 @@ fafafa.ssl 是一个跨平台的 SSL/TLS 抽象框架,支持多个操作系统�
 
 ## 当前发布与平台验证入口
 
-如果你是在继续当前工程的验证或收口，先看这三页，再按当前平台口径推进：
+如果你是在继续当前工程的验证或收口，先看这四页，再按当前平台口径推进：
 
-- `docs/ROADMAP.md`
-- `docs/plans/2026-05-12-release-v1.5.0-formalization.md`
-- `docs/test_reports/RELEASE_READINESS_V1.5.0.md`
+- [当前路线图](ROADMAP.md)
+- [Release Readiness v1.5.0](test_reports/RELEASE_READINESS_V1.5.0.md)
+- [WinSSL 后端状态报告](test_reports/WINSSL_BACKEND_STATUS_REPORT.md)
+- [WinSSL 后端能力矩阵](reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md)
 
-当前默认本地 release baseline 是 Linux release-control 链：
+当前默认本地 release baseline 仍是 Linux release-control 链：
 
 - `python3 scripts/compile_all_modules.py`
 - `bash scripts/run_minimal_ci_gate.sh --fast-local`
@@ -25,13 +26,13 @@ fafafa.ssl 是一个跨平台的 SSL/TLS 抽象框架,支持多个操作系统�
 - `python3 scripts/check_code_style.py src`
 - `bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local`
 
-Wave C 页面现在只保留 closeout / approval / historical reference 角色，不再是默认工程入口。Windows 保留现有 PowerShell 测试入口；macOS 当前更适合先做 focused smoke，再按 release-control 状态决定是否需要继续扩展验证。全量多平台 workflow 仍以 template/manual 为主。
+`v1.5.0` 已发布，当前跨平台 runtime/release truth 以 `RELEASE_READINESS_V1.5.0.md` 为准：Linux、macOS、Windows 的当前发布链都已经有对应 workflow 证据。Linux 仍是默认本地 control-plane，WinSSL 的更细能力边界继续以状态报告和能力矩阵为准。全量多平台 workflow 仍以 template/manual 为主。
 
-| 平台        | 状态        | 后端支持        | 测试覆盖率 | CI/CD     |
-| ----------- | ----------- | --------------- | ---------- | --------- |
-| **Windows** | ✅ 完全支持 | OpenSSL, WinSSL | 97.5%      | ✅        |
-| **Linux**   | ✅ 完全支持 | OpenSSL         | 97.5%      | ✅        |
-| **macOS**   | 🔄 验证中   | OpenSSL         | 待测试     | 🔄 配置中 |
+| 平台        | 当前状态 | 后端支持        | 当前验证入口                                  | 自动化 |
+| ----------- | -------- | --------------- | --------------------------------------------- | ------ |
+| **Windows** | ✅ 已发布 | OpenSSL, WinSSL | `RELEASE_READINESS_V1.5.0` + WinSSL 状态报告  | ✅     |
+| **Linux**   | ✅ 已发布 | OpenSSL         | 本地 release-control + `ci.yml` minimal gate  | ✅     |
+| **macOS**   | ✅ 已发布 | OpenSSL         | cross-platform runtime workflow + smoke 入口 | ✅     |
 
 ---
 
@@ -40,8 +41,10 @@ Wave C 页面现在只保留 closeout / approval / historical reference 角色�
 ### 支持状态
 
 - **状态**: ✅ 完全支持
-- **测试覆盖率**: 97.5% (39/40 核心测试通过)
-- **生产就绪度**: 99%+
+- **当前权威入口**:
+  - [Release Readiness v1.5.0](test_reports/RELEASE_READINESS_V1.5.0.md)
+  - [WinSSL 后端状态报告](test_reports/WINSSL_BACKEND_STATUS_REPORT.md)
+  - [WinSSL 后端能力矩阵](reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md)
 
 ### 支持的后端
 
@@ -50,10 +53,12 @@ Wave C 页面现在只保留 closeout / approval / historical reference 角色�
    - 动态库: `libssl-3-x64.dll`, `libcrypto-3-x64.dll`
    - 安装方式: 从 OpenSSL 官网下载或使用包管理器
 
-2. **WinSSL (Schannel)** (零依赖，100% 完成)
+2. **WinSSL (Schannel)** (零依赖客户端 baseline 已验证)
    - 版本: Windows Vista+
    - TLS 1.3 支持: Windows 10 20348+ 或 Windows 11
-   - 状态: ✅ 生产就绪（所有 6 个阶段完成）
+   - 状态: 已纳入当前 `v1.5.0` 已发布主线
+   - 会话复用 / Session Ticket: 仍按 experimental public surface 理解
+   - 当前 dedicated Windows runtime truth: `observed_reuse=false` / `session_configured=true`
    - 优势: 零外部依赖,使用系统原生 SSL/TLS,自动安全更新
 
 ### 安装指南
@@ -109,8 +114,9 @@ cd tests
 ### 支持状态
 
 - **状态**: ✅ 完全支持
-- **测试覆盖率**: 97.5% (39/40 核心测试通过)
-- **生产就绪度**: 99%+
+- **当前权威入口**:
+  - [Release Readiness v1.5.0](test_reports/RELEASE_READINESS_V1.5.0.md)
+  - [当前路线图](ROADMAP.md)
 
 ### 支持的后端
 
@@ -188,9 +194,10 @@ bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local
 
 ### 支持状态
 
-- **状态**: 🔄 验证中
-- **测试覆盖率**: 待测试
-- **生产就绪度**: 待验证
+- **状态**: ✅ 已发布（manual cross-platform runtime workflow 已绿）
+- **当前权威入口**:
+  - [Release Readiness v1.5.0](test_reports/RELEASE_READINESS_V1.5.0.md)
+  - [当前路线图](ROADMAP.md)
 
 ### 支持的后端
 
@@ -330,14 +337,13 @@ Lib := CreateWinSSLLibrary();
 
 ---
 
-## 🧪 测试覆盖率
+## 🧪 当前验证口径
 
-### 核心测试套件
+### 当前 gate / workflow 入口
 
-- **总测试**: 40 个核心测试
-- **Windows**: 39/40 通过 (97.5%)
-- **Linux**: 39/40 通过 (97.5%)
-- **macOS**: 待测试
+- **Linux**: 本地 `compile_all_modules.py` + `run_minimal_ci_gate.sh --fast-local`
+- **Windows**: cross-platform runtime workflow + `WINSSL_BACKEND_STATUS_REPORT.md`
+- **macOS**: 当前发布链已绿；继续扩测时优先做 focused smoke，再按 `RELEASE_READINESS_V1.5.0.md` 对齐
 
 ### 测试类别
 
@@ -393,7 +399,7 @@ jobs:
 如果您在特定平台上遇到问题或有改进建议,请:
 
 1. 查看 [故障排除文档](guides/TROUBLESHOOTING.md)
-2. 搜索现有 [Issues](https://github.com/your-repo/fafafa.ssl/issues)
+2. 搜索现有 [Issues](https://github.com/dtamade/fafafa.ssl/issues)
 3. 创建新 Issue 并提供详细信息:
    - 操作系统和版本
    - Free Pascal 版本

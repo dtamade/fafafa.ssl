@@ -10,6 +10,37 @@
 
 ## Current Status
 
+- [completed] Active release / platform truth sweep 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-active-release-platform-truth-sweep.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_active_release_platform_truth_contract.sh`
+  - 当前已修正的高入口活跃文档：
+    - `docs/RELEASE_NOTES.md`
+    - `docs/PLATFORM_SUPPORT.md`
+    - `docs/guides/WINSSL_USER_GUIDE.md`
+    - `docs/ZERO_DEPENDENCY_DEPLOYMENT.md`
+  - 当前已收掉的真问题：
+    - `RELEASE_NOTES` 顶部不再把 `v1.0.0` 历史快照冒充当前稳定发布入口
+    - `PLATFORM_SUPPORT` 不再保留：
+      - `97.5% / 99%+`
+      - `macOS 验证中`
+      - `WinSSL 100% 完成 / 所有 6 个阶段完成`
+      这类旧阶段口径
+    - `WINSSL_USER_GUIDE` 不再把 `session resumption / tickets` 写成 `100% 完成 / 完全支持`
+    - `ZERO_DEPENDENCY_DEPLOYMENT` 不再把 WinSSL 总体状态写成 `100% 完成，生产就绪`
+    - 活跃文档中的 `yourusername` / `your-repo` / `your.email@example.com` 占位入口已清掉
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_active_release_platform_truth_contract.sh`
+    - `bash tests/scripts/test_active_release_platform_truth_contract.sh`
+    - `git diff --check`: PASS
+  - 当前结论：
+    - 当前 release/platform/WinSSL 高入口文档已经重新锚回：
+      - `docs/ROADMAP.md`
+      - `docs/test_reports/RELEASE_READINESS_V1.5.0.md`
+      - `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md`
+      - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+    - 后续如果继续看 WinSSL，不应再从“100% 完成”这类旧口径出发，而应直接从当前 session/runtime truth 进入
 - [completed] Implemented backend future truth sweep 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-implemented-backend-future-truth-sweep.md`

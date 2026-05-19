@@ -2,6 +2,47 @@
 
 ## 2026-05-19
 
+- 再次核对当前权威源后，上一轮候选清单里有一部分已经过时：
+  - `docs/test_reports/RELEASE_READINESS_V1.5.0.md` 已明确说明：
+    - `v1.5.0` 已发布
+    - cross-platform runtime workflow 已绿
+  - 所以这轮不能再把平台总口径简单改成“都还没完成”，而是要区分：
+    - 发布链已经闭环
+    - WinSSL 的 session resumption / tickets 仍不是“完整 runtime-proven”
+
+- 这轮最值得收掉的高入口漂移，不是实现缺口，而是“当前权威入口和当前能力边界被旧叙事盖住”：
+  - `RELEASE_NOTES.md`
+    - 顶部仍把 `v1.0.0 / 99.5% / Production Ready` 当作当前主叙事
+  - `PLATFORM_SUPPORT.md`
+    - 同时残留两类相反方向的漂移：
+      - Windows/WinSSL 被写得过满
+      - macOS 又仍被写成“验证中”
+  - `WINSSL_USER_GUIDE.md` / `ZERO_DEPENDENCY_DEPLOYMENT.md`
+    - 继续把 WinSSL 写成 `100% 完成`
+    - 继续把 session resumption / tickets 讲成稳定成功能力
+
+- 这说明“活跃文档真相”不能只看一种漂移：
+  - 过强表述会误导下一步路线，以为能力已经 runtime-complete
+  - 过弱表述也会误导下一步路线，以为平台发布链还没闭环
+  - 二者都需要重新锚到同一组 authority docs
+
+- 当前最有效的修法不是重写整页历史内容，而是把高入口文档重新分层：
+  - 当前稳定 truth 放到文档顶部
+  - 旧 `v1.0.0` 内容降级成显式历史快照
+  - WinSSL 细能力边界直接锚到：
+    - `WINSSL_BACKEND_STATUS_REPORT`
+    - `WINSSL_BACKEND_CAPABILITY_MATRIX`
+
+- 这轮还顺手暴露了一类常被忽略、但实际会直接误导用户的真问题：
+  - 活跃文档仍残留 `yourusername` / `your-repo` / `your.email@example.com`
+  - 它们不是无害占位，而是错误导航入口
+
+- 本批收口后的新基线应明确保留：
+  - 当前 stable release truth = `v1.5.0` 已发布
+  - 当前平台发布 truth = Linux / macOS / Windows 都已有发布链证据
+  - 当前 WinSSL backend truth = 零依赖客户端 baseline 已验证，但 `session resumption / tickets` 继续按 experimental public surface 理解
+  - 当前 WinSSL session 摘要 = `observed_reuse=false` / `session_configured=true`
+
 - 在收掉根入口 broken links 之后，下一层明显的路线图级误导其实不是坏链接，而是“未来态残留”：
   - 几份活跃文档虽然能打开，但仍把已经存在的 backend 写成“计划中/未来”
   - 这会比单纯 broken link 更隐蔽，因为阅读者会以为这是当前权威事实

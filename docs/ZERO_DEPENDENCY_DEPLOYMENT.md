@@ -4,6 +4,8 @@
 
 本指南详细说明如何使用 **fafafa.ssl** 的 **WinSSL 后端**实现 Windows 应用的零依赖部署，消除对外部 SSL 库（如 OpenSSL DLL）的依赖。
 
+> 当前口径：WinSSL 的零依赖客户端 baseline 已验证；如果你要判断 session resumption / Session Ticket 的当前真相，请同时查看 [WinSSL 后端状态报告](test_reports/WINSSL_BACKEND_STATUS_REPORT.md) 和 [WinSSL 后端能力矩阵](reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md)。这部分能力目前仍按实验性 public surface 理解。
+
 ---
 
 ## 📋 目录
@@ -1174,6 +1176,7 @@ Conn := Ctx.CreateConnection(Socket);
 - [WinSSL 用户指南](guides/WINSSL_USER_GUIDE.md)
 - [WinSSL 快速入门](guides/WINSSL_QUICKSTART.md)
 - [WinSSL 后端状态报告](test_reports/WINSSL_BACKEND_STATUS_REPORT.md)
+- [WinSSL 后端能力矩阵](reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md)
 
 ### Microsoft 文档
 - [Schannel 官方文档](https://docs.microsoft.com/en-us/windows/win32/secauthn/secure-channel)
@@ -1187,10 +1190,11 @@ Conn := Ctx.CreateConnection(Socket);
 
 ---
 
-**文档版本**: 2.0
-**最后更新**: 2026-01-19
+**文档版本**: 2.1
+**最后更新**: 2026-05-19
 **作者**: fafafa.ssl 开发团队
-**状态**: ✅ WinSSL 100% 完成，生产就绪
+**状态**: ✅ WinSSL 零依赖客户端基线已验证；会话复用 / Session Ticket 仍按实验性 public surface 理解
+**当前权威入口**: [WinSSL 用户指南](guides/WINSSL_USER_GUIDE.md) · [WinSSL 后端状态报告](test_reports/WINSSL_BACKEND_STATUS_REPORT.md) · [WinSSL 后端能力矩阵](reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md)
 
 ---
 

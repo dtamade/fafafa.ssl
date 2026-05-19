@@ -166,10 +166,11 @@ Conn.Connect;
 - 传统算法支持（Blowfish 等）
 - 精确的协议版本控制
 
-**服务器应用**:
+**需要完整跨平台 server/runtime 保证的场景**:
 
-- 当前版本 (Phase 2.4) 主要支持客户端模式
-- 服务器模式功能有限
+- 需要在 Linux/macOS 上复用同一后端
+- 需要 caller-provided server OCSP stapling 等 OpenSSL 优先能力
+- 需要把 session resumption / tickets 当成已稳定 runtime-proven 能力
 
 ---
 
@@ -212,26 +213,26 @@ end;
 
 ## 📊 功能状态
 
-### ✅ 已实现（100% 完成）
+### 当前 public surface 与验证边界
 
-| 功能                       | 状态                       | 实现版本  |
-| -------------------------- | -------------------------- | --------- |
-| **TLS 1.0/1.1/1.2**        | ✅ 完全支持                | Phase 2.4 |
-| **TLS 1.3**                | ⚠️ Windows 10 20348+/Win11 | 平台限制  |
-| **客户端 TLS 握手**        | ✅ 完全支持                | Phase 2.4 |
-| **服务器 TLS 握手**        | ✅ 完全支持                | Phase 5   |
-| **SNI (服务器名称指示)**   | ✅ 完全支持                | Phase 2.4 |
-| **证书验证（自动模式）**   | ✅ 完全支持                | Phase 1   |
-| **证书链验证**             | ✅ 完全支持                | Phase 1   |
-| **主机名验证**             | ✅ 完全支持                | Phase 1   |
-| **证书文件加载**           | ✅ 完全支持                | Phase 2   |
-| **客户端证书（双向 TLS）** | ✅ 完全支持                | Phase 3   |
-| **ALPN 协议协商**          | ✅ 完全支持                | Phase 4   |
-| **会话复用优化**           | ✅ 完全支持                | Phase 6   |
-| **数据加密/解密**          | ✅ 完全支持                | Phase 2.4 |
-| **连接管理**               | ✅ 完全支持                | Phase 2.4 |
-| **错误处理**               | ✅ 完全支持                | Phase 2.4 |
-| **Windows 证书存储访问**   | ✅ 完全支持                | Phase 2.4 |
+| 功能 | 当前状态 | 当前口径 |
+| --- | --- | --- |
+| **TLS 1.0/1.1/1.2** | ✅ 支持 | 基础 TLS capability 已接通 |
+| **TLS 1.3** | ⚠️ 条件支持 | 受 Windows 版本限制 |
+| **客户端 TLS 握手** | ✅ 已有当前 Windows runtime baseline | 见状态报告 |
+| **服务器 TLS 握手** | ✅ 已实现 | 更细 server runtime 场景继续按状态报告区分 |
+| **SNI (服务器名称指示)** | ✅ 支持 | 客户端 / 服务器 surface 已接通 |
+| **证书验证（自动模式）** | ✅ 支持 | 基础证书链 / 主机名校验已接通 |
+| **证书链验证** | ✅ 支持 | 使用 Windows 证书存储 |
+| **主机名验证** | ✅ 支持 | 支持通配符和 SAN |
+| **证书文件加载** | ✅ 支持 | PFX / DER / PEM |
+| **客户端证书（双向 TLS）** | ✅ 支持 | 见状态报告中的当前证据边界 |
+| **ALPN 协议协商** | ✅ 支持 | 受 Windows 版本影响 |
+| **会话复用 / Session Ticket** | ⚠️ 实验性 public surface | 当前 dedicated Windows runtime truth: `observed_reuse=false` / `session_configured=true` |
+| **数据加密/解密** | ✅ 支持 | 连接读写 surface 已接通 |
+| **连接管理** | ✅ 支持 | 客户端 / 服务器 connection surface 已接通 |
+| **错误处理** | ✅ 支持 | WinSSL 错误映射已接到公共接口 |
+| **Windows 证书存储访问** | ✅ 支持 | 原生集成 |
 
 ### 📋 功能详情
 
@@ -261,22 +262,24 @@ end;
 **Phase 5: 服务器 TLS 握手**
 
 - ✅ 服务器上下文配置
-- ✅ 服务器握手（`AcceptSecurityContext`）
+- ✅ 服务器握手 public surface（`AcceptSecurityContext`）
+- ⚠️ 更细 server runtime 场景继续按状态报告区分
 
 **Phase 6: 会话复用优化**
 
-- ✅ 线程安全的会话管理器
-- ✅ FIFO 缓存策略
-- ✅ 会话元数据保存
+- ✅ 线程安全的会话对象 / metadata surface
+- ✅ FIFO 缓存与会话材料接线
+- ⚠️ 当前 dedicated Windows runtime truth 仍是 `observed_reuse=false` / `session_configured=true`
+- ⚠️ 因此 session resumption / tickets 继续按实验性 public surface 理解
 
 ### ⏳ 验证状态
 
-| 验证类型     | 状态      | 说明                       |
-| ------------ | --------- | -------------------------- |
-| **代码审查** | ✅ 通过   | 所有实现已通过详细代码审查 |
-| **逻辑测试** | ⏳ 待执行 | 需要 Windows 环境          |
-| **功能验证** | ⏳ 待执行 | 由 Windows 用户执行        |
-| **性能测试** | ⏳ 待执行 | 需要 Windows 环境          |
+| 验证类型 | 状态 | 说明 |
+| --- | --- | --- |
+| **源码 / compile proof** | ✅ 通过 | Linux 侧 source contract 与 compile gate 已闭环 |
+| **GitHub Windows runtime baseline** | ✅ 通过 | 当前 broader suite / runtime evidence 已落地 |
+| **Session resumption semantics** | ⚠️ 实验性 | 当前 dedicated Windows runtime truth: `observed_reuse=false` / `session_configured=true` |
+| **更深 native resumed-handshake 行为** | ⚠️ 继续按状态报告收敛 | 不再写成“100% 完成” |
 
 ---
 
@@ -499,11 +502,10 @@ Lib := CreateSSLLibrary(sslWinSSL);
 
 ---
 
-**文档版本**: 2.0
-**最后更新**: 2026-01-19
-**项目状态**: ✅ WinSSL 后端 100% 完成（所有 6 个阶段）
-**代码审查**: ✅ 通过（所有实现已审查）
-**功能验证**: ⏳ 待 Windows 用户执行
+**文档版本**: 2.1
+**最后更新**: 2026-05-19
+**项目状态**: ✅ WinSSL 零依赖客户端基线已验证；会话复用 / Session Ticket 仍为实验性 public surface
+**当前权威入口**: [WinSSL 后端状态报告](../test_reports/WINSSL_BACKEND_STATUS_REPORT.md) · [WinSSL 后端能力矩阵](../reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md)
 
 ---
 

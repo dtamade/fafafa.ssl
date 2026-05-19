@@ -2,6 +2,68 @@
 
 ## 2026-05-19
 
+### Active Release / Platform Truth Sweep
+
+- add `docs/plans/2026-05-19-active-release-platform-truth-sweep.md`
+  - change:
+    - define the bounded active-doc truth batch for release/platform/WinSSL entrypoints
+
+- add `tests/scripts/test_active_release_platform_truth_contract.sh`
+  - change:
+    - lock current release/platform/WinSSL truth across:
+      - `docs/RELEASE_NOTES.md`
+      - `docs/PLATFORM_SUPPORT.md`
+      - `docs/guides/WINSSL_USER_GUIDE.md`
+      - `docs/ZERO_DEPENDENCY_DEPLOYMENT.md`
+    - forbid stale placeholder repo/contact tokens in these active docs
+
+- `bash -n tests/scripts/test_active_release_platform_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new active-release/platform focused contract syntax is valid
+
+- `bash tests/scripts/test_active_release_platform_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `RELEASE_NOTES` still presented `v1.0.0` as current release head
+      - `PLATFORM_SUPPORT` still mixed old `97.5% / macOS 验证中 / WinSSL 100% 完成` wording
+      - `WINSSL_USER_GUIDE` still overclaimed `100% 完成 / 会话复用完全支持`
+      - `ZERO_DEPENDENCY_DEPLOYMENT` still ended with `WinSSL 100% 完成，生产就绪`
+      - active docs still kept `yourusername` / `your-repo` / `your.email@example.com`
+    - GREEN after fix:
+      - current active entry docs now point back to `v1.5.0` release truth and bounded WinSSL session truth
+
+- update `docs/RELEASE_NOTES.md`
+  - change:
+    - promote current `v1.5.0` release truth to the doc head
+    - demote `v1.0.0` to explicit historical snapshot
+    - replace placeholder repo/support URLs with the live GitHub repository
+
+- update `docs/PLATFORM_SUPPORT.md`
+  - change:
+    - replace stale platform percentages with current verification-entry wording
+    - align Windows/Linux/macOS status text to current `v1.5.0` release/workflow truth
+    - bound WinSSL wording to current session/runtime truth
+    - replace placeholder Issues URL with the live repository
+
+- update `docs/guides/WINSSL_USER_GUIDE.md`
+  - change:
+    - replace `100% 完成` heading/status with current public-surface-and-boundary wording
+    - restate session resumption / tickets as experimental public surface with
+      `observed_reuse=false` / `session_configured=true`
+
+- update `docs/ZERO_DEPENDENCY_DEPLOYMENT.md`
+  - change:
+    - add current bounded WinSSL truth note near the top
+    - add capability-matrix reference
+    - replace stale `100% 完成，生产就绪` footer status with current bounded wording
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current active-release/platform truth batch has no whitespace or patch-format issues
+
 ### Implemented Backend Future Truth Sweep
 
 - add `docs/plans/2026-05-19-implemented-backend-future-truth-sweep.md`
