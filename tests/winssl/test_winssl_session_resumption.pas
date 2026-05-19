@@ -7,7 +7,7 @@ uses
   {$IFDEF WINDOWS}
   Windows, WinSock2,
   {$ENDIF}
-  SysUtils, Classes,
+  SysUtils, Classes, Process,
   fafafa.ssl.base,
   fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.api,
@@ -17,6 +17,10 @@ uses
 var
   Total, Passed, Failed: Integer;
   Section: string;
+
+const
+  ResumeMarkerPrefix = '[WINSSL-SESSION-RESUME] ';
+  NativeProbeChildEnv = 'FAFAFA_WINSSL_NATIVE_PROBE_CHILD';
 
 function ResolveSessionHost: string;
 begin
@@ -52,7 +56,7 @@ end;
 
 procedure EmitResumeMarker(const AMarker: string);
 begin
-  WriteLn('[WINSSL-SESSION-RESUME] ', AMarker);
+  WriteLn(ResumeMarkerPrefix, AMarker);
 end;
 
 function BoolText(AValue: Boolean): string;
@@ -75,6 +79,139 @@ end;
 function EnvInt(const AName: string; ADefault: Integer): Integer;
 begin
   Result := StrToIntDef(Trim(GetEnvironmentVariable(AName)), ADefault);
+end;
+
+function IsNativeProbeChildMode: Boolean;
+begin
+  Result := EnvEnabled(NativeProbeChildEnv);
+end;
+
+procedure SetProcessEnvironment(const AName, AValue: string);
+begin
+  if AValue = '' then
+    Windows.SetEnvironmentVariable(PChar(AName), nil)
+  else
+    Windows.SetEnvironmentVariable(PChar(AName), PChar(AValue));
+end;
+
+function ExtractResumeMarker(const ALine: string; out AMarker: string): Boolean;
+begin
+  Result := Pos(ResumeMarkerPrefix, ALine) = 1;
+  if Result then
+    AMarker := Trim(Copy(ALine, Length(ResumeMarkerPrefix) + 1, MaxInt))
+  else
+    AMarker := '';
+end;
+
+procedure UpdateNativeProbeObservationFromMarker(const AMarker: string;
+  var AObservedNativeReuse: Boolean; var AProbeSucceeded: Boolean);
+begin
+  if Pos('native_probe ', AMarker) <> 1 then
+    Exit;
+
+  if Pos('available=true', AMarker) > 0 then
+  begin
+    AProbeSucceeded := True;
+    if Pos('reused=true', AMarker) > 0 then
+      AObservedNativeReuse := True;
+  end;
+end;
+
+function LoadProcessOutput(AProcess: TProcess): string;
+var
+  LOutput: TStringList;
+begin
+  LOutput := TStringList.Create;
+  try
+    LOutput.LoadFromStream(AProcess.Output);
+    Result := LOutput.Text;
+  finally
+    LOutput.Free;
+  end;
+end;
+
+function RunIsolatedNativeProbeWorker(const AHost: string; AAttemptCount: Integer;
+  out AExitCode: Integer; out AOutput: string; out AObservedNativeReuse: Boolean;
+  out AProbeSucceeded: Boolean; out ALastMarker: string): Boolean;
+var
+  LProcess: TProcess;
+  LOutputLines: TStringList;
+  LOriginalHost: string;
+  LOriginalAttempts: string;
+  LOriginalRunNet: string;
+  LOriginalProbeEnabled: string;
+  LOriginalChildMode: string;
+  LMarker: string;
+  I: Integer;
+begin
+  Result := False;
+  AExitCode := -1;
+  AOutput := '';
+  AObservedNativeReuse := False;
+  AProbeSucceeded := False;
+  ALastMarker := 'none';
+
+  LOriginalHost := GetEnvironmentVariable('FAFAFA_WINSSL_SESSION_HOST');
+  LOriginalAttempts := GetEnvironmentVariable('FAFAFA_WINSSL_SESSION_ATTEMPTS');
+  LOriginalRunNet := GetEnvironmentVariable('FAFAFA_RUN_NETWORK_TESTS');
+  LOriginalProbeEnabled := GetEnvironmentVariable('FAFAFA_WINSSL_ENABLE_NATIVE_PROBE');
+  LOriginalChildMode := GetEnvironmentVariable(NativeProbeChildEnv);
+
+  SetProcessEnvironment('FAFAFA_WINSSL_SESSION_HOST', AHost);
+  SetProcessEnvironment('FAFAFA_WINSSL_SESSION_ATTEMPTS', IntToStr(AAttemptCount));
+  SetProcessEnvironment('FAFAFA_RUN_NETWORK_TESTS', '1');
+  SetProcessEnvironment('FAFAFA_WINSSL_ENABLE_NATIVE_PROBE', '1');
+  SetProcessEnvironment(NativeProbeChildEnv, '1');
+
+  LProcess := TProcess.Create(nil);
+  try
+    LProcess.Executable := ParamStr(0);
+    LProcess.Options := [poWaitOnExit, poUsePipes, poStderrToOutPut];
+    LProcess.Execute;
+    LProcess.WaitOnExit;
+    AOutput := LoadProcessOutput(LProcess);
+    AExitCode := LProcess.ExitCode;
+  except
+    on E: Exception do
+    begin
+      AExitCode := -1;
+      AOutput := Format('worker_exception=%s:%s', [E.ClassName, E.Message]);
+      ALastMarker := 'worker_launch_exception';
+    end;
+  end;
+  LProcess.Free;
+
+  SetProcessEnvironment('FAFAFA_WINSSL_SESSION_HOST', LOriginalHost);
+  SetProcessEnvironment('FAFAFA_WINSSL_SESSION_ATTEMPTS', LOriginalAttempts);
+  SetProcessEnvironment('FAFAFA_RUN_NETWORK_TESTS', LOriginalRunNet);
+  SetProcessEnvironment('FAFAFA_WINSSL_ENABLE_NATIVE_PROBE', LOriginalProbeEnabled);
+  SetProcessEnvironment(NativeProbeChildEnv, LOriginalChildMode);
+
+  LOutputLines := TStringList.Create;
+  try
+    LOutputLines.Text := AOutput;
+    for I := 0 to LOutputLines.Count - 1 do
+    begin
+      if ExtractResumeMarker(TrimRight(LOutputLines[I]), LMarker) then
+      begin
+        ALastMarker := LMarker;
+        if Pos('native_probe ', LMarker) = 1 then
+        begin
+          EmitResumeMarker(LMarker);
+          UpdateNativeProbeObservationFromMarker(LMarker,
+            AObservedNativeReuse, AProbeSucceeded);
+        end;
+      end;
+    end;
+  finally
+    LOutputLines.Free;
+  end;
+
+  EmitResumeMarker(Format(
+    'native_probe_worker exit_code=%d probe_succeeded=%s observed_reuse=%s last_marker=%s',
+    [AExitCode, BoolText(AProbeSucceeded), BoolText(AObservedNativeReuse),
+     ALastMarker]));
+  Result := AExitCode = 0;
 end;
 
 function InitWinsock: Boolean;
@@ -225,6 +362,7 @@ var
   LObservedReuse: Boolean;
   LObservedNativeReuse: Boolean;
   LNativeProbeEnabled: Boolean;
+  LNativeProbeChildMode: Boolean;
   LNativeProbeSucceeded: Boolean;
   LRequireNativeReuse: Boolean;
   LSessionConfigured: Boolean;
@@ -234,6 +372,9 @@ var
   LReused: Boolean;
   LNativeReused: Boolean;
   LNativeDetails: string;
+  LWorkerExitCode: Integer;
+  LWorkerOutput: string;
+  LWorkerLastMarker: string;
   LInitError: string;
 begin
   BeginSection('WinSSL session resumption truth');
@@ -253,6 +394,7 @@ begin
   LRequireNativeReuse := EnvEnabled('FAFAFA_WINSSL_REQUIRE_NATIVE_REUSE');
   LNativeProbeEnabled := EnvEnabled('FAFAFA_WINSSL_ENABLE_NATIVE_PROBE') or
     LRequireNativeReuse;
+  LNativeProbeChildMode := IsNativeProbeChildMode;
   LObservedReuse := False;
   LObservedNativeReuse := False;
   LNativeProbeSucceeded := False;
@@ -332,8 +474,10 @@ begin
       Check('initial handshake must not report reuse', not LReused,
         'fresh handshake unexpectedly reported session reuse');
 
-      if LNativeProbeEnabled then
+      if LNativeProbeEnabled and LNativeProbeChildMode then
       begin
+        EmitResumeMarker(
+          'native_probe label=initial_handshake pending=true mode=isolated_worker');
         if TryQueryNativeSessionReuse(LConn, LNativeReused, LNativeDetails) then
         begin
           LNativeProbeSucceeded := True;
@@ -348,7 +492,7 @@ begin
             'native_probe label=initial_handshake available=false reason=%s',
             [LNativeDetails]));
       end
-      else
+      else if not LNativeProbeEnabled then
         EmitResumeMarker(
           'native_probe label=initial_handshake available=false reason=disabled_by_default');
 
@@ -406,8 +550,11 @@ begin
         if LReused then
           LObservedReuse := True;
 
-        if LNativeProbeEnabled then
+        if LNativeProbeEnabled and LNativeProbeChildMode then
         begin
+          EmitResumeMarker(Format(
+            'native_probe label=same_context_attempt_%d pending=true mode=isolated_worker',
+            [LAttempt]));
           if TryQueryNativeSessionReuse(LConn, LNativeReused, LNativeDetails) then
           begin
             LNativeProbeSucceeded := True;
@@ -422,7 +569,7 @@ begin
               'native_probe label=same_context_attempt_%d available=false reason=%s',
               [LAttempt, LNativeDetails]));
         end
-        else
+        else if not LNativeProbeEnabled then
           EmitResumeMarker(Format(
             'native_probe label=same_context_attempt_%d available=false reason=disabled_by_default',
             [LAttempt]));
@@ -435,6 +582,16 @@ begin
 
       if LObservedReuse then
         Break;
+    end;
+
+    if LNativeProbeEnabled and not LNativeProbeChildMode then
+    begin
+      RunIsolatedNativeProbeWorker(AHost, LAttemptCount, LWorkerExitCode,
+        LWorkerOutput, LObservedNativeReuse, LNativeProbeSucceeded,
+        LWorkerLastMarker);
+      Check('isolated native probe worker exits cleanly', LWorkerExitCode = 0,
+        Format('exit_code=%d last_marker=%s',
+          [LWorkerExitCode, LWorkerLastMarker]));
     end;
 
     EmitResumeMarker(Format(
