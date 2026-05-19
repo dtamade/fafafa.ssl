@@ -62,6 +62,17 @@
   - 剩下的 direct-core 名字主要是解释性提及或 compatibility/deprecation 声明，
     不再属于 active guidance drift
 
+- `P2_MINIMUM_API_CAPABILITY_MATRIX.md` 这次暴露的是另一类更隐蔽的 capability drift：
+  - 不是表格行本身错
+  - 而是顶部“先看结论”还保留旧判断
+  - 结果就会出现“摘要说 CT 有直接字段映射，但 CT 行和特别说明又说没有”的
+    自相矛盾
+
+- 这种“摘要层 truth 漂移”风险很高：
+  - 很多人只看顶部 bullet，不会继续读到表格细节和特别说明
+  - 所以 capability 文档里，顶部 summary 反而要比具体行更保守
+  - 后续扫 capability matrix / KnownIssues 时，也要优先盯 summary / 结论段
+
 - session-resumption residual 这条线现在终于可以稳定冻结了：
   - `tests/contract/test_backend_contract.pas`
     是 compatibility mirror proof

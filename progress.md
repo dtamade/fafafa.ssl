@@ -151,6 +151,52 @@
     - active `docs/guides` / `docs/reference` no longer retain direct-core connection-call examples
     - the remaining direct-core names in active docs are now explanatory compatibility/deprecation mentions rather than teaching call sites
 
+### P2 Minimum API Matrix CT Truth
+
+- `rg -n "PKCS12 / CT|SupportsCertificateTransparency|CertTransparencySupport|无默认直接字段映射|CT 模块可用性不等于 OpenSSL backend public capability" docs/reference/P2_MINIMUM_API_CAPABILITY_MATRIX.md`
+  - result: PASS
+  - summary:
+    - static scan confirmed a summary-vs-detail contradiction in the P2 minimum API matrix:
+      - top summary still claimed CT had a direct capability-field mapping
+      - CT row and explanatory note already said it did not
+
+- add `docs/plans/2026-05-19-p2-minimum-api-matrix-ct-truth.md`
+  - change:
+    - recorded the bounded docs-only plan for the P2 minimum API matrix CT-truth cleanup
+
+- add `tests/scripts/test_p2_minimum_api_matrix_ct_truth_contract.sh`
+  - change:
+    - added a focused shell contract that guards:
+      - top summary no longer claims a direct CT field mapping
+      - CT row remains scoped to low-level OpenSSL binding availability
+      - explanatory note still demotes `SupportsCertificateTransparency` /
+        `CertTransparencySupport` from direct API mapping
+
+- update `docs/reference/P2_MINIMUM_API_CAPABILITY_MATRIX.md`
+  - change:
+    - rewrote the top summary bullet so only `PKCS12` remains a direct field expression
+    - kept CT scoped to low-level API/binding availability rather than default backend public capability
+
+- `bash -n tests/scripts/test_p2_minimum_api_matrix_ct_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new P2 minimum API matrix CT-truth contract syntax is valid
+
+- `bash tests/scripts/test_p2_minimum_api_matrix_ct_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - the P2 minimum API matrix no longer contradicts itself on CT capability mapping
+
+- `npx prettier --write docs/reference/P2_MINIMUM_API_CAPABILITY_MATRIX.md`
+  - result: PASS
+  - summary:
+    - the P2 matrix remains formatter-stable after the CT truth cleanup
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - the P2 minimum API matrix CT-truth batch is whitespace-clean
+
 ### ISSLSessionResumption Runtime Residual Classification Tightening
 
 - add `docs/plans/2026-05-19-isslsessionresumption-runtime-residual-classification-tightening.md`

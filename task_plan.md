@@ -4513,3 +4513,27 @@
      - 优先查：
        - capability matrix / KnownIssues / backend contract 之间是否还有实现或发布边界不一致
        - 活跃 reference/guides 是否还残留固定 capability 结论或 backend-specific old truth
+98. `P2 minimum API matrix CT truth` 已完成 focused 收口，并应作为当前 P2 最低 API 矩阵 CT 映射口径的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-p2-minimum-api-matrix-ct-truth.md`
+   - 当前已确认的真实 drift：
+     - `docs/reference/P2_MINIMUM_API_CAPABILITY_MATRIX.md`
+       - 顶部结论仍写：
+         - `TSSLBackendCapabilities 已能直接表达 PKCS12 / CT`
+       - 但 CT 行和特别说明同时又明确：
+         - `无默认直接字段映射`
+         - `SupportsCertificateTransparency` / `CertTransparencySupport`
+           不应当作这组底层 API 的直接映射
+   - 当前最小正确修法已落地：
+     - 不改生产实现
+     - 只把这页的顶部结论改回当前 capability/public truth
+     - 并新增 focused contract 冻结 CT 映射口径
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_p2_minimum_api_matrix_ct_truth_contract.sh`
+     - `bash tests/scripts/test_p2_minimum_api_matrix_ct_truth_contract.sh`
+     - `npx prettier --write docs/reference/P2_MINIMUM_API_CAPABILITY_MATRIX.md`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 继续按 capability truth 主线审查：
+       - 其它 matrix / KnownIssues / API reference 是否还有“顶部结论”和具体字段口径打架
+       - backend capability 发布面是否还存在 coarse-grained flag 与具体 runtime/public surface 不一致

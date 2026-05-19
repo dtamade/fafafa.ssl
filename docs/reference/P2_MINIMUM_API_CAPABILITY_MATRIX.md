@@ -9,7 +9,7 @@
 ## 先看结论
 
 - OpenSSL 3.5.4 基线下，P2 模块测试集已通过（见 `docs/test_reports/P2_MODULES_TEST_REPORT.md`）。
-- `TSSLBackendCapabilities` 已能直接表达 **PKCS12 / CT**，并部分表达 **OCSP / Store**。
+- `TSSLBackendCapabilities` 已能直接表达 **PKCS12**，并部分表达 **OCSP / Store**。
 - **PKCS7 / CMS / TS** 当前没有一对一能力字段，使用“模块加载状态 + 测试结果”作为显式支持依据。
 
 ---
@@ -29,15 +29,15 @@
 
 ## 模块清单（最低可用 API + 字段映射）
 
-| 模块 | 最低可用 API 集（必须可用） | 能力矩阵字段映射 | 当前状态（OpenSSL 3.5.4） |
-|---|---|---|---|
-| PKCS7 | `LoadPKCS7Functions` + `SignData` + `VerifySignedData` + `EncryptData` + `DecryptData` | 无直接字段（用模块加载状态 `osmPKCS7` + 测试结果） | ✅ 支持 |
-| CMS | `LoadOpenSSLCMS` + `CMSSignData` + `CMSVerifySignature` + `CMSEncryptData` + `CMSDecryptData` | 无直接字段（用模块加载状态 `osmCMS` + 测试结果） | ✅ 支持 |
-| PKCS12 | `LoadPKCS12Module` + `PKCS12_create` + `PKCS12_parse` + `d2i_PKCS12_bio` + `i2d_PKCS12_bio` | `SupportsPKCS12`（直接字段） | ✅ 支持 |
-| OCSP | `LoadOpenSSLOCSP` + `CheckCertificateStatus` + `CreateOCSPRequest` + `SendOCSPRequest` + `VerifyOCSPResponse` | `SupportsOCSPStapling` / `OCSPStaplingSupport`（仅装订能力，非完整 OCSP 客户端语义） | ✅ 支持（字段部分映射） |
-| CT | `LoadCTFunctions` + `EnableCertificateTransparency` + `ValidateSCTList` + `LoadCTLogStore` + `X509_get_SCT_LIST` | 无默认直接字段映射；当前只代表底层 OpenSSL CT binding 可用性，不等于 OpenSSL backend 已发布 connection-level CT public surface | ✅ 底层 API 可用 |
-| TS | `LoadTSFunctions` + `CreateTimestampRequest` + `VerifyTimestampResponse` + `GetTimestampTime` | 无直接字段（用函数可用性 + 测试结果） | ✅ 支持 |
-| Store | `LoadSTOREFunctions` + `LoadCertificateFromStore` + `LoadPrivateKeyFromStore` + `LoadCertificateChainFromStore` + `SearchCertificateByAlias` | `SupportsSystemCertStore` / `RequiresExternalLibrary`（部分映射） | ✅ 支持（字段部分映射） |
+| 模块   | 最低可用 API 集（必须可用）                                                                                                                  | 能力矩阵字段映射                                                                                                               | 当前状态（OpenSSL 3.5.4） |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------- |
+| PKCS7  | `LoadPKCS7Functions` + `SignData` + `VerifySignedData` + `EncryptData` + `DecryptData`                                                       | 无直接字段（用模块加载状态 `osmPKCS7` + 测试结果）                                                                             | ✅ 支持                   |
+| CMS    | `LoadOpenSSLCMS` + `CMSSignData` + `CMSVerifySignature` + `CMSEncryptData` + `CMSDecryptData`                                                | 无直接字段（用模块加载状态 `osmCMS` + 测试结果）                                                                               | ✅ 支持                   |
+| PKCS12 | `LoadPKCS12Module` + `PKCS12_create` + `PKCS12_parse` + `d2i_PKCS12_bio` + `i2d_PKCS12_bio`                                                  | `SupportsPKCS12`（直接字段）                                                                                                   | ✅ 支持                   |
+| OCSP   | `LoadOpenSSLOCSP` + `CheckCertificateStatus` + `CreateOCSPRequest` + `SendOCSPRequest` + `VerifyOCSPResponse`                                | `SupportsOCSPStapling` / `OCSPStaplingSupport`（仅装订能力，非完整 OCSP 客户端语义）                                           | ✅ 支持（字段部分映射）   |
+| CT     | `LoadCTFunctions` + `EnableCertificateTransparency` + `ValidateSCTList` + `LoadCTLogStore` + `X509_get_SCT_LIST`                             | 无默认直接字段映射；当前只代表底层 OpenSSL CT binding 可用性，不等于 OpenSSL backend 已发布 connection-level CT public surface | ✅ 底层 API 可用          |
+| TS     | `LoadTSFunctions` + `CreateTimestampRequest` + `VerifyTimestampResponse` + `GetTimestampTime`                                                | 无直接字段（用函数可用性 + 测试结果）                                                                                          | ✅ 支持                   |
+| Store  | `LoadSTOREFunctions` + `LoadCertificateFromStore` + `LoadPrivateKeyFromStore` + `LoadCertificateChainFromStore` + `SearchCertificateByAlias` | `SupportsSystemCertStore` / `RequiresExternalLibrary`（部分映射）                                                              | ✅ 支持（字段部分映射）   |
 
 ---
 
