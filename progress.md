@@ -9213,3 +9213,50 @@
   - result: PASS
   - summary:
     - current auto-backend PKCS#11 capability-truth batch has no whitespace or patch-format issues
+
+### Active FIPS Docs Truth Sweep
+
+- add `docs/plans/2026-05-19-active-fips-docs-truth-sweep.md`
+  - purpose:
+    - record the bounded batch that realigns active FIPS docs with current source truth
+
+- add `tests/scripts/test_active_fips_docs_truth_contract.sh`
+  - change:
+    - guard that active docs no longer advertise OpenSSL default-build FIPS capability as published truth
+    - guard that WinSSL remains the currently published FIPS-capable backend in these active docs
+
+- `bash -n tests/scripts/test_active_fips_docs_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new active-FIPS-docs shell contract syntax is valid
+
+- `bash tests/scripts/test_active_fips_docs_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `Backend abstraction design doc still advertises stale OpenSSL FIPS truth`
+    - static review then confirmed the same active-doc family also still carried:
+      - stale OpenSSL FIPS truth in backend selector design
+      - stale OpenSSL/WinSSL split in platform support
+    - GREEN after fix:
+      - active FIPS docs now match current source truth instead of the older static OpenSSL capability story
+
+- update `docs/reference/BACKEND_ABSTRACTION_LAYER_DESIGN.md`
+  - change:
+    - replace stale `OpenSSL FIPS = ✅` row with current default-build truth
+    - add explicit note that OpenSSL requires a dedicated module/build for FIPS
+
+- update `docs/reference/BACKEND_SELECTOR_DESIGN.md`
+  - change:
+    - replace stale `OpenSSL FIPS = ✅` row with current default-build truth
+    - add explicit selector note that default capability must not be treated as already FIPS-ready
+
+- update `docs/PLATFORM_SUPPORT.md`
+  - change:
+    - replace the OpenSSL/WinSSL FIPS comparison row with the current split
+    - add explicit note that default OpenSSL backend capability still does not publish FIPS
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current active FIPS docs-truth batch has no whitespace or patch-format issues

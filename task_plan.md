@@ -2938,3 +2938,26 @@
    - 当前批收口后默认下一步应为：
      - 继续找其它“source truth 已 runtime-aware，但 downstream proof 还缺位”的 builder/selector 残余点
      - 优先审 `RequirePKCS11Support` 相关文档/示例是否仍把本机 harness 现状误写成通用结论
+74. `active FIPS docs truth` 已完成 focused 收口，并应作为当前 docs completeness 的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-active-fips-docs-truth-sweep.md`
+   - 当前已确认的 active-doc drift：
+     - `docs/reference/BACKEND_ABSTRACTION_LAYER_DESIGN.md`
+       - 仍把 `OpenSSL FIPS = ✅` 写成当前 capability truth
+     - `docs/reference/BACKEND_SELECTOR_DESIGN.md`
+       - 仍把 `OpenSSL FIPS = ✅` 写成 selector 设计层默认真相
+     - `docs/PLATFORM_SUPPORT.md`
+       - 仍把 OpenSSL / WinSSL 对比写成两边都“FIPS 模式支持”
+   - 当前最小正确修法已落地：
+     - 不改生产代码
+     - 只把上述 3 份 active docs 重新锚回：
+       - OpenSSL 默认构建 `SupportsFIPSMode = False`
+       - WinSSL 当前 `SupportsFIPSMode = True`
+       - OpenSSL 若要进入 FIPS 路线，需要专门模块/构建
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_active_fips_docs_truth_contract.sh`
+     - `bash tests/scripts/test_active_fips_docs_truth_contract.sh`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 继续找其它 active reference/platform docs 是否仍把 OpenSSL 默认构建写成已发布 FIPS capability
+     - 或继续回到 builder/selector/implementation completeness 的下一个 focused proof gap

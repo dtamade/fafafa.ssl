@@ -333,7 +333,9 @@ Lib := CreateWinSSLLibrary();
 | **TLS 版本**  | 1.0-1.3             | 1.0-1.3      |
 | **性能**      | 优秀                | 优秀         |
 | **证书管理**  | 文件/内存           | 系统证书存储 |
-| **FIPS 模式** | 支持                | 支持         |
+| **FIPS 模式** | 默认构建不发布      | 支持         |
+
+OpenSSL 若要进入 FIPS 路线，需要额外的专门模块/构建；当前 fafafa.ssl 默认 OpenSSL backend capability 仍为未发布。
 
 ---
 

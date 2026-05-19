@@ -4354,3 +4354,31 @@
   - capability truth 不只是 source/doc/test 各自正确
   - 还要补齐 selector / builder 下游 proof
   - 后续若继续推进 completeness，优先值最高的是继续找这些“上游 truth 已收口，但下游 focused proof 还缺位”的点
+
+- 再次顺着 active docs 入口往下复审时，又确认了一类平行残余：
+  - `PKCS11/TPM` 不是唯一还会在文档层回漂的 capability truth
+  - `FIPS` 这条线在几个高可见 active docs 里也还保留着旧的 OpenSSL 静态能力心智
+
+- 当前已经压实的 3 个具体漂移点是：
+  - `docs/reference/BACKEND_ABSTRACTION_LAYER_DESIGN.md`
+    - 仍把 `OpenSSL FIPS = ✅` 写成当前能力矩阵真相
+  - `docs/reference/BACKEND_SELECTOR_DESIGN.md`
+    - 仍把 `OpenSSL FIPS = ✅` 写成 selector 设计层默认能力
+  - `docs/PLATFORM_SUPPORT.md`
+    - 仍把 OpenSSL / WinSSL 对比写成：
+      - 两边都“FIPS 模式支持”
+
+- 这类问题的风险和前两批完全同源：
+  - 会把“可通过特殊构建/模块进入 FIPS 路线”误写成“当前默认 backend capability 已发布”
+  - 进而让后续设计、选型、甚至平台对比都从错误前提出发
+
+- 这批最小正确修法也继续保持很窄：
+  - 不改 backend 实现
+  - 只把 active docs 重新锚回当前 source truth：
+    - OpenSSL 默认构建 `SupportsFIPSMode = False`
+    - WinSSL 当前 `SupportsFIPSMode = True`
+    - OpenSSL 若要进入 FIPS 路线，需要专门模块/构建
+
+- 因而当前 capability/completeness 路线的 docs 真相又向前收了一层：
+  - 不只是 `PKCS11/TPM`
+  - `FIPS` 这一类“特殊构建/平台合规能力”也不能再被 active docs 冒充成默认 shipped capability

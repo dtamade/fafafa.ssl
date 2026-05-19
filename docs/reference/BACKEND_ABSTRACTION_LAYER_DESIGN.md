@@ -136,10 +136,12 @@ Ctx := TSSLContextBuilder.Create
 | Session Ticket | ✅ | ✅ | ⚠️ |
 | PSK | ✅ | ✅ | ❌ |
 | Ed25519 | ✅ | ⚠️ | ❌ |
-| FIPS | ✅ | ❌ | ✅ |
+| FIPS | ❌ 默认构建 | ❌ | ✅ |
 | 系统证书存储 | ⚠️ | ⚠️ | ✅ |
 
 *需要 Windows 10 1903+
+
+OpenSSL 如需 FIPS 需要专门模块/构建；当前默认 backend capability 不发布 FIPS。
 
 ## 实现状态
 
