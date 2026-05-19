@@ -10,6 +10,41 @@
 
 ## Current Status
 
+- [completed] `BACKEND_CAPABILITY_MATRIX` performance/selection truth alignment
+  已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-backend-capability-matrix-performance-selection-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_backend_capability_matrix_performance_selection_truth_contract.sh`
+  - 当前已收紧的根入口 truth：
+    - `docs/BACKEND_CAPABILITY_MATRIX.md`
+      后半段现已不再维护固定后端性能相对值表
+    - 根入口性能说明现已统一回到：
+      - `scripts/run_phase2_performance_baseline.sh`
+      - `tests/benchmarks/run_all_benchmarks.sh`
+      - `docs/guides/PERFORMANCE_GUIDE.md`
+      - `docs/guides/PERFORMANCE_OPTIMIZATION_GUIDE.md`
+    - 选型建议现已改成 capability-aware recommendation：
+      - `WinSSL` 保留 Windows 专有客户端 / 零依赖优势
+      - 但同时显式写清 Early Data / caller-provided server OCSP stapling /
+        session-resumption runtime truth caveat
+      - `OpenSSL` / `MbedTLS` / `WolfSSL` / `FreePascal`
+        也都回到各自当前 published capability 边界
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_backend_capability_matrix_performance_selection_truth_contract.sh`
+    - `bash tests/scripts/test_backend_capability_matrix_performance_selection_truth_contract.sh`
+    - `npx prettier --write docs/BACKEND_CAPABILITY_MATRIX.md`
+    - `git diff --check`
+  - 当前结论：
+    - 这次暴露的不是 capability 行本身错，而是“根入口后半段仍拿历史 benchmark
+      snapshot 和 blanket recommendation 当当前 truth”
+    - 现在性能/选型段也已经和当前 benchmark truth source /
+      backend-specific capability 边界收敛到同一口径
+  - 当前下一条真实剩余工作：
+    - 继续审 `docs/BACKEND_CAPABILITY_MATRIX.md`
+      以及相邻高入口文档里剩余的历史快照/版本公告式内容，
+      尤其确认 `版本历史` 这类根入口 summary
+      是否还会误导当前 v1.5.0 路线判断
 - [completed] `BACKEND_CAPABILITY_MATRIX` quick-reference truth alignment
   已完成 focused 收口：
   - 新增计划：

@@ -256,6 +256,62 @@
   - summary:
     - the quick-reference truth batch is whitespace-clean
 
+### Backend Capability Matrix Performance And Selection Truth
+
+- `rg -n "性能对比|握手性能|吞吐量|1\\.0x|1\\.2x|0\\.8x|0\\.3x|选择建议|推荐|零依赖部署|Windows 应用" docs/BACKEND_CAPABILITY_MATRIX.md docs/guides/PERFORMANCE_GUIDE.md docs/guides/PERFORMANCE_OPTIMIZATION_GUIDE.md docs/guides/WINSSL_USER_GUIDE.md`
+- `sed -n '1,260p' docs/guides/PERFORMANCE_GUIDE.md`
+- `sed -n '1,260p' docs/guides/PERFORMANCE_OPTIMIZATION_GUIDE.md`
+- `sed -n '120,220p' docs/guides/WINSSL_USER_GUIDE.md`
+- `sed -n '300,360p' docs/guides/WINSSL_USER_GUIDE.md`
+  - result: PASS
+  - summary:
+    - static comparison confirmed the top-level backend matrix still carried:
+      - fixed backend performance ratio tables
+      - blanket recommendation wording
+    - current truth sources already said:
+      - performance truth must come from current benchmark entrypoints and fresh output
+      - WinSSL recommendations must keep capability/runtime caveats visible
+
+- add `docs/plans/2026-05-19-backend-capability-matrix-performance-selection-truth.md`
+  - change:
+    - recorded the bounded docs-only plan for tightening the top-level matrix's
+      performance and selection wording
+
+- add `tests/scripts/test_backend_capability_matrix_performance_selection_truth_contract.sh`
+  - change:
+    - added a focused shell contract that guards:
+      - fixed performance ratio tables stay removed
+      - the root matrix points readers to current benchmark truth sources
+      - selection guidance stays capability-aware instead of blanket
+      - WinSSL / MbedTLS / WolfSSL / FreePascal caveats remain visible in the root doc
+
+- update `docs/BACKEND_CAPABILITY_MATRIX.md`
+  - change:
+    - replaced stale backend performance ratio tables with current measurement entrypoints and interpretation boundaries
+    - rewrote the selection section around capability-aware recommendation rather than unconditional backend ranking
+    - kept WinSSL zero-dependency/client strengths while restoring runtime/public-capability caveats
+
+- `bash -n tests/scripts/test_backend_capability_matrix_performance_selection_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new performance/selection truth contract syntax is valid
+
+- `bash tests/scripts/test_backend_capability_matrix_performance_selection_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - the top-level backend matrix no longer publishes stale performance tables
+      or blanket selection advice that outruns current capability truth
+
+- `npx prettier --write docs/BACKEND_CAPABILITY_MATRIX.md`
+  - result: PASS
+  - summary:
+    - the backend capability matrix remains formatter-stable after the performance/selection cleanup
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - the performance/selection truth batch is whitespace-clean
+
 ### ISSLSessionResumption Runtime Residual Classification Tightening
 
 - add `docs/plans/2026-05-19-isslsessionresumption-runtime-residual-classification-tightening.md`

@@ -93,6 +93,27 @@
   - 因为读者最容易只扫一眼 quick reference 就形成心智模型
   - 一旦 quick reference 比 source/backend truth 更激进，后面再多详细解释都很难补救
 
+- `BACKEND_CAPABILITY_MATRIX.md` 的后半段又暴露了同一种风险的另一个变体：
+  - quick reference 收紧之后，根入口仍可能在“性能对比”和“选择建议”里继续偷跑
+  - 也就是：
+    - 用固定 benchmark 相对值表假装当前长期 truth
+    - 用 blanket recommendation 掩盖 backend-specific caveat
+
+- 这里最危险的不是“数字旧了”本身，而是它会直接改写产品路线判断：
+  - 读者会因为一张 `1.2x / 0.8x` 表，就误以为 backend 性能排序是稳定常量
+  - 也会因为“Windows 应用推荐 WinSSL”一句话，就忽略：
+    - Early Data
+    - caller-provided server OCSP stapling
+    - session resumption / tickets runtime truth
+    - custom cipher / PKCS#11 / 完整 PKCS#12 helper
+    这些真正会改变技术选型的边界
+
+- 所以 capability/doc 审查到这个阶段，顶层入口的修法应该统一成一个原则：
+  - 根入口只负责给出当前可验证口径和分流路径
+  - 不能继续自己携带“固定性能榜单”或“无条件优胜者”叙事
+  - 真正的性能 truth 要回到 benchmark runner / baseline / fresh output
+  - 真正的选型建议要回到 capability-aware recommendation
+
 - session-resumption residual 这条线现在终于可以稳定冻结了：
   - `tests/contract/test_backend_contract.pas`
     是 compatibility mirror proof

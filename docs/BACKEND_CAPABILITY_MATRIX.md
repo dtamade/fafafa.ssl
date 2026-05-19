@@ -402,67 +402,62 @@ Ctx.LoadPrivateKey('pkcs11:token=MyToken;object=MyKey', 'PIN');
 
 ---
 
-## 性能对比
+## 性能与测量入口
 
-### 握手性能（相对值）
+本页不再维护固定“相对值表”。backend 性能会同时受到 CPU、操作系统、编译参数、
+OpenSSL/Schannel/WolfSSL 运行时、目标端点、网络路径、是否启用 TLS lane 与当前
+session/ticket 证据状态影响；因此固定 `x 倍`、固定 `ms` 或固定 `ops/s` 都不应被
+当成长期 truth。
 
-| 后端       | TLS 1.2 | TLS 1.3 | TLS 1.3 + 0-RTT |
-| ---------- | ------- | ------- | --------------- |
-| FreePascal | 1.0x    | 0.8x    | 0.3x            |
-| OpenSSL    | 1.2x    | 1.0x    | 0.4x            |
-| WinSSL     | 0.9x    | 0.7x    | N/A             |
-| MbedTLS    | 0.8x    | N/A     | N/A             |
-| WolfSSL    | 1.1x    | 0.9x    | N/A             |
+当前性能真相源优先看：
 
-**注**: 基准为 FreePascal TLS 1.2，数值越小越快
+- `scripts/run_phase2_performance_baseline.sh`
+- `tests/benchmarks/run_all_benchmarks.sh`
+- `docs/guides/PERFORMANCE_GUIDE.md`
+- `docs/guides/PERFORMANCE_OPTIMIZATION_GUIDE.md`
 
-### 吞吐量（相对值）
+解读时请特别注意：
 
-| 后端       | 小数据 (<1KB) | 大数据 (>1MB) |
-| ---------- | ------------- | ------------- |
-| FreePascal | 1.0x          | 1.0x          |
-| OpenSSL    | 1.3x          | 1.5x          |
-| WinSSL     | 1.1x          | 1.2x          |
-| MbedTLS    | 0.9x          | 0.8x          |
-| WolfSSL    | 1.2x          | 1.3x          |
+- loopback、本机 TLS 栈与公网端点结果要分开记录
+- `WinSSL` session resumption / tickets 当前仍按 experimental public surface 理解
+- `FreePascal` / `WolfSSL` 的 early-data 能力也要结合当前 capability 和 fresh run 判断
+- 发布性能结论时，应同时附带命令、环境、输出目录和生成时间
 
 ---
 
 ## 选择建议
 
-### 通用应用
+### 通用跨平台 / 功能优先
 
-**推荐**: OpenSSL 后端
+**优先考虑**: OpenSSL 后端
 
-- 最成熟
-- 功能最完整
-- 性能优秀
+- 当前 published capability 最完整
+- 需要 custom cipher suites、PKCS#11、完整 PKCS#12 helper/API surface 时优先
+- 需要 caller-provided server OCSP stapling 或更稳的 early-data/runtime 证据时优先
 
-### Windows 应用
+### Windows 专有客户端 / 零依赖
 
-**推荐**: WinSSL 后端
+**优先考虑**: WinSSL 后端
 
-- 无需额外依赖
-- 系统集成好
-- 自动更新
+- 适合 Windows 专有客户端
+- 零依赖部署、系统证书存储、企业策略集成是当前优势
+- 但 Early Data / caller-provided server OCSP stapling 当前不发布，session resumption / tickets 仍按 experimental public surface 理解
 
-**备选**: OpenSSL 后端（需要 Early Data）
+### 嵌入式 / 体积与移植优先
 
-### 嵌入式系统
+**优先考虑**: MbedTLS 或 WolfSSL 后端
 
-**推荐**: MbedTLS 或 WolfSSL 后端
+- 更适合资源受限或嵌入式环境
+- `MbedTLS` 当前不要假设 Early Data / OCSP stapling / CT 已可用
+- `WolfSSL` 当前不要假设 early-data / OCSP stapling 无条件可用；它们仍受 build/runtime helper 门控
 
-- 内存占用小
-- 适合资源受限环境
+### Pascal-first / 零外部 SSL 动态库
 
-### 零依赖部署
+**优先考虑**: FreePascal 后端
 
-**推荐**: FreePascal 后端
-
-- 无外部依赖
-- 功能面广
-- `0-RTT / early data`、OCSP stapling、CT 当前仍应按 experimental capability 理解
-- 跨平台
+- 无外部 SSL 动态库依赖
+- 适合 Pascal-first、跨平台、自带 TLS core 的接入路径
+- `0-RTT / early data`、OCSP stapling、CT 当前仍按 experimental capability 理解
 
 ---
 
