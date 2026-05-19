@@ -2,6 +2,67 @@
 
 ## 2026-05-20
 
+- `MbedTLS`
+  这次暴露的是一种
+  比“写错支持状态”更容易误导路线的表述：
+  - 文档把
+    “调用方可在库外自己实现某种 workflow”
+    和
+    “当前 backend 已经发布对应 capability”
+    混成了一个
+    `⚠️ 部分`
+    结论
+
+- 对 backend matrix 来说，
+  `需手动实现`
+  这种说法必须非常谨慎。
+  如果当前 source / tests / builder
+  都还在表达：
+  - capability = none
+  - optional interface absent
+  - builder fail-fast
+  那么 dedicated page
+  就不能再写成
+  “部分支持”
+
+- MbedTLS 这批很有代表性：
+  - source 里：
+    - `sslFeatOCSPStapling=False`
+    - `OCSPStaplingSupport=sslSupportNone`
+    - `KnownIssues` 继续说
+      `OCSP stapling` 当前不支持
+  - tests 里：
+    - `ISSLServerOCSPStaplingContext`
+      不暴露
+    - unsupported backend
+      不应暴露
+      `ISSLOCSPStapling`
+  - 但 dedicated page
+    却还留着
+    `OCSP | ⚠️ 部分 | 需手动实现`
+
+- 这说明，
+  当某条能力压根没有 shipped public surface 时，
+  正确的文档写法应该是：
+  - 先明确
+    `当前 capability 不发布`
+  - 再补一句：
+    如果你要做类似 workflow，
+    只能在
+    `fafafa.ssl`
+    已发布 surface 之外，
+    由应用层自己实现
+
+- 也就是说，
+  “应用层能不能自己做”
+  是 integration possibility，
+  不是 backend capability classification。
+  这两者一旦混写，
+  很容易把后续实现路线带偏成
+  “是不是少接了一层 glue”
+  而不是
+  “当前根本没发布这条 surface”
+
 - 这批说明，
   design/reference 文档
   本身也可能成为

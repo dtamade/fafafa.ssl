@@ -10,6 +10,91 @@
 
 ## Current Status
 
+- [completed] `mbedtls ocsp capability doc truth alignment`
+  当前 focused 目标：
+  - 收掉
+    `MBEDTLS_BACKEND_CAPABILITY_MATRIX`
+    里把：
+    - `OCSP`
+    - `OCSP Stapling`
+    写成
+    “只差调用方手动实现”
+    的模糊叙事
+  - 明确区分：
+    - 当前 backend 已发布 capability
+    - 应用层在库外自行补的 revocation workflow
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-mbedtls-ocsp-capability-doc-truth-alignment.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_mbedtls_ocsp_capability_doc_truth_contract.sh`
+  - 收口文档：
+    - `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+  当前预判：
+  - source / tests 已经持续表达：
+    - `OCSPStaplingSupport=sslSupportNone`
+    - `sslFeatOCSPStapling=False`
+    - `ISSLServerOCSPStaplingContext` 不暴露
+    - unsupported OCSP backend 不应暴露 `ISSLOCSPStapling`
+  - 但 dedicated MbedTLS page
+    仍把：
+    - `OCSP | ⚠️ 部分 | 需手动实现`
+    - `OCSP Stapling | ❌ 不支持 | 需外部实现`
+    混写在一起，
+    容易让读者误读成
+    “当前 backend 只差 integration glue”
+  当前验证策略：
+  - 用 focused shell contract
+    同时冻结：
+    - MbedTLS source capability truth
+    - builder fail-fast truth
+    - MbedTLS context / backend contract 里的 interface-absence truth
+    - dedicated MbedTLS page 当前必须出现/必须消失的 wording
+  当前最终收口证据：
+  - 新 contract 第一次 RED
+    就直接证明：
+    dedicated MbedTLS page
+    还没有把 generic `OCSP`
+    收回到
+    `当前 capability 不发布`
+  - 第二次 RED
+    暴露的是 contract 自己对反引号行的 quoting 问题，
+    不是产品 drift
+  - GREEN 后证明：
+    - `OCSP`
+      不再写成
+      `⚠️ 部分`
+    - `OCSP Stapling`
+      不再只写成
+      `需外部实现`
+    - 限制说明
+      也改成
+      “当前 backend 不发布 capability；
+      若需要相关 workflow，
+      需在 fafafa.ssl 已发布 surface 之外自行实现”
+  focused verification 已通过：
+  - `bash -n tests/scripts/test_mbedtls_ocsp_capability_doc_truth_contract.sh`
+  - `bash tests/scripts/test_mbedtls_ocsp_capability_doc_truth_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - 这批收掉的是
+    MbedTLS dedicated backend page
+    对
+    `OCSP`
+    /
+    `OCSP Stapling`
+    的 capability classification drift，
+    不是 MbedTLS 新实现缺口
+  当前下一条真实工作：
+  - 继续 backend-specific / guide / design docs completeness 审计
+  - 优先再找：
+    - 其他 dedicated backend pages
+    - performance / selection / security guides
+    是否还有
+    “平台/应用层潜力”
+    被写成
+    “当前 published capability”
+    的入口
 - [completed] `backend selector design doc truth alignment`
   当前 focused 目标：
   - 收掉

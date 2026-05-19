@@ -86,8 +86,8 @@ Ctx := TSSLContextBuilder.Create
 | X.509 解析 | ✅ 支持 | 完整支持 |
 | 证书链验证 | ✅ 支持 | 完整支持 |
 | CRL 检查 | ✅ 支持 | 本地 CRL |
-| OCSP | ⚠️ 部分 | 需手动实现 |
-| OCSP Stapling | ❌ 不支持 | 需外部实现 |
+| OCSP | ❌ 当前 capability 不发布 | 当前 backend 没有 shipped online OCSP verification public surface；如需相关 revocation workflow，需由应用层在 fafafa.ssl 已发布 surface 之外自行实现 |
+| OCSP Stapling | ❌ 当前 capability 不发布 | 当前 backend 不暴露 `ISSLOCSPStapling` / `ISSLServerOCSPStaplingContext`；`server_ocsp_stapled_response_file` 配置会在 builder 侧 fail-fast |
 | 证书固定 | ✅ 支持 | 使用 context pinning API（AddCertificatePin / SetCertificatePinningEnabled），不是 callback surface |
 | SNI | ✅ 支持 | 客户端/服务器 |
 
@@ -203,7 +203,7 @@ end.
 
 ## 限制与注意事项
 
-1. **OCSP Stapling**: MbedTLS 不内置 OCSP Stapling，需要应用层实现
+1. **OCSP / OCSP Stapling**: 当前 backend 不发布 online OCSP 或 stapled-response public capability；如需相关 revocation workflow，需在 fafafa.ssl 已发布 surface 之外自行实现
 2. **硬件加速**: 需要编译时启用特定平台的硬件加速
 3. **FIPS 模式**: 当前 `SupportsFIPSMode=False`，不要把上游特定商业/认证版本能力当成 fafafa.ssl 当前 backend truth
 4. **API 差异**: 与 OpenSSL backend 共享统一核心接口，但 published capability 仍然 backend-specific

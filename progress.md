@@ -4,6 +4,74 @@
 
 ## 2026-05-20
 
+### MbedTLS OCSP Capability Doc Truth Alignment
+
+- `mcp__ace_tool__.search_context(...)`
+- `rg -n "OCSPStaplingSupport :=|SupportsOCSPStapling :=|ISSLServerOCSPStaplingContext|server_ocsp_stapled_response_file|WithServerOCSPStapledResponseFile|OCSP" src/fafafa.ssl.mbedtls*.pas src/fafafa.ssl.context.builder.pas tests -S`
+- `sed -n '490,520p' src/fafafa.ssl.mbedtls.lib.pas`
+- `sed -n '1080,1185p' src/fafafa.ssl.context.builder.pas`
+- `sed -n '80,110p' docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+- `sed -n '200,214p' docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+  - result: PASS
+  - summary:
+    - confirmed a real dedicated-doc drift:
+      - source and tests already said
+        `OCSPStaplingSupport=None`,
+        no `ISSLServerOCSPStaplingContext`,
+        and builder fail-fast for unsupported server stapling config
+      - but the dedicated MbedTLS page still mixed
+        unpublished capability
+        with
+        application-layer possibility
+        via
+        `OCSP | ⚠️ 部分 | 需手动实现`
+
+- add `docs/plans/2026-05-20-mbedtls-ocsp-capability-doc-truth-alignment.md`
+- add `tests/scripts/test_mbedtls_ocsp_capability_doc_truth_contract.sh`
+  - change:
+    - recorded a bounded MbedTLS OCSP doc-truth batch
+    - added a focused contract freezing:
+      - source `OCSPStaplingSupport=None` / `sslFeatOCSPStapling=False`
+      - no shipped MbedTLS online-OCSP source path
+      - builder fail-fast truth
+      - dedicated MbedTLS matrix wording
+
+- `bash -n tests/scripts/test_mbedtls_ocsp_capability_doc_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new MbedTLS OCSP doc-truth contract syntax was valid
+
+- `bash tests/scripts/test_mbedtls_ocsp_capability_doc_truth_contract.sh`
+  - result: FAIL -> FAIL -> PASS
+  - summary:
+    - first real RED proved the live drift:
+      - dedicated MbedTLS matrix still did not classify generic `OCSP`
+        as unpublished capability
+    - second failure was contract-side, not product-side:
+      - unescaped backticks in the stapling row needle triggered shell command substitution
+    - GREEN after the doc update proves:
+      - generic `OCSP` is no longer described as partial support
+      - `OCSP Stapling` no longer uses only the vague
+        `需外部实现`
+        wording
+      - the limitation note now distinguishes
+        unpublished capability
+        from
+        application-layer implementation
+
+- update docs:
+  - `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+  - change:
+    - rewrote `OCSP` as
+      `❌ 当前 capability 不发布`
+    - rewrote `OCSP Stapling` to mention absent owner surfaces and builder fail-fast truth
+    - narrowed the limitation note so it no longer implies a near-complete shipped capability
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remain after the MbedTLS OCSP doc closeout
+
 ### Backend Selector Design Doc Truth Alignment
 
 - `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "/home/dtamade/projects/fafafa.ssl"`
