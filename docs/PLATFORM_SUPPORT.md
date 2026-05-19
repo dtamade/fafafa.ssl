@@ -380,11 +380,11 @@ jobs:
 
 ## 📚 相关文档
 
-- [快速入门](QUICKSTART.md)
-- [入门指南](GETTING_STARTED.md)
-- [API 参考](API_REFERENCE.md)
-- [故障排除](TROUBLESHOOTING.md)
-- [WinSSL 用户指南](WINSSL_USER_GUIDE.md)
+- [快速入门](guides/QUICKSTART.md)
+- [入门指南](guides/GETTING_STARTED.md)
+- [API 参考](reference/API_REFERENCE.md)
+- [故障排除](guides/TROUBLESHOOTING.md)
+- [WinSSL 用户指南](guides/WINSSL_USER_GUIDE.md)
 
 ---
 
@@ -392,7 +392,7 @@ jobs:
 
 如果您在特定平台上遇到问题或有改进建议,请:
 
-1. 查看 [故障排除文档](TROUBLESHOOTING.md)
+1. 查看 [故障排除文档](guides/TROUBLESHOOTING.md)
 2. 搜索现有 [Issues](https://github.com/your-repo/fafafa.ssl/issues)
 3. 创建新 Issue 并提供详细信息:
    - 操作系统和版本

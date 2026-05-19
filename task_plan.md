@@ -10,6 +10,33 @@
 
 ## Current Status
 
+- [completed] Active root doc link repair 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-active-root-doc-link-repair.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_active_root_doc_link_repair_contract.sh`
+  - 当前已修正的高入口活跃文档：
+    - `docs/PLATFORM_SUPPORT.md`
+    - `docs/RELEASE_NOTES.md`
+    - `docs/TOOLS.md`
+    - `docs/ZERO_DEPENDENCY_DEPLOYMENT.md`
+    - `docs/guides/WINSSL_USER_GUIDE.md`
+  - 当前已收掉的真问题：
+    - 根入口文档不再指向旧的 `QUICKSTART.md` / `GETTING_STARTED.md` / `API_REFERENCE.md` / `TROUBLESHOOTING.md` 裸路径
+    - `RELEASE_NOTES` 不再保留旧的 `docs/QuickStart.md` / `docs/API_Reference.md` / `docs/PROJECT_FINAL_SUMMARY.md`
+    - `ZERO_DEPENDENCY_DEPLOYMENT` 不再指向 `.claude/plan/WINSSL_COMPLETION_REPORT.md`
+    - `WINSSL_USER_GUIDE` 不再保留：
+      - `WINSSL_HTTPS_TEST_REPORT.md`
+      - `../PHASE2_2_COMPLETION_REPORT.md`
+      - `../PHASE2_4_TEST_REPORT.md`
+      这些失效入口
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_active_root_doc_link_repair_contract.sh`
+    - `bash tests/scripts/test_active_root_doc_link_repair_contract.sh`
+    - `git diff --check`: PASS
+  - 当前结论：
+    - 这批把 5 个最容易被先打开的入口文档重新接回当前真实存在的 guides/reference/test_reports 页面
+    - 后续 backend/platform/WinSSL 审查不再先被 broken links 绊住
 - [completed] Backend doc linkage + enum truth 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-backend-doc-linkage-and-enum-truth.md`

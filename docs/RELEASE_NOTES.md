@@ -411,11 +411,11 @@ Phase 1-7 完整技术追踪
 
 ### 文档
 
-- [快速入门](docs/QuickStart.md)
-- [API 参考](docs/API_Reference.md)
-- [常见问题](docs/FAQ.md)
-- [架构设计](docs/ARCHITECTURE.md)
-- [最终总结](docs/PROJECT_FINAL_SUMMARY.md)
+- [快速入门](guides/QUICKSTART.md)
+- [API 参考](reference/API_REFERENCE.md)
+- [常见问题](guides/FAQ.md)
+- [架构设计](ARCHITECTURE.md)
+- [当前路线图](ROADMAP.md)
 
 ### 问题反馈
 

@@ -184,8 +184,8 @@ fpc -Mobjfpc -Sh -Fu./src -Fi./src your_program.pas
 
 ## 📖 文档
 
-- [快速开始指南](QUICKSTART.md)
-- [API文档](docs/API.md) (即将推出)
+- [快速开始指南](guides/QUICKSTART.md)
+- [API参考](reference/API_REFERENCE.md)
 - [示例集合](examples/)
 
 ---

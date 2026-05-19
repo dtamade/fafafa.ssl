@@ -1171,9 +1171,9 @@ Conn := Ctx.CreateConnection(Socket);
 ## 📚 参考资源
 
 ### 官方文档
-- [WinSSL 用户指南](WINSSL_USER_GUIDE.md)
-- [WinSSL 快速入门](WINSSL_QUICKSTART.md)
-- [WinSSL 完成度报告](.claude/plan/WINSSL_COMPLETION_REPORT.md)
+- [WinSSL 用户指南](guides/WINSSL_USER_GUIDE.md)
+- [WinSSL 快速入门](guides/WINSSL_QUICKSTART.md)
+- [WinSSL 后端状态报告](test_reports/WINSSL_BACKEND_STATUS_REPORT.md)
 
 ### Microsoft 文档
 - [Schannel 官方文档](https://docs.microsoft.com/en-us/windows/win32/secauthn/secure-channel)

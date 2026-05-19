@@ -2,6 +2,76 @@
 
 ## 2026-05-19
 
+### Active Root Doc Link Repair
+
+- add `docs/plans/2026-05-19-active-root-doc-link-repair.md`
+  - change:
+    - define the bounded root-doc broken-link repair batch for the highest-traffic active docs
+
+- add `tests/scripts/test_active_root_doc_link_repair_contract.sh`
+  - change:
+    - lock the live doc targets for:
+      - `docs/PLATFORM_SUPPORT.md`
+      - `docs/RELEASE_NOTES.md`
+      - `docs/TOOLS.md`
+      - `docs/ZERO_DEPENDENCY_DEPLOYMENT.md`
+      - `docs/guides/WINSSL_USER_GUIDE.md`
+
+- `bash -n tests/scripts/test_active_root_doc_link_repair_contract.sh`
+  - result: PASS
+  - summary:
+    - new active-root-doc focused contract syntax is valid
+
+- `bash tests/scripts/test_active_root_doc_link_repair_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `PLATFORM_SUPPORT` still linked stale bare targets like `QUICKSTART.md`
+      - `RELEASE_NOTES` still linked old `docs/QuickStart.md` / `docs/API_Reference.md`
+      - `TOOLS` still linked placeholder `docs/API.md`
+      - `ZERO_DEPENDENCY_DEPLOYMENT` still linked `.claude/plan/WINSSL_COMPLETION_REPORT.md`
+      - `WINSSL_USER_GUIDE` still linked missing `WINSSL_HTTPS_TEST_REPORT.md` and stale phase reports
+    - GREEN after fix:
+      - all 5 high-entry docs now resolve to live guides/reference/test_reports targets
+
+- update `docs/PLATFORM_SUPPORT.md`
+  - change:
+    - move related-doc and troubleshooting links to current `guides/` / `reference/` targets
+
+- update `docs/RELEASE_NOTES.md`
+  - change:
+    - replace stale `docs/*` support links with current:
+      - `guides/QUICKSTART.md`
+      - `reference/API_REFERENCE.md`
+      - `guides/FAQ.md`
+      - `ARCHITECTURE.md`
+      - `ROADMAP.md`
+
+- update `docs/TOOLS.md`
+  - change:
+    - replace stale quickstart/API placeholders with current guide/reference targets
+
+- update `docs/ZERO_DEPENDENCY_DEPLOYMENT.md`
+  - change:
+    - replace stale WinSSL guide / quickstart / completion-report links with:
+      - `guides/WINSSL_USER_GUIDE.md`
+      - `guides/WINSSL_QUICKSTART.md`
+      - `test_reports/WINSSL_BACKEND_STATUS_REPORT.md`
+
+- update `docs/guides/WINSSL_USER_GUIDE.md`
+  - change:
+    - replace stale sibling/root/phase-report links with current:
+      - `../ZERO_DEPENDENCY_DEPLOYMENT.md`
+      - `../test_reports/WINSSL_BACKEND_STATUS_REPORT.md`
+      - `../reference/WINSSL_DESIGN.md`
+      - `../reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+      - `../reference/WINSSL_PERFORMANCE_TUNING.md`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current active-root-doc link-repair batch has no whitespace or patch-format issues
+
 ### Backend Doc Linkage And Enum Truth
 
 - add `docs/plans/2026-05-19-backend-doc-linkage-and-enum-truth.md`

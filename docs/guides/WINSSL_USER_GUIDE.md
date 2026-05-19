@@ -19,7 +19,7 @@
 
 ### 📦 部署
 
-- **[ZERO_DEPENDENCY_DEPLOYMENT.md](ZERO_DEPENDENCY_DEPLOYMENT.md)** - 零依赖部署指南
+- **[ZERO_DEPENDENCY_DEPLOYMENT.md](../ZERO_DEPENDENCY_DEPLOYMENT.md)** - 零依赖部署指南
   - Windows 零依赖优势
   - 部署步骤和最佳实践
   - 企业场景集成
@@ -27,7 +27,7 @@
 
 ### 🧪 测试和验证
 
-- **[WINSSL_HTTPS_TEST_REPORT.md](WINSSL_HTTPS_TEST_REPORT.md)** - 完整测试报告
+- **[WINSSL_BACKEND_STATUS_REPORT.md](../test_reports/WINSSL_BACKEND_STATUS_REPORT.md)** - 当前后端状态报告
   - TLS 握手测试
   - HTTPS 客户端测试
   - 性能基准
@@ -35,16 +35,16 @@
 
 ### 🏗️ 架构和设计
 
-- **[WINSSL_DESIGN.md](WINSSL_DESIGN.md)** - 架构设计文档
+- **[WINSSL_DESIGN.md](../reference/WINSSL_DESIGN.md)** - 架构设计文档
   - Schannel API 绑定
   - 接口实现细节
   - 内部工作原理
   - 技术决策
 
-### 📋 完成报告
+### 📋 状态与能力报告
 
-- **[PHASE2_2_COMPLETION_REPORT.md](../PHASE2_2_COMPLETION_REPORT.md)** - Phase 2.2 核心实现
-- **[PHASE2_4_TEST_REPORT.md](../PHASE2_4_TEST_REPORT.md)** - Phase 2.4 测试验证
+- **[WINSSL_BACKEND_STATUS_REPORT.md](../test_reports/WINSSL_BACKEND_STATUS_REPORT.md)** - 当前 WinSSL 后端状态
+- **[WINSSL_BACKEND_CAPABILITY_MATRIX.md](../reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md)** - 当前 WinSSL 能力矩阵
 
 ---
 
@@ -423,7 +423,7 @@ Lib := CreateSSLLibrary(sslWinSSL);
 
 **测试环境**: Windows 11 x64, 网络连接到互联网服务器
 
-详细性能报告：**[PHASE2_4_TEST_REPORT.md](../PHASE2_4_TEST_REPORT.md#task-4-性能基准测试-✅)**
+详细性能说明：**[WINSSL_PERFORMANCE_TUNING.md](../reference/WINSSL_PERFORMANCE_TUNING.md)**
 
 ---
 
@@ -438,14 +438,14 @@ Lib := CreateSSLLibrary(sslWinSSL);
 
 ### 进阶路径
 
-1. **理解架构设计** - [WINSSL_DESIGN.md](WINSSL_DESIGN.md)
-2. **阅读完成报告** - [PHASE2_2_COMPLETION_REPORT.md](../PHASE2_2_COMPLETION_REPORT.md)
-3. **研究测试报告** - [PHASE2_4_TEST_REPORT.md](../PHASE2_4_TEST_REPORT.md)
+1. **理解架构设计** - [WINSSL_DESIGN.md](../reference/WINSSL_DESIGN.md)
+2. **阅读状态报告** - [WINSSL_BACKEND_STATUS_REPORT.md](../test_reports/WINSSL_BACKEND_STATUS_REPORT.md)
+3. **查看能力矩阵** - [WINSSL_BACKEND_CAPABILITY_MATRIX.md](../reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md)
 4. **探索源代码** - `src/fafafa.ssl.winssl.*.pas`
 
 ### 企业用户路径
 
-1. **零依赖部署指南** - [ZERO_DEPENDENCY_DEPLOYMENT.md](ZERO_DEPENDENCY_DEPLOYMENT.md)
+1. **零依赖部署指南** - [ZERO_DEPENDENCY_DEPLOYMENT.md](../ZERO_DEPENDENCY_DEPLOYMENT.md)
 2. **企业场景示例** - `examples/winssl_*.pas`
 3. **安全策略集成** - 查看 Windows GPO 配置
 4. **FIPS 合规配置** - Windows 安全设置
@@ -457,9 +457,9 @@ Lib := CreateSSLLibrary(sslWinSSL);
 ### 文档
 
 - [快速入门指南](WINSSL_QUICKSTART.md)
-- [零依赖部署指南](ZERO_DEPENDENCY_DEPLOYMENT.md)
-- [测试报告](WINSSL_HTTPS_TEST_REPORT.md)
-- [架构设计](WINSSL_DESIGN.md)
+- [零依赖部署指南](../ZERO_DEPENDENCY_DEPLOYMENT.md)
+- [后端状态报告](../test_reports/WINSSL_BACKEND_STATUS_REPORT.md)
+- [架构设计](../reference/WINSSL_DESIGN.md)
 
 ### 示例代码
 
@@ -486,7 +486,7 @@ Lib := CreateSSLLibrary(sslWinSSL);
 ### 文档
 
 - 阅读 **[WINSSL_QUICKSTART.md](WINSSL_QUICKSTART.md)** 的故障排除章节
-- 查看 **[PHASE2_4_TEST_REPORT.md](../PHASE2_4_TEST_REPORT.md)** 中的已知问题
+- 查看 **[WINSSL_BACKEND_STATUS_REPORT.md](../test_reports/WINSSL_BACKEND_STATUS_REPORT.md)** 中的当前已知问题
 
 ### 报告问题
 

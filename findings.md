@@ -2,9 +2,39 @@
 
 ## 2026-05-19
 
+- 在继续扫描活跃文档入口时，又确认了一条会明显拖慢后续审查节奏的现实问题：
+  - 仓库里不只是有“个别 stale wording”，而是存在一批真实 broken links
+  - 而且它们集中出现在最容易被先点开的根入口文档：
+    - `PLATFORM_SUPPORT`
+    - `RELEASE_NOTES`
+    - `TOOLS`
+    - `ZERO_DEPENDENCY_DEPLOYMENT`
+    - `guides/WINSSL_USER_GUIDE`
+
+- 这类问题的危害很直接：
+  - 它会把继续做 backend/platform/WinSSL 审查的人先导向旧路径、占位路径或已经消失的 phase 报告
+  - 结果不是“阅读体验差一点”，而是后续每次都要先重新辨认真正的权威入口
+
+- 当前这批 focused 收口后，入口真相已经重新建立：
+  - `PLATFORM_SUPPORT` 统一回到当前活跃的：
+    - `docs/guides/*`
+    - `docs/reference/API_REFERENCE.md`
+  - `RELEASE_NOTES` 的文档入口不再指向大小写错误或已消失的 `docs/*` 旧名
+  - `ZERO_DEPENDENCY_DEPLOYMENT` 和 `WINSSL_USER_GUIDE`
+    - 已从历史 phase reports / `.claude/plan` / 消失的 WinSSL test report
+      切回当前有效的：
+      - `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md`
+      - `docs/reference/WINSSL_DESIGN.md`
+      - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+      - `docs/reference/WINSSL_PERFORMANCE_TUNING.md`
+
+- 这一轮也顺带说明了下一阶段文档审查的一个方法论：
+  - 不要只 grep “计划中/未来” 这种字面漂移
+  - 还要把“高入口文档是否仍能把人导向真实存在、当前活跃的 truth source”当成第一类质量问题
+
 - 继续做 backend completeness 审查时，又发现一条很容易把后续工作流带偏的活跃文档裂缝：
   - `docs/BACKEND_CAPABILITY_MATRIX.md` 底部还在链接：
-    - `reference/OPENSSL_BACKEND.md`
+  - `reference/OPENSSL_BACKEND.md`
     - `reference/WINSSL_BACKEND.md`
   - 但这两个文件在当前仓库里根本不存在
 
