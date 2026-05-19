@@ -10,6 +10,38 @@
 
 ## Current Status
 
+- [completed] `early-data owner-surface reasoning`
+  当前 focused 目标：
+  - 把 `EARLY_DATA_GUIDE` 中 direct context/connection owner path 的使用原因写清楚，
+    避免读者把 early-data 示例误解成 generic facade 主路径
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-early-data-owner-surface-reasoning.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_early_data_owner_surface_reasoning_contract.sh`
+  - 同步更新：
+    - `docs/guides/EARLY_DATA_GUIDE.md`
+  当前预判：
+  - 这页当前使用 `ISSLEarlyDataContext` / `ISSLEarlyDataConnection`
+    本身是对的，缺口更像“为什么这里必须回到 owner surface”的解释层
+  当前最终收口证据：
+  - `EARLY_DATA_GUIDE.md` 明确：
+    - 这页 direct path 是为了读取/配置 early-data owner surface
+    - 普通握手入口仍是 `TSSLConnector` / `TSSLStream`
+  focused verification 已通过：
+  - `bash -n tests/scripts/test_early_data_owner_surface_reasoning_contract.sh`
+  - `bash tests/scripts/test_early_data_owner_surface_reasoning_contract.sh`
+  - `bash tests/scripts/test_early_data_docs_truth_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - `EARLY_DATA_GUIDE` 当前并不是 early-data optional interface 或 capability truth 出错，
+    而是还需要把“为什么这里必须下到 context/connection owner surface”讲透。
+  - 现在 early-data 这页也被拉回到了同一套 direct-path 分层体系。
+  当前下一条真实工作：
+  - 继续扫 remaining active guides / specialized pages：
+    - 还有没有 direct `CreateConnection(...)` 已经是 intentional path，
+      但仍缺“为什么这里要走 owner surface / low-level path”的 residual
+
 - [completed] `specialized owner-surface reasoning`
   当前 focused 目标：
   - 把 specialized optional-interface guides 中 direct connection owner path 的

@@ -39,6 +39,7 @@ TLS 1.3 Early Data（0-RTT）允许客户端在 TLS 握手完成前发送应用�
 ## 快速开始
 
 本页代码示例默认使用 `OpenSSL`，因为这是当前唯一可直接按 production-ready 看待的 early-data 路径。切到 `FreePascal` 或 `WolfSSL` 前，先检查 capability 和可选接口是否真实存在。
+这里直接回到 `CreateConnection(...)`，是因为 `ISSLEarlyDataContext` / `ISSLEarlyDataConnection` 这组 early-data owner surface 分别挂在 context / connection 对象上；如果你只是普通客户端接入而不需要 early-data owner surface，握手入口仍可保持在 `TSSLConnector` / `TSSLStream`。
 
 ### 客户端 Early Data
 

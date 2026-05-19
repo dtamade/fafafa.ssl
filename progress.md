@@ -13956,3 +13956,45 @@
   - result: PASS
   - summary:
     - current specialized owner-surface batch has no whitespace or patch-format issues
+
+### Early-Data Owner-Surface Reasoning
+
+- add `docs/plans/2026-05-20-early-data-owner-surface-reasoning.md`
+  - change:
+    - define the bounded early-data-guide batch for explaining why the page intentionally uses context/connection owner surfaces
+
+- add `tests/scripts/test_early_data_owner_surface_reasoning_contract.sh`
+  - change:
+    - lock that `EARLY_DATA_GUIDE` must explain why it intentionally drops to `CreateConnection(...)` to access early-data owner surfaces
+
+- `bash -n tests/scripts/test_early_data_owner_surface_reasoning_contract.sh`
+  - result: PASS
+  - summary:
+    - new early-data owner-surface reasoning contract syntax is valid
+
+- `bash tests/scripts/test_early_data_owner_surface_reasoning_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `EARLY_DATA_GUIDE` still used `CreateConnection(...)` without explicitly explaining why the page intentionally uses early-data owner surfaces
+    - GREEN after fix:
+      - `EARLY_DATA_GUIDE` now explains that `ISSLEarlyDataContext` / `ISSLEarlyDataConnection`
+        are owner surfaces on the context / connection objects
+      - `EARLY_DATA_GUIDE` now points ordinary clients without early-data needs back to
+        `TSSLConnector` / `TSSLStream`
+
+- update `docs/guides/EARLY_DATA_GUIDE.md`
+  - change:
+    - explain that the page intentionally returns to `CreateConnection(...)`
+      because early-data owner surfaces are split across context and connection
+    - point ordinary handshake entry back to `TSSLConnector` / `TSSLStream`
+
+- `bash tests/scripts/test_early_data_docs_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - early-data capability/runtime truth remained aligned after the owner-surface explanation note
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current early-data owner-surface batch has no whitespace or patch-format issues

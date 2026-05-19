@@ -6632,3 +6632,24 @@
      在新增 specialized owner-path 解释之后仍保持绿色
    - 现在新的稳定基线应记为：
      - OCSP / CT specialized guides 不会再把 owner-surface 示例误读成 generic facade 主路径
+
+111. `EARLY_DATA_GUIDE` 也属于同一种“接口没错，但解释层还没讲透”的 residual：
+   - 这页原本已经在正确使用：
+     - `ISSLEarlyDataContext`
+     - `ISSLEarlyDataConnection`
+   - 真正缺的不是 early-data owner path 迁移，而是：
+     - 为什么这里必须回到 `CreateConnection(...)`
+     - 为什么还要同时从 context / connection 两侧读取和配置 owner surface
+     - 以及如果不需要 early-data owner surface，generic main path 仍是什么
+   - 当前最小正确修法已经压实为：
+     - 在 `EARLY_DATA_GUIDE` 快速开始前明确：
+       - 这里 direct path 是因为 `ISSLEarlyDataContext` /
+         `ISSLEarlyDataConnection`
+         分别挂在 context / connection 对象上
+       - 不需要这层 owner surface 时，
+         普通客户端仍可把握手入口保持在 `TSSLConnector` / `TSSLStream`
+   - 这批也顺手证明：
+     - `test_early_data_docs_truth_contract.sh`
+       在新增 owner-surface 说明之后仍保持绿色
+   - 现在新的稳定基线应记为：
+     - `EARLY_DATA_GUIDE` 不会再把 early-data owner-surface 示例误读成 generic facade 主路径
