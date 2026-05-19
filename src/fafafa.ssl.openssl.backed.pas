@@ -921,6 +921,7 @@ var
   LDTLS12Ready: Boolean;
   LSNIReady: Boolean;
   LALPNReady: Boolean;
+  LSessionTicketsReady: Boolean;
   LSessionCacheReady: Boolean;
   LRenegotiationReady: Boolean;
   LOCSPStaplingReady: Boolean;
@@ -953,6 +954,7 @@ begin
   LDTLS12Ready := IsProtocolSupported(sslProtocolDTLS12);
   LSNIReady := OpenSSLSNISurfaceReady;
   LALPNReady := OpenSSLALPNSurfaceReady;
+  LSessionTicketsReady := OpenSSLSessionTicketSurfaceReady;
   LSessionCacheReady := OpenSSLSessionCacheSurfaceReady;
   LRenegotiationReady := OpenSSLRenegotiationSurfaceReady;
   LOCSPStaplingReady := OpenSSLOCSPStaplingSurfaceReady;
@@ -980,16 +982,7 @@ begin
   Result.SupportsTLS13 := LTLS13Ready;
 
   // OpenSSL 原生支持的特性
-  Result.SupportsALPN := LALPNReady;
-  Result.SupportsSNI := LSNIReady;
-  Result.SupportsSessionTickets := OpenSSLSessionTicketSurfaceReady;
   Result.SupportsECDHE := True;
-
-  // OCSP 装订支持
-  Result.SupportsOCSPStapling := LOCSPStaplingReady;
-
-  // 当前默认 OpenSSL backend 还没有发布 connection-level CT public surface
-  Result.SupportsCertificateTransparency := False;
 
   // ChaCha20-Poly1305 需要真实 ciphersuite parser ready
   Result.SupportsChaChaPoly := LChaChaPolyReady;
@@ -1033,7 +1026,7 @@ begin
   // 当前默认 OpenSSL backend 还没有发布 connection-level CT / validation public surface
   Result.CertTransparencySupport := sslSupportNone;
 
-  if OpenSSLSessionTicketSurfaceReady then
+  if LSessionTicketsReady then
     Result.SessionTicketsSupport := sslSupportStable
   else
     Result.SessionTicketsSupport := sslSupportNone;

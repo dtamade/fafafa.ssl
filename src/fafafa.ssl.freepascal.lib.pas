@@ -1475,11 +1475,6 @@ begin
 
   FillChar(Result, SizeOf(Result), 0);
   Result.SupportsTLS13 := True;
-  Result.SupportsALPN := True;
-  Result.SupportsSNI := True;
-  Result.SupportsOCSPStapling := True;
-  Result.SupportsCertificateTransparency := True;
-  Result.SupportsSessionTickets := True;
   Result.SupportsECDHE := True;
   Result.SupportsChaChaPoly := True;
   Result.SupportsPEMPrivateKey := True;

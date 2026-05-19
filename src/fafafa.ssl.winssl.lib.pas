@@ -499,6 +499,8 @@ begin
 end;
 
 function TWinSSLLibrary.GetCapabilities: TSSLBackendCapabilities;
+var
+  LALPNReady: Boolean;
 begin
   { v1.2.0: 如果已缓存，直接返回缓存值 }
   if FCapabilitiesCached then
@@ -515,21 +517,8 @@ begin
   Result.SupportsTLS13 := (FWindowsVersion.Major >= 10) and (FWindowsVersion.Build >= 18362);
 
   // ALPN 需要 Windows 8+ (版本 6.2+) 或 Windows 10+
-  Result.SupportsALPN := (FWindowsVersion.Major >= 10) or
+  LALPNReady := (FWindowsVersion.Major >= 10) or
     ((FWindowsVersion.Major = 6) and (FWindowsVersion.Minor >= 2));
-
-  // SNI 是 Schannel 原生支持的
-  Result.SupportsSNI := True;
-
-  // OCSP 装订需要手动实现，Schannel 不原生支持
-  Result.SupportsOCSPStapling := False;
-
-  // Certificate Transparency Schannel 不原生支持
-  Result.SupportsCertificateTransparency := False;
-
-  // Schannel 原生提供 session tickets/surface, but fafafa.ssl's
-  // native resumed-handshake bridge is still only experimentally proven.
-  Result.SupportsSessionTickets := True;
 
   // ECDHE 需要 Windows Vista+ (版本 6.0+)
   Result.SupportsECDHE := (FWindowsVersion.Major >= 6);
@@ -557,7 +546,7 @@ begin
 
   // 功能支持级别
   Result.SNISupport := sslSupportStable;
-  if Result.SupportsALPN then
+  if LALPNReady then
     Result.ALPNSupport := sslSupportStable
   else
     Result.ALPNSupport := sslSupportNone;

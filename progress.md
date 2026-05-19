@@ -4,6 +4,95 @@
 
 ## 2026-05-20
 
+### Capability Support-Level Source Normalization
+
+- `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
+- `ls -1 task_plan.md findings.md progress.md`
+- `rg -n "SupportsALPN :=|SupportsSNI :=|SupportsOCSPStapling :=|SupportsSessionTickets :=|SNISupport :=|ALPNSupport :=|OCSPStaplingSupport :=|SessionTicketsSupport :=|NormalizeLegacyCapabilityBooleans\(Result\)" src/fafafa.ssl.*lib.pas src/fafafa.ssl.openssl.backed.pas`
+  - result: PASS
+  - summary:
+    - confirmed the next live residual was real source-shape drift, not stale docs:
+      - all five backend `GetCapabilities` implementations still hand-wrote paired legacy bools
+      - all five also already called `NormalizeLegacyCapabilityBooleans(Result);`
+    - this narrowed the batch to producer-source normalization instead of reopening selector /
+      serializer / diff governance
+
+- add `docs/plans/2026-05-20-capability-support-level-source-normalization.md`
+- add `tests/scripts/test_capability_support_level_source_normalization_contract.sh`
+  - change:
+    - recorded a bounded source-normalization plan
+    - added a focused static contract that freezes:
+      - live backends must keep the shared normalization helper
+      - live backends must stop directly assigning paired legacy capability bools
+
+- `bash -n tests/scripts/test_capability_support_level_source_normalization_contract.sh`
+  - result: PASS
+  - summary:
+    - new focused contract syntax is valid
+
+- `bash tests/scripts/test_capability_support_level_source_normalization_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first proved the residual was live:
+      - `src/fafafa.ssl.openssl.backed.pas`
+        still assigned `Result.SupportsSNI := LSNIReady;`
+    - GREEN after the source edits proves:
+      - OpenSSL / FreePascal / WinSSL / MbedTLS / WolfSSL
+        no longer directly assign
+        `SupportsSNI` / `SupportsALPN` /
+        `SupportsOCSPStapling` /
+        `SupportsCertificateTransparency` /
+        `SupportsSessionTickets`
+      - those paired legacy bools are now derived only through
+        `NormalizeLegacyCapabilityBooleans(Result);`
+
+- update source:
+  - `src/fafafa.ssl.openssl.backed.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - change:
+    - removed direct paired legacy bool writes from `GetCapabilities`
+    - kept support-level producer logic intact
+    - kept the shared normalization helper as the sole compatibility projection step
+    - on OpenSSL / WinSSL, introduced/used local ready booleans where later logic had
+      previously depended on the legacy bool assignments
+
+- `rg -n "Result\.Supports(SNI|ALPN|OCSPStapling|CertificateTransparency|SessionTickets) :=" src/fafafa.ssl.openssl.backed.pas src/fafafa.ssl.freepascal.lib.pas src/fafafa.ssl.winssl.lib.pas src/fafafa.ssl.mbedtls.lib.pas src/fafafa.ssl.wolfssl.lib.pas`
+  - result: PASS
+  - summary:
+    - grep returned no matches, confirming the direct assignment lane is gone from all
+      five live backend sources
+
+- `bash tests/scripts/test_capability_legacy_bool_normalization_contract.sh`
+  - result: PASS
+  - summary:
+    - existing shared-helper contract still holds after the source tightening
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - the capability source-normalization batch is whitespace-clean
+
+- `mkdir -p tmp/test_capability_source_normalization_units`
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_capability_source_normalization_units -FEtmp/test_capability_source_normalization_units -otmp/test_capability_source_normalization_units/test_capabilities_contract tests/contract/test_capabilities_contract.pas && ./tmp/test_capability_source_normalization_units/test_capabilities_contract`
+  - result: PASS
+  - summary:
+    - cross-backend runtime contract stayed green after the producer-source cleanup:
+      - `63 passed`
+      - `0 failed`
+      - `1 skipped`
+    - available backends on this Linux host:
+      - `OpenSSL`
+      - `WolfSSL`
+      - `MbedTLS`
+      - `FreePascal Native`
+      all still prove:
+      - support-level truth exists
+      - paired legacy bools match support-level projection
+    - `Windows Schannel` remained a platform-expected skip on Linux
+
 ### Helper Surface Classification Truth
 
 - `rg -n "TSSLHelper|QuickServer|CreateOCSPClient|CreateCRLManager|GetLibraryInstance|推荐入口|helper" docs/reference/API_REFERENCE.md RELEASE_NOTES_V1.5.0.md docs/README.md docs/guides/GETTING_STARTED.md docs/guides/USER_GUIDE.md docs/guides/MIGRATION_GUIDE.md src/fafafa.ssl.pas src/fafafa.ssl.factory.pas`

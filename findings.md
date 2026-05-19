@@ -1,5 +1,66 @@
 # Findings - Interface Design And Backend Implementation Verification
 
+## 2026-05-20
+
+- capability 双真相这条线现在可以再向前收一层：
+  - 之前我们已经收掉了：
+    - selector / builder 的 support-level 消费
+    - serializer / deserializer precedence
+    - diff support-level truth
+    - backend 返回前统一 `NormalizeLegacyCapabilityBooleans(Result);`
+  - 但 live backend source 里仍保留
+    “先手工写 legacy bool，再写 `*Support`，最后再 normalize”的 producer 形态
+  - 这会继续把 legacy bool 暗示成主发布口，而不只是 compatibility projection
+
+- 新增的 focused shell contract 先红后绿，把这个 residual 直接钉成了真实 source 问题：
+  - 初始失败点就是：
+    - `src/fafafa.ssl.openssl.backed.pas`
+      仍有 `Result.SupportsSNI := LSNIReady;`
+  - 说明这条线不是“我们已经在逻辑上解决了，只剩文档描述没同步”，
+    而是 producer source 形态本身确实还没收口
+
+- 这批之后，五个 live backend 的 paired capability producer
+  已经统一回到同一个规则：
+  - backend 只发布：
+    - `SNISupport`
+    - `ALPNSupport`
+    - `OCSPStaplingSupport`
+    - `CertTransparencySupport`
+    - `SessionTicketsSupport`
+  - compatibility bool：
+    - `SupportsSNI`
+    - `SupportsALPN`
+    - `SupportsOCSPStapling`
+    - `SupportsCertificateTransparency`
+    - `SupportsSessionTickets`
+    只再由 shared
+    `NormalizeLegacyCapabilityBooleans(...)`
+    投影
+
+- 这一点很重要，因为它把“support-level 为 runtime/source truth”
+  从：
+  - 文档规则
+  - serializer/diff 规则
+  - focused runtime contract
+  进一步推进成了 live backend producer 的真实源码形态
+
+- cross-backend runtime contract 继续全绿也说明：
+  - 这批没有引入新的 capability 行为回归
+  - `OpenSSL / WolfSSL / MbedTLS / FreePascal Native`
+    仍保持：
+    - support-level truth 存在
+    - legacy bool 与 support-level compatibility projection 一致
+  - `Windows Schannel`
+    在当前 Linux host 上仍只能做静态/source 审查，
+    不属于本轮回归
+
+- capability producer 这条线到这里可以认为“当前一段闭环”：
+  - 若后面再回到 capability 主线，
+    更值得看的不会是 paired legacy bool 归一化本身，
+    而是：
+    - 还有没有 support-level-only 字段缺乏一致 consumer proof
+    - 或者 backend public surface / runtime semantics 自己是否还存在更大的结构债
+
 ## 2026-05-19
 
 - `26048015976` 和 `26108902159` 的对照把一个很重要的 triage 规则钉死了：

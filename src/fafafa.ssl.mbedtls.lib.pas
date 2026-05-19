@@ -476,11 +476,6 @@ begin
 
   // v1.1.0 字段（向后兼容）
   Result.SupportsTLS13 := FCapabilities.HasTLS13;
-  Result.SupportsALPN := FCapabilities.HasALPN;
-  Result.SupportsSNI := FCapabilities.HasSNI;
-  Result.SupportsOCSPStapling := False;
-  Result.SupportsCertificateTransparency := False;
-  Result.SupportsSessionTickets := FCapabilities.HasSessionTickets;
   Result.SupportsECDHE := FCapabilities.HasECDHE;
   Result.SupportsChaChaPoly := FCapabilities.HasChaCha20;
   Result.SupportsPEMPrivateKey := True;

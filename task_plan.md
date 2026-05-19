@@ -10,6 +10,65 @@
 
 ## Current Status
 
+- [completed] `capability support-level source normalization`
+  当前 focused 目标：
+  - 把 backend `GetCapabilities` 的 paired capability producer
+    收成 support-level 单真相，
+    不再让各 backend 同时手工写
+    `SupportsSNI` / `SupportsALPN` /
+    `SupportsOCSPStapling` /
+    `SupportsCertificateTransparency` /
+    `SupportsSessionTickets`
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-capability-support-level-source-normalization.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_capability_support_level_source_normalization_contract.sh`
+  - 收口源码：
+    - `src/fafafa.ssl.openssl.backed.pas`
+    - `src/fafafa.ssl.freepascal.lib.pas`
+    - `src/fafafa.ssl.winssl.lib.pas`
+    - `src/fafafa.ssl.mbedtls.lib.pas`
+    - `src/fafafa.ssl.wolfssl.lib.pas`
+  当前最终收口证据：
+  - 先红后绿的 focused shell contract 已证明：
+    - 初始 RED：
+      `src/fafafa.ssl.openssl.backed.pas`
+      仍直接赋值 `Result.SupportsSNI := LSNIReady;`
+    - GREEN 后：
+      五个 live backend
+      都只保留 support-level producer，
+      paired legacy bool 统一走
+      `NormalizeLegacyCapabilityBooleans(Result);`
+  - cross-backend runtime contract 已通过：
+    - `tests/contract/test_capabilities_contract.pas`
+    - 结果：
+      `63 passed, 0 failed, 1 skipped`
+    - Linux 可用 backend：
+      - `OpenSSL`
+      - `WolfSSL`
+      - `MbedTLS`
+      - `FreePascal Native`
+      仍全部满足：
+      - support-level truth 存在
+      - legacy bool 与 support-level 投影一致
+    - `Windows Schannel`
+      在当前 Linux host 上按预期 `SKIP`
+  当前结论：
+  - capability dual truth 的 producer 入口现在进一步收紧：
+    - backend source 不再暗示 legacy bool 也是主发布口
+    - shared normalization helper
+      现在成为 paired capability bool 的唯一 live projection 点
+  - 这批收掉的是 source-shape / producer residual，
+    不是新的 runtime capability regression
+  当前下一条真实工作：
+  - 继续接口设计 / backend completeness 主线，
+    但不要再回头做：
+    - `ISSLServerConnection` 文档修正
+    - `TSSLConfig` 的重复 docs 治理
+  - 下一条更值钱的审查方向：
+    - `ISSLConnection` 是否仍承担过宽职责
+    - client / server public surface 是否仍存在实现不对称残口
 - [completed] `auto-backend os-native preference truth`
   当前 focused 目标：
   - 给 `PreferOSNative` / auto-backend selection
