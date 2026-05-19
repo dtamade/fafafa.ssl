@@ -10,6 +10,87 @@
 
 ## Current Status
 
+- [completed] `GetPeerCertificateChain compiler deprecation alignment`
+  当前 focused 目标：
+  - 把 `ISSLConnection.GetPeerCertificateChain`
+    从“owner path 已存在但 core 仍像普通 surface”
+    收成和当前
+    `ISSLCertificateVerification`
+    真相一致的 compiler-deprecated compatibility mirror
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-getpeercertificatechain-compiler-deprecation.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_getpeercertificatechain_compiler_deprecated_contract.sh`
+  - 收口源码 / docs / ordinary guidance / residual proofs：
+    - `src/fafafa.ssl.base.pas`
+    - `docs/reference/API_REFERENCE.md`
+    - `docs/reference/INTERFACE_DESIGN_V2.md`
+    - `docs/guides/TROUBLESHOOTING.md`
+    - `tests/examples/test_certchain.pas`
+    - `tests/contract/test_backend_contract.pas`
+    - `tests/test_openssl_connection_peer_certificate_surface.pas`
+    - `tests/test_mbedtls_connection_peer_certificate_contract.pas`
+    - `tests/connection/test_wolfssl_client_peer_certificate_surface.pas`
+    - `tests/test_openssl_connection_peer_certificate_chain_contract.pas`
+    - `tests/test_freepascal_client_peer_certificate_surface.pas`
+    - `tests/winssl/test_winssl_connection_info.pas`
+    - `tests/winssl/test_winssl_peer_certificate_surface.pas`
+  当前预判：
+  - `GetVerifyResult*` 已经完成 compiler-deprecated 收口，
+    所以下一刀最值钱的不是再做 verify-result archaeology，
+    而是把仍停在半收口状态的
+    `GetPeerCertificateChain`
+    也推进到 source/doc/compiler 同步状态
+  当前验证策略：
+  - 先跑 focused shell contract 做 RED
+  - 然后只做
+    - 新 contract
+    - `git diff --check`
+    - 1-3 个代表性 Pascal 编译
+  - 不重新拉大门禁
+  当前最终收口证据：
+  - focused shell contract 先红后绿：
+    - 初始 RED：
+      `src/fafafa.ssl.base.pas`
+      中
+      `GetPeerCertificateChain`
+      的 compiler-deprecated 声明匹配数为 `0`
+    - GREEN 后：
+      - core declaration 已进入
+        `deprecated 'Use ISSLCertificateVerification.GetPeerCertificateChain'`
+      - `API_REFERENCE` / `INTERFACE_DESIGN_V2`
+        已同步记录为 compiler-deprecated compatibility mirror
+      - `TROUBLESHOOTING` / `tests/examples/test_certchain.pas`
+        已切到
+        `ISSLCertificateVerification.GetPeerCertificateChain`
+      - residual direct-core file set
+        已显式 warning quarantine
+  focused verification 已通过：
+  - `bash tests/scripts/test_getpeercertificatechain_compiler_deprecated_contract.sh`
+  - `fpc ... tests/contract/test_backend_contract.pas`
+  - `fpc ... tests/test_openssl_connection_peer_certificate_surface.pas`
+  - `fpc ... tests/test_mbedtls_connection_peer_certificate_contract.pas`
+  - `git diff --check`
+  当前结论：
+  - `ISSLCertificateVerification`
+    现在不再只是“文档上的 owner”
+  - `GetPeerCertificateChain`
+    已经和相邻的
+    `GetVerifyResult*`
+    一样进入 source/doc/compiler 三层对齐
+  - 这批真正收掉的是
+    “普通教学入口仍把 direct-core getter 当默认用法”
+    这条 drift，
+    同时保留了必要的 backend/runtime mirror proofs
+  当前下一条真实工作：
+  - 继续沿
+    `ISSLConnection` slimming / client-server symmetry
+    主线前进
+  - 更值钱的下一刀优先再看：
+    - `ISSLServerConnection`
+      的建模不对称
+    - 或 `ISSLConnection` 上还未明确 owner / compatibility 分层的剩余 surface
 - [completed] `isslocspstapling compiler deprecation alignment`
   当前 focused 目标：
   - 把 `ISSLConnection` 上的 4 个 OCSP compatibility-core mirrors

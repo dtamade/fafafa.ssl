@@ -20,6 +20,11 @@ uses
   fafafa.ssl.tls13.servercertverify,
   fafafa.ssl.crypto.hash;
 
+// INTENTIONAL_CORE_SURFACE: this backend proof file intentionally keeps direct
+// core GetPeerCertificateChain coverage as runtime proof. Generic
+// ISSLCertificateVerification owner-path guidance is frozen elsewhere.
+{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
+
 procedure Fail(const AMessage: string);
 begin
   WriteLn('❌ ', AMessage);

@@ -365,8 +365,11 @@ end;
 // 2. 检查证书链
 var
   LChain: TSSLCertificateArray;
+  LCertVerify: ISSLCertificateVerification;
 begin
-  LChain := LConn.GetPeerCertificateChain;
+  if not Supports(LConn, ISSLCertificateVerification, LCertVerify) then
+    raise Exception.Create('ISSLCertificateVerification unavailable');
+  LChain := LCertVerify.GetPeerCertificateChain;
   WriteLn('Certificate chain length: ', Length(LChain));
   for var i := 0 to High(LChain) do
     WriteLn('  [', i, '] ', LChain[i].GetSubject);

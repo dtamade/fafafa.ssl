@@ -1235,8 +1235,13 @@ type
     function GetPeerCertificate: ISSLCertificate;
 
     {** 获取对端证书链
+        @preferred-access 新代码优先通过 ISSLCertificateVerification.GetPeerCertificateChain 获取
+        @owner-note 当前默认 owner 为 ISSLCertificateVerification；ISSLConnection.GetPeerCertificateChain 保留为 v1.x compatibility mirror
+        @compatibility-note v1.x compatibility-core mirror; not recommended as the primary entry for new code; Stage-A demotion target is ISSLCertificateVerification
+        @deprecated 推荐使用 ISSLCertificateVerification.GetPeerCertificateChain
         @returns 证书数组，从叶证书到根证书 *}
     function GetPeerCertificateChain: TSSLCertificateArray;
+      deprecated 'Use ISSLCertificateVerification.GetPeerCertificateChain';
 
     {** 获取证书验证结果码
         @preferred-access 新代码优先通过 ISSLCertificateVerification.GetVerifyResult 获取

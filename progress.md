@@ -4,6 +4,91 @@
 
 ## 2026-05-20
 
+### GetPeerCertificateChain Compiler Deprecation Alignment
+
+- `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
+- `rg -n "GetPeerCertificateChain|ISSLCertificateVerification|deprecated 'Use ISSLCertificateVerification.GetPeerCertificateChain'|preferred-access" src/fafafa.ssl.base.pas src/fafafa.ssl.connection.base.pas docs/reference/API_REFERENCE.md docs/reference/INTERFACE_DESIGN_V2.md docs/guides/TROUBLESHOOTING.md tests/examples/test_certchain.pas tests/contract/test_backend_contract.pas tests/test_openssl_connection_peer_certificate_surface.pas tests/test_mbedtls_connection_peer_certificate_contract.pas tests/connection/test_wolfssl_client_peer_certificate_surface.pas tests/test_openssl_connection_peer_certificate_chain_contract.pas tests/test_freepascal_client_peer_certificate_surface.pas tests/winssl/test_winssl_connection_info.pas tests/winssl/test_winssl_peer_certificate_surface.pas`
+  - result: PASS
+  - summary:
+    - confirmed the next real residual was still live:
+      - `ISSLCertificateVerification` already exposed `GetPeerCertificateChain`
+      - but `ISSLConnection.GetPeerCertificateChain` itself was still not compiler-deprecated
+      - ordinary docs/example usage still included direct core reads
+
+- add `docs/plans/2026-05-20-getpeercertificatechain-compiler-deprecation.md`
+- add `tests/scripts/test_getpeercertificatechain_compiler_deprecated_contract.sh`
+  - change:
+    - recorded a bounded owner-surface/compiler-deprecation batch
+    - added a focused shell contract freezing:
+      - core compiler-deprecated declaration
+      - API / V2 wording
+      - troubleshooting/example owner-path usage
+      - residual direct-core file set and warning quarantine
+
+- `bash -n tests/scripts/test_getpeercertificatechain_compiler_deprecated_contract.sh`
+  - result: PASS
+  - summary:
+    - new focused contract syntax is valid
+
+- `bash tests/scripts/test_getpeercertificatechain_compiler_deprecated_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first proved the live gap:
+      - `src/fafafa.ssl.base.pas`
+        still had zero compiler-deprecated `GetPeerCertificateChain` declarations
+    - the first GREEN attempt also surfaced a contract bug, not a product bug:
+      - `rg` exact-match on a markdown list item starting with `- `
+        needed `--` to avoid option parsing
+    - GREEN after source/docs/test edits proves:
+      - `GetPeerCertificateChain`
+        now carries
+        `deprecated 'Use ISSLCertificateVerification.GetPeerCertificateChain'`
+      - active docs/examples no longer teach direct core peer-chain access
+      - intentional residual proofs are explicitly quarantined
+
+- update source/docs/tests:
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.connection.base.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/INTERFACE_DESIGN_V2.md`
+  - `docs/guides/TROUBLESHOOTING.md`
+  - `tests/examples/test_certchain.pas`
+  - `tests/contract/test_backend_contract.pas`
+  - `tests/test_openssl_connection_peer_certificate_surface.pas`
+  - `tests/test_mbedtls_connection_peer_certificate_contract.pas`
+  - `tests/connection/test_wolfssl_client_peer_certificate_surface.pas`
+  - `tests/test_openssl_connection_peer_certificate_chain_contract.pas`
+  - `tests/test_freepascal_client_peer_certificate_surface.pas`
+  - `tests/winssl/test_winssl_connection_info.pas`
+  - `tests/winssl/test_winssl_peer_certificate_surface.pas`
+  - change:
+    - moved `GetPeerCertificateChain` into compiler-deprecated compatibility status
+    - aligned `TBaseSSLConnection` residual note with the stronger source truth
+    - switched ordinary troubleshooting/example guidance to `ISSLCertificateVerification`
+    - preserved direct-core mirror proofs with explicit deprecation-warning quarantine
+
+- `mkdir -p tmp/test_peer_chain_backend_contract_units tmp/test_peer_chain_backend_contract_bin && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_peer_chain_backend_contract_units -FEtmp/test_peer_chain_backend_contract_bin -otmp/test_peer_chain_backend_contract_bin/test_backend_contract tests/contract/test_backend_contract.pas`
+  - result: PASS
+  - summary:
+    - backend contract still compiles after the new core deprecation
+    - compile output only showed pre-existing repository warnings/notes;
+      no new `GetPeerCertificateChain` deprecation noise escaped the intended quarantine
+
+- `mkdir -p tmp/test_peer_chain_openssl_surface_units tmp/test_peer_chain_openssl_surface_bin && fpc -B -Fu./src -Fu./tests -FUtmp/test_peer_chain_openssl_surface_units -FEtmp/test_peer_chain_openssl_surface_bin -otmp/test_peer_chain_openssl_surface_bin/test_openssl_connection_peer_certificate_surface tests/test_openssl_connection_peer_certificate_surface.pas`
+  - result: PASS
+  - summary:
+    - OpenSSL intentional direct-core peer-chain residual still compiles cleanly under the new deprecation status
+
+- `mkdir -p tmp/test_peer_chain_mbedtls_units tmp/test_peer_chain_mbedtls_bin && fpc -B -Fu./src -Fu./tests -FUtmp/test_peer_chain_mbedtls_units -FEtmp/test_peer_chain_mbedtls_bin -otmp/test_peer_chain_mbedtls_bin/test_mbedtls_connection_peer_certificate_contract tests/test_mbedtls_connection_peer_certificate_contract.pas`
+  - result: PASS
+  - summary:
+    - MbedTLS intentional direct-core peer-chain residual still compiles cleanly under the new deprecation status
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - the `GetPeerCertificateChain` compiler-deprecation batch is whitespace-clean
+
 ### ISSLOCSPStapling Compiler Deprecation Alignment
 
 - `rg -n "GetOCSPStaplingEnabled|GetOCSPResponse\\b|IsOCSPResponseVerified|GetOCSPResponseStatus|ISSLOCSPStapling" src/fafafa.ssl.base.pas src/fafafa.ssl.connection.base.pas docs/reference/API_REFERENCE.md docs/reference/INTERFACE_DESIGN_V2.md docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md tests tests/scripts`

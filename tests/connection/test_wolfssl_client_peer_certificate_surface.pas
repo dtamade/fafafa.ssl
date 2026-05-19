@@ -21,6 +21,11 @@ var
   GOriginalGetChainLength: TwolfSSL_get_chain_length = nil;
   GOriginalGetChainCert: TwolfSSL_get_chain_cert = nil;
 
+// INTENTIONAL_CORE_SURFACE: this backend proof file intentionally keeps direct
+// core GetPeerCertificateChain coverage as runtime proof. Generic
+// ISSLCertificateVerification owner-path guidance is frozen elsewhere.
+{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
+
 procedure Skip(const AMessage: string);
 begin
   WriteLn('[SKIP] ', AMessage);

@@ -30,6 +30,11 @@ var
   GOriginalSkX509Num: Tsk_X509_num = nil;
   GOriginalSkX509Value: Tsk_X509_value = nil;
 
+// INTENTIONAL_CORE_SURFACE: this backend proof file intentionally keeps direct
+// core GetPeerCertificateChain coverage as runtime proof. Generic
+// ISSLCertificateVerification owner-path guidance is frozen elsewhere.
+{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
+
 procedure Skip(const AMessage: string);
 begin
   WriteLn('[SKIP] ', AMessage);

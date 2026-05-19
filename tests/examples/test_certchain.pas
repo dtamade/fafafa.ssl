@@ -18,6 +18,7 @@ var
   Context: ISSLContext;
   Connection: ISSLConnection;
   ClientConn: ISSLClientConnection;
+  CertVerify: ISSLCertificateVerification;
   Socket: THandle;
   ServerAddr: TSockAddrIn;
   HostEnt: PHostEnt;
@@ -128,7 +129,13 @@ begin
     
     // 获取证书链
     WriteLn('获取证书链...');
-    CertChain := Connection.GetPeerCertificateChain;
+    if not Supports(Connection, ISSLCertificateVerification, CertVerify) then
+    begin
+      WriteLn('错误: 连接未暴露 ISSLCertificateVerification');
+      closesocket(Socket);
+      Exit;
+    end;
+    CertChain := CertVerify.GetPeerCertificateChain;
     WriteLn('证书链长度: ', Length(CertChain));
     
     // 显示证书链中每个证书的信息

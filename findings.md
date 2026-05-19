@@ -2,6 +2,54 @@
 
 ## 2026-05-20
 
+- `GetPeerCertificateChain` 之前正好卡在一个比
+  `GetVerifyResult*`
+  更容易让人误判的半收口状态：
+  - `ISSLCertificateVerification`
+    早就已经暴露了这条 surface
+  - `TBaseSSLConnection`
+    里的 residual note
+    也已经把 ordinary docs/tests 判断成 owner-path
+  - 但 `ISSLConnection.GetPeerCertificateChain`
+    自己仍是普通 public declaration，
+    所以编译器、API 参考、以及一部分普通示例
+    还在继续把它当默认入口
+
+- 这批最值钱的修法不是单纯再补一句文档，
+  而是把两类入口彻底分开：
+  - 普通文档 / 普通示例：
+    统一切到
+    `ISSLCertificateVerification.GetPeerCertificateChain`
+  - backend/runtime/contract residual proof：
+    允许继续保留 direct-core mirror，
+    但显式标成 intentional deprecated compatibility usage
+
+- 这也说明一个更一般化的审查规则：
+  - 如果 owner-path 已存在，
+    但普通 docs/example 仍继续直接教学 core getter，
+    那么“source comment 已说明 owner”
+    还不够
+  - 真正会改变使用心智的，
+    是：
+    - ordinary guidance 切换
+    - compiler-deprecated 声明
+    - residual allowlist 冻结
+    三者一起收口
+
+- Windows 静态 residual 文件这次也再次说明：
+  - 当当前 host 不能直接编译某个 backend lane 时，
+    最稳的静态收口方式不是“假设本地 warning 会被局部 `PUSH/POP` 覆盖”，
+    而是直接在 intentional residual 文件顶层留下
+    file-scoped deprecation quarantine
+  - 这样静态 contract
+    就能在 Linux host 上明确冻结这层意图
+
+- 这批还补了一条小 workflow 经验：
+  - `rg` 精确匹配 markdown 列表项时，
+    如果 pattern 以 `- ` 开头，
+    记得加 `--`
+  - 否则 contract 自己会先因为参数解析失败而报假红
+
 - OCSP 这组 core surface 之前停在一个“半收口”状态：
   - active docs 已经转向 `ISSLOCSPStapling`
   - source comments 也已经把 core `GetOCSP*` 标成 compatibility-core mirrors

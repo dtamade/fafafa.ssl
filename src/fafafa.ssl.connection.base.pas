@@ -740,6 +740,9 @@ begin
   Result := DoGetPeerCertificate;
 end;
 
+{ `GetPeerCertificateChain` 当前共享同一条基类 mirror 实现：
+  ordinary docs/tests 已转向 `ISSLCertificateVerification` owner path，
+  direct core 残余面当前只剩 helper fallback、contract mirror proof 和 backend-specific runtime residuals。 }
 function TBaseSSLConnection.GetPeerCertificateChain: TSSLCertificateArray;
 begin
   Result := DoGetPeerCertificateChain;

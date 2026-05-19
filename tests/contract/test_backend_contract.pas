@@ -2180,6 +2180,10 @@ begin
       end;
       {$POP}
 
+      // INTENTIONAL_CORE_SURFACE: keep this direct core GetPeerCertificateChain
+      // comparison as the mirror-proof boundary. Generic
+      // ISSLCertificateVerification owner-path guidance is frozen elsewhere.
+      {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
       LCoreChain := LConn.GetPeerCertificateChain;
       LOptionalChain := LCertVerify.GetPeerCertificateChain;
 
@@ -2248,6 +2252,7 @@ begin
           Exit;
         end;
       end;
+      {$POP}
 
       WriteLn('  [PASS] Certificate-verification surface is self-consistent');
       AddResult('CertificateVerificationInterfaceAligned', ABackend, True);

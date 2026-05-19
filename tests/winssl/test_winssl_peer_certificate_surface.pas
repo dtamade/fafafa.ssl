@@ -14,6 +14,11 @@ var
   Failed: Integer;
   Section: string;
 
+// INTENTIONAL_CORE_SURFACE: this backend proof file intentionally keeps direct
+// core GetPeerCertificateChain coverage as runtime proof. Generic
+// ISSLCertificateVerification owner-path guidance is frozen elsewhere.
+{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
+
 function ResolvePeerCertHost: string;
 begin
   Result := Trim(GetEnvironmentVariable('FAFAFA_WINSSL_PEER_CERT_HOST'));
