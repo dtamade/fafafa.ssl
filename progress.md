@@ -13324,3 +13324,22 @@
   - result: PASS
   - summary:
     - current evidence-only worker batch has no whitespace or patch-format issues
+
+- `git push origin master`
+  - result: PASS
+  - summary:
+    - pushed evidence-only worker batch as commit `bafa1db`
+
+- `gh workflow run "Wave B B2 Manual Gate (Template)" --ref master -f run_id=winssl_native_probe_evidence_only_20260519_235540 -f strict_closure=false -f winssl_enable_native_probe=true`
+  - result: PASS
+  - summary:
+    - launched final Windows/manual verification lane against commit `bafa1db`
+
+- `gh run watch 26108902159 --exit-status`
+  - result: FAIL
+  - summary:
+    - linux gate passed
+    - windows quick smoke passed
+    - windows Wave B gate passed
+    - broader WinSSL runtime suite passed
+    - workflow still failed only because macOS gate failed independently

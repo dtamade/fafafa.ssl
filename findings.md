@@ -6348,3 +6348,10 @@
   - 更合理的默认收口应该是：
     - evidence-only by default
     - strict only when `FAFAFA_WINSSL_REQUIRE_NATIVE_REUSE=1`
+
+- 这条 evidence-only 收口已经被 fresh Windows CI run `26108902159` 真实验证：
+  - `windows quick smoke` = PASS
+  - `Run Windows Wave B gate` = PASS
+  - `Run broader WinSSL runtime suite` = PASS
+  - 说明我们已经把 Windows 主线从“被 investigatory native probe 拖红”收回到了“主线可绿、evidence 仍保留”的状态
+  - 当前 cross-platform workflow 仍整体为 FAIL，只是因为 macOS lane 还独立失败，不再是 WinSSL native probe 主线阻塞

@@ -4935,3 +4935,12 @@
        - Windows Wave B gate 仍 PASS
        - broader WinSSL runtime suite 由 FAIL 转为 PASS
        - native probe marker 仍完整保留在 transcript 中
+   - 最新 runtime verification：
+     - run `26108902159`
+       已经完成上述验证：
+       - Windows quick smoke = PASS
+       - Windows Wave B gate = PASS
+       - broader WinSSL runtime suite = PASS
+     - 因此 WinSSL native probe 主线当前应视为：
+       - Windows mainline unblocked
+       - remaining failure moved off this lane and back to macOS-specific gate work
