@@ -108,7 +108,7 @@ Ctx := TSSLContextBuilder.Create
 | 重协商 | ⚠️ 可选 | 安全重协商 |
 | 客户端证书 | ✅ 支持 | 双向 TLS |
 | 自定义 I/O | ❌ 当前 public callback surface 不发布 | 当前 transport path 仅使用内置 socket/stream BIO wiring，不提供 caller-supplied I/O callback seam |
-| 异步操作 | ⚠️ 部分 | 非阻塞 I/O |
+| 异步操作 | ⚠️ 部分 | 当前 public surface 通过 `WantRead / WantWrite` 暴露非阻塞重试语义；没有 dedicated async callback / job public capability |
 
 ## 与 OpenSSL 对比
 

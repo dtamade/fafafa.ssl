@@ -7712,3 +7712,34 @@
      - `ISSLServerConnection` 文档/源码不一致
      - `ISSLConnection` 核心接口过宽
      - `TSSLConfig` 跨层职责混杂
+122. `MbedTLS` 的“异步操作”当前真正发布的能力边界已经可以更精确地表述为：
+  - 现有 public surface 确实支持
+    `WantRead / WantWrite`
+    这类非阻塞重试语义
+  - 但这不等于当前已经发布了 dedicated async callback / job / event-loop capability
+  - 因而专页只写
+    `非阻塞 I/O`
+    会把“可重试状态语义”和“正式 async capability”
+    混成一个过宽结论
+- 这批 focused contract 的价值不在于新增实现，而在于把三层 truth 锁到一起：
+  - `src/fafafa.ssl.base.pas`
+    的 active connection surface
+  - `src/fafafa.ssl.mbedtls.connection.pas`
+    的 native WANT_READ / WANT_WRITE 映射
+  - `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+    的 capability wording
+- 当前最重要的流程结论同样已经改变：
+  - GitHub Actions `WinSSL Runtime Gate`
+    run `26130501368`
+    已 `success`
+  - 这说明 Windows / WinSSL runtime 验证
+    现在已经有自动主线承接
+  - 所以下一步不该再回到
+    “WinSSL 只能静态审查”
+    这种旧前提，而应继续清理剩余的 source-backed capability drift
+- 因而当前批收口后的默认顺序应为：
+  - 先继续同类 residual：
+    `MbedTLS Ed25519`
+  - 再处理：
+    `WinSSL Windows 7 SP1`
+    平台支持表述

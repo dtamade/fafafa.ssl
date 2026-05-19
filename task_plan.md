@@ -6995,3 +6995,44 @@
      - 因此 WinSSL native probe 主线当前应视为：
        - Windows mainline unblocked
        - remaining failure moved off this lane and back to macOS-specific gate work
+105. `MbedTLS async capability doc truth alignment` 这批现在应作为一个已验证通过、等待提交的最小收口批次保留：
+   - 新 plan：
+     - `docs/plans/2026-05-20-mbedtls-async-capability-doc-truth-alignment.md`
+   - 当前 source / API truth：
+     - `src/fafafa.ssl.base.pas`
+       已发布：
+       - `WantRead`
+       - `WantWrite`
+     - `src/fafafa.ssl.mbedtls.connection.pas`
+       当前明确以：
+       - `MBEDTLS_ERR_SSL_WANT_READ`
+       - `MBEDTLS_ERR_SSL_WANT_WRITE`
+       驱动：
+       - `DoWantRead`
+       - `DoWantWrite`
+     - `tests/test_mbedtls_framework.pas`
+       已冻结：
+       - `ERR_SSL_WANT_READ -> sslErrWantRead`
+       - `ERR_SSL_WANT_WRITE -> sslErrWantWrite`
+   - 当前最小修正：
+     - 把 `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+       中
+       - `| 异步操作 | ⚠️ 部分 | 非阻塞 I/O |`
+       收紧为
+       - `当前 public surface 通过 WantRead / WantWrite 暴露非阻塞重试语义；没有 dedicated async callback / job public capability`
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_mbedtls_async_capability_doc_truth_contract.sh`
+     - `bash tests/scripts/test_mbedtls_async_capability_doc_truth_contract.sh`
+     - `git diff --check`
+   - 当前外部流程状态：
+     - GitHub Actions `WinSSL Runtime Gate`
+       run `26130501368`
+       已 `success`
+     - 说明 Windows / WinSSL runtime proof
+       现在已经有自动 lane 承接，
+       不必再把这条线当成“只能静态审查”的阻塞理由
+   - 当前批收口后默认下一步应为：
+     - 继续同一组 residual doc-truth 审查，
+       优先处理：
+       - `MbedTLS Ed25519`
+       - `WinSSL Windows 7 SP1` 平台支持表述

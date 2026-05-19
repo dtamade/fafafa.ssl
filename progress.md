@@ -15424,3 +15424,66 @@
     - recorded that the selector / builder platform preference / requirement
       proof cluster is now effectively closed out and the next lane should
       return to broader interface-design / backend-completeness work
+
+### MbedTLS Async Capability Doc Truth Alignment
+
+- add `docs/plans/2026-05-20-mbedtls-async-capability-doc-truth-alignment.md`
+  - change:
+    - define the bounded doc-truth closeout for the
+      `异步操作` row in
+      `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+    - explicitly scope the truth to:
+      - published retry semantics via `WantRead / WantWrite`
+      - no dedicated async callback / job public capability
+
+- add `tests/scripts/test_mbedtls_async_capability_doc_truth_contract.sh`
+  - change:
+    - add a focused shell contract that freezes:
+      - `ISSLConnection.WantRead / WantWrite`
+      - `TMbedTLSConnection` WANT_READ / WANT_WRITE mapping
+      - `tests/test_mbedtls_framework.pas` error mapping
+      - the dedicated MbedTLS capability matrix wording
+
+- update `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+  - change:
+    - tighten the `异步操作` row from vague
+      `非阻塞 I/O`
+      wording to the current shipped truth:
+      - retry semantics are exposed through `WantRead / WantWrite`
+      - no dedicated async callback / job public capability is published
+
+- `bash -n tests/scripts/test_mbedtls_async_capability_doc_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_mbedtls_async_capability_doc_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - current source, API reference, framework test, and dedicated MbedTLS doc
+      are now aligned on the same async-capability truth
+    - this batch closes a wording drift; it does not introduce or expand any
+      runtime async implementation
+
+- `git diff --check`
+  - result: PASS
+
+- `gh run view 26130501368 --json status,conclusion,name,workflowName,createdAt,updatedAt,url,jobs`
+  - result: PASS
+  - summary:
+    - `WinSSL Runtime Gate` completed with `conclusion=success`
+    - workflow steps confirm the auto Windows lane now runs:
+      - quick WinSSL smoke
+      - Windows Wave B gate
+      - broader WinSSL runtime suite
+    - Windows / WinSSL runtime proof is now automated and should no longer be
+      treated as a static-only verification lane
+
+- update planning files:
+  - `task_plan.md`
+  - `findings.md`
+  - `progress.md`
+  - change:
+    - recorded this batch as a doc-truth closeout rather than a runtime backend
+      implementation fix
+    - recorded that the next residual queue should continue with:
+      - `MbedTLS Ed25519`
+      - `WinSSL Windows 7 SP1` platform-support wording
