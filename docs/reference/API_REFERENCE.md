@@ -755,6 +755,7 @@ WinSSL 后端提供 `ISSLSession` 复用能力，但活跃公共接口以当前�
 > 当前 dedicated Windows CI runtime truth 已由 run `26037518301` 固定：
 > `observed_reuse=false`，`session_configured=true`。
 > 这意味着 WinSSL 的 session-resumption public surface 已可安全使用，但 native resumed-handshake 行为在 fafafa.ssl 中仍应视为实验性能力，而不是已稳定命中的 runtime 结论。
+> 由于 canonical shared path 当前继续撤下 live `SECPKG_ATTR_SESSION_INFO` probe 以避免 Windows AV，`observed_reuse` 在 broader/shared lane 上应按 conservative public truth 理解；更深 native evidence 需要查看 opt-in isolated native probe 输出的 `native_observed_reuse` / `native_probe_succeeded`。
 > 按当前 Schannel truth，client-side reconnect/cache lookup 仍主要取决于相同的 `target name` 与相同的 context-level `credential handle`；
 > `ISSLSessionResumption.SetSession(...)` 在 WinSSL 上当前更接近 compatibility metadata surface，而不是 native session-handle injection 点。
 

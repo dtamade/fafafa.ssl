@@ -1,7 +1,7 @@
 # WinSSL 后端实现状态报告
 
 > **Status**: draft
-> **Updated**: 2026-05-18
+> **Updated**: 2026-05-19
 
 ## 概述
 
@@ -48,7 +48,7 @@
 | caller-provided server OCSP stapling | 不支持                    | 当前不暴露 `ISSLServerOCSPStaplingContext` public surface               |
 | SNI                                  | 支持                      | public capability 已对齐                                                |
 | ALPN                                 | 条件支持                  | 受 Windows 版本影响                                                     |
-| Session resumption / tickets         | experimental public surface | final Windows proof run `26037518301` recorded `observed_reuse=false` / `session_configured=true`; shared crash 已关闭，但 native resumed-handshake 仍未在 fafafa.ssl 中证实 |
+| Session resumption / tickets         | experimental public surface | final Windows proof run `26037518301` recorded shared/public `observed_reuse=false` / `session_configured=true`; canonical shared path keeps conservative truth while opt-in isolated native probe remains the deeper evidence lane |
 | Native handle access                 | context / connection 暴露 | session 不暴露 `ISSLNativeHandleAccess`                                 |
 
 ## GitHub Windows runner 当前真相
@@ -100,7 +100,9 @@
 - **代码结构和 compile surface 持续收口中，且当前已通过选定的 source contract 与 Win64 交叉编译验证**
 - **仓库级 Linux gate 继续全绿**
 - **GitHub Windows runner 现在已经同时给出“实际执行 + substantive artifact evidence”**
-- **WinSSL session-resumption lane 现在已有 dedicated runtime proof harness，且最终 green run `26037518301` 已把当前 truth 固定为 `observed_reuse=false` / `session_configured=true`**
+- **WinSSL session-resumption lane 现在会同时产出两层证据：shared/public 的 conservative truth，以及 opt-in isolated native probe truth；因此 `observed_reuse=false` 不能单独读成“已经直接证明 Schannel 没复用”**
+- **当前 green baseline 仍把 shared/public truth 固定在 `observed_reuse=false` / `session_configured=true`，而更深 native resumed-handshake evidence 仍要继续看 `native_observed_reuse` / `native_probe_succeeded`**
+- 最新 opt-in native-probe 调查 run `26104446972` 进一步证明：当前 isolated worker 仍可能在 `QueryContextAttributesW(..., SECPKG_ATTR_SESSION_INFO, ...)` 之前/期间以 `native_probe_worker exit_code=-1073741819` 失败，因此 native probe lane 仍属于 investigatory evidence，而不是稳定 baseline。
 - **WinSSL / MbedTLS 的 `IsSessionReused` preclaim semantic false positive 已修掉**
 - **真正剩余的高风险未证实区域，已经前移到 WinSSL backend native resumed-handshake / session tickets 行为本身，而不再是 workflow capture 或 shared-path crash**
 

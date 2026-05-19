@@ -462,6 +462,8 @@ begin
   LNativeProbeSucceeded := False;
   LSessionConfigured := False;
   LSession := nil;
+  EmitResumeMarker(
+    'evidence_model public_reuse_truth=conservative_shared_path native_probe_truth=isolated_worker_opt_in');
 
   if not InitWinsock then
   begin

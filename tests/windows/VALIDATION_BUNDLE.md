@@ -63,12 +63,19 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\tests\run_winssl_tests.ps1 *>&1 
 
 ```text
 [WINSSL-RUNTIME] suite_start total=...
-[WINSSL-RUNTIME] session_resumption summary host=... attempts=... observed_reuse=...
+[WINSSL-RUNTIME] session_resumption evidence_model public_reuse_truth=conservative_shared_path native_probe_truth=isolated_worker_opt_in
+[WINSSL-RUNTIME] session_resumption summary host=... attempts=... observed_reuse=... native_probe_enabled=... native_observed_reuse=... native_probe_succeeded=... require_reuse=... require_native_reuse=... session_configured=...
 [WINSSL-RUNTIME] suite_summary passed=... failed=... total=... success_rate=...
 [WINSSL-RUNTIME] suite_end status=PASS|FAIL
 ```
 
 `test_winssl_session_resumption.lpi` 还会输出 `[WINSSL-SESSION-RESUME] ...` 原始观测行；wrapper 会把它们提升成 `[WINSSL-RUNTIME] session_resumption ...` evidence marker。
+这些 marker 现在需要配套理解：
+- `evidence_model ...` 说明 shared/public 路径当前继续维持 conservative truth，native probe 仍是 isolated opt-in lane
+- `summary ... observed_reuse=...` 不能再被单独误读成“是否真的观测到 resumed handshake”的唯一结论
+- 更深 native evidence 需要同时看 `native_probe_enabled` / `native_observed_reuse` / `native_probe_succeeded`
+这样才方便后续在 artifact 里区分 shared/public conservative truth 与 opt-in native probe evidence，而不是把 `observed_reuse` 单独误读成“是否真的观测到 resumed handshake”的唯一结论。
+如果这是开启 native probe 的专项调查，还应同时保存 `native_probe_worker exit_code=...` 和最后一个 `stage=...` marker；当前 GitHub Windows runner 上，这条 lane 仍可能在 `before_query_context_attributes` 附近以 `-1073741819` 失败。
 
 如果只留下“我跑过了”，没有这些 summary / log / runtime markers，后续审查仍然会回到猜。
 

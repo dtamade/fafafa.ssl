@@ -12828,3 +12828,138 @@
   - result: PASS
   - summary:
     - current session-cache semantic-boundary batch has no whitespace or patch-format issues
+
+### WinSSL Session Evidence Model Truth
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - batch started from a clean `master...origin/master` worktree
+
+- `gh run list -w "Wave B B2 Manual Gate (Template)" --limit 8`
+  - result: PASS
+  - summary:
+    - current verified manual-lane sequence showed:
+      - latest successful Windows manual gate = `26093405878`
+      - previous failure = `26092828923`
+    - both facts helped confirm that this lane is live/current rather than a stale historical handoff
+
+- `gh run view 26093405878 --log | rg -n "\[INFO\] Using WinSSL session resumption host override|\[INFO\] Using default WinSSL session resumption host from test program|\[INFO\] Enabling risky WinSSL native probe for Schannel session evidence|\[INFO\] Keeping WinSSL native probe disabled by default|\[WINSSL-SESSION-RESUME\] summary host=|\[WINSSL-RUNTIME\] session_resumption summary host="`
+  - result: PASS
+  - summary:
+    - latest successful manual gate still ran the broader suite with the native probe disabled by default
+    - the artifact/log truth remained:
+      - `observed_reuse=false`
+      - `session_configured=true`
+      - `native_probe_enabled=false`
+
+- `sed -n '930,1045p' src/fafafa.ssl.winssl.connection.pas`
+  - result: PASS
+  - summary:
+    - static source audit confirmed the deeper truth:
+      - `UpdateSessionReuseTruthFromContext(...)` currently forces:
+        - `ASessionId := ''`
+        - `FSessionReused := False`
+      - reason: canonical shared path keeps the live `SECPKG_ATTR_SESSION_INFO` probe removed to avoid GitHub Windows AVs
+    - this means the broader/shared lane's `observed_reuse=false` is a conservative public truth, not a direct safe native probe result
+
+- `sed -n '1,240p' tests/windows/VALIDATION_BUNDLE.md`
+  - result: PASS
+  - summary:
+    - validation bundle inventory still documented only the short `observed_reuse` marker shape
+    - it did not yet teach readers how to distinguish shared/public conservative truth from opt-in native probe evidence
+
+- `sed -n '132,176p' tests/windows/WINDOWS_VALIDATION_CHECKLIST.md`
+  - result: PASS
+  - summary:
+    - Windows checklist had the same evidence-model drift:
+      - promoted marker shape only showed `observed_reuse`
+      - explanation still implied direct artifact inspection answers whether resumed handshake was truly observed
+
+- add `docs/plans/2026-05-19-winssl-session-evidence-model-truth.md`
+  - change:
+    - recorded the bounded plan for locking the WinSSL session evidence model
+
+- add `tests/scripts/test_winssl_session_evidence_model_truth_contract.sh`
+  - change:
+    - added a focused shell contract that guards:
+      - proof program emits a stable `evidence_model` marker
+      - high-entry docs distinguish conservative shared/public truth from opt-in native probe truth
+      - Windows checklist/bundle document the richer summary shape
+
+- update docs/proof:
+  - `tests/winssl/test_winssl_session_resumption.pas`
+  - `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md`
+  - `tests/windows/VALIDATION_BUNDLE.md`
+  - `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  - `docs/guides/WINSSL_USER_GUIDE.md`
+  - change:
+    - emit a stable session-resumption `evidence_model` marker
+    - teach readers that `observed_reuse` is current shared/public conservative truth
+    - point deeper runtime interpretation to `native_observed_reuse` / `native_probe_succeeded`
+
+- `bash -n tests/scripts/test_winssl_session_evidence_model_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new session evidence-model truth contract syntax is valid
+
+- `bash tests/scripts/test_winssl_session_evidence_model_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed two real alignment gaps:
+      - proof program did not yet emit an explicit evidence-model marker
+      - status/checklist/bundle wording still left room to over-read `observed_reuse`
+    - GREEN after the focused patch:
+      - proof + docs now preserve the two-layer evidence model we actually rely on
+
+- `bash tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - pre-existing runtime-truth contract stays green after the evidence-model tightening
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current session evidence-model truth batch has no whitespace or patch-format issues
+
+- `gh workflow run "Wave B B2 Manual Gate (Template)" --ref master -f run_id=winssl_native_probe_20260519_2300 -f strict_closure=false -f winssl_enable_native_probe=true`
+  - result: PASS
+  - summary:
+    - launched a fresh Windows manual lane specifically to capture latest isolated native-probe evidence without reopening the shared-path probe
+
+- `gh run list -w "Wave B B2 Manual Gate (Template)" --limit 3`
+  - result: PASS (in_progress at capture time)
+  - summary:
+    - newly launched native-probe run is currently:
+      - `26104446972`
+    - status at capture time:
+      - `in_progress`
+
+- `gh run download 26104446972 --dir tmp/gh-run-26104446972`
+  - result: PASS
+  - summary:
+    - downloaded fresh Linux/macOS/Windows/summary artifacts for the native-probe investigation run
+    - this avoided GitHub web-log auth friction and gave direct access to the Windows runtime transcript
+
+- `rg -n "session_resumption|evidence_model|observed_reuse|native_observed_reuse|native_probe_succeeded|native_probe_worker|query_failed|exception=|suite_end|test_result index=5" tmp/gh-run-26104446972 -g '*.log' -g '*.md'`
+  - result: PASS
+  - summary:
+    - fresh artifact evidence confirmed:
+      - `windows_runtime_transcript` is substantive and records `suite_end_status=FAIL`
+      - failure is concentrated in `WinSSL Session Resumption Truth`
+      - no evidence gap remains in artifact capture for this lane
+
+- `rg -n "native_probe_worker exit_code=-1073741819|before_query_context_attributes|native_probe_enabled=true|native_probe_succeeded=false" tmp/gh-run-26104446972/wave-b-windows-winssl_native_probe_20260519_2300/winssl_runtime_suite_winssl_native_probe_20260519_2300.log`
+  - result: PASS
+  - summary:
+    - fresh native-probe run `26104446972` ended with:
+      - `native_probe_worker exit_code=-1073741819`
+      - last marker at `native_probe label=initial_handshake stage=before_query_context_attributes`
+      - `observed_reuse=false`
+      - `native_probe_enabled=true`
+      - `native_observed_reuse=false`
+      - `native_probe_succeeded=false`
+      - `session_configured=true`
+    - this tightened the real unresolved issue to the isolated-worker `SECPKG_ATTR_SESSION_INFO` probe itself

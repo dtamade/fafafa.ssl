@@ -4707,3 +4707,68 @@
      - 继续回到更值钱的 WinSSL runtime 端调查：
        - 为什么 same `target name` + same `credential handle` 仍然停在 `observed_reuse=false`
      - 或继续横向审查其它 backend capability/support-level 字段是否还有类似的语义漂移
+100. `WinSSL session evidence model truth` 已完成 repo-side focused 收口，并应作为当前 WinSSL runtime 证据链的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-winssl-session-evidence-model-truth.md`
+   - 当前已确认的真实 drift：
+     - `src/fafafa.ssl.winssl.connection.pas`
+       - `UpdateSessionReuseTruthFromContext(...)`
+         当前明确保持：
+         - `ASessionId := ''`
+         - `FSessionReused := False`
+       - 原因不是“已经安全证明 Schannel 不会复用”
+       - 而是 canonical shared path 继续撤下 live `SECPKG_ATTR_SESSION_INFO` probe，以避免 GitHub Windows 上的 AV
+     - `tests/winssl/test_winssl_session_resumption.pas`
+       - summary 虽然已经同时输出：
+         - `observed_reuse`
+         - `native_observed_reuse`
+         - `native_probe_succeeded`
+       - 但没有一条稳定 marker 明说当前 evidence model
+     - `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md`
+     - `tests/windows/VALIDATION_BUNDLE.md`
+     - `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md`
+     - `docs/reference/API_REFERENCE.md`
+     - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+     - `docs/guides/WINSSL_USER_GUIDE.md`
+       - 之前都还容易把：
+         - `observed_reuse=false`
+         当成“是否真的观测到 resumed handshake”的唯一结论
+       - 没有把：
+         - shared/public conservative truth
+         - opt-in isolated native probe truth
+         这两层证据明确拆开
+   - 当前最小正确修法已落地：
+     - 不改 WinSSL runtime/handshake 实现
+     - 让 dedicated proof program 额外输出稳定 marker：
+       - `evidence_model public_reuse_truth=conservative_shared_path native_probe_truth=isolated_worker_opt_in`
+     - 把 Windows checklist / bundle / status report / WinSSL 高入口说明统一收紧到：
+       - `observed_reuse` = shared/public conservative truth
+       - `native_observed_reuse` / `native_probe_succeeded` = deeper opt-in native evidence
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_winssl_session_evidence_model_truth_contract.sh`
+     - `bash tests/scripts/test_winssl_session_evidence_model_truth_contract.sh`
+     - `bash tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+     - `git diff --check`
+   - 当前 live follow-up 已拿到最新结果：
+     - 新的 GitHub Windows manual lane：
+       - run `26104446972`
+     - 当前已确认的 fresh runtime evidence：
+       - broader suite 的 session-resumption lane 在启用 native probe 后失败
+       - `native_probe_worker exit_code=-1073741819`
+       - last marker 停在：
+         - `native_probe label=initial_handshake stage=before_query_context_attributes`
+       - summary 仍是：
+         - `observed_reuse=false`
+         - `native_probe_enabled=true`
+         - `native_observed_reuse=false`
+         - `native_probe_succeeded=false`
+         - `session_configured=true`
+     - 这说明当前更值钱的问题已经继续收窄成：
+       - isolated worker / `SECPKG_ATTR_SESSION_INFO` probe 自身仍不安全
+       - 而不是 workflow 没跑起来，也不是 broader/shared lane marker 丢失
+   - 当前批收口后默认下一步应为：
+     - 不再把问题描述成“WinSSL session truth 还不够清楚”
+     - 直接静态审查并缩小：
+       - isolated worker / `SECPKG_ATTR_SESSION_INFO` probe 的 ABI / lifetime / buffer safety 边界
+     - 若能定位 Pascal 绑定或调用约束缺口，就开下一批 source-side 修复
+     - 若仍无安全修法，再考虑把 native probe lane 明确降级成更强的 quarantined investigation path

@@ -99,6 +99,7 @@ Ctx := TSSLContextBuilder.Create
 
 > 当前 dedicated Windows CI runtime truth 以 run `26037518301` 为准：
 > `observed_reuse=false`，`session_configured=true`。
+> 由于 canonical shared path 当前继续撤下 live `SECPKG_ATTR_SESSION_INFO` probe 以避免 Windows AV，`observed_reuse` 当前应按 conservative public truth 理解；更深 native evidence 仍需看 opt-in isolated native probe 输出的 `native_observed_reuse` / `native_probe_succeeded`。
 > 因此 WinSSL `session resumption / tickets` 当前只能作为实验性 public surface 使用，不能再写成“完整支持”。
 
 ### 高级功能

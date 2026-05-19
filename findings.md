@@ -6176,3 +6176,74 @@
     仍是当前 dedicated Windows runtime truth
   - 因而不能再把 `SessionCacheSupport=stable`
     当作“resumed handshake 已经 runtime-proven”的旁证
+
+- 顺着 WinSSL runtime 继续往下审，这次又钉死了一条更底层的事实：
+  - 当前 `observed_reuse=false`
+    在 broader/shared lane 上并不是“已经安全直接观测到 Schannel 没复用”
+  - 而是 canonical shared path 为了避开 GitHub Windows 上的 AV，
+    暂时撤下了 live `SECPKG_ATTR_SESSION_INFO` probe 后保留下来的 conservative public truth
+
+- 这条事实的关键证据已经不再是文档猜测，而是源码直接写着：
+  - `src/fafafa.ssl.winssl.connection.pas`
+    - `UpdateSessionReuseTruthFromContext(...)`
+      当前固定：
+      - `ASessionId := ''`
+      - `FSessionReused := False`
+    - 并明确注释：
+      - shared path 上的 `SECPKG_ATTR_SESSION_INFO` probe 仍因 Windows AV 风险而撤下
+
+- 因而当前 WinSSL session-resumption lane 实际上有两层证据：
+  - 第一层：
+    - shared/public conservative truth
+    - 看：
+      - `observed_reuse`
+      - `session_configured`
+  - 第二层：
+    - opt-in isolated native probe truth
+    - 看：
+      - `native_probe_enabled`
+      - `native_observed_reuse`
+      - `native_probe_succeeded`
+
+- 之前真正会误导路线图的，不是“我们没有任何 session runtime 证据”，而是：
+  - checklist / bundle / status report / API reference
+    还容易把第一层 shared/public truth
+    单独读成全部 runtime 结论
+  - 这会让人误以为：
+    - `observed_reuse=false`
+      已经足够证明 native resumed-handshake 没发生
+
+- 这批之后，WinSSL session-resumption lane 的稳定解释应该固定为：
+  - public/shared 路径当前仍可安全给出 conservative truth
+  - 更深 native resumed-handshake evidence 仍要看 isolated worker / opt-in probe
+  - 所以 repo 下一步最值钱的动作，不再是继续改 wording，
+    而是继续把最新 GitHub Windows native probe 证据拉回来
+
+- 最新 GitHub Windows native-probe run `26104446972` 已经把下一处真实实现缺口进一步钉死：
+  - 不是 workflow 没跑
+  - 不是 summary marker 丢了
+  - 也不是“只是 observed_reuse=false”
+  - 而是 opt-in isolated worker 现在仍会在：
+    - `native_probe label=initial_handshake stage=before_query_context_attributes`
+    之后直接以：
+    - `native_probe_worker exit_code=-1073741819`
+    崩掉
+
+- 这条 fresh runtime evidence 的价值很高：
+  - 它说明当前问题已经收窄到：
+    - `QueryContextAttributesW(..., SECPKG_ATTR_SESSION_INFO, ...)`
+      这条 native probe 调用链本身
+  - 不再是：
+    - shared-path marker 解释不清
+    - workflow capture 不完整
+    - broader suite 没把 session lane 跑起来
+
+- 因而当前 WinSSL session-resumption lane 的最真实状态应该是：
+  - shared/public conservative truth：
+    - 已稳定可记录
+  - isolated native probe truth：
+    - 仍是 investigatory lane
+    - 当前最新 Windows run 还会在 `before_query_context_attributes`
+      附近 crash
+  - 这让下一步 source-side 审查方向非常明确：
+    - 优先审 ABI / buffer / lifetime / attribute-binding 安全边界
