@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$root_dir"
+
+fail() {
+  echo "[FAIL] $1" >&2
+  exit 1
+}
+
+require_fixed() {
+  local file="$1"
+  local pattern="$2"
+  local message="$3"
+  if ! rg -F -n --quiet -- "$pattern" "$file"; then
+    fail "$message"
+  fi
+}
+
+require_absent() {
+  local file="$1"
+  local pattern="$2"
+  local message="$3"
+  if rg -F -n --quiet -- "$pattern" "$file"; then
+    fail "$message"
+  fi
+}
+
+api_doc="docs/reference/API_DOCUMENTATION.md"
+winssl_practices="docs/guides/WINSSL_BEST_PRACTICES.md"
+winssl_guide="docs/guides/WINSSL_USER_GUIDE.md"
+
+echo "[TEST] active connection API docs truth contract"
+
+require_fixed "$api_doc" "**版本:** rolling" \
+  "API_DOCUMENTATION must declare rolling doc version instead of stale 2.0.0 snapshot"
+require_fixed "$api_doc" ".WithSystemRoots;" \
+  "API_DOCUMENTATION quick-start must use current builder system-roots method"
+require_fixed "$api_doc" "Connection := Context.CreateConnection(Socket);" \
+  "API_DOCUMENTATION must create SSL connections from caller-owned socket/stream handles"
+require_fixed "$api_doc" "if Supports(Connection, ISSLClientConnection, ClientConn) then" \
+  "API_DOCUMENTATION quick-start must use per-connection client role surface"
+require_fixed "$api_doc" "ClientConn.SetServerName('example.com');" \
+  "API_DOCUMENTATION quick-start must set SNI through ISSLClientConnection"
+require_fixed "$api_doc" "if Connection.Connect then" \
+  "API_DOCUMENTATION must use the current zero-argument Connect signature"
+require_fixed "$api_doc" "Connection.WriteString('GET / HTTP/1.1'#13#10 +" \
+  "API_DOCUMENTATION quick-start must use the current string convenience writer"
+require_fixed "$api_doc" "Connection.Shutdown;" \
+  "API_DOCUMENTATION must use Shutdown instead of stale Disconnect"
+require_fixed "$api_doc" "function Connect: Boolean;" \
+  "API_DOCUMENTATION ISSLConnection section must publish the current Connect signature"
+require_fixed "$api_doc" "function Write(const ABuffer; ACount: Integer): Integer;" \
+  "API_DOCUMENTATION ISSLConnection section must publish the current raw Write signature"
+require_fixed "$api_doc" "function WriteString(const AStr: string): Boolean;" \
+  "API_DOCUMENTATION ISSLConnection section must publish the current WriteString helper"
+require_fixed "$api_doc" "function Read(var ABuffer; ACount: Integer): Integer;" \
+  "API_DOCUMENTATION ISSLConnection section must publish the current raw Read signature"
+require_fixed "$api_doc" "function ReadString(out AStr: string): Boolean;" \
+  "API_DOCUMENTATION ISSLConnection section must publish the current ReadString helper"
+require_fixed "$api_doc" "if Connection.GetVerifyResult <> 0 then" \
+  "API_DOCUMENTATION troubleshooting must use current verify-result surface"
+require_fixed "$api_doc" "WriteLn('证书验证失败: ', Connection.GetVerifyResultString);" \
+  "API_DOCUMENTATION troubleshooting must use current verify-result string surface"
+require_absent "$api_doc" "**版本:** 2.0.0" \
+  "API_DOCUMENTATION must stop advertising stale 2.0.0 version"
+require_absent "$api_doc" "WithSystemRootCerts" \
+  "API_DOCUMENTATION must stop using stale WithSystemRootCerts builder name"
+require_absent "$api_doc" "CreateConnection(443)" \
+  "API_DOCUMENTATION must stop teaching CreateConnection(port)"
+require_absent "$api_doc" "Connect('example.com', 443)" \
+  "API_DOCUMENTATION must stop teaching Connect(host, port)"
+require_absent "$api_doc" "Connection.Disconnect;" \
+  "API_DOCUMENTATION must stop using stale Disconnect"
+require_absent "$api_doc" "function Connect(const AHost: string; APort: Word): Boolean;" \
+  "API_DOCUMENTATION ISSLConnection section must stop publishing stale Connect(host, port)"
+require_absent "$api_doc" "function Write(const AData: TBytes): Integer;" \
+  "API_DOCUMENTATION ISSLConnection section must stop publishing stale Write(TBytes) overload"
+require_absent "$api_doc" "function Write(const AData: string): Integer;" \
+  "API_DOCUMENTATION ISSLConnection section must stop publishing stale string Write overload"
+require_absent "$api_doc" "function Read(var ABuffer: TBytes; AMaxLen: Integer): Integer;" \
+  "API_DOCUMENTATION ISSLConnection section must stop publishing stale Read(TBytes) signature"
+require_absent "$api_doc" "Connection.GetLastError" \
+  "API_DOCUMENTATION must stop using nonexistent connection-level GetLastError"
+require_absent "$api_doc" "Connection.GetPeerCertificateVerified" \
+  "API_DOCUMENTATION must stop using nonexistent GetPeerCertificateVerified"
+
+require_fixed "$winssl_practices" "(LConn as ISSLClientConnection).SetServerName('example.com');" \
+  "WINSSL_BEST_PRACTICES must set example.com through ISSLClientConnection"
+require_fixed "$winssl_practices" "(LConn as ISSLClientConnection).SetServerName('localhost');" \
+  "WINSSL_BEST_PRACTICES must set localhost through ISSLClientConnection in local-test guidance"
+require_absent "$winssl_practices" "LConn.Connect('example.com', 443);" \
+  "WINSSL_BEST_PRACTICES must stop teaching Connect(host, port) for external tests"
+require_absent "$winssl_practices" "LConn.Connect('localhost', 8443);" \
+  "WINSSL_BEST_PRACTICES must stop teaching Connect(host, port) for local tests"
+
+require_fixed "$winssl_guide" 'WinSSL 与 OpenSSL/WolfSSL/MbedTLS 共享统一的核心 public interface，但具体 published capability 仍以后端的 `ISSLLibrary.GetCapabilities` 为准。' \
+  "WINSSL_USER_GUIDE must explain core-interface parity without claiming full backend identity"
+require_fixed "$winssl_guide" '像 password callback、DER/PKCS8 私钥导入、PKCS#12 helper 范围这类能力，仍然属于 backend-specific published truth。' \
+  "WINSSL_USER_GUIDE must call out backend-specific capability boundaries"
+require_absent "$winssl_guide" "完全相同的接口" \
+  "WINSSL_USER_GUIDE must stop claiming identical interfaces"
+
+echo "[PASS] active connection API docs truth contract passed"

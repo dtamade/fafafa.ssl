@@ -2,6 +2,50 @@
 
 ## 2026-05-19
 
+- 继续沿着“高入口 active docs 是否还在教授旧 public surface”这条线往下压时，又压实了一批直接影响上手用户的连接 API 漂移：
+  - `docs/reference/API_DOCUMENTATION.md`
+    还停在旧的连接时代：
+    - `ISSLConnection.Connect(host, port)`
+    - `CreateConnection(443)`
+    - `Disconnect`
+    - `Write(string)` / `Read(TBytes)` 旧签名
+    - `Connection.GetLastError`
+    - `Connection.GetPeerCertificateVerified`
+  - `docs/guides/WINSSL_BEST_PRACTICES.md`
+    还在测试最佳实践里继续教授：
+    - `LConn.Connect('example.com', 443)`
+    - `LConn.Connect('localhost', 8443)`
+  - `docs/guides/WINSSL_USER_GUIDE.md`
+    还把 WinSSL 讲成“与 OpenSSL 后端完全相同的接口”
+
+- 这批问题的风险不只是文案过时，而是会直接把调用方带回不存在或已变形的 public surface：
+  - 新用户照着 `API_DOCUMENTATION` 抄代码，会得到与当前 shipped source 不匹配的连接初始化、I/O 和错误处理写法
+  - WinSSL 指南里的“完全同构”说法，又会掩盖前面已经连续收口过的 backend-specific capability truth
+    - callbacks
+    - DER/PKCS8 私钥导入
+    - PKCS#12 helper 范围
+
+- 这条线当前最小正确修法也很明确：
+  - 不改 runtime
+  - 不扩到更大范围的 guide 全量重写
+  - 只把高入口文档拉回当前 source truth：
+    - transport 先建立，再 `CreateConnection(Socket/Stream)`
+    - client SNI 走 `ISSLClientConnection.SetServerName(...)`
+    - `ISSLConnection.Connect` 当前是无参握手入口
+    - 文本 I/O 走 `ReadString` / `WriteString`
+    - 证书验证问题走 `GetVerifyResult` / `GetVerifyResultString`
+  - 再用 focused contract 守住：
+    - 旧 `Connect(host, port)` 片段
+    - 旧 `Disconnect` / `Connection.GetLastError`
+    - WinSSL “完全相同的接口” overclaim
+
+- 当前这批收口后的新基线应明确保留：
+  - `API_DOCUMENTATION` 已经重新回到 current `ISSLConnection` / `ISSLClientConnection` 真相
+  - `WINSSL_BEST_PRACTICES` 不再把旧连接调用形状当作推荐路径
+  - `WINSSL_USER_GUIDE` 现在明确：
+    - 核心 public interface 一致
+    - 但 published capability 仍然是 backend-specific truth
+
 - 在修完 `ReadString` 活跃示例签名漂移之后，继续扫 `ISSLConnection` / owner-surface 残口时，又压实了另一条高入口指导面回流：
   - `GetSelectedALPNProtocol` 当前在源码里已经是：
     - `deprecated 'Use ISSLConnectionInfo.GetSelectedALPNProtocol'`

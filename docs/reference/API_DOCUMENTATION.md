@@ -1,7 +1,7 @@
 # fafafa.ssl API 文档
 
-**版本:** 2.0.0  
-**更新日期:** 2026-01-31
+**版本:** rolling
+**更新日期:** 2026-05-19
 
 ---
 
@@ -26,6 +26,7 @@
 program QuickStart;
 
 uses
+  SysUtils,
   fafafa.ssl.base,
   fafafa.ssl.factory,
   fafafa.ssl.context.builder;
@@ -34,6 +35,9 @@ var
   Builder: ISSLContextBuilder;
   Context: ISSLContext;
   Connection: ISSLConnection;
+  ClientConn: ISSLClientConnection;
+  Socket: THandle;
+  Response: string;
 begin
   // 1. 创建 SSL 上下文
   Builder := TSSLContextBuilder.Create;
@@ -41,25 +45,30 @@ begin
     .WithTLS12And13                    // 使用 TLS 1.2 和 1.3
     .WithVerifyPeer                    // 验证对端证书
     .WithOCSPStapling(True)            // 启用 OCSP Stapling
-    .WithSystemRootCerts;              // 使用系统根证书
+    .WithSystemRoots;                  // 使用系统根证书
 
   Context := Builder.BuildClient;
 
-  // 2. 创建连接
-  Connection := Context.CreateConnection(443);
+  // 2. 先由 transport 层建立 TCP 连接
+  Socket := ConnectToServer('example.com', 443);
+  Connection := Context.CreateConnection(Socket);
+  if Supports(Connection, ISSLClientConnection, ClientConn) then
+    ClientConn.SetServerName('example.com');
 
   // 3. 连接到服务器
-  if Connection.Connect('example.com', 443) then
+  if Connection.Connect then
   begin
     WriteLn('连接成功!');
     WriteLn('协议版本: ', Connection.GetProtocolVersion);
     WriteLn('密码套件: ', Connection.GetCipherName);
 
     // 4. 发送和接收数据
-    Connection.Write('GET / HTTP/1.1'#13#10'Host: example.com'#13#10#13#10);
-    // ... 读取响应
+    Connection.WriteString('GET / HTTP/1.1'#13#10 +
+      'Host: example.com'#13#10#13#10);
+    if Connection.ReadString(Response) then
+      WriteLn(Response);
 
-    Connection.Disconnect;
+    Connection.Shutdown;
   end;
 end.
 ```
@@ -264,15 +273,10 @@ SSL/TLS 连接接口。
 ##### Connect
 
 ```pascal
-function Connect(const AHost: string; APort: Word): Boolean;
+function Connect: Boolean;
 ```
 
-连接到服务器。
-
-**参数:**
-
-- `AHost`: 主机名或 IP 地址
-- `APort`: 端口号
+对已经绑定到 socket/stream transport 的连接执行 TLS 握手。
 
 **返回值:**
 
@@ -282,22 +286,22 @@ function Connect(const AHost: string; APort: Word): Boolean;
 **示例:**
 
 ```pascal
-if Connection.Connect('example.com', 443) then
+if Connection.Connect then
   WriteLn('连接成功');
 ```
 
 ##### Write
 
 ```pascal
-function Write(const AData: TBytes): Integer;
-function Write(const AData: string): Integer;
+function Write(const ABuffer; ACount: Integer): Integer;
 ```
 
-发送数据。
+发送原始字节数据。
 
 **参数:**
 
-- `AData`: 要发送的数据
+- `ABuffer`: 数据缓冲区
+- `ACount`: 要发送的字节数
 
 **返回值:**
 
@@ -306,21 +310,21 @@ function Write(const AData: string): Integer;
 **示例:**
 
 ```pascal
-BytesSent := Connection.Write('Hello, World!');
+BytesSent := Connection.Write(Request[1], Length(Request));
 ```
 
 ##### Read
 
 ```pascal
-function Read(var ABuffer: TBytes; AMaxLen: Integer): Integer;
+function Read(var ABuffer; ACount: Integer): Integer;
 ```
 
-接收数据。
+接收原始字节数据。
 
 **参数:**
 
 - `ABuffer`: 接收缓冲区
-- `AMaxLen`: 最大接收字节数
+- `ACount`: 最大接收字节数
 
 **返回值:**
 
@@ -329,8 +333,37 @@ function Read(var ABuffer: TBytes; AMaxLen: Integer): Integer;
 **示例:**
 
 ```pascal
-SetLength(Buffer, 4096);
-BytesRead := Connection.Read(Buffer, 4096);
+BytesRead := Connection.Read(Buffer, SizeOf(Buffer));
+```
+
+##### WriteString
+
+```pascal
+function WriteString(const AStr: string): Boolean;
+```
+
+发送文本数据。
+
+**示例:**
+
+```pascal
+if not Connection.WriteString('Hello, World!') then
+  WriteLn('发送失败');
+```
+
+##### ReadString
+
+```pascal
+function ReadString(out AStr: string): Boolean;
+```
+
+读取文本数据。
+
+**示例:**
+
+```pascal
+if Connection.ReadString(Response) then
+  WriteLn(Response);
 ```
 
 ##### GetOCSPStaplingEnabled
@@ -511,8 +544,10 @@ end;
 ### 检查 OCSP 状态
 
 ```pascal
-Connection := Context.CreateConnection(443);
-if Connection.Connect('example.com', 443) then
+Connection := Context.CreateConnection(Socket);
+if Supports(Connection, ISSLClientConnection, ClientConn) then
+  ClientConn.SetServerName('example.com');
+if Connection.Connect then
 begin
   if Supports(Connection, ISSLOCSPStapling, OCSP) then
   begin
@@ -789,7 +824,7 @@ Builder
   .WithVerifyPeer                    // 验证证书
   .WithOCSPStapling(True)            // 启用 OCSP Stapling
   .WithOCSPStaplingRequired(False)   // 高风险路径可改成 True
-  .WithSystemRootCerts               // 使用系统根证书
+  .WithSystemRoots                   // 使用系统根证书
   .WithOption(ssoNoSSLv2)            // 禁用旧协议
   .WithOption(ssoNoSSLv3);
 
@@ -815,13 +850,16 @@ Context := Builder.BuildServer;
 
 ```pascal
 try
-  if Connection.Connect('example.com', 443) then
+  if Connection.Connect then
   begin
     // 处理连接
   end
   else
   begin
-    WriteLn('连接失败: ', Connection.GetLastError);
+    if Connection.GetVerifyResult <> 0 then
+      WriteLn('证书验证失败: ', Connection.GetVerifyResultString)
+    else
+      WriteLn('TLS 握手失败');
   end;
 except
   on E: ESSLException do
@@ -838,7 +876,7 @@ var
   Connection: ISSLConnection;
 begin
   Context := TSSLContextBuilder.Create.BuildClient;
-  Connection := Context.CreateConnection(443);
+  Connection := Context.CreateConnection(MySocket);
 
   // 使用连接...
 
@@ -859,12 +897,12 @@ end;
 **解决方案:**
 
 ```pascal
-// 检查错误信息
-WriteLn('错误: ', Connection.GetLastError);
+// 当前连接失败时，优先检查证书验证结果
+if Connection.GetVerifyResult <> 0 then
+  WriteLn('证书验证失败: ', Connection.GetVerifyResultString);
 
-// 检查证书验证
-if not Connection.GetPeerCertificateVerified then
-  WriteLn('证书验证失败');
+// 对 client 连接，确认是否已在 Connect 前设置 per-connection SNI
+// (Connection as ISSLClientConnection).SetServerName('example.com');
 ```
 
 #### 2. OCSP Stapling 未工作

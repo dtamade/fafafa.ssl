@@ -10,6 +10,41 @@
 
 ## Current Status
 
+- [completed] Active connection API docs truth 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-active-connection-api-docs-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+  - 当前已修正的高入口活跃文档：
+    - `docs/reference/API_DOCUMENTATION.md`
+    - `docs/guides/WINSSL_BEST_PRACTICES.md`
+    - `docs/guides/WINSSL_USER_GUIDE.md`
+  - 当前已收掉的真问题：
+    - `API_DOCUMENTATION` 不再把：
+      - `ISSLConnection.Connect` 教成 `Connect(host, port)`
+      - `CreateConnection` 教成直接接收端口号
+      - `Disconnect` / `Connection.GetLastError` / `GetPeerCertificateVerified`
+        这类不存在或过时 surface 当成当前 public API
+    - `API_DOCUMENTATION` 的 `ISSLConnection` section 现在重新回到 current shipped truth：
+      - `Connect: Boolean`
+      - `Write(const ABuffer; ACount)`
+      - `Read(var ABuffer; ACount)`
+      - `WriteString`
+      - `ReadString`
+    - `WINSSL_BEST_PRACTICES` 的测试最佳实践不再继续教授：
+      - `LConn.Connect('example.com', 443)`
+      - `LConn.Connect('localhost', 8443)`
+    - `WINSSL_USER_GUIDE` 不再把 WinSSL 讲成与其它 backend “完全相同的接口”
+      现在明确回到：
+      - 共享统一核心 public interface
+      - published capability 仍以后端 `ISSLLibrary.GetCapabilities` 为准
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+    - `bash tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+    - `git diff --check`
+  - 当前结论：
+    - 这批修掉的是 active docs 把旧连接形状和 backend overclaim 继续教给用户的问题
+    - 后续如果继续扫 `ISSLConnection` / WinSSL completeness，不应再把这些高入口旧 `Connect(host, port)` 片段当成 current source truth
 - [completed] ALPN owner-path active guidance 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-alpn-owner-path-active-guidance.md`

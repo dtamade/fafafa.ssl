@@ -2,6 +2,81 @@
 
 ## 2026-05-19
 
+### Active Connection API Docs Truth
+
+- add `docs/plans/2026-05-19-active-connection-api-docs-truth.md`
+  - change:
+    - define the bounded active-doc truth batch for stale connection-shape guidance and WinSSL overclaim wording
+
+- add `tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+  - change:
+    - lock that high-entry docs no longer teach:
+      - `Connect(host, port)`
+      - `CreateConnection(port)`
+      - `Disconnect`
+      - nonexistent connection-level error helpers
+    - lock that WinSSL guide no longer claims full backend identity
+
+- read-only evidence triage
+  - summary:
+    - stale `Connect(host, port)` guidance was confirmed in:
+      - `docs/reference/API_DOCUMENTATION.md`
+      - `docs/guides/WINSSL_BEST_PRACTICES.md`
+    - WinSSL active guide still claimed:
+      - `完全相同的接口`
+    - current source truth remained:
+      - `ISSLConnection.Connect: Boolean`
+      - caller-owned `CreateConnection(Socket/Stream)`
+      - per-connection SNI via `ISSLClientConnection.SetServerName(...)`
+
+- `bash -n tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new active connection API docs contract syntax is valid
+
+- `bash tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `API_DOCUMENTATION` still declared stale `2.0.0` doc version
+      - quick-start / `ISSLConnection` / troubleshooting sections still taught old connection surface
+      - `WINSSL_BEST_PRACTICES` still used `Connect(host, port)` in test guidance
+      - `WINSSL_USER_GUIDE` still claimed identical interfaces
+    - GREEN after fix:
+      - `API_DOCUMENTATION` now uses rolling doc version and current connection/SNI/I-O/verify-result truth
+      - `WINSSL_BEST_PRACTICES` test snippets now use caller-owned socket + per-connection SNI + zero-arg `Connect`
+      - `WINSSL_USER_GUIDE` now distinguishes core-interface parity from backend-specific capability truth
+
+- update `docs/reference/API_DOCUMENTATION.md`
+  - change:
+    - switch header to rolling/current date
+    - quick-start now uses:
+      - caller-owned socket
+      - `CreateConnection(Socket)`
+      - `ISSLClientConnection.SetServerName(...)`
+      - `Connect`
+      - `WriteString` / `ReadString`
+      - `Shutdown`
+    - `ISSLConnection` section now publishes current raw/text I/O signatures
+    - troubleshooting/examples now use `GetVerifyResult` / `GetVerifyResultString`
+
+- update `docs/guides/WINSSL_BEST_PRACTICES.md`
+  - change:
+    - replace stale `Connect(host, port)` test snippets with:
+      - `CreateConnection(CreateSocket(...))`
+      - per-connection `SetServerName(...)`
+      - zero-arg `Connect`
+
+- update `docs/guides/WINSSL_USER_GUIDE.md`
+  - change:
+    - replace “完全相同的接口” wording with bounded core-interface parity guidance
+    - record that password callback / DER-PKCS8 key import / PKCS#12 helper range remain backend-specific capability truth
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current active connection API docs batch has no whitespace or patch-format issues
+
 ### ALPN Owner-Path Active Guidance
 
 - add `docs/plans/2026-05-19-alpn-owner-path-active-guidance.md`

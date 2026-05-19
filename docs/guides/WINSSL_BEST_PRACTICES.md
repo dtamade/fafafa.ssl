@@ -477,7 +477,9 @@ end;
 **❌ 错误做法**:
 ```pascal
 // 依赖外部服务器测试
-LConn.Connect('example.com', 443);
+LConn := LContext.CreateConnection(CreateSocket('example.com', 443));
+(LConn as ISSLClientConnection).SetServerName('example.com');
+Assert(LConn.Connect);
 ```
 
 **✅ 正确做法**:
@@ -492,7 +494,9 @@ begin
 end;
 
 // 测试
-LConn.Connect('localhost', 8443);
+LConn := LContext.CreateConnection(CreateSocket('localhost', 8443));
+(LConn as ISSLClientConnection).SetServerName('localhost');
+Assert(LConn.Connect);
 ```
 
 ### 2. 测试错误场景

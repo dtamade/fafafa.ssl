@@ -99,10 +99,11 @@ MyApp.exe (210 KB)                 ← 仅需这一个文件
 
 #### 4. ✅ 统一 API
 
-WinSSL 实现了与 OpenSSL 后端**完全相同的接口**:
+WinSSL 与 OpenSSL/WolfSSL/MbedTLS 共享统一的核心 public interface，但具体 published capability 仍以后端的 `ISSLLibrary.GetCapabilities` 为准。
+像 password callback、DER/PKCS8 私钥导入、PKCS#12 helper 范围这类能力，仍然属于 backend-specific published truth。
 
 ```pascal
-// 代码完全相同，只需改变库类型
+// 核心创建路径保持一致，只需改变库类型
 {$IFDEF WINDOWS}
 Lib := CreateSSLLibrary(sslWinSSL);   // Windows: 零依赖
 {$ELSE}
@@ -112,7 +113,7 @@ Lib := CreateSSLLibrary(sslOpenSSL);  // Linux/macOS: OpenSSL
 // 或者让工厂自动选择
 Lib := CreateSSLLibrary(sslAutoDetect);
 
-// 后续代码完全一致
+// 后续核心连接/握手路径一致；可选能力仍需按 capability 判断
 Ctx := Lib.CreateContext(sslCtxClient);
 Conn := Ctx.CreateConnection(Socket);
 (Conn as ISSLClientConnection).SetServerName('www.example.com');
