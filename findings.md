@@ -6566,3 +6566,24 @@
      在新增 direct-path 解释后仍保持绿色
    - 现在新的稳定基线应记为：
      - backend-specific quickstarts 也不会再把 direct path 误教成 generic main entry
+
+108. active diagnostics / backend 故障页面里也存在同类但更细的小残口：
+   - `TROUBLESHOOTING.md` 的
+     - `LConn.SetTimeout(30000)`
+     - `LConn.SetBlocking(False)`
+   - `MBEDTLS_USER_GUIDE.md` 的
+     - `Connection.SetTimeout(30000)`
+   - 这些示例本身都不是错，但如果不加一句 current-role 说明，
+     调用方仍会把它们误读成普通主路径配置，而不是：
+     - direct-connection diagnostic override
+     - backend-specific 故障调查入口
+   - 当前最小正确修法已经压实为：
+     - `TROUBLESHOOTING`
+       明确 timeout / nonblocking 这两处都是 direct-connection
+       diagnostic override / 调试入口
+     - `MBEDTLS_USER_GUIDE`
+       明确 `Connection.SetTimeout(...)` 只是 connection-level override，
+       普通跨后端客户端仍优先 builder/connector/transport timer
+   - 现在新的稳定基线应记为：
+     - diagnostics/backends 页面不会再把 connection-level override
+       误教成普通主路径配置建议

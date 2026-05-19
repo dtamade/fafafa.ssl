@@ -470,6 +470,8 @@ Connection.SetTimeout(30000);  // 30 秒
 // sudo ufw status
 ```
 
+这里的 `Connection.SetTimeout(...)` 也是 connection-level override；如果你只是普通跨后端客户端，优先统一使用 builder / connector 路线与外围 transport timer，而不是把 timeout 策略全压在单个 connection 上。
+
 ### 问题 4: 内存不足（嵌入式）
 
 **错误信息**:

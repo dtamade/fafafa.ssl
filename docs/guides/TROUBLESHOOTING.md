@@ -282,6 +282,8 @@ else
   WriteLn('TCP connection failed');
 ```
 
+这里的 `LConn.SetTimeout(...)` 是 direct-connection 诊断 override；如果你走的是 `TSSLConnectionBuilder` / `TSSLConnector` / `TSSLAcceptor`，普通新代码优先在构建阶段设置 timeout，并继续让外围 timer/cancel 负责真实超时控制。
+
 ### 问题: 连接意外关闭
 
 **错误信息**:
@@ -539,6 +541,8 @@ end;
 // 3. 使用非阻塞 I/O
 LConn.SetBlocking(False);
 ```
+
+这里把 `LConn.SetBlocking(False)` 当成 direct-connection 调试入口；如果你已经有自己的事件循环或 facade 集成，优先继续让外围 event-loop / poller 管理非阻塞状态。
 
 ---
 

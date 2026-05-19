@@ -13789,3 +13789,54 @@
   - result: PASS
   - summary:
     - current backend-quickstarts direct-path batch has no whitespace or patch-format issues
+
+### Diagnostics Connection Override Classification
+
+- add `docs/plans/2026-05-20-diagnostics-connection-override-classification.md`
+  - change:
+    - define the bounded diagnostics/backend-doc batch for timeout/blocking override classification
+
+- add `tests/scripts/test_diagnostics_connection_override_classification_contract.sh`
+  - change:
+    - lock that active diagnostics/backends must classify
+      `SetTimeout(...)` / `SetBlocking(...)` as connection-level diagnostic overrides
+
+- `bash -n tests/scripts/test_diagnostics_connection_override_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - new diagnostics-override contract syntax is valid
+
+- `bash tests/scripts/test_diagnostics_connection_override_classification_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `TROUBLESHOOTING.md` still showed `LConn.SetTimeout(...)` without classifying it as diagnostic override guidance
+    - GREEN after fix:
+      - `TROUBLESHOOTING.md` now classifies timeout and nonblocking snippets as direct-connection diagnostic overrides
+      - `MBEDTLS_USER_GUIDE.md` now classifies `Connection.SetTimeout(...)` as connection-level override guidance
+
+- update `docs/guides/TROUBLESHOOTING.md`
+  - change:
+    - explain that `LConn.SetTimeout(...)` is a direct-connection diagnostic override
+    - explain that `LConn.SetBlocking(False)` is a direct-connection debugging entrypoint
+    - point facade/event-loop users back to builder configuration and outer timer/poller control
+
+- update `docs/guides/MBEDTLS_USER_GUIDE.md`
+  - change:
+    - explain that `Connection.SetTimeout(...)` in the timeout-failure section is a connection-level override
+    - point ordinary cross-backend clients back to builder/connector/transport timer control
+
+- `bash tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - MbedTLS capability/public-surface truth remained aligned after the timeout-override clarification
+
+- `bash tests/scripts/test_active_guide_convenience_surface_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - generic convenience-surface guidance remained aligned after the new diagnostics wording
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current diagnostics-override batch has no whitespace or patch-format issues

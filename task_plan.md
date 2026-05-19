@@ -10,6 +10,49 @@
 
 ## Current Status
 
+- [completed] `diagnostics connection override classification`
+  当前 focused 目标：
+  - 把 active diagnostics / backend guide 里的 `SetTimeout(...)` / `SetBlocking(...)`
+    重新标回当前主路径 truth：
+    - 它们仍然存在
+    - 但在这些页面里主要是 direct-connection diagnostic override
+    - 普通新代码仍优先 builder/connector/acceptor 与外围 timer/event-loop
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-diagnostics-connection-override-classification.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_diagnostics_connection_override_classification_contract.sh`
+  - 同步更新：
+    - `docs/guides/TROUBLESHOOTING.md`
+    - `docs/guides/MBEDTLS_USER_GUIDE.md`
+  当前最终收口证据：
+  - `TROUBLESHOOTING.md` 现在明确：
+    - `LConn.SetTimeout(...)` 是 direct-connection 诊断 override
+    - `LConn.SetBlocking(False)` 是 direct-connection 调试入口
+    - 如果已经走 builder/connector/acceptor 或自有 event-loop，
+      仍应优先让构建阶段与外围 timer/poller 管理真实超时和非阻塞状态
+  - `MBEDTLS_USER_GUIDE.md` 现在明确：
+    - timeout 故障小节里的 `Connection.SetTimeout(...)`
+      只是 connection-level override
+    - 普通跨后端客户端仍优先统一的 builder/connector/transport timer 路线
+  focused verification 已通过：
+  - `bash -n tests/scripts/test_diagnostics_connection_override_classification_contract.sh`
+  - `bash tests/scripts/test_diagnostics_connection_override_classification_contract.sh`
+  - `bash tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+  - `bash tests/scripts/test_active_guide_convenience_surface_classification_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - 这批暴露的不是 `SetTimeout` / `SetBlocking` 自己不该存在，
+    而是诊断类页面也需要明确它们只是在 current docs 中承担
+    connection-level diagnostic override 角色。
+  - generic guides、landing quickstarts、backend quickstarts、diagnostics guides
+    这几层现在已经开始形成统一的主路径/低层入口分层。
+  当前下一条真实工作：
+  - 继续从 active diagnostics / backend-specific guides 里找剩余 residual：
+    - 优先扫还没纳入 focused contract 的 `COMMON_PITFALLS` /
+      `SECURITY_GUIDE` / `ERROR_HANDLING_BEST_PRACTICES`
+      这些高频页面里的 direct-connection 语义
+
 - [completed] `backend quickstarts direct-path classification`
   当前 focused 目标：
   - 把 backend-specific quickstarts 中 direct `ISSLConnection` 的使用原因讲清楚，
