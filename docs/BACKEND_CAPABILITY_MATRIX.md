@@ -20,6 +20,7 @@
 | **SNI**                      | ✅         | ✅      | ✅     | ✅      | ✅      |
 | **PSK**                      | ✅         | ✅      | ⚠️     | ✅      | ✅      |
 | **PKCS#11**                  | ❌         | ✅      | ❌     | ❌      | ❌      |
+| **Context Callbacks**        | ❌         | ✅      | ⚠️     | ❌      | ❌      |
 
 **图例**:
 
@@ -30,6 +31,11 @@
 `Session Resumption` 这一行按当前 runtime/capability truth 汇总：
 - `FreePascal`: public surface 已闭合，但 `SessionTicketsSupport` / `SessionCacheSupport` 仍发布为 `experimental`
 - `WinSSL`: public surface 存在，但当前 dedicated Windows runtime truth 仍是 `observed_reuse=false` / `session_configured=true`
+
+`Context Callbacks` 这一行按当前 published runtime truth 汇总：
+- `OpenSSL`: verify/password/info callback 都已发布并具备 runtime wiring
+- `WinSSL`: 仅 verify/info callback 已发布；password callback 当前仍为 unsupported
+- `FreePascal` / `WolfSSL` / `MbedTLS`: `SupportsCallbacks=False`，verify/password/info setter 当前都已 fail-closed
 
 ---
 

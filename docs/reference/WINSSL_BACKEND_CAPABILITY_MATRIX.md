@@ -106,8 +106,12 @@ Ctx := TSSLContextBuilder.Create
 | ALPN | ✅ 支持 | Windows 8.1+ |
 | 重协商 | ✅ 支持 | 安全重协商 |
 | 客户端证书 | ✅ 支持 | 双向 TLS |
+| Context callbacks | ⚠️ 部分 | 当前仅 verify/info runtime path 已发布；password callback 仍为 unsupported |
 | 智能卡 / PKCS#11 | ❌ 当前 capability 不发布 | Windows 平台底层可接触硬件密钥，但 fafafa.ssl 当前 WinSSL backend 没有 shipped PKCS#11 URI / smart-card 私钥加载 surface |
 | TPM | ❌ 当前 capability 不发布 | Schannel/CNG 的平台潜在能力不等于 fafafa.ssl 已发布 TPM loading/runtime contract |
+
+> `SupportsCallbacks=True` 在 WinSSL 上当前是 coarse-grained publication flag：
+> verify/info callback 已发布，password callback 仍未接入 runtime，non-nil assignment 会 fail-closed 为 unsupported。
 
 ## 与 OpenSSL 对比
 

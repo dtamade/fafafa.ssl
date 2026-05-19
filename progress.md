@@ -9931,3 +9931,67 @@
   - result: PASS
   - summary:
     - current WinSSL password callback partial-publication batch has no whitespace or patch-format issues
+
+### Callback Publication Matrix Truth
+
+- `rg -n "SupportsCallbacks|callback surface|Verify callback|Password callback|Info callback|回调" docs docs/reference src task_plan.md findings.md progress.md`
+  - result: PASS
+  - summary:
+    - static audit confirmed the remaining callback docs gap had moved to active matrix surfaces:
+      - `API_REFERENCE` already carried callback gating / WinSSL partial-publication truth
+      - `BACKEND_CAPABILITY_MATRIX` / `WINSSL_BACKEND_CAPABILITY_MATRIX` still lacked a callback publication row/note
+
+- add `docs/plans/2026-05-19-callback-publication-matrix-truth.md`
+  - change:
+    - record the bounded docs-only batch that promotes callback truth from API reference level into active capability matrices
+
+- add `tests/scripts/test_callback_publication_matrix_truth_contract.sh`
+  - change:
+    - add a focused shell contract that guards:
+      - callback publication quick-reference row in `BACKEND_CAPABILITY_MATRIX`
+      - callback row semantics note
+      - WinSSL backend matrix callback row
+      - coarse `SupportsCallbacks=True` explanation for current WinSSL partial publication
+
+- `bash -n tests/scripts/test_callback_publication_matrix_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new callback publication matrix contract syntax is valid
+
+- `bash tests/scripts/test_callback_publication_matrix_truth_contract.sh`
+  - result: FAIL -> FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `backend capability quick-reference matrix must publish current callback availability`
+    - after docs fix, the contract itself hit one quoting issue caused by backticks inside a double-quoted fixed string
+    - GREEN after fixing the script:
+      - active callback matrix docs now match current callback publication truth
+
+- update matrix docs:
+  - `docs/BACKEND_CAPABILITY_MATRIX.md`
+  - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  - change:
+    - add `Context Callbacks` quick-reference truth
+    - record callback row semantics
+    - add WinSSL partial-publication row
+    - add coarse `SupportsCallbacks=True` explanation for current WinSSL behavior
+
+- `bash tests/scripts/test_callback_capability_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - callback capability truth remains aligned after the matrix-doc updates
+
+- `bash tests/scripts/test_winssl_password_callback_partial_publication_contract.sh`
+  - result: PASS
+  - summary:
+    - WinSSL password callback partial-publication truth remains aligned after the matrix-doc updates
+
+- `bash tests/scripts/test_api_reference_library_context_surface_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - active API reference and library/context docs still match current source truth after the matrix-doc updates
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current callback publication matrix batch has no whitespace or patch-format issues

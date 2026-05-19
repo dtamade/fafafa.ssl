@@ -4720,3 +4720,26 @@
 - 这样一来，callback 路线又向前收了一层：
   - 不只是 false-capability backend 不再 silently accept
   - 连 `SupportsCallbacks=True` 的 coarse-grained backend，也不再把未发布的具体 callback 种类继续伪装成“可安全配置”
+
+- 把 WinSSL partial-publication 收口后，又暴露了一个纯 docs 层但很容易让人反复误读的缺口：
+  - `API_REFERENCE` 已经写明 callback gating 和 WinSSL partial truth
+  - 但最常先被看到的 active matrix docs 还没有这层信息
+  - 这会导致：
+    - 看 API 参考的人知道 `WinSSL` password callback 仍 unsupported
+    - 只看能力矩阵的人却根本看不到 callback publication granularity
+
+- 这次因此没有继续动代码，而是把 callback truth 从 API 参考页推进到了 active matrix 层：
+  - `BACKEND_CAPABILITY_MATRIX`
+    - 补了 `Context Callbacks` 快速参考行
+    - 明确：
+      - `OpenSSL` = 全发布
+      - `WinSSL` = verify/info only
+      - `FreePascal` / `WolfSSL` / `MbedTLS` = unpublished + fail-closed
+  - `WINSSL_BACKEND_CAPABILITY_MATRIX`
+    - 补了 `Context callbacks` 行
+    - 补了 coarse `SupportsCallbacks=True` 的解释 note
+
+- 这类修法虽然只动文档，但价值是实打实的：
+  - 它把 callback granularity truth 从“分散在几个 batch 结果里”
+  - 变成“在 active capability 总览里直接可见”
+  - 以后再继续 callback/completeness 审查时，就不需要每次从 `API_REFERENCE` 反向解释到 matrix docs

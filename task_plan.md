@@ -3250,3 +3250,33 @@
      - 继续审查：
        - 单一 `SupportsCallbacks` bool 是否需要进一步拆成 per-callback capability
        - 或先做 active docs / capability matrix，把 callback publication granularity 系统化写清
+82. `callback publication matrix truth` 已完成 focused 收口，并应作为当前 active callback matrix docs 的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-callback-publication-matrix-truth.md`
+   - 当前已确认的 docs drift：
+     - `API_REFERENCE` 已经写明：
+       - callback gating note
+       - `WinSSL` partial callback publication
+     - 但 active capability matrix docs 还缺：
+       - `docs/BACKEND_CAPABILITY_MATRIX.md` 的 callback publication row
+       - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md` 的 coarse bool / partial-publication note
+   - 当前最小正确修法已落地：
+     - 不改生产代码
+     - 不重新设计 capability 结构
+     - 只把 callback publication truth 写回 active matrix docs：
+       - backend quick-reference row
+       - callback row semantics note
+       - WinSSL backend matrix partial-publication row
+       - WinSSL coarse-grained `SupportsCallbacks=True` note
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_callback_publication_matrix_truth_contract.sh`
+     - `bash tests/scripts/test_callback_publication_matrix_truth_contract.sh`
+     - `bash tests/scripts/test_callback_capability_truth_contract.sh`
+     - `bash tests/scripts/test_winssl_password_callback_partial_publication_contract.sh`
+     - `bash tests/scripts/test_api_reference_library_context_surface_truth_contract.sh`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 不再重复拉起 active callback matrix docs drift
+     - 继续审查：
+       - 是否还存在其它 active guide / reference 页面把 `SupportsCallbacks=True` 误读成“所有 callback 种类都已发布”
+       - 以及单一 bool capability 是否最终需要拆解成 finer-grained publication surface
