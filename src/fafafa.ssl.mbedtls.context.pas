@@ -76,6 +76,8 @@ type
     procedure ApplyVerifyMode;
     procedure ApplyCredentials;
     procedure RequireValidContext(const AMethodName: string);
+    procedure RejectUnsupportedCallbackAssignment(
+      const AFeature, AMethodName: string);
 
   public
     constructor Create(ALibrary: ISSLLibrary; AType: TSSLContextType);
@@ -775,9 +777,25 @@ begin
   Result := FVerifyDepth;
 end;
 
+procedure TMbedTLSContext.RejectUnsupportedCallbackAssignment(
+  const AFeature, AMethodName: string);
+begin
+  raise ESSLConfigurationException.CreateWithContext(
+    Format('%s is not published by the current MbedTLS backend runtime. ' +
+      'Check ISSLLibrary.GetCapabilities.SupportsCallbacks before installing a non-nil callback.',
+      [AFeature]),
+    sslErrUnsupported,
+    AMethodName,
+    0,
+    sslMbedTLS
+  );
+end;
+
 procedure TMbedTLSContext.SetVerifyCallback(ACallback: TSSLVerifyCallback);
 begin
-  FVerifyCallback := ACallback;
+  if Assigned(ACallback) then
+    RejectUnsupportedCallbackAssignment('Verify callback', 'TMbedTLSContext.SetVerifyCallback');
+  FVerifyCallback := nil;
 end;
 
 { 密码套件配置 }
@@ -914,12 +932,16 @@ end;
 
 procedure TMbedTLSContext.SetPasswordCallback(ACallback: TSSLPasswordCallback);
 begin
-  FPasswordCallback := ACallback;
+  if Assigned(ACallback) then
+    RejectUnsupportedCallbackAssignment('Password callback', 'TMbedTLSContext.SetPasswordCallback');
+  FPasswordCallback := nil;
 end;
 
 procedure TMbedTLSContext.SetInfoCallback(ACallback: TSSLInfoCallback);
 begin
-  FInfoCallback := ACallback;
+  if Assigned(ACallback) then
+    RejectUnsupportedCallbackAssignment('Info callback', 'TMbedTLSContext.SetInfoCallback');
+  FInfoCallback := nil;
 end;
 
 { 证书固定 }

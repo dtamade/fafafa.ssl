@@ -79,6 +79,8 @@ type
     function HasEarlyDataCapability: Boolean;
     function HasClientOCSPCapability: Boolean;
     procedure RequireValidContext(const AMethodName: string);
+    procedure RejectUnsupportedCallbackAssignment(
+      const AFeature, AMethodName: string);
 
   public
     constructor Create(ALibrary: ISSLLibrary; AType: TSSLContextType);
@@ -782,9 +784,25 @@ begin
   Result := FVerifyDepth;
 end;
 
+procedure TWolfSSLContext.RejectUnsupportedCallbackAssignment(
+  const AFeature, AMethodName: string);
+begin
+  raise ESSLConfigurationException.CreateWithContext(
+    Format('%s is not published by the current WolfSSL backend runtime. ' +
+      'Check ISSLLibrary.GetCapabilities.SupportsCallbacks before installing a non-nil callback.',
+      [AFeature]),
+    sslErrUnsupported,
+    AMethodName,
+    0,
+    sslWolfSSL
+  );
+end;
+
 procedure TWolfSSLContext.SetVerifyCallback(ACallback: TSSLVerifyCallback);
 begin
-  FVerifyCallback := ACallback;
+  if Assigned(ACallback) then
+    RejectUnsupportedCallbackAssignment('Verify callback', 'TWolfSSLContext.SetVerifyCallback');
+  FVerifyCallback := nil;
 end;
 
 { 密码套件配置 }
@@ -887,12 +905,16 @@ end;
 
 procedure TWolfSSLContext.SetPasswordCallback(ACallback: TSSLPasswordCallback);
 begin
-  FPasswordCallback := ACallback;
+  if Assigned(ACallback) then
+    RejectUnsupportedCallbackAssignment('Password callback', 'TWolfSSLContext.SetPasswordCallback');
+  FPasswordCallback := nil;
 end;
 
 procedure TWolfSSLContext.SetInfoCallback(ACallback: TSSLInfoCallback);
 begin
-  FInfoCallback := ACallback;
+  if Assigned(ACallback) then
+    RejectUnsupportedCallbackAssignment('Info callback', 'TWolfSSLContext.SetInfoCallback');
+  FInfoCallback := nil;
 end;
 
 { 证书固定 }

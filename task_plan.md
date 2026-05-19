@@ -3175,3 +3175,42 @@
      - 继续审查：
        - `SupportsCallbacks=False` 的 backend 是否应该对 `SetVerifyCallback` / `SetPasswordCallback` / `SetInfoCallback` fail-closed
        - 或至少补齐 active docs / API reference，对 setter-only compatibility surface 给出明确 guidance
+80. `callback setter fail-closed alignment` 已完成 focused 收口，并应作为当前 callback setter/runtime semantics 的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-callback-setter-fail-closed-alignment.md`
+   - 当前已确认的真实 drift：
+     - 前一批虽然已经把：
+       - `FreePascal`
+       - `WolfSSL`
+       - `MbedTLS`
+       的 `SupportsCallbacks` capability 收回到 `False`
+     - 但这 3 个 backend 的：
+       - `SetVerifyCallback`
+       - `SetPasswordCallback`
+       - `SetInfoCallback`
+       仍然只是 silent setter / field store
+     - 这会让 caller 继续误以为“虽然 capability 不发布，但接口至少还能安全配置”
+     - 同时 `docs/reference/API_REFERENCE.md` 的 callback type signatures 也还停留在旧接口形态
+   - 当前最小正确修法已落地：
+     - 不改 `OpenSSL` / `WinSSL` 已发布 callback runtime path
+     - 不重做 callback runtime 设计
+     - 只把 `SupportsCallbacks=False` backend 的 setter 语义收紧为：
+       - non-nil 赋值 -> fail-closed `unsupported`
+       - `nil` -> 允许清除 / 保持默认行为
+     - 并把：
+       - `base` interface docs
+       - `API_REFERENCE` callback gating note
+       - `API_REFERENCE` callback type signatures
+       写回当前源码真相
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_callback_setter_fail_closed_contract.sh`
+     - `bash tests/scripts/test_callback_setter_fail_closed_contract.sh`
+     - `mkdir -p tmp/test_callback_setter_fail_closed && fpc -B -Fu./src -Fu./tests -FUtmp/test_callback_setter_fail_closed -FEtmp/test_callback_setter_fail_closed -otmp/test_callback_setter_fail_closed/test_backend_callback_setter_fail_closed_contract tests/test_backend_callback_setter_fail_closed_contract.pas && ./tmp/test_callback_setter_fail_closed/test_backend_callback_setter_fail_closed_contract`
+     - `bash tests/scripts/test_callback_capability_truth_contract.sh`
+     - `bash tests/scripts/test_api_reference_library_context_surface_truth_contract.sh`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 不再重复拉起 false-backend callback setter silent-store drift
+     - 继续审查：
+       - `WinSSL` 的 callback surface 是否只是 verify/info partial runtime，而 `Password callback` 仍未接线
+       - 现有单一 `SupportsCallbacks` bool 是否需要继续细化成 per-callback truth，或至少补 active docs 说明 partial runtime coverage

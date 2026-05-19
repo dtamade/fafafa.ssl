@@ -92,6 +92,8 @@ type
     function TicketKey(const ATicket: TBytes): string;
     procedure PruneResumptionCache;
     procedure EnforceResumptionCacheLimit;
+    procedure RejectUnsupportedCallbackAssignment(
+      const AFeature, AMethodName: string);
   public
     constructor Create(ALibrary: ISSLLibrary; AType: TSSLContextType);
     destructor Destroy; override;
@@ -548,9 +550,25 @@ begin
   Result := FVerifyDepth;
 end;
 
+procedure TFreePascalContext.RejectUnsupportedCallbackAssignment(
+  const AFeature, AMethodName: string);
+begin
+  raise ESSLConfigurationException.CreateWithContext(
+    Format('%s is not published by the current FreePascal backend runtime. ' +
+      'Check ISSLLibrary.GetCapabilities.SupportsCallbacks before installing a non-nil callback.',
+      [AFeature]),
+    sslErrUnsupported,
+    AMethodName,
+    0,
+    sslFreePascal
+  );
+end;
+
 procedure TFreePascalContext.SetVerifyCallback(ACallback: TSSLVerifyCallback);
 begin
-  FVerifyCallback := ACallback;
+  if Assigned(ACallback) then
+    RejectUnsupportedCallbackAssignment('Verify callback', 'TFreePascalContext.SetVerifyCallback');
+  FVerifyCallback := nil;
 end;
 
 procedure TFreePascalContext.SetCipherList(const ACipherList: string);
@@ -698,12 +716,16 @@ end;
 
 procedure TFreePascalContext.SetPasswordCallback(ACallback: TSSLPasswordCallback);
 begin
-  FPasswordCallback := ACallback;
+  if Assigned(ACallback) then
+    RejectUnsupportedCallbackAssignment('Password callback', 'TFreePascalContext.SetPasswordCallback');
+  FPasswordCallback := nil;
 end;
 
 procedure TFreePascalContext.SetInfoCallback(ACallback: TSSLInfoCallback);
 begin
-  FInfoCallback := ACallback;
+  if Assigned(ACallback) then
+    RejectUnsupportedCallbackAssignment('Info callback', 'TFreePascalContext.SetInfoCallback');
+  FInfoCallback := nil;
 end;
 
 procedure TFreePascalContext.SetHTTPGetCallback(ACallback: TSSLHTTPGetCallback);

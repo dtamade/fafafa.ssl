@@ -9757,3 +9757,90 @@
   - result: PASS
   - summary:
     - current callback capability truth batch has no whitespace or patch-format issues
+
+### Callback Setter Fail-Closed Alignment
+
+- `sed -n '540,715p' src/fafafa.ssl.freepascal.context.pas`
+- `sed -n '770,930p' src/fafafa.ssl.wolfssl.context.pas`
+- `sed -n '760,935p' src/fafafa.ssl.mbedtls.context.pas`
+- `sed -n '1898,2205p' src/fafafa.ssl.openssl.context.pas`
+  - result: PASS
+  - summary:
+    - static audit confirmed the real drift after the previous capability batch:
+      - `FreePascal` / `WolfSSL` / `MbedTLS` still silently stored non-nil verify/password/info callbacks
+      - `OpenSSL` remained the reference implementation with real runtime callback wiring
+
+- `sed -n '300,360p' docs/reference/API_REFERENCE.md`
+- `sed -n '1476,1496p' docs/reference/API_REFERENCE.md`
+  - result: PASS
+  - summary:
+    - active API reference still published stale callback type signatures and lacked a callback capability gating note
+
+- add `docs/plans/2026-05-19-callback-setter-fail-closed-alignment.md`
+  - change:
+    - record the bounded batch that closes false-backend callback setter silent-store drift and API callback signature drift
+
+- add `tests/scripts/test_callback_setter_fail_closed_contract.sh`
+  - change:
+    - add a focused source/docs contract that guards:
+      - callback capability gating note in `base` / `API_REFERENCE`
+      - current callback type signatures in active API docs
+      - fail-closed setter source patterns for `FreePascal` / `WolfSSL` / `MbedTLS`
+
+- add `tests/test_backend_callback_setter_fail_closed_contract.pas`
+  - change:
+    - add a runtime contract that verifies:
+      - published callback backends accept non-nil assignments and nil clears
+      - unpublished callback backends reject non-nil assignments with unsupported semantics and still accept nil clears
+
+- `bash -n tests/scripts/test_callback_setter_fail_closed_contract.sh`
+  - result: PASS
+  - summary:
+    - new callback setter source/docs contract syntax is valid
+
+- `bash tests/scripts/test_callback_setter_fail_closed_contract.sh`
+  - result: FAIL -> FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `base interface docs must explain callback capability gating and nil-clear semantics`
+    - after source/docs fix, the contract itself exposed one test-script quoting bug caused by backticks inside a double-quoted fixed string
+    - GREEN after fixing the contract:
+      - source/docs truth now locks callback gating notes, current callback signatures, and false-backend fail-closed setter source patterns
+
+- `mkdir -p tmp/test_callback_setter_fail_closed && fpc -B -Fu./src -Fu./tests -FUtmp/test_callback_setter_fail_closed -FEtmp/test_callback_setter_fail_closed -otmp/test_callback_setter_fail_closed/test_backend_callback_setter_fail_closed_contract tests/test_backend_callback_setter_fail_closed_contract.pas && ./tmp/test_callback_setter_fail_closed/test_backend_callback_setter_fail_closed_contract`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `FreePascal Native must reject non-nil Verify callback while SupportsCallbacks=False`
+    - GREEN after fix:
+      - `OpenSSL` published callback setters accept non-nil assignments and nil clears
+      - `FreePascal` / `WolfSSL` / `MbedTLS` unpublished callback setters now fail-closed on non-nil assignments and accept nil clears
+      - `WinSSL` is skipped on Linux and remains pending Windows-host/CI callback-surface granularity proof
+    - compile emitted existing unrelated warnings only
+
+- update callback setter/runtime truth sources:
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.freepascal.context.pas`
+  - `src/fafafa.ssl.wolfssl.context.pas`
+  - `src/fafafa.ssl.mbedtls.context.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - add callback capability gating note
+    - make false-capability backends reject non-nil callback assignments with unsupported semantics
+    - keep `nil` callback clears valid
+    - fix active API reference callback type signatures to current source truth
+
+- `bash tests/scripts/test_callback_capability_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - previous callback capability truth batch remains aligned after the new setter semantics changes
+
+- `bash tests/scripts/test_api_reference_library_context_surface_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - active `ISSLLibrary` / `ISSLContext` docs still match current source truth after the callback API reference fix
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current callback setter fail-closed batch has no whitespace or patch-format issues

@@ -1475,19 +1475,26 @@ function CreateSSLLibrary(aType: TSSLLibraryType = sslOpenSSL): ISSLLibrary;
 
 ## 回调类型
 
+在安装非 nil 的 Verify/Password/Info callback 前，先检查 `ISSLLibrary.GetCapabilities.SupportsCallbacks`；对 `SupportsCallbacks=False` 的 backend，non-nil 赋值应抛出 unsupported，`nil` 仅用于清除并回到默认行为。
+
 ```pascal
 // 日志回调
 TSSLLogLevel = (sslLogDebug, sslLogInfo, sslLogWarning, sslLogError);
 TSSLLogCallback = procedure(aLevel: TSSLLogLevel; const aMessage: string) of object;
 
 // 验证回调
-TSSLVerifyCallback = function(aPreverified: Boolean; aCert: ISSLCertificate): Boolean of object;
+TSSLVerifyCallback = function(const aCertificate: TSSLCertificateInfo;
+                              const aErrorCode: Integer;
+                              const aErrorMessage: string): Boolean of object;
 
 // 密码回调
-TSSLPasswordCallback = function(const aHint: string; aMaxLen: Integer): string of object;
+TSSLPasswordCallback = function(var aPassword: string;
+                                const aIsRetry: Boolean): Boolean of object;
 
 // 信息回调
-TSSLInfoCallback = procedure(const aInfo: string) of object;
+TSSLInfoCallback = procedure(const aWhere: Integer;
+                             const aRet: Integer;
+                             const aState: string) of object;
 ```
 
 ---

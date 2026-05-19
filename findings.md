@@ -4632,3 +4632,53 @@
   - 也把 callback 这条线从“到底算不算支持”的反复争论，推进到了下一个真正有价值的问题：
     - 对 `SupportsCallbacks=False` 的 backend，setter-only compatibility surface 是否应该 fail-closed
     - 还是至少要在 active docs / API reference 中明确标出 compatibility-only truth
+
+- 顺着这条线继续往 setter semantics 收时，很快就确认这已经不是抽象设计问题，而是一个直接会误导调用方的 runtime drift：
+  - `FreePascal` / `WolfSSL` / `MbedTLS` 虽然已经发布 `SupportsCallbacks=False`
+  - 但 `SetVerifyCallback` / `SetPasswordCallback` / `SetInfoCallback` 仍会静默接收 non-nil 回调并存进字段
+  - runtime 又永远不消费它们
+  - 这属于典型的 silent no-op / misleading setter surface
+
+- 与此同时，active docs 里还冒出了一个并行的 callback truth 漂移：
+  - `docs/reference/API_REFERENCE.md` 的 callback 类型签名示例
+  - 仍写着旧的：
+    - `aPreverified / aCert`
+    - `aHint / aMaxLen`
+    - `aInfo`
+  - 但当前源码真实签名已经是：
+    - `TSSLCertificateInfo + ErrorCode + ErrorMessage`
+    - `var Password + IsRetry`
+    - `Where + Ret + State`
+
+- 这次因此把 callback setter 的当前正确语义压成了一个更明确的基线：
+  - `SupportsCallbacks=True`
+    - non-nil callback assignment 允许继续工作
+    - `nil` 用于清除并回到默认行为
+  - `SupportsCallbacks=False`
+    - non-nil callback assignment 必须 fail-closed 为 `unsupported`
+    - `nil` 只保留为清除/保持默认行为的 compatibility operation
+
+- 新的 RED 也给了两类直接证据：
+  - shell/source contract 先抓到了：
+    - `base` / `API_REFERENCE` 还没有 callback capability gating note
+  - runtime contract 又直接抓到了：
+    - `FreePascal Native must reject non-nil Verify callback while SupportsCallbacks=False`
+
+- 因而这批最小正确修法继续保持窄 scope：
+  - 不改 `OpenSSL` / `WinSSL` published callback path
+  - 不发明新的 callback capability 结构
+  - 只让 `FreePascal` / `WolfSSL` / `MbedTLS` 的 non-nil callback setter 显式 fail-closed
+  - 同时把 active docs 的 callback gating 与 callback type signatures 对齐回源码真相
+
+- 这样一来，callback 这条线现在已经从：
+  - “bool 能力有没有发对”
+  - 推进到了：
+  - “未发布能力的 setter 还能不能 silently accept”
+  - 并且把 active docs 的签名真相也一起收回来了
+
+- 收口后剩下的下一个高价值问题也更清楚了：
+  - `WinSSL` 当前被归入 `SupportsCallbacks=True`
+  - 但从现有静态证据看，更像 verify/info 有 runtime use-site，password callback 未必真的接线
+  - 也就是说，下一批更值得做的是 callback surface granularity 审查：
+    - 要么补 WinSSL password callback runtime completeness
+    - 要么承认当前 bool 只代表 partial callback publication，并把 active docs 写清
