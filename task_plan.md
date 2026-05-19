@@ -4192,3 +4192,43 @@
      - 继续审查：
        - 其它 specialized guides 是否还把 backend-specific helper/API 冒充成 generic public path
        - 以及哪些指南仍保留“总测试数 / 通过率 / Phase 完成度”式快照内容
+90. `specialized guide historical test snapshot cleanup` 已完成 focused 收口，并应作为当前 specialized guides 文档口径的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-specialized-guide-historical-test-snapshot-cleanup.md`
+   - 当前已确认的真实 drift：
+     - `docs/guides/CMS_USER_GUIDE.md`
+       - 仍把：
+         - `43/43`
+         - `20/20`
+         - `100.0%`
+         - `总测试数`
+         - `预期输出`
+         这类历史测试快照直接写在当前正文里
+       - 还保留按时间线记录的旧通过率更新日志
+     - `docs/guides/PKCS12_USER_GUIDE.md`
+       - 仍把：
+         - `34/34`
+         - `100.0%`
+         - `总测试数`
+         - `预期输出`
+         直接写成当前 helper/API 指南 truth
+       - 还保留旧的测试通过率/阶段性更新日志
+   - 当前最小正确修法已落地：
+     - 不改生产实现
+     - 只把 `CMS_USER_GUIDE` / `PKCS12_USER_GUIDE` 的正文口径改成：
+       - 保留当前 surface 边界
+       - 保留可执行测试命令
+       - 保留使用示例
+       - 去掉硬编码历史统计与 captured output 块
+       - 用“成功标准 + 以当前运行结果为准”的方式描述验证
+       - 把更新日志收成维护说明，不再把旧通过率写成当前正文 truth
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_specialized_guides_historical_test_snapshot_contract.sh`
+     - `bash tests/scripts/test_specialized_guides_historical_test_snapshot_contract.sh`
+     - `npx prettier --write docs/guides/CMS_USER_GUIDE.md docs/guides/PKCS12_USER_GUIDE.md`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 不再把 specialized guides 当作固定测试统计面板
+     - 继续审查：
+       - 其它 guide/reference 是否还残留相同的“历史快照混入当前正文 truth”问题
+       - 尤其优先看仍保留 phase 完成度 / 性能基准截图 / 通过率段落的文档

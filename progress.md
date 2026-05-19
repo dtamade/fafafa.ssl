@@ -11925,3 +11925,56 @@
   - result: PASS
   - summary:
     - current security-guide HSM/password-key batch has no whitespace or patch-format issues
+
+### Specialized Guide Historical Test Snapshot Cleanup
+
+- `rg -n "总测试数|通过率|100%|综合测试|基础测试|Phase [A-Z]|完成总结|测试结果总结" docs/guides/PKCS12_USER_GUIDE.md docs/guides/CMS_USER_GUIDE.md`
+  - result: PASS
+  - summary:
+    - targeted scan showed the next residual docs family was no longer API truth drift
+    - it had become historical test-snapshot drift inside specialized guides:
+      - `CMS_USER_GUIDE.md`
+      - `PKCS12_USER_GUIDE.md`
+
+- add `docs/plans/2026-05-19-specialized-guide-historical-test-snapshot-cleanup.md`
+  - change:
+    - recorded the bounded docs-only plan for demoting historical test snapshots out of current specialized-guide truth
+
+- add `tests/scripts/test_specialized_guides_historical_test_snapshot_contract.sh`
+  - change:
+    - added a focused shell contract that guards:
+      - presence of "current verification entrypoint, not fixed snapshot" guidance
+      - absence of hardcoded `43/43`, `20/20`, `34/34`
+      - absence of captured `总测试数` / `通过率` / `预期输出` blocks in the guide body
+
+- update docs:
+  - `docs/guides/CMS_USER_GUIDE.md`
+  - `docs/guides/PKCS12_USER_GUIDE.md`
+  - change:
+    - removed captured expected-output snapshots
+    - removed hardcoded historical pass-rate/count statements from the guide body
+    - kept the executable test commands
+    - replaced fixed-output expectations with success criteria
+    - demoted history-style update logs to maintenance guidance
+
+- `bash -n tests/scripts/test_specialized_guides_historical_test_snapshot_contract.sh`
+  - result: PASS
+  - summary:
+    - new specialized-guide snapshot contract syntax is valid
+
+- `bash tests/scripts/test_specialized_guides_historical_test_snapshot_contract.sh`
+  - result: PASS
+  - summary:
+    - CMS / PKCS12 specialized guides no longer present historical test snapshots as current truth
+
+- `npx prettier --write docs/guides/CMS_USER_GUIDE.md docs/guides/PKCS12_USER_GUIDE.md`
+  - result: PASS
+  - summary:
+    - specialized guides formatting remains stable
+
+- `git diff --check`
+  - result: FAIL -> PASS
+  - summary:
+    - first check caught trailing whitespace in the CMS guide version/update footer
+    - GREEN after removing the markdown trailing spaces:
+      - current specialized-guide snapshot cleanup batch has no whitespace or patch-format issues
