@@ -11796,3 +11796,72 @@
   - result: PASS
   - summary:
     - current API inventory / PKCS#11 high-entry docs batch has no whitespace or patch-format issues
+
+### WinSSL Quickstart Runtime Truth
+
+- `rg -n "待实现|未实现|sslVerifyPeer|sslVerifyFailIfNoPeerCert|LoadCAFile|GetServerName|双向 TLS|mTLS|客户端证书" docs/guides/WINSSL_* docs/reference/WINSSL_*`
+  - result: PASS
+  - summary:
+    - targeted sweep showed `WINSSL_QUICKSTART.md` still carried a concentrated runtime-truth drift cluster even after other WinSSL docs had been tightened
+    - the same page still marked verify / mTLS / CA paths as pending while its own FAQ already said those paths were implemented
+
+- `rg -n "procedure TWinSSLContext.LoadCAFile|procedure TWinSSLContext.SetVerifyMode|sslVerifyPeer|sslVerifyFailIfNoPeerCert|LoadPrivateKey\\('client\\.pfx'|LoadCertificate\\(|LoadPrivateKey\\(|client certificate|双向 TLS|mTLS|SetCertificateStore|LoadCAFile" src/fafafa.ssl.winssl.context.pas src/fafafa.ssl.winssl.connection.pas docs/reference/WINSSL_DESIGN.md docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md docs/reference/API_REFERENCE.md tests/winssl tests`
+  - result: PASS
+  - summary:
+    - source/tests/reference evidence confirmed the quickstart was behind the current implementation:
+      - `LoadCAFile(...)` is implemented
+      - `sslVerifyPeer` and `sslVerifyFailIfNoPeerCert` are active verify-mode paths
+      - WinSSL mTLS tests and docs already exist
+      - connection-level SNI owner path remains `ISSLClientConnection`
+
+- add `docs/plans/2026-05-19-winssl-quickstart-runtime-truth.md`
+  - change:
+    - recorded the bounded docs-only plan for quickstart runtime-truth cleanup
+
+- add `tests/scripts/test_winssl_quickstart_runtime_truth_contract.sh`
+  - change:
+    - added a focused shell contract that guards:
+      - current verify-mode syntax
+      - current mTLS verify-mode syntax
+      - current `LoadCAFile(...)` path
+      - per-connection SNI troubleshooting example
+      - removal of stale "待实现"/"未实现" claims in the quickstart
+
+- update docs:
+  - `docs/guides/WINSSL_QUICKSTART.md`
+  - change:
+    - replaced stale non-set verify syntax with current set-based API
+    - removed pending markers from verify / mTLS / CA guidance
+    - updated troubleshooting wording to current verification failure semantics
+    - switched SNI inspection example from deprecated `Ctx.GetServerName` to per-connection `ISSLClientConnection.GetServerName`
+    - replaced the stale "client certificates unsupported" troubleshooting note with current mTLS guidance
+
+- `bash -n tests/scripts/test_winssl_quickstart_runtime_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new WinSSL quickstart runtime-truth contract syntax is valid
+
+- `bash tests/scripts/test_winssl_quickstart_runtime_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - WinSSL quickstart now matches the current runtime/source truth
+
+- `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - quickstart import/unit guidance remained aligned after the runtime-truth cleanup
+
+- `bash tests/scripts/test_winssl_private_key_format_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - existing WinSSL private-key-format doc truth remained green after the quickstart adjustments
+
+- `npx prettier --write docs/guides/WINSSL_QUICKSTART.md`
+  - result: PASS
+  - summary:
+    - WinSSL quickstart formatting remains stable
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current WinSSL quickstart runtime-truth batch has no whitespace or patch-format issues

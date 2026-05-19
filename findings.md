@@ -5710,3 +5710,52 @@
     - 统一等价接口叙事
     - 历史 phase snapshot 叙事
     - 或 backend-specific truth 被抹平的入口示例
+
+- 顺着高入口 reference 页继续往下扫时，又抓到一个很典型但价值很高的入口页残余：
+  - `docs/guides/WINSSL_QUICKSTART.md`
+  - 这次的重点不再是 capability matrix，而是 quickstart 本身还在输出过期 runtime 结论
+
+- 这条 drift 的危险性在于它不是单个错句，而是同页内部自相矛盾：
+  - 在“配置选项”和“故障排查”里仍写：
+    - `sslVerifyPeer` 待实现
+    - `sslVerifyFailIfNoPeerCert` / mTLS 待实现
+    - `LoadCAFile` 待实现
+    - 证书验证未实现时才需要手动模式
+  - 但同页 FAQ 又已经承认：
+    - 自动证书验证已实现
+    - 双向 TLS 已支持
+
+- 这类 quickstart drift 的后果比深层参考页更直接：
+  - 它会让第一次接触 WinSSL 的调用方立刻做出错误实现决策
+  - 比如以为：
+    - 生产环境还不能开 `sslVerifyPeer`
+    - mTLS 还不能用
+    - `LoadCAFile` 只是未来计划
+  - 结果就是把已经闭合的实现路径继续当成缺口
+
+- 这批确认下来的更细真相有三层：
+  - 当前 WinSSL source/tests 已经明确支持：
+    - `SetVerifyMode([sslVerifyPeer])`
+    - `SetVerifyMode([sslVerifyPeer, sslVerifyFailIfNoPeerCert])`
+    - `LoadCAFile(...)`
+    - 本地/脚本化 mTLS 证据路径
+  - 当前 quickstart 里还残留旧语法：
+    - `Ctx.SetVerifyMode(sslVerifyPeer);`
+    - `Ctx.SetVerifyMode(sslVerifyPeer or sslVerifyFailIfNoPeerCert);`
+  - SNI 调试示例还在继续使用 deprecated context-level：
+    - `Ctx.GetServerName`
+    - 这会把 earlier SNI owner-path 收口再次讲散
+
+- 这批最小正确修法因此继续保持很窄：
+  - 不动 WinSSL 实现
+  - 只把 quickstart 改回当前 public API / runtime truth：
+    - `[]` / `[sslVerifyPeer]` / `[sslVerifyPeer, sslVerifyFailIfNoPeerCert]`
+    - `LoadCAFile(...)`
+    - per-connection `ISSLClientConnection.GetServerName`
+    - 当前验证失败语义
+
+- 这次也再次证明了一个路线图原则：
+  - source truth 和 matrix truth 收口之后
+  - 高入口 quickstart 仍然可能拖着旧阶段心智
+  - 所以后续“接口设计完整 / 各 backend 实现完整 / 测试和文档完整”的推进，不能只盯 capability rows
+  - 还要继续清理这些最容易被复制粘贴的入口示例页

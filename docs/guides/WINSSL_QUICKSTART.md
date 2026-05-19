@@ -387,17 +387,15 @@ Conn := Ctx.CreateConnection(Socket);
 ### 3. 证书验证模式
 
 ```pascal
-// 手动验证（当前默认，不验证证书）
+// 测试环境：不验证证书
 // ⚠️ 仅用于测试环境！
-Ctx.SetVerifyMode(sslVerifyNone);
+Ctx.SetVerifyMode([]);
 
 // 自动验证（推荐，生产环境）
-// ⏳ 待实现
-Ctx.SetVerifyMode(sslVerifyPeer);
+Ctx.SetVerifyMode([sslVerifyPeer]);
 
 // 客户端证书（双向 TLS）
-// ⏳ 待实现
-Ctx.SetVerifyMode(sslVerifyPeer or sslVerifyFailIfNoPeerCert);
+Ctx.SetVerifyMode([sslVerifyPeer, sslVerifyFailIfNoPeerCert]);
 ```
 
 ### 4. 超时设置
@@ -421,7 +419,6 @@ end;
 Ctx.LoadPrivateKey('client.pfx', 'pfx-password');
 
 // 加载自定义 CA 证书
-// ⏳ 待实现
 Ctx.LoadCAFile('custom-ca.crt');
 ```
 
@@ -456,7 +453,7 @@ end;
 **可能原因**:
 
 1. 服务器不支持客户端协议版本
-2. 证书验证失败（未实现时使用手动模式）
+2. 证书验证失败（例如 CA、hostname 或 mTLS 策略不匹配）
 3. 网络连接问题
 4. SNI 主机名错误
 
@@ -475,7 +472,7 @@ if WinSock2.connect(Socket, Addr, SizeOf(Addr)) = SOCKET_ERROR then
   WriteLn('TCP connection failed before TLS handshake');
 
 // 4. 验证 SNI 主机名
-WriteLn('SNI hostname: ', Ctx.GetServerName);
+WriteLn('SNI hostname: ', (Conn as ISSLClientConnection).GetServerName);
 ```
 
 ### 问题 3: "Connection reset by peer"
@@ -500,7 +497,8 @@ Ctx.SetProtocolVersions([sslProtocolTLS10, sslProtocolTLS11,
                         sslProtocolTLS12, sslProtocolTLS13]);
 
 // 3. 检查服务器是否需要客户端证书
-// （如果需要，当前版本无法支持，待实现）
+// 如果服务端要求客户端证书，确保当前上下文已加载 PFX/P12 客户端证书，
+// 并启用 Ctx.SetVerifyMode([sslVerifyPeer, sslVerifyFailIfNoPeerCert]);
 ```
 
 ### 问题 4: "Access violation" 或崩溃

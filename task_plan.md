@@ -4110,3 +4110,45 @@
      - 继续审查：
        - 其它高入口 reference / guide 页面是否仍把 backend-specific truth 写成统一等价接口
        - 以及还有哪些入口页仍保留“阶段报告式”快照内容而不是 current source truth
+88. `WinSSL quickstart runtime truth` 已完成 focused 收口，并应作为当前 WinSSL 高入口 quickstart 的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-winssl-quickstart-runtime-truth.md`
+   - 当前已确认的真实 drift：
+     - `docs/guides/WINSSL_QUICKSTART.md`
+       - 仍把：
+         - `Ctx.SetVerifyMode([sslVerifyPeer])`
+         - `Ctx.SetVerifyMode([sslVerifyPeer, sslVerifyFailIfNoPeerCert])`
+         - `Ctx.LoadCAFile('custom-ca.crt')`
+         讲成“待实现”
+       - 仍使用旧语法：
+         - `Ctx.SetVerifyMode(sslVerifyPeer);`
+         - `Ctx.SetVerifyMode(sslVerifyPeer or sslVerifyFailIfNoPeerCert);`
+       - 故障排查里仍写：
+         - “证书验证失败（未实现时使用手动模式）”
+       - SNI 调试示例仍使用 deprecated：
+         - `Ctx.GetServerName`
+       - 同一页 FAQ 却已经承认：
+         - 自动证书验证已实现
+         - 双向 TLS 已支持
+     - 这不是单点措辞问题，而是同一高入口 quickstart 内部自己和自己矛盾
+   - 当前最小正确修法已落地：
+     - 不改 WinSSL 生产实现
+     - 只把 `docs/guides/WINSSL_QUICKSTART.md` 重新锚回当前 runtime/source truth：
+       - `SetVerifyMode([])` = 测试环境 verify-none
+       - `SetVerifyMode([sslVerifyPeer])` = 当前生产推荐
+       - `SetVerifyMode([sslVerifyPeer, sslVerifyFailIfNoPeerCert])` = 当前 mTLS verify policy
+       - `LoadCAFile('custom-ca.crt')` = 当前已发布 CA load path
+       - troubleshooting 改成当前验证/mTLS 失败语义
+       - SNI 调试示例改成 per-connection `ISSLClientConnection.GetServerName`
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_winssl_quickstart_runtime_truth_contract.sh`
+     - `bash tests/scripts/test_winssl_quickstart_runtime_truth_contract.sh`
+     - `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+     - `bash tests/scripts/test_winssl_private_key_format_truth_contract.sh`
+     - `npx prettier --write docs/guides/WINSSL_QUICKSTART.md`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 不再把 `WINSSL_QUICKSTART` 当作旧阶段状态页
+     - 继续审查：
+       - 其它 backend quickstart / high-entry guide 是否也残留“已实现能力仍写待实现”或旧接口语法
+       - 尤其优先看还保留 phase snapshot / 总测试数 / 完成度口径的 specialized guides
