@@ -33,6 +33,8 @@
 
 ## 5 分钟快速开始
 
+这份 WinSSL quickstart 聚焦 Windows-native / WinSSL-specific path，因此会直接展示 `ISSLConnection`；如果你只是普通跨后端 HTTPS 客户端，优先使用通用的 `TSSLContextBuilder` + `TSSLConnector` + `TSSLStream`。
+
 ### 最简示例（5 行代码）
 
 ```pascal

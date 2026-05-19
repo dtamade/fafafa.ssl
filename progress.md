@@ -13732,3 +13732,60 @@
   - result: PASS
   - summary:
     - current landing-quickstarts direct-path batch has no whitespace or patch-format issues
+
+### Backend Quickstarts Direct-Path Classification
+
+- add `docs/plans/2026-05-20-backend-quickstarts-direct-path-classification.md`
+  - change:
+    - define the bounded backend-quickstarts batch for direct `ISSLConnection` classification in MbedTLS/WinSSL high-entry guides
+
+- add `tests/scripts/test_backend_quickstarts_direct_path_classification_contract.sh`
+  - change:
+    - lock that backend-specific quickstarts must explain why they show direct `ISSLConnection`
+      instead of the generic facade main path
+
+- `bash -n tests/scripts/test_backend_quickstarts_direct_path_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - new backend-quickstarts direct-path contract syntax is valid
+
+- `bash tests/scripts/test_backend_quickstarts_direct_path_classification_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `MBEDTLS_USER_GUIDE` still showed the simple HTTPS client sample without classifying it as backend raw-surface guidance
+    - GREEN after fix:
+      - `MBEDTLS_USER_GUIDE` now classifies its simple client sample as backend raw-surface guidance
+      - `WINSSL_QUICKSTART` now explains that the page focuses on Windows-native / WinSSL-specific direct-path usage
+
+- update `docs/guides/MBEDTLS_USER_GUIDE.md`
+  - change:
+    - explain that the simple HTTPS sample directly uses `Context.CreateConnection(...)`
+      to show current backend raw shipped surface
+    - point ordinary cross-backend clients back to
+      `TSSLContextBuilder` + `TSSLConnector` + `TSSLStream`
+
+- update `docs/guides/WINSSL_QUICKSTART.md`
+  - change:
+    - explain that the quickstart intentionally focuses on Windows-native / WinSSL-specific direct-path usage
+    - point ordinary cross-backend clients back to the generic facade main path
+
+- `bash tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - MbedTLS capability/public-surface truth remained green after the new direct-path explanation
+
+- `bash tests/scripts/test_winssl_quickstart_status_phase_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - WinSSL quickstart status/runtime wording remained aligned after classifying the direct path
+
+- `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - unit/import guidance remained aligned across WinSSL/MbedTLS docs after the direct-path clarification
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current backend-quickstarts direct-path batch has no whitespace or patch-format issues

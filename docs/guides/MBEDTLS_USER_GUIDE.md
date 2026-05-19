@@ -89,6 +89,8 @@ Context.LoadCertificate('cert.pem');
 - **MbedTLS** 3.0+ (推荐 3.6+)
 - **平台**: Linux, Windows, macOS, 嵌入式系统
 
+这段简单 HTTPS 示例直接操作 `Context.CreateConnection(...)`，是为了展示当前 MbedTLS backend 的 raw shipped surface；如果你只是普通跨后端 HTTPS 客户端，优先使用通用的 `TSSLContextBuilder` + `TSSLConnector` + `TSSLStream`。
+
 ### 安装 MbedTLS
 
 **Ubuntu/Debian**:

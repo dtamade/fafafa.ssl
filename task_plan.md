@@ -10,6 +10,46 @@
 
 ## Current Status
 
+- [completed] `backend quickstarts direct-path classification`
+  当前 focused 目标：
+  - 把 backend-specific quickstarts 中 direct `ISSLConnection` 的使用原因讲清楚，
+    避免把 backend 深入示例误读成通用 facade 主路径
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-backend-quickstarts-direct-path-classification.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_backend_quickstarts_direct_path_classification_contract.sh`
+  - 同步更新：
+    - `docs/guides/MBEDTLS_USER_GUIDE.md`
+    - `docs/guides/WINSSL_QUICKSTART.md`
+  当前最终收口证据：
+  - `MBEDTLS_USER_GUIDE.md` 现在明确：
+    - 简单 HTTPS 示例直接走 `Context.CreateConnection(...)`
+      是为了展示 backend raw shipped surface
+    - 普通跨后端 HTTPS 客户端仍优先通用的
+      `TSSLContextBuilder` + `TSSLConnector` + `TSSLStream`
+  - `WINSSL_QUICKSTART.md` 现在明确：
+    - 这页聚焦 Windows-native / WinSSL-specific path，
+      所以会直接展示 `ISSLConnection`
+    - 普通跨后端 HTTPS 客户端仍优先通用 facade 主路径
+  focused verification 已通过：
+  - `bash -n tests/scripts/test_backend_quickstarts_direct_path_classification_contract.sh`
+  - `bash tests/scripts/test_backend_quickstarts_direct_path_classification_contract.sh`
+  - `bash tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+  - `bash tests/scripts/test_winssl_quickstart_status_phase_truth_contract.sh`
+  - `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - 这批暴露的不是 backend 文档接口名错了，而是 backend-specific quickstarts
+    也需要显式写清“为什么这里要用 direct path”。
+  - 现在 generic landing docs 与 backend-specific quickstarts 的主路径分层
+    已经重新说成一张图。
+  当前下一条真实工作：
+  - 继续从 active diagnostics / backend-specific guides 里找剩余 residual：
+    - 重点看还没纳入 focused contract 的 timeout/blocking /
+      direct-connection troubleshooting 示例
+    - 仍然优先 docs/contract 收口，不重开已绿的 runtime/CI 线
+
 - [completed] `landing quickstarts direct-path classification`
   当前 focused 目标：
   - 把最高入口文档里仍展示 direct `ISSLConnection` 的地方统一标回当前主路径 truth：

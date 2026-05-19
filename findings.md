@@ -6545,3 +6545,24 @@
      - root README 不再让 raw `CreateConnection` 代码块冒充 quickstart 主路径
      - `GETTING_STARTED` 已明确 direct `ISSLConnection` 只是低层入口
      - `QUICKSTART` 已明确 WinSSL session-resumption 示例的 direct-path 原因
+
+107. 再继续往 backend-specific quickstarts 深挖后，当前新的 residual 也已经确认：
+   - `MBEDTLS_USER_GUIDE` 和 `WINSSL_QUICKSTART`
+     原本并不是接口名错了，也不是 capability truth 漂了
+   - 真正缺的是：
+     - 为什么这些专项示例会直接下探 `CreateConnection(...)`
+     - 以及它们和通用 facade 主路径之间的关系
+   - 当前最小正确修法已经压实为：
+     - `MBEDTLS_USER_GUIDE`
+       明确简单 HTTPS 示例是 backend raw shipped surface 演示，
+       普通跨后端客户端仍优先 builder + connector + stream
+     - `WINSSL_QUICKSTART`
+       明确这页聚焦 Windows-native / WinSSL-specific path，
+       所以会直接展示 `ISSLConnection`
+   - 这批顺手也证明：
+     - `test_mbedtls_active_docs_capability_truth_contract.sh`
+     - `test_winssl_quickstart_status_phase_truth_contract.sh`
+     - `test_public_unit_import_guidance_truth_contract.sh`
+     在新增 direct-path 解释后仍保持绿色
+   - 现在新的稳定基线应记为：
+     - backend-specific quickstarts 也不会再把 direct path 误教成 generic main entry
