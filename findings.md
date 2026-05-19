@@ -2,6 +2,32 @@
 
 ## 2026-05-19
 
+- `tests/test_freepascal_tls13_early_data.pas`
+  这块最大的 ordinary runtime residual 证明了一个更稳的迁移策略：
+  - 对超大测试文件，最小正确修法不是到处散落 `Supports(...)` 局部变量
+  - 而是在 helper 区收一个统一入口：
+    - `RequireSessionResumption(...)`
+    - `AssertSessionReused(...)`
+  - 这样既能把 direct-core `GetSession` / `SetSession` / `IsSessionReused`
+    一次性迁走，也不会让文件继续长出一堆重复样板
+
+- 这批 focused RED -> GREEN 也再次证明：
+  - 红灯一开始确实来自 ordinary runtime file 里还活着的 direct-core session mirrors
+  - 真正迁完后，大测试重新编译运行仍然全绿
+  - 所以这次收掉的是 runtime owner-path truth 漂移，不是行为逻辑调整
+
+- session-resumption runtime residual 现在已经进一步压缩到更清晰的一层：
+  - `tests/contract/test_backend_contract.pas`
+    是 intentional compatibility mirror proof
+  - `tests/test_mbedtls_connection_session_reused_contract.pas`
+  - `tests/test_openssl_connection_session_reused_contract.pas`
+    更像 backend semantic truth proof，需要单独决定是否保留 direct-core
+  - `tests/winssl/test_session_save_logic.pas`
+    更像 mock/save helper residual
+  - 这意味着 ordinary runtime lane 基本已经收口，不应该再把
+    `tests/test_freepascal_tls13_early_data.pas`
+    反复拉起
+
 - session-resumption 这条线继续往下压后，又暴露了一个更值钱的事实：
   - 不只是 ordinary runtime tests 在直接走 core mirror
   - `src/fafafa.ssl.connection.builder.pas`

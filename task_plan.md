@@ -10,6 +10,41 @@
 
 ## Current Status
 
+- [completed] `ISSLSessionResumption` runtime owner-path migration wave 2
+  (`tests/test_freepascal_tls13_early_data.pas`) 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-isslsessionresumption-runtime-owner-path-migration-wave2-freepascal-tls13-early-data.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_isslsessionresumption_tls13_early_data_owner_path_contract.sh`
+  - 当前已收口的 ordinary runtime truth：
+    - `tests/test_freepascal_tls13_early_data.pas`
+      现在通过统一 helper：
+      - `RequireSessionResumption(...)`
+      - `AssertSessionReused(...)`
+      来访问 `ISSLSessionResumption` owner path
+    - 这份大文件里的 direct-core：
+      - `GetSession`
+      - `SetSession`
+      - `IsSessionReused`
+      已全部清掉
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_isslsessionresumption_tls13_early_data_owner_path_contract.sh`
+    - `bash tests/scripts/test_isslsessionresumption_tls13_early_data_owner_path_contract.sh`
+    - `fpc + run tests/test_freepascal_tls13_early_data.pas`
+    - `rg -lP "\\b(?:Conn|LConn|LConn1|LConn2|ResumedConn|InitialConn|LTLSStream\\.Connection)\\.(?:GetSession|SetSession|IsSessionReused)\\b" tests --glob '!tests/scripts/**' | sort`
+    - `git diff --check`
+  - 当前 residual snapshot 已进一步收窄为：
+    - `tests/contract/test_backend_contract.pas`
+    - `tests/test_mbedtls_connection_session_reused_contract.pas`
+    - `tests/test_openssl_connection_session_reused_contract.pas`
+    - `tests/winssl/test_session_save_logic.pas`
+  - 当前下一条真实剩余工作：
+    - 判断 `mbedtls/openssl` 这两份 contract
+      是否应继续作为 intentional direct-core semantic proof 保留
+    - 明确 `tests/winssl/test_session_save_logic.pas`
+      是否只是 mock/save helper residual
+    - `tests/contract/test_backend_contract.pas`
+      继续作为 compatibility mirror proof，不和 ordinary runtime lane 混淆
 - [completed] `ISSLSessionResumption` runtime owner-path migration wave 1 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-isslsessionresumption-runtime-owner-path-migration-wave1.md`
@@ -37,7 +72,7 @@
     - `fpc + run tests/test_openssl_wolfssl_early_data_connection_contract.pas`
     - `fpc + run tests/test_tls_connector_early_data_contract.pas`
     - `git diff --check`
-  - 当前 residual snapshot 已进一步收窄为：
+  - 当时的 residual snapshot 已进一步收窄为：
     - `tests/contract/test_backend_contract.pas`
     - `tests/test_freepascal_tls13_early_data.pas`
     - `tests/test_mbedtls_connection_session_reused_contract.pas`

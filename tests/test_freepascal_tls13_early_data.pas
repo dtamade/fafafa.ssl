@@ -51,6 +51,25 @@ begin
     Fail(Format('%s (expected=%d actual=%d)', [AMessage, AExpected, AActual]));
 end;
 
+function RequireSessionResumption(
+  const AConn: ISSLConnection;
+  const AMessage: string
+): ISSLSessionResumption;
+begin
+  AssertTrue(Supports(AConn, ISSLSessionResumption, Result), AMessage);
+end;
+
+procedure AssertSessionReused(const AConn: ISSLConnection; const AMessage: string);
+begin
+  AssertTrue(
+    RequireSessionResumption(
+      AConn,
+      AMessage + ' (connection should expose ISSLSessionResumption owner path)'
+    ).IsSessionReused,
+    AMessage
+  );
+end;
+
 const
   TEST_FILE_REPLAY_PROVIDER_VERSION = 1;
   TEST_INVALID_FILE_REPLAY_PROVIDER_VERSION = 99;
@@ -2128,7 +2147,7 @@ begin
       'Runtime crash-accept helper connection should expose early-data interface');
     AssertTrue(LConn.Accept,
       'Runtime crash-accept helper should accept resumed early-data before the simulated crash');
-    AssertTrue(LConn.IsSessionReused,
+    AssertSessionReused(LConn,
       'Runtime crash-accept helper should still reuse the serialized cached session');
     if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
       AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataAccepted,
@@ -2363,7 +2382,7 @@ begin
         'Runtime replay probe helper connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Runtime replay probe helper should still complete resumed handshake');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Runtime replay probe helper should still reuse the serialized cached session');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -2392,7 +2411,7 @@ begin
         'Runtime replay probe helper accepted connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Runtime replay probe helper should accept the first resumed attempt on a fresh child boundary');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Runtime replay probe helper should still reuse the serialized cached session on the fresh child boundary');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataAccepted,
@@ -2414,7 +2433,7 @@ begin
         'Runtime replay probe helper rejected connection should expose early-data interface after the child boundary is materialized');
       AssertTrue(LConn.Accept,
         'Runtime replay probe helper should still complete the second resumed handshake on the child boundary');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Runtime replay probe helper should still reuse the serialized cached session on the second attempt');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -2441,7 +2460,7 @@ begin
       'Runtime replay probe helper fresh connection should expose early-data interface');
     AssertTrue(LConn.Accept,
       'Runtime replay probe helper should still accept a fresh resumed early-data attempt after restart');
-    AssertTrue(LConn.IsSessionReused,
+    AssertSessionReused(LConn,
       'Runtime replay probe helper should still reuse the fresh session after restart');
     if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
       AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataAccepted,
@@ -2914,7 +2933,7 @@ begin
       ALabel + ' connection should expose early-data interface');
     AssertTrue(LConn.Accept,
       ALabel + ' should keep the resumed handshake running');
-    AssertTrue(LConn.IsSessionReused,
+    AssertSessionReused(LConn,
       ALabel + ' should reuse the cached session');
     if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
       AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataAccepted,
@@ -2948,7 +2967,7 @@ begin
       ALabel + ' connection should expose early-data interface');
     AssertTrue(LConn.Accept,
       ALabel + ' should keep the resumed handshake running');
-    AssertTrue(LConn.IsSessionReused,
+    AssertSessionReused(LConn,
       ALabel + ' should reuse the cached session');
     if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
       AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -2994,7 +3013,10 @@ begin
     LConn := LInitialCtx.CreateConnection(LInitialStream);
     (LConn as ISSLClientConnection).SetServerName('example.com');
     AssertTrue(LConn.Connect, 'Initial handshake should succeed for early-data capture');
-    LSession := LConn.GetSession;
+    LSession := RequireSessionResumption(
+      LConn,
+      'Initial handshake connection should expose session-resumption owner path'
+    ).GetSession;
     AssertTrue(LSession <> nil, 'Initial handshake should capture resumable session');
   finally
     LInitialStream.Free;
@@ -3013,7 +3035,10 @@ begin
     LConn := LResumedCtx.CreateConnection(LAcceptStream);
     AssertTrue(Supports(LConn, ISSLEarlyDataConnection, LEarlyConn),
       'Resumed client connection should expose early-data connection interface');
-    LConn.SetSession(LSession);
+    RequireSessionResumption(
+      LConn,
+      'Resumed client connection should expose session-resumption owner path'
+    ).SetSession(LSession);
     (LConn as ISSLClientConnection).SetServerName('example.com');
     if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
     begin
@@ -3039,7 +3064,10 @@ begin
     LConn := LResumedCtx.CreateConnection(LRejectStream);
     AssertTrue(Supports(LConn, ISSLEarlyDataConnection, LEarlyConn),
       'Rejected-path client connection should expose early-data connection interface');
-    LConn.SetSession(LSession);
+    RequireSessionResumption(
+      LConn,
+      'Rejected-path client connection should expose session-resumption owner path'
+    ).SetSession(LSession);
     (LConn as ISSLClientConnection).SetServerName('example.com');
     if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
     begin
@@ -3081,7 +3109,10 @@ begin
     LTLSStream := TSSLConnector.FromContext(LInitialCtx)
       .ConnectStream(LInitialStream, 'example.com');
     try
-      LSession := LTLSStream.Connection.GetSession;
+      LSession := RequireSessionResumption(
+        LTLSStream.Connection,
+        'Initial connector handshake connection should expose session-resumption owner path'
+      ).GetSession;
       AssertTrue(LSession <> nil, 'Initial connector handshake should capture resumable session');
     finally
       LTLSStream.Free;
@@ -3179,7 +3210,10 @@ begin
   LSession := BuildManualSession('zero-limit', 0);
   try
     LConn := LCtx.CreateConnection(LTransport);
-    LConn.SetSession(LSession);
+    RequireSessionResumption(
+      LConn,
+      'Enabled client connection should expose session-resumption owner path'
+    ).SetSession(LSession);
     AssertTrue(Supports(LConn, ISSLEarlyDataConnection, LEarlyConn),
       'Enabled client connection should expose early-data connection interface');
     if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
@@ -3253,7 +3287,7 @@ begin
     AssertTrue(Supports(LConn, ISSLEarlyDataConnection, LEarlyConn),
       'Replay-rejected server connection should expose early-data connection interface');
     AssertTrue(LConn.Accept, 'Replay-rejected early-data server handshake should still resume successfully');
-    AssertTrue(LConn.IsSessionReused,
+    AssertSessionReused(LConn,
       'Replay-rejected early-data attempt should still complete resumed handshake');
     if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
       AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -3331,7 +3365,7 @@ begin
     AssertTrue(Supports(LConn, ISSLEarlyDataConnection, LEarlyConn),
       'Issue-only resumed server connection should expose early-data interface');
     AssertTrue(LConn.Accept, 'Issue-only resumed handshake should still succeed');
-    AssertTrue(LConn.IsSessionReused,
+    AssertSessionReused(LConn,
       'Issue-only resumed handshake should still reuse the session');
     if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
       AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -3380,7 +3414,10 @@ begin
   LTransport := TMemoryStream.Create;
   try
     LConn := LClientCtx.CreateConnection(LTransport);
-    LConn.SetSession(LSession);
+    RequireSessionResumption(
+      LConn,
+      'Configured-limit client connection should expose session-resumption owner path'
+    ).SetSession(LSession);
     AssertTrue(Supports(LConn, ISSLEarlyDataConnection, LEarlyConn),
       'Configured-limit client connection should expose early-data interface');
     if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
@@ -3560,7 +3597,7 @@ begin
         'Default durable runtime restart accepted connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Default durable replay-store should accept the first resumed early-data attempt before restart');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Default durable runtime restart test should reuse the captured session before restart');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataAccepted,
@@ -3659,7 +3696,7 @@ begin
     AssertTrue(Supports(LConn, ISSLEarlyDataConnection, LEarlyConn),
       'Replaceable replay-ledger connection should expose early-data interface');
     AssertTrue(LConn.Accept, 'Custom replay-ledger rejected early-data server handshake should still succeed');
-    AssertTrue(LConn.IsSessionReused,
+    AssertSessionReused(LConn,
       'Custom replay-ledger rejected early-data attempt should still complete resumed handshake');
     if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
       AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -3804,7 +3841,7 @@ begin
         'Provider-backed replay-rejected connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Provider-backed replay rejection across contexts should still complete resumed handshake');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Provider-backed replay rejection across contexts should still reuse the session');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -4098,7 +4135,7 @@ begin
         'Store-backed helper rejected connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Store-backed helper replay rejection across contexts should still complete resumed handshake');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Store-backed helper replay rejection across contexts should still reuse the session');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -4175,7 +4212,7 @@ begin
       AssertTrue(not LRaised,
         ALabel + ' should keep resumed handshake running');
 
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         ALabel + ' should still reuse the cached session');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -5512,7 +5549,7 @@ begin
             'Runtime directory lock-contention rejected connection should expose early-data interface');
           AssertTrue(LConn.Accept,
             'Runtime directory lock-contention should still complete resumed handshake while failing closed');
-          AssertTrue(LConn.IsSessionReused,
+          AssertSessionReused(LConn,
             'Runtime directory lock-contention should still reuse the cached session');
           if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
             AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -5541,7 +5578,7 @@ begin
             'Runtime directory lock-contention fresh connection should expose early-data interface');
           AssertTrue(LConn.Accept,
             'Runtime directory lock-contention should still accept a fresh resumed early-data attempt after release');
-          AssertTrue(LConn.IsSessionReused,
+          AssertSessionReused(LConn,
             'Runtime directory lock-contention should still reuse the fresh session after release');
           if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
             AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataAccepted,
@@ -7274,7 +7311,7 @@ begin
         'File-backed replay-rejected connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'File-backed replay rejection across contexts should still complete resumed handshake');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'File-backed replay rejection across contexts should still reuse the session');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -8505,7 +8542,7 @@ begin
         'Installer-parent/builder-child accepted connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Installer-parent/builder-child runtime durability test should accept the first resumed early-data attempt before restart');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Installer-parent/builder-child runtime durability test should reuse the captured session before restart');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataAccepted,
@@ -8604,7 +8641,7 @@ begin
         'Installer-parent/factory-child accepted connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Installer-parent/factory-child runtime durability test should accept the first resumed early-data attempt before restart');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Installer-parent/factory-child runtime durability test should reuse the captured session before restart');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataAccepted,
@@ -8707,7 +8744,7 @@ begin
           'Tiny restart loop accepted connection should expose early-data interface');
         AssertTrue(LConn.Accept,
           'Tiny restart loop runtime test should accept the first resumed early-data attempt before restart in each round');
-        AssertTrue(LConn.IsSessionReused,
+        AssertSessionReused(LConn,
           'Tiny restart loop runtime test should reuse the captured session before restart in each round');
         if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
           AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataAccepted,
@@ -8918,7 +8955,7 @@ begin
           'Runtime lock-contention rejected connection should expose early-data interface');
         AssertTrue(LConn.Accept,
           'Runtime lock-contention should still complete resumed handshake while failing closed');
-        AssertTrue(LConn.IsSessionReused,
+        AssertSessionReused(LConn,
           'Runtime lock-contention should still reuse the cached session');
         if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
           AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -8947,7 +8984,7 @@ begin
           'Runtime lock-contention fresh connection should expose early-data interface');
         AssertTrue(LConn.Accept,
           'Runtime lock-contention should still accept a fresh resumed early-data attempt after release');
-        AssertTrue(LConn.IsSessionReused,
+        AssertSessionReused(LConn,
           'Runtime lock-contention should still reuse the fresh session after release');
         if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
           AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataAccepted,
@@ -9177,7 +9214,7 @@ begin
         'Installer-backed replay-rejected connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Installer-backed replay rejection across contexts should still complete resumed handshake');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Installer-backed replay rejection across contexts should still reuse the session');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -9297,7 +9334,7 @@ begin
         'Installer runtime parity disabled-gate connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Disabled installer-backed runtime path should still complete resumed handshake');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Disabled installer-backed runtime path should still reuse the session');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -9319,7 +9356,7 @@ begin
         'Installer runtime parity replay-rejected connection after re-enable should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Re-enabled installer-backed runtime path should still complete resumed handshake for replay rejection');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Re-enabled installer-backed runtime path should still reuse the replayed session');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -9344,7 +9381,7 @@ begin
         'Installer runtime parity zero-capacity connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Zero-capacity installer-backed runtime path should still complete resumed handshake');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Zero-capacity installer-backed runtime path should still reuse the session');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -9366,7 +9403,7 @@ begin
         'Installer runtime parity replay-rejected connection after capacity restore should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Restored installer-backed runtime path should still complete resumed handshake for replay rejection');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Restored installer-backed runtime path should still reuse the replayed session');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -9389,7 +9426,7 @@ begin
         'Installer runtime parity restored fresh connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Restored installer-backed runtime path should allow fresh resumed early-data again');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Restored installer-backed runtime path should still reuse the fresh resumed session');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataAccepted,
@@ -11141,7 +11178,7 @@ begin
         'Custom provider installer rejected connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Custom provider installer replay rejection across contexts should still complete resumed handshake');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Custom provider installer replay rejection across contexts should still reuse the session');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -11246,7 +11283,7 @@ begin
         'Callback helper rejected connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Callback helper replay rejection across contexts should still complete resumed handshake');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Callback helper replay rejection across contexts should still reuse the session');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -11359,7 +11396,7 @@ begin
         'Callback helper runtime parity disabled-gate connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Disabled callback helper runtime path should still complete resumed handshake');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Disabled callback helper runtime path should still reuse the session');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -11381,7 +11418,7 @@ begin
         'Callback helper runtime parity replay-rejected connection after re-enable should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Re-enabled callback helper runtime path should still complete resumed handshake for replay rejection');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Re-enabled callback helper runtime path should still reuse the replayed session');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -11406,7 +11443,7 @@ begin
         'Callback helper runtime parity zero-capacity connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Zero-capacity callback helper runtime path should still complete resumed handshake');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Zero-capacity callback helper runtime path should still reuse the session');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -11428,7 +11465,7 @@ begin
         'Callback helper runtime parity replay-rejected connection after capacity restore should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Restored callback helper runtime path should still complete resumed handshake for replay rejection');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Restored callback helper runtime path should still reuse the replayed session');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -11451,7 +11488,7 @@ begin
         'Callback helper runtime parity restored fresh connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Restored callback helper runtime path should allow fresh resumed early-data again');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Restored callback helper runtime path should still reuse the fresh resumed session');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataAccepted,
@@ -11524,7 +11561,7 @@ begin
       AssertTrue(not LRaised,
         'Exploding callback-backed replay provider should keep resumed handshake running');
 
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Exploding callback-backed replay provider should still reuse the cached session');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -11674,7 +11711,7 @@ begin
         'Mixed builder/factory rejected connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Factory-built mixed public-path replay rejection should still complete resumed handshake');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Factory-built mixed public-path replay rejection should still reuse the session');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -11753,7 +11790,7 @@ begin
         'Mixed factory/builder rejected connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Builder-built mixed public-path replay rejection should still complete resumed handshake');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Builder-built mixed public-path replay rejection should still reuse the session');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -11834,7 +11871,7 @@ begin
         'Factory-built directory rejected connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Factory-built directory replay rejection should still complete resumed handshake');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Factory-built directory replay rejection should still reuse the session');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -11915,7 +11952,7 @@ begin
         'Builder-built directory rejected connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Builder-built directory replay rejection should still complete resumed handshake');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Builder-built directory replay rejection should still reuse the session');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -12084,7 +12121,7 @@ begin
         'Builder replay-store rejected connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Builder-configured cross-context replay rejection should still complete resumed handshake');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Builder-configured cross-context replay rejection should still reuse the session');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
@@ -12154,7 +12191,7 @@ begin
         'Builder runtime durability accepted connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Builder-configured file-backed replay store should accept the first resumed early-data attempt before restart');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Builder runtime durability test should reuse the captured session before restart');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataAccepted,
@@ -12244,7 +12281,7 @@ begin
         'Factory one-shot runtime durability accepted connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Factory one-shot configured file-backed replay store should accept the first resumed early-data attempt before restart');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Factory one-shot runtime durability test should reuse the captured session before restart');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataAccepted,
@@ -12320,7 +12357,7 @@ begin
         'Mixed builder-parent/factory-child accepted connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Mixed builder-parent/factory-child runtime durability test should accept the first resumed early-data attempt before restart');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Mixed builder-parent/factory-child runtime durability test should reuse the captured session before restart');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataAccepted,
@@ -12400,7 +12437,7 @@ begin
         'Mixed factory-parent/builder-child accepted connection should expose early-data interface');
       AssertTrue(LConn.Accept,
         'Mixed factory-parent/builder-child runtime durability test should accept the first resumed early-data attempt before restart');
-      AssertTrue(LConn.IsSessionReused,
+      AssertSessionReused(LConn,
         'Mixed factory-parent/builder-child runtime durability test should reuse the captured session before restart');
       if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
         AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataAccepted,

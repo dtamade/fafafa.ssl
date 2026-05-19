@@ -2,6 +2,66 @@
 
 ## 2026-05-19
 
+### ISSLSessionResumption Runtime Owner-Path Migration Wave 2 (`test_freepascal_tls13_early_data`)
+
+- add `docs/plans/2026-05-19-isslsessionresumption-runtime-owner-path-migration-wave2-freepascal-tls13-early-data.md`
+  - change:
+    - define the bounded wave 2 batch for the largest remaining ordinary runtime
+      residual file
+
+- add `tests/scripts/test_isslsessionresumption_tls13_early_data_owner_path_contract.sh`
+  - change:
+    - lock that:
+      - `tests/test_freepascal_tls13_early_data.pas`
+        no longer uses direct core `GetSession` / `SetSession` / `IsSessionReused`
+      - the file now exposes focused owner-path helpers for session capture,
+        injection, and reuse assertions
+
+- `bash -n tests/scripts/test_isslsessionresumption_tls13_early_data_owner_path_contract.sh`
+  - result: PASS
+  - summary:
+    - the new wave 2 contract is syntactically valid
+
+- `bash tests/scripts/test_isslsessionresumption_tls13_early_data_owner_path_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first proved the target file still had direct-core session-resumption mirrors
+    - the first GREEN attempt then exposed that the contract was overfit to a
+      single-line helper signature
+    - GREEN after loosening the contract to semantic helper patterns proves the
+      file now prefers `ISSLSessionResumption` owner-path usage without depending
+      on one formatting style
+
+- update `tests/test_freepascal_tls13_early_data.pas`
+  - change:
+    - add `RequireSessionResumption(...)` and `AssertSessionReused(...)`
+      helper entrypoints near the file's existing assertion helpers
+    - migrate all direct-core session capture, injection, and reuse checks to
+      `ISSLSessionResumption`
+    - keep the file's runtime assertions behaviorally identical while removing
+      ordinary direct-core session mirror usage
+
+- `mkdir -p tmp/test_freepascal_tls13_early_data_owner_path && fpc -B -Fu./src -Fu./tests -FUtmp/test_freepascal_tls13_early_data_owner_path -FEtmp/test_freepascal_tls13_early_data_owner_path -otmp/test_freepascal_tls13_early_data_owner_path/test_freepascal_tls13_early_data tests/test_freepascal_tls13_early_data.pas && ./tmp/test_freepascal_tls13_early_data_owner_path/test_freepascal_tls13_early_data`
+  - result: PASS
+  - summary:
+    - the large FreePascal TLS 1.3 early-data runtime suite still compiles and runs green
+    - compiler output only surfaced the repo's existing warning baseline; this
+      batch did not introduce a new runtime or owner-path regression
+
+- `rg -lP "\\b(?:Conn|LConn|LConn1|LConn2|ResumedConn|InitialConn|LTLSStream\\.Connection)\\.(?:GetSession|SetSession|IsSessionReused)\\b" tests --glob '!tests/scripts/**' | sort`
+  - result: PASS
+  - summary:
+    - the remaining direct-core session residual set is now:
+      - `tests/contract/test_backend_contract.pas`
+      - `tests/test_mbedtls_connection_session_reused_contract.pas`
+      - `tests/test_openssl_connection_session_reused_contract.pas`
+      - `tests/winssl/test_session_save_logic.pas`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - wave 2 owner-path migration is whitespace-clean
+
 ### ISSLSessionResumption Runtime Owner-Path Migration Wave 1
 
 - add `docs/plans/2026-05-19-isslsessionresumption-runtime-owner-path-migration-wave1.md`
