@@ -14407,3 +14407,55 @@
   - change:
     - recorded this batch as a preference proof-gap closeout rather than a
       backend implementation fix
+
+### Auto-Backend OS-Native Preference Truth
+
+- add `docs/plans/2026-05-20-auto-backend-os-native-preference-truth-contract.md`
+  - change:
+    - define the bounded runtime-aware downstream contract batch for
+      `PreferOSNative` / auto-backend selection truth
+    - explicitly record that this batch uses a controlled mock runtime because
+      current Linux runtime has no live OS-native backend
+
+- add `tests/test_auto_backend_os_native_preference_truth_contract.pas`
+  - change:
+    - add a focused Pascal contract that registers controlled mock backends for:
+      - `sslOpenSSL` as `sslImplCLibrary`
+      - `sslWinSSL` as `sslImplOSNative`
+    - verify that:
+      - baseline ranks the non-OS-native backend first
+      - enabling `PreferOSNative` gives the expected score bonus to the
+        OS-native backend and lets it overtake
+      - `SelectBestBackend(...)` returns the top-ranked preferred candidate
+      - builder uses the same selected backend
+
+- `mkdir -p tmp/test_auto_backend_os_native_truth_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_auto_backend_os_native_truth_units -FEtmp/test_auto_backend_os_native_truth_units -otmp/test_auto_backend_os_native_truth_units/test_auto_backend_os_native_preference_truth_contract tests/test_auto_backend_os_native_preference_truth_contract.pas && ./tmp/test_auto_backend_os_native_truth_units/test_auto_backend_os_native_preference_truth_contract`
+  - result: PASS
+  - summary:
+    - focused contract compiled and ran green in the controlled mock-runtime lane
+    - current proof shows:
+      - baseline selects the non-OS-native mock backend
+      - enabling `PreferOSNative` gives the current fixed score bonus to the
+        OS-native mock backend and flips the top candidate
+      - `SelectBestBackend(...)` stays aligned with the first entry from
+        `SelectBestBackends(...)`
+      - `TSSLContextBuilder.WithAutoBackendSelection(...)` uses the same
+        OS-native backend selected by the selector
+    - the contract itself was also tightened once to remove two avoidable
+      managed-record initialization warnings before final closeout
+
+- update `tests/test_auto_backend_os_native_preference_truth_contract.pas`
+  - change:
+    - replace `FillChar(...)` on managed records with `Default(...)` so the new
+      contract does not add avoidable warning noise
+
+- update planning files:
+  - `task_plan.md`
+  - `findings.md`
+  - `progress.md`
+  - change:
+    - recorded this batch as a preference proof-gap closeout rather than a
+      backend implementation fix
+    - recorded that the selector / builder platform preference / requirement
+      proof cluster is now effectively closed out and the next lane should
+      return to broader interface-design / backend-completeness work

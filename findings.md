@@ -6939,3 +6939,45 @@
    - 同类下一条最直接的残口
      应该转向：
      - `PreferOSNative`
+
+121. `PreferOSNative` 这批又把一类很容易重复误判的情况收紧了：
+   - 当本机 runtime 缺少真实正例时，
+     最危险的做法不是“先不验证”，
+     也不是“只做 negative-only proof”，
+     而是误把“环境里没有 live backend”
+     当成“selection truth 已经被证明”
+   - 对 `PreferOSNative` 来说，
+     当前 Linux 环境正好就是这种情况：
+     - `WinSSL` 不可用
+     - 真实可用 backend 里没有 live `sslImplOSNative`
+   - 这意味着更稳的 proof 方式
+     不能再依赖 live runtime 自己给出正例，
+     而要切到 controlled mock runtime：
+     - baseline 时让 non-OS-native backend 略微领先
+     - 开启 `PreferOSNative` 后，
+       让 OS-native backend 按当前公式获得固定加分并反超
+   - 这样验证到的就不再是
+     “某个平台刚好怎么选”，
+     而是 selector / builder
+     是否真实消费
+     `BackendImplType = sslImplOSNative`
+     这条 published truth
+   - 当前更 durable 的结论是：
+     - `PreferOSNative` 的 downstream proof gap
+       已经闭环
+     - “Linux 上没有真实 OS-native backend”
+       不再是后续重复拉起这条线的理由
+   - 到这里为止，
+     selector / builder 这组 platform preference / requirement
+     focused proof 已经形成一条更完整的基线：
+     - `RequirePKCS11Support`
+     - `RequireTPM`
+     - `RequireSystemCertStore`
+     - `PreferHardwareAccel`
+     - `PreferOSNative`
+   - 所以下一步不该继续在这组 proof 上来回打转，
+     而应切回更大的 public-surface / backend completeness 主线，
+     优先处理：
+     - `ISSLServerConnection` 文档/源码不一致
+     - `ISSLConnection` 核心接口过宽
+     - `TSSLConfig` 跨层职责混杂

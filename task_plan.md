@@ -10,6 +10,71 @@
 
 ## Current Status
 
+- [completed] `auto-backend os-native preference truth`
+  当前 focused 目标：
+  - 给 `PreferOSNative` / auto-backend selection
+    补一条 runtime-aware focused contract，
+    证明 `BackendImplType = sslImplOSNative`
+    会真实进入 selector 的 score / 排序，
+    并且 builder 下游沿用同一个 selection truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-auto-backend-os-native-preference-truth-contract.md`
+  - 新增 focused contract：
+    - `tests/test_auto_backend_os_native_preference_truth_contract.pas`
+  当前预判：
+  - 当前 Linux runtime 没有真实可用的 OS-native backend，
+    所以这批最值钱的不是做半截 negative-only proof，
+    而是用 controlled mock runtime
+    把 selector / builder 对 `sslImplOSNative`
+    的消费链完整钉住
+  当前最终收口证据：
+  - focused contract 使用两组 requirements 对照：
+    - baseline：
+      `CreateDefaultRequirements(optBalanced)` + 三项最低分数门槛清零
+    - preferred：
+      baseline +
+      `PlatformPreferences.PreferOSNative := True`
+  - 合同通过 mock `sslOpenSSL` / `sslWinSSL`
+    构造 controlled runtime，
+    证明：
+    - baseline 时 `sslImplCLibrary` backend 领先
+    - 开启 `PreferOSNative` 后
+      `sslImplOSNative` backend
+      按当前公式获得固定加分并反超
+    - `SelectBestBackend(...)`
+      返回 `SelectBestBackends(...)`
+      preferred 排序后的第一名
+    - `TSSLContextBuilder.Create.WithAutoBackendSelection(...).TryBuildClient(...)`
+      成功，并沿用 selector 选中的 OS-native backend
+  focused verification 已通过：
+  - `mkdir -p tmp/test_auto_backend_os_native_truth_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_auto_backend_os_native_truth_units -FEtmp/test_auto_backend_os_native_truth_units -otmp/test_auto_backend_os_native_truth_units/test_auto_backend_os_native_preference_truth_contract tests/test_auto_backend_os_native_preference_truth_contract.pas && ./tmp/test_auto_backend_os_native_truth_units/test_auto_backend_os_native_preference_truth_contract`
+  当前结论：
+  - 当前 selector / builder
+    已经真实消费
+    `BackendImplType = sslImplOSNative`
+    这条 published truth
+  - 这批收掉的是 preference downstream proof gap，
+    不是新的 backend implementation bug
+  当前总路线图进度：
+  - selector / builder focused downstream proof
+    已完成：
+    - `RequirePKCS11Support`
+    - `RequireTPM`
+    - `RequireSystemCertStore`
+    - `PreferHardwareAccel`
+    - `PreferOSNative`
+  - 这一组“platform preference / requirement 的 downstream proof”
+    现在已经基本闭环
+  当前下一条真实工作：
+  - 切回更大的接口设计 / backend completeness 主线，
+    继续沿
+    `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+    处理更高价值的 public-surface 结构债
+  - 优先再看：
+    - `ISSLServerConnection` 文档/源码不一致
+    - `ISSLConnection` 核心接口过宽
+    - `TSSLConfig` 跨层职责混杂
 - [completed] `auto-backend hardware-accel preference truth`
   当前 focused 目标：
   - 给 `PreferHardwareAccel` / auto-backend selection
