@@ -133,6 +133,8 @@ begin
 end;
 ```
 
+如果你已经在 `TSSLConnectionBuilder` / `TSSLConnector` / `TSSLAcceptor` 上配置了 timeout/blocking，这里的 `Conn.SetTimeout` / `Conn.SetBlocking` 更适合作为 direct-connection 场景下的局部 override。
+
 ### Client（非阻塞握手驱动）
 
 这段结构用于 event loop 集成。`WaitSocketReadable/WaitSocketWritable` 是伪代码，你需要用自己的 poll/epoll/kqueue/IOCP 去实现。
@@ -176,7 +178,7 @@ end;
 要点：
 
 - `WantRead/WantWrite` 描述 TLS 层“希望底层传输满足的就绪条件”。
-- 超时与取消最好由你的框架统一管理。`Conn.SetTimeout` 是连接级配置，但上层仍然应该负责 timer/cancel。
+- 超时与取消最好由你的框架统一管理。`Conn.SetTimeout` 是连接级配置，但上层仍然应该负责 timer/cancel；如果你走的是 connector / acceptor facade，新代码优先在构建阶段使用 `.WithTimeout(...)`。
 
 ### 非阻塞读写的常见处理方式
 

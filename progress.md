@@ -13607,3 +13607,70 @@
     - windows Wave B gate passed
     - broader WinSSL runtime suite passed
     - workflow still failed only because macOS gate failed independently
+
+### Active Guide Convenience Surface Classification
+
+- add `docs/plans/2026-05-20-active-guide-convenience-surface-classification.md`
+  - change:
+    - define the bounded active-guide truth batch for `ISSLConnection` convenience/helper classification drift
+
+- add `tests/scripts/test_active_guide_convenience_surface_classification_contract.sh`
+  - change:
+    - lock that active guides must classify:
+      - direct `Conn.SetTimeout` / `Conn.SetBlocking` as local override guidance
+      - `ReadString` / `WriteString` as shipped convenience text helpers rather than the preferred main path
+
+- `bash -n tests/scripts/test_active_guide_convenience_surface_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - new active-guide convenience-surface contract syntax is valid
+
+- `bash tests/scripts/test_active_guide_convenience_surface_classification_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `INTEGRATION_GUIDE` still showed `Conn.SetTimeout` / `Conn.SetBlocking` without explicit direct-override classification
+      - `MIGRATION_GUIDE` still showed direct `WriteString` usage without saying it is a convenience helper rather than the preferred transport/framework path
+      - `USER_GUIDE` still showed `ReadString` / `WriteString` text examples without explaining they are convenience-core helpers
+    - GREEN after fix:
+      - `INTEGRATION_GUIDE` now spells out builder-first / connector-first timeout guidance
+      - `MIGRATION_GUIDE` now labels direct `ISSLConnection` text I/O as shipped convenience surface
+      - `USER_GUIDE` now labels client/server text I/O examples as convenience-helper demos
+
+- update `docs/INTEGRATION_GUIDE.md`
+  - change:
+    - add explicit note that `Conn.SetTimeout` / `Conn.SetBlocking` in direct-connection snippets are local overrides when higher-level builder/connector/acceptor configuration is already in use
+    - keep timeout guidance builder-first for connector / acceptor facade users
+
+- update `docs/guides/MIGRATION_GUIDE.md`
+  - change:
+    - classify direct `ISSLConnection` text example as current shipped convenience surface
+    - restore the current `if LConn.ReadString(LResponse) then` example so the guide no longer drifts from the shipped `ReadString(out ...)` signature truth
+
+- update `docs/guides/USER_GUIDE.md`
+  - change:
+    - explain that client/server `ReadString` / `WriteString` examples are kept for simple text roundtrips only
+    - point framework / event-loop / framed-protocol integrations back to `Read` / `Write` or `TSSLStream`
+
+- `bash tests/scripts/test_readstring_active_example_signature_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `MIGRATION_GUIDE` no longer demonstrated the current `ReadString(out ...)` pattern even though the older contract still required it
+    - GREEN after fix:
+      - migration guide now shows both `WriteString(...)` and `if LConn.ReadString(LResponse) then ...`
+
+- `bash tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - active-guide wording changes did not drift the already-closed source/API/design classification truth
+
+- `bash tests/scripts/test_migration_guide_active_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - migration guide remains aligned with the current active facade/connector route after the convenience-surface wording fix
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current active-guide convenience-surface batch has no whitespace or patch-format issues

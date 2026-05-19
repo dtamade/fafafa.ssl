@@ -6486,3 +6486,39 @@
   - `Run broader WinSSL runtime suite` = PASS
   - 说明我们已经把 Windows 主线从“被 investigatory native probe 拖红”收回到了“主线可绿、evidence 仍保留”的状态
   - 当前 cross-platform workflow 仍整体为 FAIL，只是因为 macOS lane 还独立失败，不再是 WinSSL native probe 主线阻塞
+
+105. `ISSLConnection` convenience-surface 这条线目前新的真实残口不在 source / API reference，而在 active guides 的“推荐路径表达”：
+   - 已复核：
+     - `docs/guides/GETTING_STARTED.md`
+       当前已经正确把主路径放在
+       `TSSLContextBuilder` + `TSSLConnector` + `TSSLStream`
+     - 漂移主要集中在：
+       - `docs/INTEGRATION_GUIDE.md`
+       - `docs/guides/MIGRATION_GUIDE.md`
+       - `docs/guides/USER_GUIDE.md`
+   - 问题本质不是 helper 不该存在，而是这些高可见 guide 仍直接展示：
+     - `Conn.SetTimeout(...)`
+     - `Conn.SetBlocking(...)`
+     - `ReadString(...)`
+     - `WriteString(...)`
+     却缺少“这是 convenience / override，不是首选主路径”的显式说明
+   - 最小正确修法已经压实为：
+     - `INTEGRATION_GUIDE`
+       明确 timeout/blocking 在 direct `ISSLConnection` 场景下只是 local override；
+       如果走 `TSSLConnectionBuilder` / `TSSLConnector` / `TSSLAcceptor`，
+       新代码仍应 builder-first / connector-first
+     - `MIGRATION_GUIDE`
+       明确 direct `ISSLConnection` 控制方式仍 shipped，
+       但框架/transport 集成优先 `TSSLStream` 或 `Read` / `Write`
+     - `USER_GUIDE`
+       明确 `ReadString` / `WriteString` 只是快速文本往返示例，
+       更复杂协议集成优先 `Read` / `Write` 或 `TSSLStream`
+   - 这批 focused 验证时还顺手暴露了一个真实旧残口：
+     - `test_readstring_active_example_signature_truth_contract.sh`
+       一开始在 `MIGRATION_GUIDE` 上报红
+     - 原因不是新说明文本，而是 migration guide 当前只展示了 `WriteString`，
+       却没有把现行 `if LConn.ReadString(LResponse) then ...` 一起示例出来
+   - 现在新的稳定基线应记为：
+     - active guides 不再把 still-shipped convenience surface 误教成推荐主路径
+     - `MIGRATION_GUIDE` 重新展示当前 `ReadString(out ...)` truth
+     - `GETTING_STARTED` 已确认无需重复治理

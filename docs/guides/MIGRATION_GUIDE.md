@@ -92,15 +92,22 @@ end;
 var
   LConn: ISSLConnection;
   LClientConn: ISSLClientConnection;
+  LResponse: string;
 begin
   LConn := LContext.CreateConnection(THandle(LSocket));
   if Supports(LConn, ISSLClientConnection, LClientConn) then
     LClientConn.SetServerName('example.com');
 
   if LConn.Connect then
+  begin
     LConn.WriteString('GET / HTTP/1.1'#13#10'Host: example.com'#13#10#13#10);
+    if LConn.ReadString(LResponse) then
+      WriteLn(LResponse);
+  end;
 end;
 ```
+
+这段 direct `ISSLConnection` 写法仍是当前 shipped surface；如果你只是做框架/transport 集成，优先走 `TSSLStream` 或 `Read` / `Write`，`WriteString` 继续作为 `v1.x` convenience-core 文本 helper 保留。
 
 ## 从 Indy 迁移
 

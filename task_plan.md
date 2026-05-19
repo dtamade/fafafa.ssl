@@ -10,6 +10,59 @@
 
 ## Current Status
 
+- [completed] `active guide convenience-surface classification`
+  当前 focused 目标：
+  - 把 active guides 中仍然直接使用的 `ISSLConnection` convenience surface
+    重新标回当前 shipped truth：
+    - `ReadString` / `WriteString` = `v1.x` 文本 convenience helper
+    - `SetTimeout` / `SetBlocking` = builder-first / connector-first，
+      连接侧调用只作为 direct-connection convenience override
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-active-guide-convenience-surface-classification.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_active_guide_convenience_surface_classification_contract.sh`
+  - 同步更新：
+    - `docs/INTEGRATION_GUIDE.md`
+    - `docs/guides/MIGRATION_GUIDE.md`
+    - `docs/guides/USER_GUIDE.md`
+  当前最终收口证据：
+  - `INTEGRATION_GUIDE` 现在明确：
+    - `Conn.SetTimeout` / `Conn.SetBlocking` 在 direct `ISSLConnection` 示例里只是
+      local override
+    - 若走 `TSSLConnectionBuilder` / `TSSLConnector` / `TSSLAcceptor`，
+      timeout/blocking 仍优先在构建阶段配置
+  - `MIGRATION_GUIDE` 现在明确：
+    - direct `ISSLConnection` 控制方式仍是 shipped surface
+    - 框架/transport 集成优先 `TSSLStream` 或 `Read` / `Write`
+    - `WriteString` 只是 `v1.x` convenience-core 文本 helper
+  - `MIGRATION_GUIDE` 还顺手补回了当前 `ReadString(out ...)` 用法示例，
+    不再只展示单向 `WriteString`
+  - `USER_GUIDE` 现在明确：
+    - client/server 文本往返示例里保留 `ReadString` / `WriteString`
+      只是为了快速演示
+    - 更复杂的框架 / event-loop / framed-protocol 集成应优先
+      `Read` / `Write` 或 `TSSLStream`
+  - `GETTING_STARTED` 已复核，当前仍然正确地把主路径放在
+    builder + connector + stream 上，因此这批无需改动
+  focused verification 已通过：
+  - `bash -n tests/scripts/test_active_guide_convenience_surface_classification_contract.sh`
+  - `bash tests/scripts/test_active_guide_convenience_surface_classification_contract.sh`
+  - `bash tests/scripts/test_readstring_active_example_signature_truth_contract.sh`
+  - `bash tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+  - `bash tests/scripts/test_migration_guide_active_truth_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - 这批暴露的不是接口实现缺口，而是活跃指南层仍可能把
+    still-shipped convenience helper 误读成推荐主路径。
+  - 现在 active guides / canonical docs / source comments 对这组 surface
+    已经重新说成一张图。
+  当前下一条真实工作：
+  - 继续从“高可见 active guides + shipped source + backend capability truth”
+    交叉审还有没有类似 residual：
+    - 例如其它 direct `ISSLConnection` / backend-specific helper 示例
+      是否仍缺少 `推荐入口` 与 `兼容/便捷入口` 的明确分层
+
 - [completed] `helper surface classification truth`
   当前 focused 目标：
   - 把 shipped helper surfaces 的权威分级说明收回到同一张图
