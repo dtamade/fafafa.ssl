@@ -2,6 +2,83 @@
 
 ## 2026-05-19
 
+### Optional Interface Capability Alignment
+
+- add `docs/plans/2026-05-19-optional-interface-capability-alignment.md`
+  - change:
+    - define the bounded source-level batch for capability/public-interface alignment
+
+- add `tests/scripts/test_optional_interface_capability_alignment_contract.sh`
+  - change:
+    - lock the optional-interface public-surface rules for:
+      - OpenSSL early-data context / connection
+      - OpenSSL server OCSP stapling context
+      - WolfSSL server OCSP stapling context
+
+- `bash -n tests/scripts/test_optional_interface_capability_alignment_contract.sh`
+  - result: PASS
+  - summary:
+    - new optional-interface capability-alignment contract syntax is valid
+
+- `bash tests/scripts/test_optional_interface_capability_alignment_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - OpenSSL/WolfSSL source still lacked a capability-gated optional-interface boundary
+    - intermediate compile finding:
+      - the first attempt to use `override GetInterface(...)` was rejected by FPC
+      - this forced the implementation to pivot to capability-gated subclass selection instead of interface-dispatch interception
+    - GREEN after fix:
+      - OpenSSL / WolfSSL optional interface exposure now follows capability-gated subclass truth
+
+- update `src/fafafa.ssl.openssl.context.pas`
+  - change:
+    - remove unconditional `ISSLEarlyDataContext` / `ISSLServerOCSPStaplingContext` exposure from the base context class
+    - add:
+      - `TOpenSSLEarlyDataContext`
+      - `TOpenSSLServerOCSPContext`
+      - `TOpenSSLAdvancedContext`
+    - gate `CreateConnection(...)` so early-data-capable contexts produce `TOpenSSLEarlyDataConnection`
+
+- update `src/fafafa.ssl.openssl.connection.pas`
+  - change:
+    - remove unconditional `ISSLEarlyDataConnection` exposure from the base connection class
+    - add `TOpenSSLEarlyDataConnection` subclass
+
+- update `src/fafafa.ssl.openssl.backed.pas`
+  - change:
+    - gate `CreateContext(...)` by current capability truth so it selects:
+      - base context
+      - early-data context
+      - server-OCSP context
+      - combined advanced context
+
+- update `src/fafafa.ssl.wolfssl.context.pas`
+  - change:
+    - remove unconditional `ISSLServerOCSPStaplingContext` exposure from the base context class
+    - add:
+      - `TWolfSSLOCSPStaplingContext`
+      - `TWolfSSLAdvancedContext`
+
+- update `src/fafafa.ssl.wolfssl.lib.pas`
+  - change:
+    - gate `CreateContext(...)` by current capability truth so it selects:
+      - base context
+      - early-data context
+      - server-OCSP context
+      - combined advanced context
+
+- `python3 scripts/compile_all_modules.py`
+  - result: FAIL -> PASS
+  - summary:
+    - first full compile exposed that `GetInterface` is not a viable override seam in this FPC setup
+    - after pivoting to capability-gated subclasses, full compile returned to `187/187 PASS`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current optional-interface capability-alignment batch has no whitespace or patch-format issues
+
 ### Active Release / Platform Truth Sweep
 
 - add `docs/plans/2026-05-19-active-release-platform-truth-sweep.md`

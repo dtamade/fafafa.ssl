@@ -2,6 +2,56 @@
 
 ## 2026-05-19
 
+- 继续做 backend interface/completeness 静态审查时，挖出了一条比 capability wording 更深的结构性问题：
+  - `tests/contract/test_backend_contract.pas` 的公共心智已经明确要求：
+    - `EarlyDataSupport = none` 时，不应暴露 `ISSLEarlyDataContext / ISSLEarlyDataConnection`
+    - `OCSPStaplingSupport = none` 时，不应暴露 `ISSLServerOCSPStaplingContext`
+  - 但源码层面并不完全满足：
+    - OpenSSL base context 之前无条件实现 `ISSLEarlyDataContext` 与 `ISSLServerOCSPStaplingContext`
+    - OpenSSL base connection 之前无条件实现 `ISSLEarlyDataConnection`
+    - WolfSSL base context 之前无条件实现 `ISSLServerOCSPStaplingContext`
+
+- 这类问题的风险比普通 capability 字段漂移更高：
+  - builder / factory / helper / caller 会把 `Supports(...)` 当作 public truth
+  - 一旦 capability 是 `none`，但 interface 仍暴露，就会出现：
+    - source contract 说“不应该有”
+    - 调用方却还能拿到接口
+  - 这会直接污染接口设计完整性的判断，而不只是文案偏差
+
+- 这一轮还顺手确认了一个 FPC 层面的实现约束，必须记录下来避免下次重复踩坑：
+  - `GetInterface` 不是当前这里可 override 的收口点
+  - 试图在这些类上直接 `override GetInterface(...)` 会被编译器打回
+  - 因而在这个仓库里，针对 optional interface 的稳定收口方案应优先使用：
+    - capability-gated subclass
+    - `CreateContext` / `CreateConnection` 选择不同具体类
+  - 而不是继续尝试靠 `GetInterface`/分发层拦截
+
+- 最小正确修法因此变得很清楚：
+  - 不改 runtime capability 实现本身
+  - 不重写现有 early-data / OCSP 方法体
+  - 只把 base class 与 optional interface 解耦
+  - 然后用 capability-gated subclass 重新把 public surface 接回去
+
+- 当前收口后的新基线应明确保留：
+  - OpenSSL：
+    - `TOpenSSLContext` 只保留 core context / native-handle / HTTP hooks
+    - `TOpenSSLEarlyDataContext`
+    - `TOpenSSLServerOCSPContext`
+    - `TOpenSSLAdvancedContext`
+      负责按 capability 组合暴露 optional interface
+    - `TOpenSSLEarlyDataConnection`
+      只在 parent context 仍暴露 `ISSLEarlyDataContext` 时才创建
+  - WolfSSL：
+    - `TWolfSSLContext` 不再无条件实现 server OCSP stapling interface
+    - `TWolfSSLOCSPStaplingContext`
+    - `TWolfSSLEarlyDataContext`
+    - `TWolfSSLAdvancedContext`
+      负责按 capability 组合暴露 optional interface
+
+- 这意味着后续如果再做 interface/completeness 审查，一个很重要的原则已经被正式钉住：
+  - `GetCapabilities`、`Supports(...)`、`CreateContext/CreateConnection` 的具体类选择，必须是同一套 truth
+  - 不能允许 capability 与 public optional interface 再各说各话
+
 - 再次核对当前权威源后，上一轮候选清单里有一部分已经过时：
   - `docs/test_reports/RELEASE_READINESS_V1.5.0.md` 已明确说明：
     - `v1.5.0` 已发布

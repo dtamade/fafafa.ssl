@@ -45,7 +45,7 @@ uses
 
 type
   TOpenSSLConnection = class(TBaseSSLConnection, ISSLClientConnection,
-    ISSLEarlyDataConnection, ISSLOCSPStapling, ISSLNativeHandleAccess)
+    ISSLOCSPStapling, ISSLNativeHandleAccess)
   private
     FSocket: THandle;
     FStream: TStream;
@@ -137,6 +137,10 @@ type
 
     { 覆盖 GetStateString }
     function GetStateString: string; override;
+  end;
+
+  { 仅在 parent context 暴露 early-data capability 时才暴露该接口 }
+  TOpenSSLEarlyDataConnection = class(TOpenSSLConnection, ISSLEarlyDataConnection)
   end;
 
 implementation

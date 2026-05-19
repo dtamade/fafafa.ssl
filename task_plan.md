@@ -10,6 +10,35 @@
 
 ## Current Status
 
+- [completed] Optional interface capability alignment 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-optional-interface-capability-alignment.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_optional_interface_capability_alignment_contract.sh`
+  - 当前已修正的实现边界：
+    - `src/fafafa.ssl.openssl.context.pas`
+    - `src/fafafa.ssl.openssl.connection.pas`
+    - `src/fafafa.ssl.openssl.backed.pas`
+    - `src/fafafa.ssl.wolfssl.context.pas`
+    - `src/fafafa.ssl.wolfssl.lib.pas`
+  - 当前已收掉的真问题：
+    - OpenSSL base context 不再无条件实现：
+      - `ISSLEarlyDataContext`
+      - `ISSLServerOCSPStaplingContext`
+    - OpenSSL base connection 不再无条件实现：
+      - `ISSLEarlyDataConnection`
+    - WolfSSL base context 不再无条件实现：
+      - `ISSLServerOCSPStaplingContext`
+    - OpenSSL / WolfSSL 当前都改成 capability-gated subclass 暴露 optional interface
+    - `CreateContext` / `CreateConnection` 路径现在与 `GetCapabilities` 的 optional surface truth 对齐
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_optional_interface_capability_alignment_contract.sh`
+    - `bash tests/scripts/test_optional_interface_capability_alignment_contract.sh`
+    - `python3 scripts/compile_all_modules.py`: `187/187 PASS`
+    - `git diff --check`: PASS
+  - 当前结论：
+    - 这批修掉的是接口设计层的结构性漂移，而不是单个文案或单个 capability 字段
+    - builder / factory / source contract 对 optional interface 的公共心智现在重新一致
 - [completed] Active release / platform truth sweep 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-active-release-platform-truth-sweep.md`

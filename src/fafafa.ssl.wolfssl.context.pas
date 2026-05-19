@@ -37,8 +37,7 @@ type
   TWolfSSLCertPinArray = array of TWolfSSLCertPin;
 
   { TWolfSSLContext - WolfSSL 上下文类 }
-  TWolfSSLContext = class(TInterfacedObject, ISSLContext, ISSLNativeHandleAccess,
-    ISSLServerOCSPStaplingContext)
+  TWolfSSLContext = class(TInterfacedObject, ISSLContext, ISSLNativeHandleAccess)
   private
     FLibrary: ISSLLibrary;
     FContextType: TSSLContextType;
@@ -189,8 +188,17 @@ type
     procedure ConfigureSecureDefaults;
   end;
 
+  { 仅在 server OCSP stapling capability 可用时暴露该接口 }
+  TWolfSSLOCSPStaplingContext = class(TWolfSSLContext, ISSLServerOCSPStaplingContext)
+  end;
+
   { 仅在运行时 early-data capability 可用时才暴露该接口 }
   TWolfSSLEarlyDataContext = class(TWolfSSLContext, ISSLEarlyDataContext)
+  end;
+
+  { 同时暴露 early-data 与 server OCSP stapling 两类可选接口 }
+  TWolfSSLAdvancedContext = class(TWolfSSLContext,
+    ISSLEarlyDataContext, ISSLServerOCSPStaplingContext)
   end;
 
 implementation

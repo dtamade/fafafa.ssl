@@ -1305,6 +1305,8 @@ end;
 function TOpenSSLLibrary.CreateContext(AType: TSSLContextType): ISSLContext;
 var
   LConfig: TSSLConfig;
+  LExposeEarlyData: Boolean;
+  LExposeServerOCSP: Boolean;
 begin
   // Rust-quality: Explicit error handling instead of returning nil
   if not FInitialized then
@@ -1337,8 +1339,19 @@ begin
     'TOpenSSLLibrary.CreateContext'
   );
 
+  LExposeEarlyData := GetCapabilities.EarlyDataSupport <> sslSupportNone;
+  LExposeServerOCSP := (AType in [sslCtxServer, sslCtxBoth]) and
+    (GetCapabilities.OCSPStaplingSupport <> sslSupportNone);
+
   // Let exceptions propagate - caller must handle errors explicitly
-  Result := TOpenSSLContext.Create(Self, AType);
+  if LExposeEarlyData and LExposeServerOCSP then
+    Result := TOpenSSLAdvancedContext.Create(Self, AType)
+  else if LExposeEarlyData then
+    Result := TOpenSSLEarlyDataContext.Create(Self, AType)
+  else if LExposeServerOCSP then
+    Result := TOpenSSLServerOCSPContext.Create(Self, AType)
+  else
+    Result := TOpenSSLContext.Create(Self, AType);
 
   // Apply default config (already normalized in constructor/SetDefaultConfig)
   if Result <> nil then

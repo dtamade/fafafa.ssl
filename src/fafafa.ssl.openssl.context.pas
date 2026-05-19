@@ -43,7 +43,7 @@ uses
 type
   { TOpenSSLContext - OpenSSL 上下文类 }
   TOpenSSLContext = class(TInterfacedObject, ISSLContext, ISSLNativeHandleAccess,
-    ISSLHttpHooksAccess, ISSLEarlyDataContext, ISSLServerOCSPStaplingContext)
+    ISSLHttpHooksAccess)
   private
     FLibrary: ISSLLibrary;
     FContextType: TSSLContextType;
@@ -201,6 +201,19 @@ type
 
     { 便利方法 - 一键配置安全默认值 }
     procedure ConfigureSecureDefaults;
+  end;
+
+  { 仅在 runtime early-data capability 可用时暴露该接口 }
+  TOpenSSLEarlyDataContext = class(TOpenSSLContext, ISSLEarlyDataContext)
+  end;
+
+  { 仅在 runtime server-OCSP capability 可用时暴露该接口 }
+  TOpenSSLServerOCSPContext = class(TOpenSSLContext, ISSLServerOCSPStaplingContext)
+  end;
+
+  { 同时暴露 early-data 与 server-OCSP 两类可选接口 }
+  TOpenSSLAdvancedContext = class(TOpenSSLContext,
+    ISSLEarlyDataContext, ISSLServerOCSPStaplingContext)
   end;
 
 implementation
@@ -2262,11 +2275,16 @@ end;
 // ============================================================================
 
 function TOpenSSLContext.CreateConnection(ASocket: THandle): ISSLConnection;
+var
+  LEarlyDataContext: ISSLEarlyDataContext;
 begin
   RequireValidContext('TOpenSSLContext.CreateConnection');
 
   try
-    Result := TOpenSSLConnection.Create(Self, ASocket);
+    if Supports(Self, ISSLEarlyDataContext, LEarlyDataContext) then
+      Result := TOpenSSLEarlyDataConnection.Create(Self, ASocket)
+    else
+      Result := TOpenSSLConnection.Create(Self, ASocket);
   except
     on E: ESSLException do
       raise;  // Re-raise SSL exceptions as-is
@@ -2280,6 +2298,8 @@ begin
 end;
 
 function TOpenSSLContext.CreateConnection(AStream: TStream): ISSLConnection;
+var
+  LEarlyDataContext: ISSLEarlyDataContext;
 begin
   RequireValidContext('TOpenSSLContext.CreateConnection');
 
@@ -2290,7 +2310,10 @@ begin
     );
 
   try
-    Result := TOpenSSLConnection.Create(Self, AStream);
+    if Supports(Self, ISSLEarlyDataContext, LEarlyDataContext) then
+      Result := TOpenSSLEarlyDataConnection.Create(Self, AStream)
+    else
+      Result := TOpenSSLConnection.Create(Self, AStream);
   except
     on E: ESSLException do
       raise;  // Re-raise SSL exceptions as-is

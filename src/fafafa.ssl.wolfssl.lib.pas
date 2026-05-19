@@ -584,6 +584,8 @@ end;
 function TWolfSSLLibrary.CreateContext(AType: TSSLContextType): ISSLContext;
 var
   LConfig: TSSLConfig;
+  LExposeEarlyData: Boolean;
+  LExposeServerOCSP: Boolean;
 begin
   // P0 后端语义统一：与 OpenSSL/WinSSL 后端保持一致的失败语义
   if not FInitialized then
@@ -613,8 +615,16 @@ begin
     'TWolfSSLLibrary.CreateContext'
   );
 
-  if GetCapabilities.EarlyDataSupport <> sslSupportNone then
+  LExposeEarlyData := GetCapabilities.EarlyDataSupport <> sslSupportNone;
+  LExposeServerOCSP := (AType in [sslCtxServer, sslCtxBoth]) and
+    (GetCapabilities.OCSPStaplingSupport <> sslSupportNone);
+
+  if LExposeEarlyData and LExposeServerOCSP then
+    Result := TWolfSSLAdvancedContext.Create(Self, AType)
+  else if LExposeEarlyData then
     Result := TWolfSSLEarlyDataContext.Create(Self, AType)
+  else if LExposeServerOCSP then
+    Result := TWolfSSLOCSPStaplingContext.Create(Self, AType)
   else
     Result := TWolfSSLContext.Create(Self, AType);
 
