@@ -2,6 +2,69 @@
 
 ## 2026-05-19
 
+### ISSLConnection Convenience Surface Classification
+
+- add `docs/plans/2026-05-19-isslconnection-convenience-surface-classification.md`
+  - change:
+    - define the bounded route-truth batch for `ISSLConnection` convenience-core / connection-adjacent surface classification
+
+- add `tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+  - change:
+    - lock that source comments and key design/canonical docs agree on the current truth for:
+      - `ReadString` / `WriteString`
+      - `SetTimeout` / `GetTimeout`
+      - `SetBlocking` / `GetBlocking`
+
+- `bash -n tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - new convenience-surface classification contract syntax is valid
+
+- `bash tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - source comments still lacked explicit convenience-surface classification
+      - `INTERFACE_DESIGN_V2` still presented current shipped convenience methods as `**移除**`
+      - `ARCHITECTURE` / `INTERFACE_DESIGN_AUDIT_V1.5.0` still lacked current shipped-truth clarification
+    - GREEN after fix:
+      - source comments now classify text helpers as `v1.x` convenience-core
+      - timeout/blocking now classify as builder-first connection-adjacent convenience surface
+      - design/audit docs now distinguish v2 target from current shipped truth
+
+- update `src/fafafa.ssl.base.pas`
+  - change:
+    - add `@preferred-access` guidance for:
+      - `ReadString` / `WriteString`
+      - `SetTimeout` / `GetTimeout`
+      - `SetBlocking` / `GetBlocking`
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - restate `HandshakeTimeout` as builder-first with connection-side convenience override
+    - add explicit convenience-surface classification bullets under `ISSLConnection`
+
+- update `docs/reference/INTERFACE_DESIGN_V2.md`
+  - change:
+    - clarify this is the `v2` minimal-core target, not the current shipped source mirror
+    - replace stale `**移除**` wording for convenience methods with current `v1.x` classification
+
+- update `docs/ARCHITECTURE.md`
+  - change:
+    - mark the `ISSLConnection` snippet as conceptual minimal-core slice
+    - point readers back to `API_REFERENCE` for current shipped source truth
+    - correct the stale `GetState` snippet return type to `string`
+
+- update `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+  - change:
+    - separate compatibility-mirror demotion advice from current convenience-surface shipped truth
+    - note that any real convenience-method removal belongs to a future dedicated `v2` surgery batch
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current convenience-surface classification batch has no whitespace or patch-format issues
+
 ### API Reference Certificate Surfaces Truth
 
 - add `docs/plans/2026-05-19-api-reference-certificate-surfaces-truth.md`

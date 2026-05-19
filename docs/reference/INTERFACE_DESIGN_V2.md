@@ -6,12 +6,16 @@
 2. **分层扩展** - 高级功能通过扩展接口提供
 3. **清晰的错误状态** - 支持非阻塞模式集成
 
+> 这份文档描述的是 **v2 最小 core 目标**，不是 `v1.5.0` 当前 shipped source 的逐行镜像。
+> 当前 shipped source truth 以 `src/fafafa.ssl.base.pas` 与 `docs/reference/API_REFERENCE.md` 为准；
+> `ReadString` / `WriteString` / timeout / blocking 这组方法在 `v1.x` 仍保留为 convenience-core / connection-adjacent surface。
+
 ---
 
 ## 接口层次结构
 
 ```
-ISSLConnection (核心 - 17 个方法)
+ISSLConnection (v2 目标核心 - 17 个方法)
 ├── ISSLClientConnection (客户端扩展 - SNI)
 ├── ISSLNativeHandleAccess (原生句柄访问)
 ├── ISSLConnectionInfo (连接信息 mirrors)
@@ -237,11 +241,11 @@ if Supports(FSSLConn, ISSLSessionResumption, LSession) then
 | GetProtocolVersion, GetCipherName | ISSLConnection | 保留 |
 | GetPeerCertificate | ISSLConnection | 保留 |
 | GetNativeHandle | ISSLNativeHandleAccess | 不属于核心 ISSLConnection；通过可选 native-handle 接口访问 |
-| ReadString, WriteString | **移除** | 使用 Read/Write |
+| ReadString, WriteString | ISSLConnection | `v1.x` convenience-core 文本 helper；框架/transport 集成优先使用 `Read` / `Write` |
 | GetConnectionInfo | ISSLConnectionInfo | 默认 owner 已切到 ISSLConnectionInfo；core 侧仅兼容保留，源码声明已是编译期 deprecated |
 | GetStateString | ISSLConnectionInfo | 默认 owner 已切到 ISSLConnectionInfo；core 侧仅兼容保留，源码声明已是编译期 deprecated |
-| SetTimeout, GetTimeout | **移除** | 由外部框架控制 |
-| SetBlocking, GetBlocking | **移除** | 由外部框架控制 |
+| SetTimeout, GetTimeout | ISSLConnection | `v1.x` connection-adjacent convenience surface；builder-first，连接侧保留 override |
+| SetBlocking, GetBlocking | ISSLConnection | `v1.x` connection-adjacent convenience surface；builder-first，连接侧保留 override |
 | GetContext | ISSLConnectionInfo | 默认 owner 已切到 ISSLConnectionInfo；core 侧仅兼容保留，源码声明已是编译期 deprecated |
 | SetServerName, GetServerName | ISSLClientConnection | 客户端特有 |
 | GetSelectedALPNProtocol | ISSLConnectionInfo | 默认 owner 已切到 ISSLConnectionInfo；core 侧仅兼容保留，源码声明已是编译期 deprecated |

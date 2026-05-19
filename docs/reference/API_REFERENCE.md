@@ -93,7 +93,8 @@
   - `v2` 方向：不再把 library defaults 混在 context/request config record 中。
 - 迁移到 connection / transport surface
   - `HandshakeTimeout`
-    - 当前推荐入口：`TSSLConnector.WithTimeout(...)` / `TSSLAcceptor.WithTimeout(...)` / `ISSLConnection.SetTimeout(...)`
+    - 当前推荐入口：`TSSLConnector.WithTimeout(...)` / `TSSLAcceptor.WithTimeout(...)`
+    - 连接创建后若需要局部覆盖，`ISSLConnection.SetTimeout(...)` 仍作为 `v1.x` connection-adjacent convenience surface 保留
   - `BufferSize`
     - 当前推荐入口：外围 socket / stream / transport / app-level buffer policy
   - `v2` 方向：从 context factory record 中移出这类 connection-adjacent 字段。
@@ -604,6 +605,9 @@ end;
 - `GetContext` 在 `ISSLConnection` 上仅作为 `v1.x` compatibility-core mirror 保留；当前源码声明已经是编译期 `deprecated`，需要连接所属 context 引用时，新代码优先通过 `ISSLConnectionInfo.GetContext`。
 - `GetSelectedALPNProtocol` 在 `ISSLConnection` 上仅作为 `v1.x` compatibility-core mirror 保留；当前源码声明已经是编译期 `deprecated`，需要当前连接的协商 ALPN 结果时，新代码优先通过 `ISSLConnectionInfo.GetSelectedALPNProtocol`。
 - `GetStateString` 在 `ISSLConnection` 上仅作为 `v1.x` compatibility-core mirror 保留；当前源码声明已经是编译期 `deprecated`，需要后端相关状态描述时，新代码优先通过 `ISSLConnectionInfo.GetStateString`。
+- `ReadString` / `WriteString` 继续作为 `v1.x` convenience-core 文本 helper 保留；框架/transport 集成优先使用 `Read` / `Write`。
+- `SetTimeout` / `GetTimeout` 继续作为 `v1.x` connection-adjacent convenience surface 保留；新代码优先在构建阶段使用 `TSSLConnectionBuilder.WithTimeout(...)` / `TSSLConnector.WithTimeout(...)` / `TSSLAcceptor.WithTimeout(...)`。
+- `SetBlocking` / `GetBlocking` 继续作为 `v1.x` connection-adjacent convenience surface 保留；新代码优先在构建阶段使用 `TSSLConnectionBuilder.WithBlocking(...)`。
 - `GetHealthStatus` / `IsHealthy` / `GetDiagnosticInfo` / `GetPerformanceMetrics` 也由 `ISSLDiagnostics` 暴露。
 - `GetSession` / `SetSession` / `IsSessionReused` 也由 `ISSLSessionResumption` 暴露。
 - `GetPeerCertificateChain` / `GetVerifyResult` / `GetVerifyResultString` 也由 `ISSLCertificateVerification` 暴露。

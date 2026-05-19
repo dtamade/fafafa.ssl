@@ -34,7 +34,11 @@
 **建议**
 - 继续保留 `ISSLConnection` 作为最小 core，只保留连接生命周期、读写、非阻塞状态、协议结果和原生句柄。
 - 把诊断、会话、证书验证、OCSP、连接信息全部移到扩展接口或包装层。
-- `ReadString` / `WriteString` / `SetTimeout` / `SetBlocking` / `GetStateString` / `GetContext` 这类 convenience 方法应退出 core。
+- `GetStateString` / `GetContext` 这类已进入 compatibility-mirror 路线的方法，继续优先往 owner surface 收口。
+- 但对 `ReadString` / `WriteString` / `SetTimeout` / `SetBlocking` 这组 convenience 方法，当前更准确的 shipped truth 是：
+  - `v1.5.0` source 仍正式保留它们，builder 与活跃 guides 也仍在使用
+  - 当前应先完成 classification / recommendation truth 收口，而不是把它们误报成“源码已经移除”
+  - 如果未来真的要把它们退出 core，应作为单独的 v2 API surgery 批次推进
 
 ### 2. context-level SNI 已弃用，但高层入口仍在主动写入
 **证据**
@@ -152,4 +156,3 @@
 2. SNI 只走连接级
 3. 配置 record 别再塞跨层字段
 4. 文档必须跟源码同一张图
-

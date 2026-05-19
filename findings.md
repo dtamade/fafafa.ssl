@@ -2,6 +2,44 @@
 
 ## 2026-05-19
 
+- 继续沿着最早的 `ISSLConnection 太胖` 设计审计往下压时，这次真正暴露出来的不是“马上要拆接口”的实现 bug，而是路线真相已经分叉：
+  - `src/fafafa.ssl.base.pas` 仍正式保留：
+    - `ReadString` / `WriteString`
+    - `SetTimeout` / `GetTimeout`
+    - `SetBlocking` / `GetBlocking`
+  - `src/fafafa.ssl.connection.builder.pas` 仍直接通过 `AConnection.SetTimeout(...)` / `SetBlocking(...)` 应用构建期设置
+  - `docs/reference/API_REFERENCE.md` 也一直把这组方法作为 shipped source truth 列出
+  - 但 `docs/reference/INTERFACE_DESIGN_V2.md` 却把它们写成 `**移除**`
+
+- 这类问题的风险不在 runtime，而在后续路线被文档自己带偏：
+  - 会把“未来想做的最小 core”误读成“当前源码已经完成的收口”
+  - 会让后续审查者不断重开同一条 convenience/core 线路，误以为实现还没跟上
+  - 也会把真正已经进入 owner-surface demotion 的 mirrors，和仍被 builder/guides 使用的 convenience 方法混成一类
+
+- 这批重新压实后的当前 truth 应明确分成两类：
+  - 已进入 owner-surface demotion / compile-time deprecated 的 mirrors：
+    - `GetConnectionInfo`
+    - `GetContext`
+    - `GetSelectedALPNProtocol`
+    - `GetStateString`
+    - `GetVerifyResult`
+    - `GetVerifyResultString`
+  - 仍然 shipped 且有活跃调用面的 convenience-core / connection-adjacent surface：
+    - `ReadString` / `WriteString`
+    - `SetTimeout` / `GetTimeout`
+    - `SetBlocking` / `GetBlocking`
+
+- 因而这条线当前最小正确修法不是 public API surgery，而是先把 classification truth 钉牢：
+  - source comments 说明推荐路径
+  - `API_REFERENCE` 说明 builder-first / transport-first 的当前心智
+  - `INTERFACE_DESIGN_V2` 明确这是 v2 目标，而不是 current source mirror
+  - `ARCHITECTURE` / `INTERFACE_DESIGN_AUDIT_V1.5.0` 不再把 convenience 方法误报成“当前已被移除”
+
+- 这批收口后的新基线应明确保留：
+  - `ReadString` / `WriteString` 当前是 `v1.x` convenience-core 文本 helper
+  - timeout / blocking 当前是 `v1.x` connection-adjacent convenience surface，推荐 builder-first，但连接侧 override 仍是 shipped truth
+  - 如果未来真要让这组方法退出 `ISSLConnection` core，应该新开独立 `v2` API surgery 批次，而不是继续把它当成“当前实现缺口”
+
 - 沿着刚收口的 `API_REFERENCE` high-entry surface 继续往下审时，又压实了同类但更严重的一条缺口：
   - `ISSLCertificate` 主代码块不只是缺少零星方法，而是仍停留在旧的窄化证书 surface
   - `ISSLCertificateStore` 甚至连独立高入口小节都没有

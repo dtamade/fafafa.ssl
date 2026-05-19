@@ -187,6 +187,9 @@ end;
 
 ### ISSLConnection - 连接管理
 
+以下代码块是 **概念上的最小 core slice**，不是 `v1.5.0` 当前 shipped source 的完整逐行镜像。
+当前 shipped source 仍保留 `ReadString` / `WriteString` 与 timeout/blocking 这组 convenience-core / connection-adjacent 方法；权威 source-truth 视图请看 `docs/reference/API_REFERENCE.md`。
+
 ```pascal
 ISSLConnection = interface
   ['{GUID}']
@@ -197,7 +200,7 @@ ISSLConnection = interface
   function Read(var ABuffer; ACount: Integer): Integer;
   function Write(const ABuffer; ACount: Integer): Integer;
 
-  function GetState: TSSLConnectionState;
+  function GetState: string;
   function GetPeerCertificate: ISSLCertificate;
   // ... 连接方法
 end;

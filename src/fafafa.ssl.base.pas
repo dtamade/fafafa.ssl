@@ -1183,11 +1183,13 @@ type
 
     {** 读取字符串
         @param AStr 输出字符串
+        @preferred-access 框架/transport 集成优先使用 Read/Write；ReadString/WriteString 继续作为 v1.x convenience-core 文本入口保留
         @returns True 如果读取成功 *}
     function ReadString(out AStr: string): Boolean;
 
     {** 写入字符串
         @param AStr 要发送的字符串
+        @preferred-access 框架/transport 集成优先使用 Read/Write；ReadString/WriteString 继续作为 v1.x convenience-core 文本入口保留
         @returns True 如果写入成功 *}
     function WriteString(const AStr: string): Boolean;
 
@@ -1286,18 +1288,22 @@ type
       deprecated 'Use ISSLConnectionInfo.GetStateString';
 
     {** 设置操作超时
-        @param ATimeout 超时毫秒数 *}
+        @param ATimeout 超时毫秒数
+        @preferred-access 新代码优先在构建阶段使用 TSSLConnectionBuilder.WithTimeout / TSSLConnector.WithTimeout / TSSLAcceptor.WithTimeout；连接创建后仍可通过此入口做 per-connection convenience override *}
     procedure SetTimeout(ATimeout: Integer);
 
     {** 获取当前超时设置
+        @preferred-access 新代码优先在构建阶段使用 TSSLConnectionBuilder.WithTimeout / TSSLConnector.WithTimeout / TSSLAcceptor.WithTimeout；连接创建后仍可通过此入口做 per-connection convenience override
         @returns 超时毫秒数 *}
     function GetTimeout: Integer;
 
     {** 设置阻塞模式
-        @param ABlocking True 为阻塞，False 为非阻塞 *}
+        @param ABlocking True 为阻塞，False 为非阻塞
+        @preferred-access 新代码优先在构建阶段使用 TSSLConnectionBuilder.WithBlocking；连接创建后仍可通过此入口做 per-connection convenience override *}
     procedure SetBlocking(ABlocking: Boolean);
 
     {** 获取当前阻塞模式
+        @preferred-access 新代码优先在构建阶段使用 TSSLConnectionBuilder.WithBlocking；连接创建后仍可通过此入口做 per-connection convenience override
         @returns True 如果是阻塞模式 *}
     function GetBlocking: Boolean;
 

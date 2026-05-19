@@ -10,6 +10,35 @@
 
 ## Current Status
 
+- [completed] `ISSLConnection` convenience surface classification 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-isslconnection-convenience-surface-classification.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+  - 当前已修正的 source / docs truth：
+    - `src/fafafa.ssl.base.pas`
+    - `docs/reference/API_REFERENCE.md`
+    - `docs/reference/INTERFACE_DESIGN_V2.md`
+    - `docs/ARCHITECTURE.md`
+    - `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+  - 当前已收掉的真问题：
+    - `INTERFACE_DESIGN_V2` 不再把：
+      - `ReadString` / `WriteString`
+      - `SetTimeout` / `GetTimeout`
+      - `SetBlocking` / `GetBlocking`
+      误写成“当前源码已移除”
+    - `ARCHITECTURE` 的最小 `ISSLConnection` snippet 现在明确标注为 conceptual slice，而不是 current source truth
+    - source comments / canonical API doc 现在明确：
+      - `ReadString` / `WriteString` = `v1.x` convenience-core 文本 helper
+      - timeout/blocking = `v1.x` connection-adjacent convenience surface，推荐 builder-first
+    - 设计审计报告不再把这组 convenience 方法和已进入 owner-surface demotion 的 mirror methods 混成同一类“应立即移除”问题
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+    - `bash tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+    - `git diff --check`
+  - 当前结论：
+    - 这批修掉的是接口路线真相分叉，而不是 backend 实现缺口
+    - 后续若继续做 `ISSLConnection` slimming，应把 convenience 方法退出 core 视为独立的 `v2` API surgery，而不是继续误报成“当前实现已经偏离文档”
 - [completed] API reference certificate surfaces truth 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-api-reference-certificate-surfaces-truth.md`
