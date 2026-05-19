@@ -10,6 +10,58 @@
 
 ## Current Status
 
+- [completed] `troubleshooting winssl session truth`
+  当前 focused 目标：
+  - 把 `TROUBLESHOOTING.md` 里 WinSSL session 排障段收回当前 truth，
+    避免高入口故障页继续把 `SetSession(...)` + `Connect`
+    误教成默认已命中的 resumed-handshake
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-troubleshooting-winssl-session-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_troubleshooting_winssl_session_truth_contract.sh`
+  - 同步更新：
+    - `docs/guides/TROUBLESHOOTING.md`
+    - `docs/guides/MIGRATION_GUIDE.md`
+  当前预判：
+  - 这页当前 owner path / SNI 示例本身不一定错，
+    真正的缺口是排障页还把实验性 WinSSL session owner surface
+    写成了默认成功路径
+  当前最终收口证据：
+  - `TROUBLESHOOTING.md` 明确：
+    - direct `CreateConnection(...)` + `ISSLSessionResumption`
+      是排障时为了观察 session owner surface
+    - 普通跨后端 HTTPS 客户端仍优先
+      `TSSLContextBuilder` + `TSSLConnector` + `TSSLStream`
+    - 当前 dedicated Windows runtime truth 仍按
+      `observed_reuse=false` / `session_configured=true`
+      理解
+    - 不再保留 `启用 Session 复用` / `快速复用` / `快速握手`
+      这类把示例误读成稳定复用命中的 wording
+  - `MIGRATION_GUIDE.md` 低层 `ISSLConnection` 迁移示例再次显式展示
+    连接级 `ISSLClientConnection.SetServerName(...)`
+  focused verification 已通过：
+  - `bash -n tests/scripts/test_troubleshooting_winssl_session_truth_contract.sh`
+  - `bash tests/scripts/test_troubleshooting_winssl_session_truth_contract.sh`
+  - `bash tests/scripts/test_session_resumption_guide_old_name_truth_contract.sh`
+  - `bash tests/scripts/test_migration_troubleshooting_connection_level_sni_omissions_contract.sh`
+  - `bash tests/scripts/test_diagnostics_connection_override_classification_contract.sh`
+  - `bash tests/scripts/test_winssl_session_resumption_docs_truth_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - `TROUBLESHOOTING` 当前并不是
+    `ISSLSessionResumption` 接口名或 session owner-path API 本身错了，
+    而是排障页还把实验性 WinSSL session surface 写成了默认已命中的复用收益。
+  - 这轮回归还顺手暴露并收掉了 `MIGRATION_GUIDE`
+    的连接级 SNI 文案漂移，避免旧合同以后反复误报。
+  当前下一条真实工作：
+  - 继续扫 remaining high-entry / reference pages：
+    - 看还有没有 fixed snapshot / blanket recommendation /
+      unexplained direct path residual
+  - 当高入口文档残口进一步缩小后，切回
+    `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+    所指向的接口设计与 backend 实现一致性主线
+
 - [completed] `readme performance + session truth`
   当前 focused 目标：
   - 把根 `README.md` 里的高入口性能/会话口径收回当前 truth，

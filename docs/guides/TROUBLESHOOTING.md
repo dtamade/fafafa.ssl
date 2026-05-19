@@ -690,9 +690,13 @@ LContext.SetVerifyMode([]);  // 禁用证书验证
 
 **解决方案**:
 
-1. **启用 Session 复用**
+这里保留 direct `CreateConnection(...)` + `ISSLSessionResumption`，是因为排障时要直接观察连接对象上的 session owner surface；如果你只是普通跨后端 HTTPS 客户端，优先继续使用通用的 `TSSLContextBuilder` + `TSSLConnector` + `TSSLStream`。
+
+当前 dedicated Windows runtime truth 仍应按 `observed_reuse=false` / `session_configured=true` 理解，所以这段示例只能用来观察 session 是否被配置与连接是否暴露 owner surface；没有 dedicated Windows / target-specific validation 时，不要把 `LResumption2.SetSession(...)` + `LConn2.Connect` 直接读成已稳定命中的 resumed-handshake。
+
+1. **先按 owner surface 观察 Session 配置状态**
 ```pascal
-// 使用 Session 缓存
+// 使用 Session 缓存观察连接上的 owner surface
 var
   LSessionCache: TDictionary<string, ISSLSession>;
   LResumption1, LResumption2: ISSLSessionResumption;
@@ -710,7 +714,7 @@ begin
         LSessionCache.Add('example.com', LSession);
     end;
 
-    // 后续连接 - 快速复用
+    // 后续连接 - 继续观察 owner surface
     LConn2 := LCtx.CreateConnection(Socket2);
     if Supports(LConn2, ISSLSessionResumption, LResumption2) and
        LSessionCache.ContainsKey('example.com') then
@@ -720,7 +724,7 @@ begin
         LResumption2.SetSession(LSession);
     end;
     (LConn2 as ISSLClientConnection).SetServerName('example.com');
-    LConn2.Connect;  // 快速握手
+    LConn2.Connect;  // 继续观察连接结果
   finally
     LSessionCache.Free;
   end;

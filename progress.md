@@ -14203,3 +14203,71 @@
   - result: PASS
   - summary:
     - current root-README performance/session batch has no whitespace or patch-format issues
+
+### Troubleshooting WinSSL Session Truth
+
+- add `docs/plans/2026-05-20-troubleshooting-winssl-session-truth.md`
+  - change:
+    - define the bounded troubleshooting batch for tightening WinSSL session/runtime truth in the high-entry troubleshooting guide
+
+- add `tests/scripts/test_troubleshooting_winssl_session_truth_contract.sh`
+  - change:
+    - lock that `TROUBLESHOOTING.md` must classify the direct WinSSL session snippet as an owner-surface troubleshooting path and stop promising default resumed-handshake success
+
+- `bash -n tests/scripts/test_troubleshooting_winssl_session_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new troubleshooting WinSSL session-truth contract syntax is valid
+
+- `bash tests/scripts/test_troubleshooting_winssl_session_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `TROUBLESHOOTING.md` still lacked an explicit explanation for why the direct `CreateConnection(...)` + `ISSLSessionResumption` snippet is retained
+    - GREEN after fix:
+      - `TROUBLESHOOTING.md` now classifies the snippet as an owner-surface troubleshooting path
+      - `TROUBLESHOOTING.md` now explains the conservative
+        `observed_reuse=false` / `session_configured=true`
+        WinSSL truth
+      - `TROUBLESHOOTING.md` no longer promises
+        `启用 Session 复用` / `快速复用` / `快速握手`
+
+- update `docs/guides/TROUBLESHOOTING.md`
+  - change:
+    - explain that the direct session snippet is retained to observe connection-owned session state during troubleshooting
+    - explain that ordinary cross-backend HTTPS clients still prefer
+      `TSSLContextBuilder` + `TSSLConnector` + `TSSLStream`
+    - demote the WinSSL snippet to current conservative runtime truth and remove fast-reuse / fast-handshake wording
+
+- `bash tests/scripts/test_session_resumption_guide_old_name_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - broader owner-path session-resumption guidance remained intact after tightening troubleshooting wording
+
+- `bash tests/scripts/test_migration_troubleshooting_connection_level_sni_omissions_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED on regression rerun exposed:
+      - `MIGRATION_GUIDE.md` no longer matched the historical explicit connection-level SNI line expected by the contract
+    - GREEN after fix:
+      - `MIGRATION_GUIDE.md` again shows explicit low-level
+        `ISSLClientConnection.SetServerName(...)` guidance
+
+- update `docs/guides/MIGRATION_GUIDE.md`
+  - change:
+    - restore the low-level `ISSLConnection` migration snippet to the explicit connection-level SNI line expected by the historical contract
+
+- `bash tests/scripts/test_diagnostics_connection_override_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - diagnostics override classifications remained aligned after tightening troubleshooting session wording
+
+- `bash tests/scripts/test_winssl_session_resumption_docs_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - broader WinSSL session-resumption docs truth remained aligned after tightening troubleshooting wording
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current troubleshooting WinSSL session-truth batch has no whitespace or patch-format issues

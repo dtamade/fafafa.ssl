@@ -6765,3 +6765,54 @@
      在新增 README truth 收口之后仍保持绿色
    - 现在新的稳定基线应记为：
      - 根 `README.md` 不会再把固定性能快照和固定 session 收益误读成 current truth
+
+116. `TROUBLESHOOTING.md` 里还残留了一个更细但仍高可见的 WinSSL session 排障残口：
+   - 问题不是 `ISSLSessionResumption` owner path 不该存在
+   - 而是排障页仍把这段示例教成了默认成功路径：
+     - `1. **启用 Session 复用**`
+     - `// 后续连接 - 快速复用`
+     - `LConn2.Connect;  // 快速握手`
+   - 这与当前更 durable 的 WinSSL truth 冲突：
+     - `observed_reuse=false`
+     - `session_configured=true`
+     - session public surface 仍只应按实验性 owner surface 理解
+   - 当前最小正确修法已经压实为：
+     - 在问题段开头明确：
+       - 这里保留 direct `CreateConnection(...)` +
+         `ISSLSessionResumption`
+         是因为排障时要直接观察连接对象上的 session owner surface
+       - 普通跨后端 HTTPS 客户端仍优先
+         `TSSLContextBuilder` + `TSSLConnector` + `TSSLStream`
+     - 在示例前明确：
+       - 当前 dedicated Windows runtime truth 仍按
+         `observed_reuse=false` / `session_configured=true`
+         理解
+       - 没有 dedicated Windows / target-specific validation 时，
+         不要把 `SetSession(...)` + `Connect`
+         直接读成已稳定命中的 resumed-handshake
+     - 小节名与注释不再使用：
+       - `启用 Session 复用`
+       - `快速复用`
+       - `快速握手`
+   - 这批也顺手证明：
+     - `test_session_resumption_guide_old_name_truth_contract.sh`
+     - `test_diagnostics_connection_override_classification_contract.sh`
+     - `test_winssl_session_resumption_docs_truth_contract.sh`
+     在新增排障 truth 说明之后仍保持绿色
+   - 现在新的稳定基线应记为：
+     - `TROUBLESHOOTING.md` 不会再把实验性 WinSSL session owner surface
+       误读成默认已命中的复用收益
+
+117. 这轮 focused 回归还暴露了一个旧合同/文档基线重新脱节的点：
+   - `test_migration_troubleshooting_connection_level_sni_omissions_contract.sh`
+     仍要求 `MIGRATION_GUIDE.md` 的低层 `ISSLConnection`
+     迁移示例显式展示连接级 SNI
+   - 该页一度漂到了 `Supports(..., LClientConn)` 写法，
+     导致旧合同按原始显式 `SetServerName(...)` 单行基线失败
+   - 当前最小正确修法不是删合同，
+     而是把低层迁移示例收回原始“显式展示连接级 SNI”基线：
+     - `(LConn as ISSLClientConnection).SetServerName('example.com');`
+   - 现在新的稳定基线应记为：
+     - `MIGRATION_GUIDE.md` 与
+       `test_migration_troubleshooting_connection_level_sni_omissions_contract.sh`
+       再次对齐，不会在这类回归里反复误报
