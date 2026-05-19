@@ -10,6 +10,45 @@
 
 ## Current Status
 
+- [completed] `WinSSL session injection semantics` truth alignment
+  已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-winssl-session-injection-semantics-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_winssl_session_injection_semantics_truth_contract.sh`
+  - 当前已收紧的 source/doc truth：
+    - `src/fafafa.ssl.winssl.connection.pas`
+      现已在 `DoSetSession(...)` 旁明确：
+      - caller-supplied session 当前只是 compatibility metadata
+      - shared client reconnect 仍主要依赖 Schannel automatic cache key
+        (`target name + credential handle`)
+    - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+      现已把 `Resumption2.SetSession(Session)` 降级为 compatibility metadata
+      说明，而不是显式 native session 注入暗示
+    - `docs/guides/WINSSL_USER_GUIDE.md`
+      `Phase 6` 现已显式写清：
+      - `SetSession(...)` 当前不等于稳定显式恢复语义
+    - `docs/BACKEND_SELECTION_GUIDE.md`
+      `Windows 应用` 场景现已补清：
+      - 如果把 session resumption / tickets 当成已稳定 runtime-proven 能力，
+        不应只因为“Windows + 零依赖”就默认停在 WinSSL
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_winssl_session_injection_semantics_truth_contract.sh`
+    - `bash tests/scripts/test_winssl_session_injection_semantics_truth_contract.sh`
+    - `bash tests/scripts/test_winssl_session_resumption_docs_truth_contract.sh`
+    - `npx prettier --write docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md docs/guides/WINSSL_USER_GUIDE.md docs/BACKEND_SELECTION_GUIDE.md`
+    - `git diff --check`
+  - 当前结论：
+    - WinSSL 这条线当前最危险的不是“完全没 public surface”
+    - 而是 `SetSession(...)` 太容易被高入口示例误读成
+      OpenSSL 式显式 session restore 语义
+    - 这条 semantic boundary 现在已经在 source 和高入口文档里同步收口
+  - 当前下一条真实剩余工作：
+    - 继续判断 WinSSL `SessionCacheSupport=sslSupportStable`
+      与当前 shared reconnect truth 是否仍然匹配
+    - 也就是进一步区分：
+      - Schannel automatic cache availability
+      - fafafa.ssl caller-visible resumed-handshake semantics
 - [completed] `BACKEND_CAPABILITY_MATRIX` version-history truth alignment
   已完成 focused 收口：
   - 新增计划：

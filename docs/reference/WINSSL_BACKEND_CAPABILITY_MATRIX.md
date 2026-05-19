@@ -27,75 +27,75 @@ Ctx := TSSLContextBuilder.Create
 
 ### TLS 协议支持
 
-| 功能 | Windows 10+ | Windows 8.1 | Windows 7 | 说明 |
-|------|-------------|-------------|-----------|------|
-| TLS 1.0 | ⚠️ 禁用 | ✅ 支持 | ✅ 支持 | 默认禁用，不推荐 |
-| TLS 1.1 | ⚠️ 禁用 | ✅ 支持 | ✅ 支持 | 默认禁用，不推荐 |
-| TLS 1.2 | ✅ 支持 | ✅ 支持 | ⚠️ 更新后 | 推荐 |
-| TLS 1.3 | ✅ 支持 | ❌ 不支持 | ❌ 不支持 | Windows 10 1903+ |
-| DTLS 1.0 | ✅ 支持 | ✅ 支持 | ⚠️ 部分 | |
-| DTLS 1.2 | ✅ 支持 | ⚠️ 部分 | ❌ 不支持 | |
+| 功能     | Windows 10+ | Windows 8.1 | Windows 7 | 说明             |
+| -------- | ----------- | ----------- | --------- | ---------------- |
+| TLS 1.0  | ⚠️ 禁用     | ✅ 支持     | ✅ 支持   | 默认禁用，不推荐 |
+| TLS 1.1  | ⚠️ 禁用     | ✅ 支持     | ✅ 支持   | 默认禁用，不推荐 |
+| TLS 1.2  | ✅ 支持     | ✅ 支持     | ⚠️ 更新后 | 推荐             |
+| TLS 1.3  | ✅ 支持     | ❌ 不支持   | ❌ 不支持 | Windows 10 1903+ |
+| DTLS 1.0 | ✅ 支持     | ✅ 支持     | ⚠️ 部分   |                  |
+| DTLS 1.2 | ✅ 支持     | ⚠️ 部分     | ❌ 不支持 |                  |
 
 ### 密码套件
 
-| 类别 | 支持状态 | 说明 |
-|------|----------|------|
-| AES-GCM | ✅ 支持 | 推荐 |
-| AES-CBC | ✅ 支持 | 兼容性 |
-| ChaCha20-Poly1305 | ⚠️ 部分 | Windows 10 1903+ |
-| 3DES | ⚠️ 可选 | 不推荐 |
-| RC4 | ❌ 禁用 | 安全原因 |
+| 类别              | 支持状态 | 说明             |
+| ----------------- | -------- | ---------------- |
+| AES-GCM           | ✅ 支持  | 推荐             |
+| AES-CBC           | ✅ 支持  | 兼容性           |
+| ChaCha20-Poly1305 | ⚠️ 部分  | Windows 10 1903+ |
+| 3DES              | ⚠️ 可选  | 不推荐           |
+| RC4               | ❌ 禁用  | 安全原因         |
 
 | Custom cipher configuration | ❌ 不支持 | 当前由系统 Schannel policy / Windows cipher order 决定；custom non-default `SetCipherList` / `SetCipherSuites` 会 fail-closed 为 unsupported |
 
 ### 密钥交换
 
-| 算法 | 支持状态 | 说明 |
-|------|----------|------|
-| RSA | ✅ 支持 | 兼容性 |
-| DHE | ✅ 支持 | 前向保密 |
-| ECDHE | ✅ 支持 | 推荐 |
-| PSK | ❌ 不支持 | Schannel 限制 |
+| 算法  | 支持状态  | 说明          |
+| ----- | --------- | ------------- |
+| RSA   | ✅ 支持   | 兼容性        |
+| DHE   | ✅ 支持   | 前向保密      |
+| ECDHE | ✅ 支持   | 推荐          |
+| PSK   | ❌ 不支持 | Schannel 限制 |
 
 ### 签名算法
 
-| 算法 | 支持状态 | 说明 |
-|------|----------|------|
-| RSA-PKCS1 | ✅ 支持 | 兼容性 |
-| RSA-PSS | ✅ 支持 | Windows 10+ |
-| ECDSA | ✅ 支持 | 推荐 |
-| Ed25519 | ❌ 不支持 | Schannel 限制 |
+| 算法      | 支持状态  | 说明          |
+| --------- | --------- | ------------- |
+| RSA-PKCS1 | ✅ 支持   | 兼容性        |
+| RSA-PSS   | ✅ 支持   | Windows 10+   |
+| ECDSA     | ✅ 支持   | 推荐          |
+| Ed25519   | ❌ 不支持 | Schannel 限制 |
 
 ### 椭圆曲线
 
-| 曲线 | 支持状态 | 说明 |
-|------|----------|------|
-| secp256r1 (P-256) | ✅ 支持 | 推荐 |
-| secp384r1 (P-384) | ✅ 支持 | 高安全性 |
-| secp521r1 (P-521) | ✅ 支持 | 最高安全性 |
-| x25519 | ⚠️ 部分 | Windows 10 1903+ |
+| 曲线              | 支持状态 | 说明             |
+| ----------------- | -------- | ---------------- |
+| secp256r1 (P-256) | ✅ 支持  | 推荐             |
+| secp384r1 (P-384) | ✅ 支持  | 高安全性         |
+| secp521r1 (P-521) | ✅ 支持  | 最高安全性       |
+| x25519            | ⚠️ 部分  | Windows 10 1903+ |
 
 ### 证书功能
 
-| 功能 | 支持状态 | 说明 |
-|------|----------|------|
-| X.509 解析 | ✅ 支持 | 通过 CryptoAPI |
-| 证书链验证 | ✅ 支持 | 系统证书存储 |
-| CRL 检查 | ✅ 支持 | 自动下载 |
-| OCSP | ✅ 支持 | 自动检查 |
-| OCSP Stapling | ⚠️ 部分 | 服务器端（Schannel 系统级行为；fafafa.ssl 封装层不暴露 ISSLServerOCSPStaplingContext） |
-| 证书固定 | ✅ 支持 | 通过回调 |
-| SNI | ✅ 支持 | 客户端/服务器 |
-| 系统证书存储 | ✅ 支持 | 原生集成 |
+| 功能          | 支持状态 | 说明                                                                                   |
+| ------------- | -------- | -------------------------------------------------------------------------------------- |
+| X.509 解析    | ✅ 支持  | 通过 CryptoAPI                                                                         |
+| 证书链验证    | ✅ 支持  | 系统证书存储                                                                           |
+| CRL 检查      | ✅ 支持  | 自动下载                                                                               |
+| OCSP          | ✅ 支持  | 自动检查                                                                               |
+| OCSP Stapling | ⚠️ 部分  | 服务器端（Schannel 系统级行为；fafafa.ssl 封装层不暴露 ISSLServerOCSPStaplingContext） |
+| 证书固定      | ✅ 支持  | 通过回调                                                                               |
+| SNI           | ✅ 支持  | 客户端/服务器                                                                          |
+| 系统证书存储  | ✅ 支持  | 原生集成                                                                               |
 
 ### Session 管理
 
-| 功能 | 支持状态 | 说明 |
-|------|----------|------|
-| Session 复用 | ⚠️ 实验性 | public surface 存在；当前 dedicated Windows CI runtime truth 为 `observed_reuse=false` / `session_configured=true` |
-| Session Ticket | ⚠️ 实验性 | Schannel surface 存在，但 fafafa.ssl 尚未在 dedicated Windows proof 中观测到真实 resumed handshake |
-| Session Cache | ✅ 支持 | 系统管理；`SessionCacheSupport=sslSupportStable`，但这不等于当前已 runtime-proven 的 resumed handshake |
-| 0-RTT | ⚠️ 部分 | TLS 1.3（Schannel 有限支持；fafafa.ssl 封装层不暴露 ISSLEarlyDataContext） |
+| 功能           | 支持状态  | 说明                                                                                                               |
+| -------------- | --------- | ------------------------------------------------------------------------------------------------------------------ |
+| Session 复用   | ⚠️ 实验性 | public surface 存在；当前 dedicated Windows CI runtime truth 为 `observed_reuse=false` / `session_configured=true` |
+| Session Ticket | ⚠️ 实验性 | Schannel surface 存在，但 fafafa.ssl 尚未在 dedicated Windows proof 中观测到真实 resumed handshake                 |
+| Session Cache  | ✅ 支持   | 系统管理；`SessionCacheSupport=sslSupportStable`，但这不等于当前已 runtime-proven 的 resumed handshake             |
+| 0-RTT          | ⚠️ 部分   | TLS 1.3（Schannel 有限支持；fafafa.ssl 封装层不暴露 ISSLEarlyDataContext）                                         |
 
 > 当前 dedicated Windows CI runtime truth 以 run `26037518301` 为准：
 > `observed_reuse=false`，`session_configured=true`。
@@ -103,44 +103,44 @@ Ctx := TSSLContextBuilder.Create
 
 ### 高级功能
 
-| 功能 | 支持状态 | 说明 |
-|------|----------|------|
-| ALPN | ✅ 支持 | Windows 8.1+ |
-| 重协商 | ✅ 支持 | 安全重协商 |
-| 客户端证书 | ✅ 支持 | 双向 TLS |
-| Context callbacks | ⚠️ 部分 | 当前仅 verify/info runtime path 已发布；password callback 仍为 unsupported |
-| Password-protected private keys | ⚠️ 部分 | 当前仅 password-protected PFX/P12 import path 已发布；PEM private-key password path 仍为 unsupported |
-| DER / PKCS#8 private keys | ❌ 当前 capability 不发布 | 目前没有 shipped bare DER / PKCS#8 private-key load path；请改用 PFX/P12 或 OpenSSL backend |
-| 智能卡 / PKCS#11 | ❌ 当前 capability 不发布 | Windows 平台底层可接触硬件密钥，但 fafafa.ssl 当前 WinSSL backend 没有 shipped PKCS#11 URI / smart-card 私钥加载 surface |
-| TPM | ❌ 当前 capability 不发布 | Schannel/CNG 的平台潜在能力不等于 fafafa.ssl 已发布 TPM loading/runtime contract |
+| 功能                            | 支持状态                  | 说明                                                                                                                     |
+| ------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| ALPN                            | ✅ 支持                   | Windows 8.1+                                                                                                             |
+| 重协商                          | ✅ 支持                   | 安全重协商                                                                                                               |
+| 客户端证书                      | ✅ 支持                   | 双向 TLS                                                                                                                 |
+| Context callbacks               | ⚠️ 部分                   | 当前仅 verify/info runtime path 已发布；password callback 仍为 unsupported                                               |
+| Password-protected private keys | ⚠️ 部分                   | 当前仅 password-protected PFX/P12 import path 已发布；PEM private-key password path 仍为 unsupported                     |
+| DER / PKCS#8 private keys       | ❌ 当前 capability 不发布 | 目前没有 shipped bare DER / PKCS#8 private-key load path；请改用 PFX/P12 或 OpenSSL backend                              |
+| 智能卡 / PKCS#11                | ❌ 当前 capability 不发布 | Windows 平台底层可接触硬件密钥，但 fafafa.ssl 当前 WinSSL backend 没有 shipped PKCS#11 URI / smart-card 私钥加载 surface |
+| TPM                             | ❌ 当前 capability 不发布 | Schannel/CNG 的平台潜在能力不等于 fafafa.ssl 已发布 TPM loading/runtime contract                                         |
 
 > `SupportsCallbacks=True` 在 WinSSL 上当前是 coarse-grained publication flag：
 > verify/info callback 已发布，password callback 仍未接入 runtime，non-nil assignment 会 fail-closed 为 unsupported。
 
 ## 与 OpenSSL 对比
 
-| 特性 | WinSSL | OpenSSL |
-|------|--------|---------|
-| 安装依赖 | 无 | 需要 DLL |
-| 系统集成 | 原生 | 独立 |
-| 证书存储 | 系统存储 | 文件/内存 |
+| 特性                     | WinSSL                                     | OpenSSL                       |
+| ------------------------ | ------------------------------------------ | ----------------------------- |
+| 安装依赖                 | 无                                         | 需要 DLL                      |
+| 系统集成                 | 原生                                       | 独立                          |
+| 证书存储                 | 系统存储                                   | 文件/内存                     |
 | FIPS policy / capability | 系统策略检测（不作为当前 capability 发布） | 库级 capability（需专门构建） |
-| 跨平台 | 仅 Windows | 全平台 |
-| 更新方式 | Windows Update | 手动更新 |
-| 功能完整性 | TLS 核心 | 完整密码学 |
+| 跨平台                   | 仅 Windows                                 | 全平台                        |
+| 更新方式                 | Windows Update                             | 手动更新                      |
+| 功能完整性               | TLS 核心                                   | 完整密码学                    |
 
 ## 平台支持
 
-| Windows 版本 | 支持状态 | TLS 1.3 | 说明 |
-|--------------|----------|---------|------|
-| Windows 11 | ✅ 完整 | ✅ | 推荐 |
-| Windows 10 1903+ | ✅ 完整 | ✅ | 推荐 |
-| Windows 10 1809- | ✅ 支持 | ❌ | TLS 1.2 |
-| Windows 8.1 | ✅ 支持 | ❌ | TLS 1.2 |
-| Windows 7 SP1 | ⚠️ 部分 | ❌ | 需更新 |
-| Windows Server 2022 | ✅ 完整 | ✅ | 推荐 |
-| Windows Server 2019 | ✅ 支持 | ⚠️ | 需更新 |
-| Windows Server 2016 | ✅ 支持 | ❌ | TLS 1.2 |
+| Windows 版本        | 支持状态 | TLS 1.3 | 说明    |
+| ------------------- | -------- | ------- | ------- |
+| Windows 11          | ✅ 完整  | ✅      | 推荐    |
+| Windows 10 1903+    | ✅ 完整  | ✅      | 推荐    |
+| Windows 10 1809-    | ✅ 支持  | ❌      | TLS 1.2 |
+| Windows 8.1         | ✅ 支持  | ❌      | TLS 1.2 |
+| Windows 7 SP1       | ⚠️ 部分  | ❌      | 需更新  |
+| Windows Server 2022 | ✅ 完整  | ✅      | 推荐    |
+| Windows Server 2019 | ✅ 支持  | ⚠️      | 需更新  |
+| Windows Server 2016 | ✅ 支持  | ❌      | TLS 1.2 |
 
 ## 使用示例
 
@@ -207,7 +207,7 @@ begin
   Conn2 := Ctx.CreateConnection(Socket2);
   (Conn2 as ISSLClientConnection).SetServerName('api.example.com');
   if Supports(Conn2, ISSLSessionResumption, Resumption2) and Assigned(Session) then
-    Resumption2.SetSession(Session);
+    Resumption2.SetSession(Session);  // 保存 compatibility metadata；Schannel reconnect 仍主要取决于 target name + credential handle
 
   if Conn2.Connect and Supports(Conn2, ISSLSessionResumption, Resumption2) then
   begin
@@ -218,6 +218,11 @@ begin
   end;
 end.
 ```
+
+> 注意：按当前实现，WinSSL 的 `ISSLSessionResumption.SetSession(...)` 更接近
+> compatibility metadata surface；client-side reconnect/cache lookup 仍主要取决于
+> 相同的 `target name` 与相同的 context-level `credential handle`，而不是显式的
+> native session-handle 注入。
 
 ### 使用系统证书存储
 
@@ -264,12 +269,12 @@ end.
 
 ### 常见错误
 
-| 错误码 | 含义 | 解决方案 |
-|--------|------|----------|
-| SEC_E_ALGORITHM_MISMATCH | 算法不匹配 | 检查 TLS 版本和密码套件 |
-| SEC_E_CERT_EXPIRED | 证书过期 | 更新证书 |
-| SEC_E_UNTRUSTED_ROOT | 不信任的根证书 | 安装根证书到系统存储 |
-| SEC_E_WRONG_PRINCIPAL | 主机名不匹配 | 检查 SNI 设置 |
+| 错误码                   | 含义           | 解决方案                |
+| ------------------------ | -------------- | ----------------------- |
+| SEC_E_ALGORITHM_MISMATCH | 算法不匹配     | 检查 TLS 版本和密码套件 |
+| SEC_E_CERT_EXPIRED       | 证书过期       | 更新证书                |
+| SEC_E_UNTRUSTED_ROOT     | 不信任的根证书 | 安装根证书到系统存储    |
+| SEC_E_WRONG_PRINCIPAL    | 主机名不匹配   | 检查 SNI 设置           |
 
 ### 调试技巧
 

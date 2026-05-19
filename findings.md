@@ -133,6 +133,31 @@
   - 这样 capability matrix 才不会变成一张混合了
     当前路线图 + 历史公告 + 旧 milestone 的误导页
 
+- WinSSL session 这条线暴露的是另一种更“像实现问题”的语义漂移：
+  - public interface 上有 `ISSLSessionResumption.SetSession(...)`
+  - 高入口示例也在调用它
+  - 但 shared client handshake 路径里并没有把 caller-supplied session
+    当成 native handle 注入 `InitializeSecurityContextW`
+  - 当前 reconnect 仍主要依赖 Schannel automatic cache key：
+    - `target name`
+    - `credential handle`
+
+- 这意味着这里最需要防的误读不是“接口不存在”，而是：
+  - 调用方会把 `SetSession(...)` 误读成 OpenSSL 风格的显式 session restore
+  - 然后把“接口存在”误判成“调用方可控的 resumed-handshake 语义已完整”
+
+- 这也帮助我们把“实现完整度”路线再分细一层：
+  - 一层是 public surface 是否存在
+  - 一层是 public surface 的 runtime semantics 是否真的和调用方心智匹配
+  - WinSSL 当前在 session 这条线上更接近：
+    - public surface 已存在
+    - 但 caller-driven restore semantics 仍未达到 OpenSSL 式直觉语义
+
+- 所以当前最稳的修法不是先假装把实现说圆，
+  而是先把 source/high-entry docs 的 semantic boundary 钉牢：
+  - `SetSession(...)` = compatibility metadata surface
+  - real reconnect truth = Schannel automatic cache key + fresh runtime transcript
+
 - session-resumption residual 这条线现在终于可以稳定冻结了：
   - `tests/contract/test_backend_contract.pas`
     是 compatibility mirror proof

@@ -362,6 +362,68 @@
   - summary:
     - the version-history truth batch is whitespace-clean
 
+### WinSSL Session Injection Semantics Truth
+
+- `sed -n '500,740p' src/fafafa.ssl.winssl.lib.pas`
+- `rg -n "GetSession|SetSession|IsSessionReused|InitializeSecurityContextW|SECPKG_ATTR_SESSION_INFO|FCurrentSession" src/fafafa.ssl.winssl.connection.pas src/fafafa.ssl.winssl.context.pas`
+- `sed -n '2100,2265p' src/fafafa.ssl.winssl.connection.pas`
+- `sed -n '260,520p' tests/winssl/test_winssl_session_resumption.pas`
+- `rg -n "Resumption2\\.SetSession|target name|credential handle|compatibility metadata" docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md docs/guides/WINSSL_USER_GUIDE.md docs/reference/API_REFERENCE.md docs/BACKEND_SELECTION_GUIDE.md`
+  - result: PASS
+  - summary:
+    - static audit confirmed a semantic-boundary gap in the WinSSL session lane:
+      - `DoSetSession(...)` only stores `FCurrentSession`
+      - shared client handshake does not feed that session object into `InitializeSecurityContextW`
+      - API reference already documented the truth, but higher-entry WinSSL docs still under-explained it
+
+- add `docs/plans/2026-05-19-winssl-session-injection-semantics-truth.md`
+  - change:
+    - recorded the bounded source+docs truth plan for WinSSL session-injection semantics
+
+- add `tests/scripts/test_winssl_session_injection_semantics_truth_contract.sh`
+  - change:
+    - added a focused shell contract that guards:
+      - WinSSL source documents `SetSession(...)` as compatibility metadata
+      - WinSSL high-entry docs explain `target name + credential handle`
+        reconnect truth
+      - Windows selection guidance no longer hides this caveat
+
+- update source/docs:
+  - `src/fafafa.ssl.winssl.connection.pas`
+  - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  - `docs/guides/WINSSL_USER_GUIDE.md`
+  - `docs/BACKEND_SELECTION_GUIDE.md`
+  - change:
+    - added a source-side note beside `DoSetSession(...)`
+    - demoted `SetSession(...)` in WinSSL high-entry examples to compatibility metadata surface
+    - made Windows selection guidance explicitly bounce capability-sensitive users back to OpenSSL when needed
+
+- `bash -n tests/scripts/test_winssl_session_injection_semantics_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new WinSSL session-injection semantics contract syntax is valid
+
+- `bash tests/scripts/test_winssl_session_injection_semantics_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - source and high-entry docs now agree that WinSSL `SetSession(...)`
+      is not a native session-handle injection point
+
+- `bash tests/scripts/test_winssl_session_resumption_docs_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - the broader WinSSL session-resumption docs truth still stays green after the semantic-boundary tightening
+
+- `npx prettier --write docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md docs/guides/WINSSL_USER_GUIDE.md docs/BACKEND_SELECTION_GUIDE.md`
+  - result: PASS
+  - summary:
+    - the touched WinSSL docs remain formatter-stable after the semantic-boundary cleanup
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - the WinSSL session-injection semantics batch is whitespace-clean
+
 ### ISSLSessionResumption Runtime Residual Classification Tightening
 
 - add `docs/plans/2026-05-19-isslsessionresumption-runtime-residual-classification-tightening.md`

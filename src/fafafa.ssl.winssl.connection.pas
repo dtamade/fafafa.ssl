@@ -1981,6 +1981,9 @@ end;
 
 procedure TWinSSLConnection.DoSetSession(ASession: ISSLSession);
 begin
+  // WinSSL currently keeps caller-supplied sessions as compatibility metadata.
+  // Shared client reconnects still follow Schannel's automatic cache key
+  // (target name + credential handle), not a native session-handle injection path.
   FCurrentSession := ASession;
   FSessionReused := False;
 end;

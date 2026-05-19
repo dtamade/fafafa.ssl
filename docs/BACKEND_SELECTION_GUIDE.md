@@ -251,6 +251,7 @@ end;
 **不满足直接返回 0 分**，满足则得 40 分。
 
 检查项目：
+
 - 协议版本支持（TLS 1.2/1.3）
 - 密码算法支持（AES-GCM, ChaCha20）
 - 哈希算法支持（SHA-256/384/512）
@@ -271,6 +272,7 @@ PreferredScore = (MatchedCount / TotalCount) * 20
 使用后端能力矩阵中的 `SecurityScore` 字段。
 
 权重根据优化目标调整：
+
 - `optSecurity`: 40% (最高权重)
 - `optBalanced`: 20% (默认)
 - `optPerformance`: 10% (最低权重)
@@ -280,6 +282,7 @@ PreferredScore = (MatchedCount / TotalCount) * 20
 使用后端能力矩阵中的 `PerformanceScore` 字段。
 
 权重根据优化目标调整：
+
 - `optPerformance`: 40% (最高权重)
 - `optBalanced`: 20% (默认)
 - `optSecurity`: 10% (最低权重)
@@ -299,6 +302,7 @@ PreferredScore = (MatchedCount / TotalCount) * 20
 #### OpenSSL 3.5.4 后端评分
 
 **能力矩阵**:
+
 - SecurityScore: 90/100
 - PerformanceScore: 100/100
 - SupportsTLS13: Yes
@@ -309,11 +313,11 @@ PreferredScore = (MatchedCount / TotalCount) * 20
 
 **测试结果**:
 
-| 优化目标 | 必需功能 | 优选 | 安全 | 性能 | 平台 | 总分 |
-|---------|---------|------|------|------|------|------|
-| 平衡 (optBalanced) | 40 | 20 | 18 | 10 | 5.5 | 80/100 |
-| 安全 (optSecurity) | 40 | 20 | 36 | 4 | 5.5 | 88/100 |
-| 性能 (optPerformance) | 40 | 20 | 9 | 40 | 5.5 | 100/100 |
+| 优化目标              | 必需功能 | 优选 | 安全 | 性能 | 平台 | 总分    |
+| --------------------- | -------- | ---- | ---- | ---- | ---- | ------- |
+| 平衡 (optBalanced)    | 40       | 20   | 18   | 10   | 5.5  | 80/100  |
+| 安全 (optSecurity)    | 40       | 20   | 36   | 4    | 5.5  | 88/100  |
+| 性能 (optPerformance) | 40       | 20   | 9    | 40   | 5.5  | 100/100 |
 
 ---
 
@@ -352,6 +356,7 @@ Ctx := TSSLContextBuilder.Create
 注意：`WithSecurityFirst` 会优先满足 TLS 1.3、现代密码套件与安全评分；它本身不等于默认已进入 FIPS 路线。
 
 **等同于**:
+
 ```pascal
 Requirements := CreateSecurityFirstRequirements;
 // 强制 TLS 1.3
@@ -373,6 +378,7 @@ Ctx := TSSLContextBuilder.Create
 ```
 
 **特点**:
+
 - 优先硬件加速
 - 最低性能评分 85
 - 优选硬件加速的算法（AES-NI）
@@ -389,6 +395,7 @@ Ctx := TSSLContextBuilder.Create
 ```
 
 **特点**:
+
 - 支持 TLS 1.2 和 1.3
 - 无特定算法要求
 - 最低兼容性 85
@@ -422,6 +429,7 @@ Ctx := TSSLContextBuilder.Create
 ```
 
 **行为**:
+
 - 如果未启用自动选择，自动启用并创建默认需求
 - 添加 TLS 1.3 到必需协议列表
 
@@ -437,6 +445,7 @@ Ctx := TSSLContextBuilder.Create
 ```
 
 **可用算法**:
+
 - `sslCipherAES128`
 - `sslCipherAES256`
 - `sslCipherAES128GCM`
@@ -468,6 +477,7 @@ Ctx := TSSLContextBuilder.Create
 ```
 
 **效果**:
+
 - Windows: 优先选择 WinSSL
 - macOS: 优先选择 SecureTransport（如果实现）
 - Linux: 优先选择系统 OpenSSL
@@ -559,6 +569,14 @@ Ctx := TSSLContextBuilder.Create
 
 **结果**: 优先选择 WinSSL。
 
+注意：如果你的真实需求还包括：
+
+- 把 session resumption / tickets 当成已稳定 runtime-proven 能力
+- 需要 caller-provided server OCSP stapling
+- 需要 Early Data / 更强的 protocol/runtime 控制
+
+则不要只因为“Windows + 零依赖”就默认停在 WinSSL；这类路线当前仍应优先重新评估 OpenSSL。
+
 ### 场景 6: 跨平台应用
 
 **需求**: 最大兼容性，支持旧版本 TLS。
@@ -577,6 +595,7 @@ Ctx := TSSLContextBuilder.Create
 ### 1. 优先使用 Builder API
 
 ✅ **推荐**:
+
 ```pascal
 Ctx := TSSLContextBuilder.Create
   .WithSecurityFirst
@@ -585,6 +604,7 @@ Ctx := TSSLContextBuilder.Create
 ```
 
 ❌ **不推荐**:
+
 ```pascal
 Requirements := CreateSecurityFirstRequirements;
 SelectBestBackend(Requirements, BackendType, Score);
@@ -596,6 +616,7 @@ Ctx := TSSLFactory.CreateContext(sslCtxClient, BackendType);
 ### 2. 先定义需求，后构建上下文
 
 ✅ **推荐**:
+
 ```pascal
 Builder := TSSLContextBuilder.Create
   .WithSecurityFirst
@@ -610,6 +631,7 @@ Ctx := Builder.BuildClient;
 ### 3. 使用快捷方法
 
 ✅ **推荐**:
+
 ```pascal
 Ctx := TSSLContextBuilder.Create
   .WithPerformanceFirst  // 简洁明了
@@ -617,6 +639,7 @@ Ctx := TSSLContextBuilder.Create
 ```
 
 ❌ **不推荐**:
+
 ```pascal
 Requirements := CreateDefaultRequirements(optPerformance);
 Requirements.MinPerformanceScore := 85;
@@ -725,6 +748,7 @@ end;
 ### Q4: 默认的 optBalanced 是什么策略？
 
 **A**:
+
 - TLS 1.2/1.3 支持
 - 最低安全评分 60
 - 最低性能评分 60
@@ -741,6 +765,7 @@ end;
 ### Q6: RequireTLS13 和 WithTLS13 的区别？
 
 **A**:
+
 - `RequireTLS13`: 启用自动选择，要求后端支持 TLS 1.3
 - `WithTLS13`: 配置上下文使用 TLS 1.3，不涉及后端选择
 
@@ -756,6 +781,7 @@ Ctx := TSSLContextBuilder.Create
 ### Q7: 如何查看所有可用后端的评分？
 
 **A**:
+
 ```pascal
 var
   Requirements: TSSLRequirements;
@@ -788,6 +814,7 @@ Ctx := TSSLContextBuilder.Create
 **A**:
 
 **Windows**:
+
 ```pascal
 Ctx := TSSLContextBuilder.Create
   .PreferOSNative  // 优先 WinSSL
@@ -795,6 +822,7 @@ Ctx := TSSLContextBuilder.Create
 ```
 
 **需要硬件加速**:
+
 ```pascal
 Requirements := CreatePerformanceFirstRequirements;
 Requirements.PlatformPreferences.PreferHardwareAccel := True;
