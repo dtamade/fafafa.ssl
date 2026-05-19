@@ -2,6 +2,62 @@
 
 ## 2026-05-19
 
+### Session-Resumption Guide Old-Name Truth Freeze
+
+- `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
+  - result: PASS
+  - summary:
+    - no unsynced catchup output was needed before the session-resumption guide batch
+
+- `rg -n "GetSessionID|IsSessionResumed|SetSession\\(|GetSession\\(|IsSessionReused|ISSLSessionResumption" docs/guides/QUICKSTART.md docs/guides/TROUBLESHOOTING.md docs/guides/USER_GUIDE.md docs/guides/INTEGRATION_GUIDE.md docs/reference/API_REFERENCE.md docs/reference/API_DOCUMENTATION.md`
+  - result: PASS
+  - summary:
+    - confirmed the remaining high-visibility session-resumption drift now lived in `QUICKSTART.md`, `TROUBLESHOOTING.md`, and `USER_GUIDE.md`
+    - confirmed the earlier `API_REFERENCE` / `API_DOCUMENTATION` / `INTEGRATION_GUIDE` owner-path batch had already landed
+
+- add `docs/plans/2026-05-19-session-resumption-guide-old-name-freeze.md`
+  - change:
+    - define the bounded guide-only truth-freeze batch for stale session-resumption names and direct connection-core mirrors
+
+- add `tests/scripts/test_session_resumption_guide_old_name_truth_contract.sh`
+  - change:
+    - lock `QUICKSTART`, `TROUBLESHOOTING`, and `USER_GUIDE` away from `GetSessionID` / `IsSessionResumed`
+    - require `ISSLSessionResumption` owner-path guidance in all 3 guide files
+
+- update session-resumption guide truth sources:
+  - `docs/guides/QUICKSTART.md`
+  - `docs/guides/TROUBLESHOOTING.md`
+  - `docs/guides/USER_GUIDE.md`
+  - change:
+    - switch session save/restore/reuse examples to `Supports(..., ISSLSessionResumption, ...)`
+    - replace direct `Connection.GetSession / SetSession / IsSessionResumed` guidance with owner-path `GetSession / SetSession / IsSessionReused`
+    - add an explicit owner-path note in `QUICKSTART`
+
+- `bash -n tests/scripts/test_session_resumption_guide_old_name_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - session-resumption guide truth contract syntax is valid
+
+- `bash tests/scripts/test_session_resumption_guide_old_name_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - `QUICKSTART`, `TROUBLESHOOTING`, and `USER_GUIDE` are now aligned on `ISSLSessionResumption` owner-path guidance
+    - stale `GetSessionID` / `IsSessionResumed` names are gone from the active guides covered by this batch
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current session-resumption guide truth batch has no whitespace or patch-format issues
+
+- `rg -n "GetSessionID|IsSessionResumed" docs src tests --glob '!docs/archive/**' --glob '!docs/test_reports/**'`
+  - result: PASS
+  - summary:
+    - active guides no longer carry stale session-resumption names
+    - remaining hits are now limited to:
+      - `docs/reference/API_REFERENCE.md` historical/compatibility notes
+      - `tests/winssl/SESSION_REUSE_BENCHMARK_GUIDE.md`
+      - contract / plan / progress files that intentionally record the old names
+
 ### Facade Main-Entry Truth Freeze
 
 - `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`

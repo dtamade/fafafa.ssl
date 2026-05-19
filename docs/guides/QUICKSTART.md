@@ -102,6 +102,7 @@ uses
 var
   Ctx: ISSLContext;
   Conn1, Conn2: ISSLConnection;
+  SessionResumption1, SessionResumption2: ISSLSessionResumption;
   Session: ISSLSession;
   Socket1, Socket2: THandle;
 begin
@@ -118,13 +119,14 @@ begin
   Conn1 := Ctx.CreateConnection(Socket1);
   (Conn1 as ISSLClientConnection).SetServerName('api.example.com');
 
-  if Conn1.Connect then
+  if Conn1.Connect and Supports(Conn1, ISSLSessionResumption, SessionResumption1) then
   begin
     WriteLn('第一次连接成功');
-    WriteLn('Session ID: ', Conn1.GetSessionID);
 
     // 保存 Session 供后续使用
-    Session := Conn1.GetSession;
+    Session := SessionResumption1.GetSession;
+    if Assigned(Session) then
+      WriteLn('Session ID: ', Session.GetID);
 
     // 执行业务逻辑...
     Conn1.Shutdown;
@@ -133,7 +135,9 @@ begin
   // 第二次连接 - 复用 Session
   Socket2 := ConnectToHost('api.example.com', 443);
   Conn2 := Ctx.CreateConnection(Socket2);
-  Conn2.SetSession(Session);  // 设置之前保存的 Session
+  if Supports(Conn2, ISSLSessionResumption, SessionResumption2) and
+     Assigned(Session) and Session.IsValid and Session.IsResumable then
+    SessionResumption2.SetSession(Session);  // 设置之前保存的 Session
   (Conn2 as ISSLClientConnection).SetServerName('api.example.com');
 
   if Conn2.Connect then
@@ -141,7 +145,8 @@ begin
     WriteLn('第二次连接成功');
 
     // 检查是否复用了 Session
-    if Conn2.IsSessionResumed then
+    if Supports(Conn2, ISSLSessionResumption, SessionResumption2) and
+       SessionResumption2.IsSessionReused then
       WriteLn('✓ Session 复用成功 - 握手时间大幅减少')
     else
       WriteLn('✗ Session 未复用 - 执行了完整握手');
@@ -166,6 +171,8 @@ var
   Ctx: ISSLContext;
   SessionCache: TDictionary<string, ISSLSession>;
   Conn: ISSLConnection;
+  SessionResumption: ISSLSessionResumption;
+  Session: ISSLSession;
   Host: string;
   Hosts: TStringList;
   Socket: THandle;
@@ -193,19 +200,30 @@ begin
       Conn := Ctx.CreateConnection(Socket);
 
       // 尝试复用缓存的 Session
-      if SessionCache.ContainsKey(Host) then
-        Conn.SetSession(SessionCache[Host]);
+      if SessionCache.ContainsKey(Host) and
+         Supports(Conn, ISSLSessionResumption, SessionResumption) then
+      begin
+        Session := SessionCache[Host];
+        if Assigned(Session) and Session.IsValid and Session.IsResumable then
+          SessionResumption.SetSession(Session);
+      end;
 
       (Conn as ISSLClientConnection).SetServerName(Host);
 
       if Conn.Connect then
       begin
-        WriteLn(Format('连接到 %s: Session %s',
-          [Host,
-           IfThen(Conn.IsSessionResumed, '复用', '新建')]));
+        if Supports(Conn, ISSLSessionResumption, SessionResumption) then
+        begin
+          if SessionResumption.IsSessionReused then
+            WriteLn(Format('连接到 %s: Session 复用', [Host]))
+          else
+            WriteLn(Format('连接到 %s: Session 新建', [Host]));
 
-        // 保存 Session 供后续使用
-        SessionCache.AddOrSetValue(Host, Conn.GetSession);
+          // 保存 Session 供后续使用
+          Session := SessionResumption.GetSession;
+          if Assigned(Session) then
+            SessionCache.AddOrSetValue(Host, Session);
+        end;
 
         // 执行业务逻辑...
         Conn.Shutdown;
@@ -223,6 +241,7 @@ end.
 - Session 默认有效期约 10 小时（由 Windows 系统策略控制）
 - 适合 REST API 客户端、爬虫等频繁连接场景
 - Session 数据较小（< 1KB），可安全缓存大量 Session
+- 新代码优先通过 `ISSLSessionResumption.GetSession / SetSession / IsSessionReused` 访问会话恢复能力
 
 ---
 

@@ -10,6 +10,29 @@
 
 ## Current Status
 
+- [completed] session-resumption guide old-name truth freeze 已完成 focused 收口：
+  - 新增计划：`docs/plans/2026-05-19-session-resumption-guide-old-name-freeze.md`
+  - 新增 focused source contract：`tests/scripts/test_session_resumption_guide_old_name_truth_contract.sh`
+  - `docs/guides/QUICKSTART.md`
+    - Session 保存/恢复/复用示例现已统一改走 `ISSLSessionResumption`
+  - `docs/guides/TROUBLESHOOTING.md`
+    - WinSSL Session 复用排障与性能示例现已不再教学 `IsSessionResumed` / direct `SetSession`
+  - `docs/guides/USER_GUIDE.md`
+    - 性能优化里的复用检测现已切到 owner path
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_session_resumption_guide_old_name_truth_contract.sh`
+    - `bash tests/scripts/test_session_resumption_guide_old_name_truth_contract.sh`
+    - `git diff --check`: PASS
+  - focused residual scan 已确认：
+    - active guides 里的旧 session 名称漂移当前已收干净
+    - repo 内剩余 `GetSessionID` / `IsSessionResumed` 主要位于：
+      - `docs/reference/API_REFERENCE.md` 的历史/兼容性说明
+      - `tests/winssl/SESSION_REUSE_BENCHMARK_GUIDE.md` 的 WinSSL 专项 benchmark 文档
+      - contract / plan / progress 台账自身
+  - 当前结论：
+    - ordinary active guides 的 session-resumption truth 已基本对齐
+    - 如果继续沿 session-resumption 文档线推进，下一刀更适合切 `tests/winssl/SESSION_REUSE_BENCHMARK_GUIDE.md`
+    - 如果回到更高价值主线，则更适合继续 backend completeness / backend-specific runtime truth 审查
 - [completed] facade / main-entry truth freeze 已完成 focused 收口：
   - 新增计划：`docs/plans/2026-05-19-facade-main-entry-truth-freeze.md`
   - 新增 focused source contract：`tests/scripts/test_facade_main_entry_truth_contract.sh`

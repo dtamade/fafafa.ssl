@@ -504,8 +504,13 @@ LContext.SetSessionTimeout(300);  // 5 分钟
 LContext.SetSessionCacheSize(1024);
 
 // 检查会话是否复用
-if LConn.IsSessionResumed then
-  WriteLn('会话已复用 - 握手更快！');
+var
+  LSessionResumption: ISSLSessionResumption;
+begin
+  if Supports(LConn, ISSLSessionResumption, LSessionResumption) and
+     LSessionResumption.IsSessionReused then
+    WriteLn('会话已复用 - 握手更快！');
+end;
 ```
 
 ### 2. 使用 ALPN

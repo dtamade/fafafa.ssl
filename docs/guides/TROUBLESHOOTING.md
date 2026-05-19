@@ -506,8 +506,13 @@ LContext.SetCipherSuites('TLS_AES_128_GCM_SHA256');  // 硬件加速
 LContext.SetCipherList('ECDHE+AESGCM');
 
 // 4. 检查是否复用会话
-if LConn.IsSessionResumed then
-  WriteLn('Session reused - handshake faster!');
+var
+  LSessionResumption: ISSLSessionResumption;
+begin
+  if Supports(LConn, ISSLSessionResumption, LSessionResumption) and
+     LSessionResumption.IsSessionReused then
+    WriteLn('Session reused - handshake faster!');
+end;
 ```
 
 ### 问题: 数据传输慢
@@ -572,7 +577,7 @@ end;
 
 **症状**:
 ```
-连接成功，但 IsSessionResumed 总是返回 False
+连接成功，但当前连接看起来总是没有复用 Session
 ```
 
 **可能原因和解决方案**:
@@ -580,12 +585,17 @@ end;
 1. **服务器不支持 Session 复用**
 ```pascal
 // 检查服务器是否支持 Session 复用
-if not LConn.IsSessionResumed then
+var
+  LSessionResumption: ISSLSessionResumption;
 begin
-  WriteLn('Session 未复用，可能原因：');
-  WriteLn('  - 服务器不支持 Session 复用');
-  WriteLn('  - Session 已过期（默认 10 小时）');
-  WriteLn('  - 服务器要求重新验证');
+  if Supports(LConn, ISSLSessionResumption, LSessionResumption) and
+     not LSessionResumption.IsSessionReused then
+  begin
+    WriteLn('Session 未复用，可能原因：');
+    WriteLn('  - 服务器不支持 Session 复用');
+    WriteLn('  - Session 已过期（默认 10 小时）');
+    WriteLn('  - 服务器要求重新验证');
+  end;
 end;
 ```
 
@@ -610,10 +620,15 @@ end;
 3. **Session 对象未正确传递**
 ```pascal
 // 确保 Session 对象有效
-if Assigned(LSession) and LSession.IsValid then
-  LConn.SetSession(LSession)
+var
+  LSessionResumption: ISSLSessionResumption;
+begin
+  if Assigned(LSession) and LSession.IsValid and LSession.IsResumable and
+     Supports(LConn, ISSLSessionResumption, LSessionResumption) then
+    LSessionResumption.SetSession(LSession)
 else
-  WriteLn('警告: Session 无效或已过期');
+    WriteLn('警告: Session 无效、不可恢复，或当前连接未暴露 ISSLSessionResumption');
+end;
 ```
 
 **问题: 证书验证失败**
@@ -678,18 +693,30 @@ LContext.SetVerifyMode([]);  // 禁用证书验证
 // 使用 Session 缓存
 var
   LSessionCache: TDictionary<string, ISSLSession>;
+  LResumption1, LResumption2: ISSLSessionResumption;
+  LSession: ISSLSession;
 begin
   LSessionCache := TDictionary<string, ISSLSession>.Create;
   try
     // 首次连接
     LConn1 := LCtx.CreateConnection(Socket1);
     (LConn1 as ISSLClientConnection).SetServerName('example.com');
-    if LConn1.Connect then
-      LSessionCache.Add('example.com', LConn1.GetSession);
+    if LConn1.Connect and Supports(LConn1, ISSLSessionResumption, LResumption1) then
+    begin
+      LSession := LResumption1.GetSession;
+      if Assigned(LSession) then
+        LSessionCache.Add('example.com', LSession);
+    end;
 
     // 后续连接 - 快速复用
     LConn2 := LCtx.CreateConnection(Socket2);
-    LConn2.SetSession(LSessionCache['example.com']);
+    if Supports(LConn2, ISSLSessionResumption, LResumption2) and
+       LSessionCache.ContainsKey('example.com') then
+    begin
+      LSession := LSessionCache['example.com'];
+      if Assigned(LSession) and LSession.IsValid and LSession.IsResumable then
+        LResumption2.SetSession(LSession);
+    end;
     (LConn2 as ISSLClientConnection).SetServerName('example.com');
     LConn2.Connect;  // 快速握手
   finally

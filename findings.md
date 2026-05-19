@@ -2,6 +2,39 @@
 
 ## 2026-05-19
 
+- `ISSLSessionResumption` 之前虽然已经在 `API_REFERENCE` / `API_DOCUMENTATION` / `INTEGRATION_GUIDE` / generic E2E 场景收过一轮 ordinary guidance，但这次重新审 active guides 仍压出了一组高可见漏网：
+  - `docs/guides/QUICKSTART.md`
+  - `docs/guides/TROUBLESHOOTING.md`
+  - `docs/guides/USER_GUIDE.md`
+
+- 这组漏网点的共同特征也很明确：
+  - 不是实现缺口
+  - 不是 backend contract 缺口
+  - 而是高可见 guide 仍在教学旧的 `GetSessionID` / `IsSessionResumed` / direct connection-core `GetSession` / `SetSession`
+
+- 因而这批最小正确动作不是改生产逻辑，而是做一轮 session-resumption guide old-name truth freeze：
+  - 新增 focused source contract，锁住这 3 份 guide 不再回退到旧名字与 direct connection-core 路径
+  - `QUICKSTART` 的 Session 保存/恢复/复用示例切回 `Supports(..., ISSLSessionResumption, ...)`
+  - `TROUBLESHOOTING` 的 WinSSL 复用排障 / 性能示例切回 owner path
+  - `USER_GUIDE` 的性能优化示例也不再继续教 `IsSessionResumed`
+
+- focused 结果说明这批边界已经正确收住：
+  - 新 contract 直接 PASS
+  - `git diff --check` 继续 PASS
+  - 这说明当前剩余问题确实只是 guide truth 漂移，而不是更深层实现反弹
+
+- 进一步的 focused residual scan 也把这条线当前剩余面压得很窄：
+  - active guides 里的 `GetSessionID` / `IsSessionResumed` 已清空
+  - repo 内剩余旧名字主要只在：
+    - `docs/reference/API_REFERENCE.md` 的历史/兼容性说明
+    - `tests/winssl/SESSION_REUSE_BENCHMARK_GUIDE.md` 的 WinSSL 专项 benchmark 文档
+    - 以及 contract / plan / progress 等台账文件
+
+- 因而 session-resumption 这条 ordinary-guide 路线现在可以视为基本关闭：
+  - 不应再把 `QUICKSTART` / `TROUBLESHOOTING` / `USER_GUIDE` 当成未收口问题反复拉起
+  - 如果继续沿这条路线收尾，下一刀最自然的是 WinSSL benchmark guide
+  - 如果回到更高价值主线，则应继续 backend completeness / backend-specific runtime truth 审查
+
 - 当前最容易把新读者直接带回旧 public surface 的，并不是 runtime 实现，而是 highest-visibility main-entry truth source：
   - `docs/README.md`
   - `src/fafafa.ssl.pas`
