@@ -2,6 +2,69 @@
 
 ## 2026-05-20
 
+- `MbedTLS TLS 1.3`
+  这次暴露的是
+  dedicated backend page
+  的一种更隐蔽 drift：
+  - 不是把
+    `False`
+    写成
+    `True`
+  - 而是把
+    “取决于 runtime/version gate 的条件能力”
+    扁平化成了
+    “当前 backend 无条件 `✅`”
+
+- source 这次其实非常明确：
+  - `MBEDTLS_MIN_VERSION = 3.0.0`
+  - `HasTLS13 := VersionNumber >= MBEDTLS_MIN_VERSION`
+  - `IsProtocolSupported(sslProtocolTLS13) := HasTLS13`
+  - `SupportsTLS13 := HasTLS13`
+  也就是说，
+  `TLS 1.3`
+  在当前 MbedTLS backend
+  里并不是
+  unconditional capability，
+  而是
+  runtime-detected capability
+
+- 所以当 active docs
+  写：
+  - `MbedTLS 3.x 支持`
+  时，
+  如果没有继续说明
+  “当前 published truth 取决于运行时检测”，
+  读者就会自然把它理解成：
+  - 只要你选了
+    `sslMbedTLS`
+  - `TLS 1.3`
+    就一定是
+    `✅`
+
+- 这说明，
+  对 capability 审查来说，
+  不能只盯：
+  - `支持`
+  - `不支持`
+  - `部分支持`
+  这种三态字面值，
+  还要盯：
+  - 文档有没有把条件门槛
+    展平成无条件承诺
+
+- 也就是说，
+  `runtime capability gate`
+  本身就是
+  published surface
+  的一部分。
+  一旦 active docs
+  把这个 gate 抹平，
+  后续路线就会被误导成：
+  - “是不是 canonical matrix 太保守”
+  而不是
+  - “这条 backend capability
+    本来就依赖 runtime truth”
+
 - `MbedTLS`
   这次协议表说明了：
   dedicated backend page

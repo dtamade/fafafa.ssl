@@ -10,6 +10,95 @@
 
 ## Current Status
 
+- [completed] `mbedtls tls13 capability doc truth alignment`
+  当前 focused 目标：
+  - 收掉
+    `MBEDTLS_BACKEND_CAPABILITY_MATRIX`
+    把
+    `TLS 1.3`
+    写成无条件
+    `✅ 支持`
+    的专页漂移
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-mbedtls-tls13-capability-doc-truth-alignment.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_mbedtls_tls13_capability_doc_truth_contract.sh`
+  - 收口文档：
+    - `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+  当前预判：
+  - source 已经明确发布：
+    - `MBEDTLS_MIN_VERSION = $03000000`
+    - `HasTLS13 := VersionNumber >= MBEDTLS_MIN_VERSION`
+    - `IsProtocolSupported(sslProtocolTLS13) := HasTLS13`
+    - `SupportsTLS13 := HasTLS13`
+  - top-level `docs/BACKEND_CAPABILITY_MATRIX.md`
+    也已经把
+    `MbedTLS TLS 1.3`
+    记为
+    `⚠️`
+  - 但 dedicated MbedTLS page
+    仍写：
+    - `TLS 1.3 | ✅ 支持 | MbedTLS 3.x 支持`
+  - 这说明：
+    - source truth 是条件能力
+    - canonical matrix 是条件能力
+    - dedicated page 却把条件能力扁平化成了无条件支持
+  当前验证策略：
+  - 用 focused shell contract
+    同时冻结：
+    - `MBEDTLS_MIN_VERSION`
+    - `HasTLS13` 的 runtime/version gating
+    - `sslProtocolTLS13`
+      与
+      `SupportsTLS13`
+      的条件 truth
+    - canonical matrix
+      里的
+      `MbedTLS = ⚠️`
+    - dedicated page
+      新旧两行的 present / absent truth
+  当前最终收口证据：
+  - `git show HEAD:docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+    直接证明：
+    编辑前 active dedicated page
+    仍保留
+    `| TLS 1.3 | ✅ 支持 | MbedTLS 3.x 支持 |`
+  - GREEN 后证明：
+    - dedicated MbedTLS page
+      不再把
+      `TLS 1.3`
+      发布成无条件能力
+    - 活跃专页已重新回到
+      `SupportsTLS13` / `sslProtocolTLS13`
+      取决于 runtime version detection
+      的 source truth
+  focused verification 已通过：
+  - `bash -n tests/scripts/test_mbedtls_tls13_capability_doc_truth_contract.sh`
+  - `bash tests/scripts/test_mbedtls_tls13_capability_doc_truth_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - 这批收掉的是
+    MbedTLS dedicated backend page
+    对 runtime-gated TLS 1.3 capability
+    的扁平化误报，
+    不是新的 TLS 1.3 实现缺口
+  当前下一条真实工作：
+  - 继续审查 active backend 专页
+    里剩余的
+    runtime-gated / platform-gated / application-layer possibility
+    是否又被写成
+    `✅` / `⚠️ 部分`
+  - 优先再看：
+    - `MbedTLS`:
+      `Ed25519`
+      `异步操作`
+    - `WinSSL`:
+      `ChaCha20-Poly1305`
+      `x25519`
+      `Context callbacks`
+      `Password-protected private keys`
+      `Windows 7 SP1`
 - [completed] `mbedtls protocol capability doc truth alignment`
   当前 focused 目标：
   - 收掉

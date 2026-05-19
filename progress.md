@@ -4,6 +4,68 @@
 
 ## 2026-05-20
 
+### MbedTLS TLS 1.3 Capability Doc Truth Alignment
+
+- `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py /home/dtamade/projects/fafafa.ssl`
+  - result: PASS
+  - summary:
+    - no catchup output surfaced
+    - current batch could proceed from the live worktree without session-recovery repair
+
+- `mcp__ace_tool__.search_context(...)`
+- `rg -n "SupportsTLS13 :=|HasTLS13|IsProtocolSupported\\(AProtocol|sslProtocolTLS13|MinTLSVersion :=|SupportsDTLS :=" src/fafafa.ssl.mbedtls.lib.pas tests/test_mbedtls_framework.pas docs/BACKEND_CAPABILITY_MATRIX.md docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md -S`
+- `sed -n '220,245p' src/fafafa.ssl.mbedtls.base.pas`
+- `sed -n '380,520p' src/fafafa.ssl.mbedtls.lib.pas`
+- `sed -n '1,90p' docs/BACKEND_CAPABILITY_MATRIX.md`
+- `sed -n '31,45p' docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+- `git show HEAD:docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md | rg -n "TLS 1\\.3" -S`
+  - result: PASS
+  - summary:
+    - confirmed a real dedicated-doc drift:
+      - source already gates TLS 1.3 on runtime version detection
+      - canonical quick-reference already classifies MbedTLS TLS 1.3 as `⚠️`
+      - but the pre-edit dedicated MbedTLS page still published:
+        `| TLS 1.3 | ✅ 支持 | MbedTLS 3.x 支持 |`
+
+- add `docs/plans/2026-05-20-mbedtls-tls13-capability-doc-truth-alignment.md`
+- add `tests/scripts/test_mbedtls_tls13_capability_doc_truth_contract.sh`
+  - change:
+    - recorded a bounded MbedTLS TLS 1.3 doc-truth batch
+    - added a focused contract freezing:
+      - `MBEDTLS_MIN_VERSION`
+      - `HasTLS13` runtime gating
+      - `sslProtocolTLS13` / `SupportsTLS13` conditional truth
+      - canonical matrix `MbedTLS TLS 1.3 = ⚠️`
+      - dedicated matrix new row and old-row removal
+
+- update docs:
+  - `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+  - change:
+    - rewrote `TLS 1.3` from unconditional `✅ 支持`
+      to
+      `⚠️ 条件支持`
+    - explicitly documented that
+      `SupportsTLS13` / `sslProtocolTLS13`
+      depend on runtime MbedTLS version detection
+
+- `bash -n tests/scripts/test_mbedtls_tls13_capability_doc_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new MbedTLS TLS 1.3 doc-truth contract syntax was valid
+
+- `bash tests/scripts/test_mbedtls_tls13_capability_doc_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - focused contract now proves:
+      - source still keeps TLS 1.3 behind the 3.x runtime/version gate
+      - canonical matrix still classifies MbedTLS TLS 1.3 as conditional
+      - dedicated MbedTLS page no longer publishes unconditional TLS 1.3 support
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remain after the MbedTLS TLS 1.3 doc closeout
+
 ### MbedTLS Protocol Capability Doc Truth Alignment
 
 - `rg -n "function TMbedTLSLibrary\\.IsProtocolSupported|SupportsDTLS :=|sslProtocolDTLS10|sslProtocolDTLS12|HasTLS13|HasALPN|HasSNI" src/fafafa.ssl.mbedtls.lib.pas src/fafafa.ssl.mbedtls*.pas tests/test_mbedtls_framework.pas -S`

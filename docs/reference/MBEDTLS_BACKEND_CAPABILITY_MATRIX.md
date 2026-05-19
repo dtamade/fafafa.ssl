@@ -35,7 +35,7 @@ Ctx := TSSLContextBuilder.Create
 | TLS 1.0 | ❌ 当前 capability 不发布 | 当前 MbedTLS runtime path 以 TLS 1.2+ 为起点；`sslProtocolTLS10` 当前返回 `False` |
 | TLS 1.1 | ❌ 当前 capability 不发布 | 当前 MbedTLS runtime path 以 TLS 1.2+ 为起点；`sslProtocolTLS11` 当前返回 `False` |
 | TLS 1.2 | ✅ 支持 | 默认启用，推荐 |
-| TLS 1.3 | ✅ 支持 | MbedTLS 3.x 支持 |
+| TLS 1.3 | ⚠️ 条件支持 | 当前 `SupportsTLS13` / `sslProtocolTLS13` 取决于运行时 MbedTLS 版本；仅当检测到 MbedTLS 3.x+ 时才发布 |
 | DTLS 1.0 | ❌ 当前 capability 不发布 | 当前 `SupportsDTLS=False`；`sslProtocolDTLS10` 当前返回 `False` |
 | DTLS 1.2 | ❌ 当前 capability 不发布 | 当前 `SupportsDTLS=False`；`sslProtocolDTLS12` 当前返回 `False` |
 
