@@ -4,6 +4,55 @@
 
 ## 2026-05-20
 
+### WinSSL DTLS Doc Truth Alignment
+
+- `mcp__ace_tool__.search_context(...)`
+- `rg -n "WinSSL.*DTLS|DTLS 1.0|DTLS 1.2|SupportsDTLS|Schannel 不支持 DTLS|sslWinSSL.*DTLS" docs src tests -g '!docs/archive/**' -g '!docs/plans/**' -g '!docs/test_reports/**' -S`
+- `sed -n '500,620p' src/fafafa.ssl.winssl.lib.pas`
+- `sed -n '30,125p' docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  - result: PASS
+  - summary:
+    - confirmed a real dedicated-doc capability-table drift:
+      - source already publishes `SupportsDTLS=False`
+      - but the active WinSSL backend matrix still kept `DTLS 1.0 / 1.2` rows as supported/partially supported on different Windows versions
+
+- add `docs/plans/2026-05-20-winssl-dtls-doc-truth-alignment.md`
+- add `tests/scripts/test_winssl_dtls_doc_truth_contract.sh`
+  - change:
+    - recorded a bounded WinSSL DTLS doc-truth batch
+    - added a focused contract freezing:
+      - source `SupportsDTLS=False` truth
+      - dedicated WinSSL matrix DTLS rows
+      - removal of the retired platform-support DTLS rows
+
+- `bash -n tests/scripts/test_winssl_dtls_doc_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new WinSSL DTLS docs contract syntax was valid
+
+- `bash tests/scripts/test_winssl_dtls_doc_truth_contract.sh`
+  - result: FAIL -> FAIL -> PASS
+  - summary:
+    - first real RED proved the live drift:
+      - dedicated WinSSL matrix still did not classify `DTLS 1.0` as unpublished capability
+    - second failure was contract-side, not product-side:
+      - unescaped backticks in the new DTLS row needles triggered shell command substitution
+    - GREEN after the doc update proves:
+      - WinSSL dedicated matrix no longer publishes DTLS 1.0/1.2 support claims
+      - the active page now follows the source-level `SupportsDTLS=False` truth
+
+- update docs:
+  - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  - change:
+    - rewrote `DTLS 1.0 / 1.2` as
+      `❌ 当前 capability 不发布`
+    - removed the stale Windows-version DTLS support table truth from the active capability matrix
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remain after the WinSSL DTLS doc closeout
+
 ### MbedTLS OCSP Capability Doc Truth Alignment
 
 - `mcp__ace_tool__.search_context(...)`

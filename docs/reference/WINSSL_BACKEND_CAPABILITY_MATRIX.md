@@ -33,8 +33,8 @@ Ctx := TSSLContextBuilder.Create
 | TLS 1.1  | ⚠️ 禁用     | ✅ 支持     | ✅ 支持   | 默认禁用，不推荐 |
 | TLS 1.2  | ✅ 支持     | ✅ 支持     | ⚠️ 更新后 | 推荐             |
 | TLS 1.3  | ✅ 支持     | ❌ 不支持   | ❌ 不支持 | Windows 10 1903+ |
-| DTLS 1.0 | ✅ 支持     | ✅ 支持     | ⚠️ 部分   |                  |
-| DTLS 1.2 | ✅ 支持     | ⚠️ 部分     | ❌ 不支持 |                  |
+| DTLS 1.0 | ❌ 当前 capability 不发布 | ❌ 当前 capability 不发布 | ❌ 当前 capability 不发布 | 当前 WinSSL `SupportsDTLS=False`；Schannel backend 当前不发布 DTLS public/runtime path |
+| DTLS 1.2 | ❌ 当前 capability 不发布 | ❌ 当前 capability 不发布 | ❌ 当前 capability 不发布 | 当前 WinSSL `SupportsDTLS=False`；Schannel backend 当前不发布 DTLS public/runtime path |
 
 ### 密码套件
 

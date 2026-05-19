@@ -10,6 +10,76 @@
 
 ## Current Status
 
+- [completed] `winssl dtls doc truth alignment`
+  当前 focused 目标：
+  - 收掉
+    `WINSSL_BACKEND_CAPABILITY_MATRIX`
+    里把
+    `DTLS 1.0 / 1.2`
+    写成当前已支持/部分支持
+    的直接能力表漂移
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-winssl-dtls-doc-truth-alignment.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_winssl_dtls_doc_truth_contract.sh`
+  - 收口文档：
+    - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  当前预判：
+  - `src/fafafa.ssl.winssl.lib.pas`
+    已经明确发布：
+    - `SupportsDTLS=False`
+    - 注释直接写
+      `Schannel 不支持 DTLS`
+  - 但 dedicated WinSSL page
+    仍保留：
+    - `DTLS 1.0 | ✅ / ✅ / ⚠️`
+    - `DTLS 1.2 | ✅ / ⚠️ / ❌`
+    这种平台表
+  - 这已经不是 wording 模糊，
+    而是专页 capability 表
+    和 source truth
+    直接冲突
+  当前验证策略：
+  - 用 focused shell contract
+    同时冻结：
+    - WinSSL source `SupportsDTLS=False`
+    - dedicated WinSSL matrix 新的 DTLS 两行
+    - 旧的支持/部分支持行必须消失
+  当前最终收口证据：
+  - 新 contract 第一次 RED
+    就直接证明：
+    dedicated WinSSL matrix
+    还没有把
+    `DTLS 1.0`
+    收回到
+    `当前 capability 不发布`
+  - 第二次 RED
+    暴露的是 contract 对反引号行的 quoting 问题，
+    不是产品 drift
+  - GREEN 后证明：
+    - WinSSL dedicated matrix
+      不再发布任何
+      `DTLS 1.0 / 1.2`
+      支持承诺
+    - 两行都已回到
+      `SupportsDTLS=False`
+      这条 source truth
+  focused verification 已通过：
+  - `bash -n tests/scripts/test_winssl_dtls_doc_truth_contract.sh`
+  - `bash tests/scripts/test_winssl_dtls_doc_truth_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - 这批收掉的是
+    WinSSL dedicated backend page
+    的 DTLS capability-table drift，
+    不是 WinSSL 新实现缺口
+  当前下一条真实工作：
+  - 继续审查活跃 backend / guide / reference docs
+    是否还残留
+    source truth 已明确，
+    但 dedicated doc 单独保留旧平台表/旧支持行
+    的入口
 - [completed] `mbedtls ocsp capability doc truth alignment`
   当前 focused 目标：
   - 收掉

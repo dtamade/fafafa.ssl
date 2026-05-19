@@ -2,6 +2,43 @@
 
 ## 2026-05-20
 
+- `WinSSL`
+  这次 DTLS 行暴露的是
+  dedicated backend page
+  的另一种典型 drift：
+  - 不是“平台潜力 vs 当前 capability”混写
+  - 而是旧平台版本表
+    直接残留在活跃专页里，
+    让读者以为当前库层仍发布对应能力
+
+- 当 source 已经给出
+  `SupportsDTLS=False`
+  这种全局结论时，
+  active dedicated page
+  就不应该继续维持：
+  - 某些 Windows 版本 `✅`
+  - 某些版本 `⚠️`
+  这种旧平台矩阵
+
+- 这说明，
+  对 backend docs 来说，
+  “按操作系统版本列平台潜力”
+  和
+  “按当前库层 published capability 列真值”
+  也必须分开。
+  一旦前者继续留在活跃能力表里，
+  就会直接覆盖掉 source 已经明确给出的
+  `False/None`
+  capability truth
+
+- 所以高风险专页审查
+  不只是盯：
+  - `⚠️ 部分`
+  - `需手动实现`
+  也要盯：
+  - 看起来很完整的旧平台兼容表
+  因为它们同样可能已经脱离当前 shipped surface
+
 - `MbedTLS`
   这次暴露的是一种
   比“写错支持状态”更容易误导路线的表述：
