@@ -2,6 +2,75 @@
 
 ## 2026-05-19
 
+### Capability Precedence Doc Truth
+
+- add `docs/plans/2026-05-19-capability-precedence-doc-truth.md`
+  - change:
+    - define the bounded docs batch for capability precedence truth and adjacent high-entry example drift
+
+- add `tests/scripts/test_capability_precedence_docs_truth_contract.sh`
+  - change:
+    - lock that active capability docs now state:
+      - paired `*Support` fields are the truth source
+      - legacy `Supports*` bools are compatibility projections
+      - `SupportsTLS13` remains the primary bool truth
+    - lock that capability guide / API reference use `TSSLFactory.GetLibraryInstance(...)`
+    - lock same-batch adjacent truth for:
+      - `CompatibilityLevel: Integer`
+      - new-backend example calling `NormalizeLegacyCapabilityBooleans(Result);`
+
+- read-only evidence triage
+  - summary:
+    - current runtime/source truth was re-confirmed in:
+      - `src/fafafa.ssl.base.pas`
+      - `src/fafafa.ssl.capability.serializer.pas`
+      - `src/fafafa.ssl.capability.diff.pas`
+    - the remaining drift was control-plane only:
+      - `CAPABILITY_MATRIX_GUIDE` and `API_REFERENCE` still listed legacy bools and `*Support` without clearly freezing precedence
+      - `BACKEND_CAPABILITY_MATRIX` still lacked a table-level precedence note
+    - same-file adjacent drift was also confirmed:
+      - capability guide still used `TSSLFactory.GetLibrary(...)`
+      - capability record snippets still published `CompatibilityLevel: Byte`
+      - new-backend example still looked legacy-bool-first
+
+- `bash -n tests/scripts/test_capability_precedence_docs_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new capability precedence docs contract syntax is valid
+
+- `bash tests/scripts/test_capability_precedence_docs_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - initial RED proved `CAPABILITY_MATRIX_GUIDE` still lacked an explicit support-level-first precedence statement
+    - GREEN after fix proves:
+      - capability guide / API reference now spell out the truth-source rule
+      - backend capability matrix now declares the table precedence
+      - high-entry examples now use `GetLibraryInstance(...)`
+
+- update `docs/CAPABILITY_MATRIX_GUIDE.md`
+  - change:
+    - add explicit support-level-first precedence guidance
+    - keep `SupportsTLS13` as the primary bool truth in the doc wording
+    - replace high-entry `GetLibrary(...)` examples with `GetLibraryInstance(...)`
+    - fix `CompatibilityLevel` type to `Integer`
+    - rewrite the new-backend snippet to show `*Support` first plus `NormalizeLegacyCapabilityBooleans(Result);`
+    - refresh same-file related-doc links to current active paths
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - add explicit capability precedence wording in the `TSSLBackendCapabilities` section
+    - fix `CompatibilityLevel` type to `Integer`
+    - move the capability example back to `TSSLFactory.GetLibraryInstance(...)`
+
+- update `docs/BACKEND_CAPABILITY_MATRIX.md`
+  - change:
+    - add a concise table-level precedence note for paired `*Support` fields and `SupportsTLS13`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - capability precedence docs batch is whitespace-clean after the final plan/log sync
+
 ### Interface Audit Current Truth Refresh
 
 - add `docs/plans/2026-05-19-interface-audit-current-truth-refresh.md`

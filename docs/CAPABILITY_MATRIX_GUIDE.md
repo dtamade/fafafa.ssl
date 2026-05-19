@@ -77,10 +77,15 @@ type
     HasSecureMemoryWipe: Boolean;
 
     // 兼容性
-    CompatibilityLevel: Byte;  // 0-100
+    CompatibilityLevel: Integer;  // 0-100
     KnownIssues: string;
   end;
 ```
+
+能力字段读取优先级：
+
+- 当 `SNISupport` / `ALPNSupport` / `OCSPStaplingSupport` / `CertTransparencySupport` / `SessionTicketsSupport` 存在时，它们是当前 capability truth；legacy `SupportsSNI` / `SupportsALPN` / `SupportsOCSPStapling` / `SupportsCertificateTransparency` / `SupportsSessionTickets` 只作为兼容投影。
+- `SupportsTLS13` 仍然是主 bool truth，因为当前没有 `TLS13Support` 支持级别字段。
 
 ### 枚举类型
 
@@ -124,7 +129,7 @@ var
   Caps: TSSLBackendCapabilities;
 begin
   // 方式1: 通过工厂获取库
-  Lib := TSSLFactory.GetLibrary(sslOpenSSL);
+  Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   Caps := Lib.GetCapabilities;
 
   // 方式2: 通过上下文获取
@@ -454,7 +459,7 @@ begin
     'windows-desktop':
     begin
       // Windows 桌面：优先使用 WinSSL（系统集成）
-      Caps := TSSLFactory.GetLibrary(sslWinSSL).GetCapabilities;
+      Caps := TSSLFactory.GetLibraryInstance(sslWinSSL).GetCapabilities;
       if Caps.SupportsSystemCertStore then
         Exit(sslWinSSL);
     end;
@@ -462,7 +467,7 @@ begin
     'embedded':
     begin
       // 嵌入式：优先使用 MbedTLS（小体积）
-      Caps := TSSLFactory.GetLibrary(sslMbedTLS).GetCapabilities;
+      Caps := TSSLFactory.GetLibraryInstance(sslMbedTLS).GetCapabilities;
       if not Caps.RequiresExternalLibrary then
         Exit(sslMbedTLS);
     end;
@@ -470,7 +475,7 @@ begin
     'high-performance':
     begin
       // 高性能：优先使用 OpenSSL（性能最佳）
-      Caps := TSSLFactory.GetLibrary(sslOpenSSL).GetCapabilities;
+      Caps := TSSLFactory.GetLibraryInstance(sslOpenSSL).GetCapabilities;
       if (GetPerformanceScore(Caps) >= 90) and
          Caps.HasHardwareAcceleration then
         Exit(sslOpenSSL);
@@ -489,7 +494,7 @@ function ValidateBackendRequirements(ABackend: TSSLLibraryType): Boolean;
 var
   Caps: TSSLBackendCapabilities;
 begin
-  Caps := TSSLFactory.GetLibrary(ABackend).GetCapabilities;
+  Caps := TSSLFactory.GetLibraryInstance(ABackend).GetCapabilities;
 
   // 检查必需特性
   Result := Caps.SupportsTLS13 and
@@ -536,7 +541,7 @@ begin
   for I := Low(Backends) to High(Backends) do
   begin
     try
-      Lib := TSSLFactory.GetLibrary(Backends[I]);
+      Lib := TSSLFactory.GetLibraryInstance(Backends[I]);
       if not Assigned(Lib) then
       begin
         WriteLn(SSL_LIBRARY_NAMES[Backends[I]], ': Not available');
@@ -578,7 +583,7 @@ procedure GenerateOptimalConfig(ABackend: TSSLLibraryType);
 var
   Caps: TSSLBackendCapabilities;
 begin
-  Caps := TSSLFactory.GetLibrary(ABackend).GetCapabilities;
+  Caps := TSSLFactory.GetLibraryInstance(ABackend).GetCapabilities;
 
   WriteLn('Optimal Configuration for ', SSL_LIBRARY_NAMES[ABackend]);
   WriteLn('==========================================');
@@ -651,7 +656,7 @@ begin
     try
       WriteLn('Trying backend: ', SSL_LIBRARY_NAMES[Backends[I]]);
 
-      ALib := TSSLFactory.GetLibrary(Backends[I]);
+      ALib := TSSLFactory.GetLibraryInstance(Backends[I]);
       if not Assigned(ALib) then
       begin
         WriteLn('  Not available');
@@ -780,16 +785,21 @@ function TMyBackend.GetCapabilities: TSSLBackendCapabilities;
 begin
   FillChar(Result, SizeOf(Result), 0);
 
-  // v1.1.0 字段
+  // 独立布尔真相
   Result.SupportsTLS13 := True;
-  Result.SupportsALPN := True;
-  // ... 其他字段
+
+  // paired feature 优先写 support-level 真相
+  Result.SNISupport := sslSupportStable;
+  Result.ALPNSupport := sslSupportStable;
+  Result.OCSPStaplingSupport := sslSupportExperimental;
 
   // v1.2.0 字段
   Result.BackendType := sslMyBackend;
   Result.BackendImplType := sslImplNative;  // 或其他类型
   Result.BackendVersion := '1.0.0';
-  // ... 其他字段
+
+  // 用 support-level 真相回填 legacy boolean 兼容视图
+  NormalizeLegacyCapabilityBooleans(Result);
 end;
 ```
 
@@ -799,8 +809,8 @@ end;
 
 ## 相关文档
 
-- **API 参考**: `docs/API_REFERENCE.md` - 完整 API 文档
-- **迁移指南**: `docs/MIGRATION_GUIDE_V1.1.md` - v1.1/v1.2 迁移说明
+- **API 参考**: `docs/reference/API_REFERENCE.md` - 完整 API 文档
+- **迁移指南**: `docs/guides/MIGRATION_GUIDE.md` - 当前迁移主线
 - **原生句柄指南**: `docs/NATIVE_HANDLE_QUICK_REF.md` - 原生句柄使用
 - **架构文档**: `docs/ARCHITECTURE.md` - 架构设计
 

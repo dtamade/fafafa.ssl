@@ -30,6 +30,9 @@
 - ⚠️ 部分支持或有限制（接口存在但功能受限）
 - ❌ 不支持
 
+本表对 SNI / ALPN / OCSP stapling / Certificate Transparency / Session Tickets 统一按 `*Support` 支持级别字段汇总；legacy `Supports*` 布尔值仅作为兼容投影。
+`SupportsTLS13` 仍按主 bool 字段解读，因为当前没有 `TLS13Support`。
+
 `Session Resumption` 这一行按当前 runtime/capability truth 汇总：
 - `FreePascal`: public surface 已闭合，但 `SessionTicketsSupport` / `SessionCacheSupport` 仍发布为 `experimental`
 - `WinSSL`: public surface 存在，但当前 dedicated Windows runtime truth 仍是 `observed_reuse=false` / `session_configured=true`

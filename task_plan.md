@@ -10,6 +10,36 @@
 
 ## Current Status
 
+- [completed] Capability precedence doc truth 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-capability-precedence-doc-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_capability_precedence_docs_truth_contract.sh`
+  - 当前已修正的高入口 capability 文档：
+    - `docs/CAPABILITY_MATRIX_GUIDE.md`
+    - `docs/reference/API_REFERENCE.md`
+    - `docs/BACKEND_CAPABILITY_MATRIX.md`
+  - 当前已收掉的真问题：
+    - capability docs 现在明确说明：
+      - paired feature 的 `SNISupport` / `ALPNSupport` / `OCSPStaplingSupport` / `CertTransparencySupport` / `SessionTicketsSupport`
+        才是当前 truth source
+      - legacy `SupportsSNI` / `SupportsALPN` / `SupportsOCSPStapling` / `SupportsCertificateTransparency` / `SupportsSessionTickets`
+        只是 compatibility projection
+      - `SupportsTLS13` 仍然是 primary bool truth，因为当前没有 `TLS13Support`
+    - capability guide / API reference 的高入口示例现在回到：
+      - `TSSLFactory.GetLibraryInstance(...)`
+    - capability 记录示例中的 `CompatibilityLevel` 类型现在回到源码真相：
+      - `Integer`
+    - capability guide 的新 backend 示例现在明确：
+      - paired feature 先写 `*Support`
+      - 再 `NormalizeLegacyCapabilityBooleans(Result);`
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_capability_precedence_docs_truth_contract.sh`
+    - `bash tests/scripts/test_capability_precedence_docs_truth_contract.sh`
+    - `git diff --check`
+  - 当前结论：
+    - 这批修掉的是 capability 控制面仍在暗示“双主真相”的文档漂移，不是 runtime/backends 缺口
+    - 后续若继续扫 capability matrix / selector / serializer，不应再把 active docs 当成 paired features 的 dual-truth 来源
 - [completed] Interface audit current truth refresh 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-interface-audit-current-truth-refresh.md`

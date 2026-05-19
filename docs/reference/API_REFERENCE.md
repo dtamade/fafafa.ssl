@@ -1655,10 +1655,15 @@ type
     HasSecureMemoryWipe: Boolean;
 
     // 兼容性
-    CompatibilityLevel: Byte;  // 0-100
+    CompatibilityLevel: Integer;  // 0-100
     KnownIssues: string;
   end;
 ```
+
+读取优先级说明：
+
+- 当 `SNISupport` / `ALPNSupport` / `OCSPStaplingSupport` / `CertTransparencySupport` / `SessionTicketsSupport` 出现时，它们是当前 source/runtime truth；legacy `SupportsSNI` / `SupportsALPN` / `SupportsOCSPStapling` / `SupportsCertificateTransparency` / `SupportsSessionTickets` 仅作为兼容投影。
+- `SupportsTLS13` 仍是主 bool 字段，因为当前没有 `TLS13Support`。
 
 ### ISSLLibrary.GetCapabilities
 
@@ -1997,7 +2002,7 @@ var
   Caps: TSSLBackendCapabilities;
 begin
   try
-    Lib := TSSLFactory.GetLibrary(ABackend);
+    Lib := TSSLFactory.GetLibraryInstance(ABackend);
     if not Assigned(Lib) then
     begin
       WriteLn('Backend not available: ', SSL_LIBRARY_NAMES[ABackend]);

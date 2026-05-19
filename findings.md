@@ -2,6 +2,54 @@
 
 ## 2026-05-19
 
+- capability dual-truth 这条线继续往下压后，当前剩得最明显的已不再是 runtime/serializer/diff 本身，而是高入口 capability 文档还没有把“谁才是真相源”讲清楚：
+  - `src/fafafa.ssl.base.pas` 已经把：
+    - `NormalizeLegacyCapabilityBooleans(...)`
+    - `@note runtime truth 以 support-level 字段为准；legacy boolean 仅作兼容派生`
+    固定成 source truth
+  - `src/fafafa.ssl.capability.serializer.pas` 已经把：
+    - v1.2 `*Support` 出现时优先回填 legacy boolean
+    固定成序列化/反序列化 truth
+  - `src/fafafa.ssl.capability.diff.pas` 已经把：
+    - `v1.2 support-level 为真相，legacy boolean 仅作兼容回退`
+    固定成 diff truth
+  - 但 `docs/CAPABILITY_MATRIX_GUIDE.md` / `docs/reference/API_REFERENCE.md` 之前仍只是并排列出两套字段，没有把 precedence 讲透
+
+- 这类问题的风险不只是“文档解释不够完整”，而是会持续把后续审查重新带回已经收掉的双真相歧义：
+  - 新读者会误以为：
+    - `SupportsSNI` 和 `SNISupport`
+    - `SupportsALPN` 和 `ALPNSupport`
+    是并列 primary truth
+  - 这会直接冲淡前面已经通过 runtime contract 固定下来的 support-level-first 规则
+  - 也会让 capability table / selector / optional-interface alignment 的后续讨论反复绕回旧心智
+
+- 当前最小正确修法因此非常清楚，而且只需要动控制面：
+  - `CAPABILITY_MATRIX_GUIDE` 明确写出：
+    - paired feature 的 `*Support` 是 truth source
+    - legacy `Supports*` 只是 compatibility projection
+    - `SupportsTLS13` 仍是 primary bool truth，因为当前没有 `TLS13Support`
+  - `API_REFERENCE` 在 `TSSLBackendCapabilities` 小节重复同一条 precedence 规则
+  - `BACKEND_CAPABILITY_MATRIX` 在表格前补一条简短口径说明，避免读者把表格误读成 legacy bool 表
+
+- 在同一批 capability docs sweep 里，还顺手压实了几处同页相邻漂移：
+  - `CAPABILITY_MATRIX_GUIDE` 多处高入口示例仍用 `TSSLFactory.GetLibrary(...)`
+    现在统一回到：
+    - `TSSLFactory.GetLibraryInstance(...)`
+  - `CAPABILITY_MATRIX_GUIDE` / `API_REFERENCE` 里的 `CompatibilityLevel` 之前仍写成：
+    - `Byte`
+    但当前源码真相是：
+    - `Integer`
+  - capability guide 的“如何为新后端实现能力矩阵”示例之前仍更像 legacy-bool-first 心智
+    现在明确回到：
+    - paired feature 先写 `*Support`
+    - 再 `NormalizeLegacyCapabilityBooleans(Result);`
+
+- 当前这批收口后的新基线应明确保留：
+  - active capability docs 已经重新与 source/runtime precedence 对齐
+  - 后续若继续扫 capability 体系，应优先找：
+    - 真正尚未统一的 publication granularity
+    - coarse-grained bool 是否还需要继续细分
+  - 不应再把 active docs 本身当成 paired capability dual-truth 的主要来源
 - 继续往“接口设计 / 开发路线 / 审计结论是否还讲真话”这条线上压时，当前最有价值的新问题不是 runtime，而是静态权威审计报告本身已经落后于最近几轮真实收口：
   - `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
     仍然把下面三条写成当前 live drift：
