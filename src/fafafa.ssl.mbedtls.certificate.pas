@@ -38,6 +38,8 @@ type
 
     procedure AllocateCertificate;
     procedure FreeCertificate;
+    function TryGetParsedAlgorithmMetadata(out APublicKeyAlgorithm,
+      ASignatureAlgorithm: string): Boolean;
 
   public
     constructor Create; overload;
@@ -149,7 +151,8 @@ implementation
 
 uses
   Contnrs, DateUtils,
-  fafafa.ssl.utils;
+  fafafa.ssl.utils,
+  fafafa.ssl.x509;
 
 const
   MBEDTLS_X509_CRT_SIZE = 1024;  // 估算大小
@@ -233,6 +236,51 @@ begin
       mbedtls_x509_crt_free(FX509Crt);
     FreeMem(FX509Crt);
     FX509Crt := nil;
+  end;
+end;
+
+function TMbedTLSCertificate.TryGetParsedAlgorithmMetadata(
+  out APublicKeyAlgorithm, ASignatureAlgorithm: string): Boolean;
+var
+  LParser: TX509Certificate;
+  LDER: TBytes;
+begin
+  APublicKeyAlgorithm := '';
+  ASignatureAlgorithm := '';
+  Result := False;
+
+  if FX509Crt = nil then
+    Exit;
+
+  LParser := TX509Certificate.Create;
+  try
+    try
+      if Length(FDERData) > 0 then
+        LParser.LoadFromDER(FDERData)
+      else if FPEMData <> '' then
+        LParser.LoadFromPEM(FPEMData)
+      else
+      begin
+        LDER := SaveToDER;
+        if Length(LDER) = 0 then
+          Exit;
+        LParser.LoadFromDER(LDER);
+      end;
+
+      APublicKeyAlgorithm := LParser.PublicKeyInfo.Algorithm.Name;
+      if APublicKeyAlgorithm = '' then
+        APublicKeyAlgorithm := LParser.PublicKeyInfo.Algorithm.OID;
+
+      ASignatureAlgorithm := LParser.SignatureAlgorithm.Name;
+      if ASignatureAlgorithm = '' then
+        ASignatureAlgorithm := LParser.SignatureAlgorithm.OID;
+
+      Result := (APublicKeyAlgorithm <> '') or (ASignatureAlgorithm <> '');
+    except
+      Result := False;
+    end;
+  finally
+    LParser.Free;
   end;
 end;
 
@@ -415,6 +463,8 @@ begin
   Result.SerialNumber := GetSerialNumber;
   Result.NotBefore := GetNotBefore;
   Result.NotAfter := GetNotAfter;
+  Result.PublicKeyAlgorithm := GetPublicKeyAlgorithm;
+  Result.SignatureAlgorithm := GetSignatureAlgorithm;
   Result.Version := GetVersion;
 end;
 
@@ -635,12 +685,22 @@ begin
 end;
 
 function TMbedTLSCertificate.GetPublicKeyAlgorithm: string;
+var
+  LSignatureAlgorithm: string;
 begin
+  if TryGetParsedAlgorithmMetadata(Result, LSignatureAlgorithm) and (Result <> '') then
+    Exit;
+
   Result := 'RSA';  // 默认
 end;
 
 function TMbedTLSCertificate.GetSignatureAlgorithm: string;
+var
+  LPublicKeyAlgorithm: string;
 begin
+  if TryGetParsedAlgorithmMetadata(LPublicKeyAlgorithm, Result) and (Result <> '') then
+    Exit;
+
   Result := 'SHA256withRSA';  // 默认
 end;
 

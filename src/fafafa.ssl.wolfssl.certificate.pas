@@ -33,6 +33,8 @@ type
     FPEMData: string;
     FDERData: TBytes;
     FIssuerCert: ISSLCertificate;
+    function TryGetParsedAlgorithmMetadata(out APublicKeyAlgorithm,
+      ASignatureAlgorithm: string): Boolean;
 
   public
     constructor Create; overload;
@@ -188,6 +190,51 @@ begin
   end;
   FIssuerCert := nil;
   inherited Destroy;
+end;
+
+function TWolfSSLCertificate.TryGetParsedAlgorithmMetadata(
+  out APublicKeyAlgorithm, ASignatureAlgorithm: string): Boolean;
+var
+  LParser: TX509Certificate;
+  LDER: TBytes;
+begin
+  APublicKeyAlgorithm := '';
+  ASignatureAlgorithm := '';
+  Result := False;
+
+  if FX509 = nil then
+    Exit;
+
+  LParser := TX509Certificate.Create;
+  try
+    try
+      if Length(FDERData) > 0 then
+        LParser.LoadFromDER(FDERData)
+      else if FPEMData <> '' then
+        LParser.LoadFromPEM(FPEMData)
+      else
+      begin
+        LDER := SaveToDER;
+        if Length(LDER) = 0 then
+          Exit;
+        LParser.LoadFromDER(LDER);
+      end;
+
+      APublicKeyAlgorithm := LParser.PublicKeyInfo.Algorithm.Name;
+      if APublicKeyAlgorithm = '' then
+        APublicKeyAlgorithm := LParser.PublicKeyInfo.Algorithm.OID;
+
+      ASignatureAlgorithm := LParser.SignatureAlgorithm.Name;
+      if ASignatureAlgorithm = '' then
+        ASignatureAlgorithm := LParser.SignatureAlgorithm.OID;
+
+      Result := (APublicKeyAlgorithm <> '') or (ASignatureAlgorithm <> '');
+    except
+      Result := False;
+    end;
+  finally
+    LParser.Free;
+  end;
 end;
 
 function TWolfSSLCertificate.LoadFromFile(const AFileName: string): Boolean;
@@ -421,6 +468,8 @@ begin
   Result.SerialNumber := GetSerialNumber;
   Result.NotBefore := GetNotBefore;
   Result.NotAfter := GetNotAfter;
+  Result.PublicKeyAlgorithm := GetPublicKeyAlgorithm;
+  Result.SignatureAlgorithm := GetSignatureAlgorithm;
   Result.Version := GetVersion;
 end;
 
@@ -542,12 +591,22 @@ begin
 end;
 
 function TWolfSSLCertificate.GetPublicKeyAlgorithm: string;
+var
+  LSignatureAlgorithm: string;
 begin
+  if TryGetParsedAlgorithmMetadata(Result, LSignatureAlgorithm) and (Result <> '') then
+    Exit;
+
   Result := 'RSA';  // 默认
 end;
 
 function TWolfSSLCertificate.GetSignatureAlgorithm: string;
+var
+  LPublicKeyAlgorithm: string;
 begin
+  if TryGetParsedAlgorithmMetadata(LPublicKeyAlgorithm, Result) and (Result <> '') then
+    Exit;
+
   Result := 'SHA256withRSA';  // 默认
 end;
 

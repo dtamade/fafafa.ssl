@@ -2,6 +2,81 @@
 
 ## 2026-05-20
 
+- `CI` run `26131410258`
+  现已完整 `success`，
+  说明上一批
+  `WinSSL` / workflow truth
+  收口已经正式落地；
+  当前不该再把控制面状态当作主阻塞
+
+- 下一条更贴近
+  “接口设计完整 / 各 backend 实现完整”
+  的真实缺口是：
+  `MbedTLS` / `WolfSSL`
+  证书算法元数据
+  仍保留
+  `RSA` /
+  `SHA256withRSA`
+  默认壳
+
+- 这类问题比文档漂移更直接，
+  因为它已经落在
+  `ISSLCertificate`
+  的实际 published getter surface 上：
+  - `GetPublicKeyAlgorithm`
+  - `GetSignatureAlgorithm`
+  - `GetInfo`
+    中对应字段
+
+- 现有仓库里其实已经有更稳的修复路径，
+  不需要继续扩 native binding：
+  - `TFreePascalCertificate`
+    已复用
+    `TX509Certificate`
+    解析
+    `PublicKeyInfo.Algorithm.Name`
+    和
+    `SignatureAlgorithm.Name`
+  - optional backends
+    直接复用同一路径
+    就能把这条真相补齐
+
+- 现有 framework tests
+  把默认值当成真相
+  本身也是 drift：
+  - 当测试继续断言
+    `RSA`
+    / `SHA256withRSA`
+    时，
+    它会把后来的人持续带离
+    “真实证书元数据应该被发布”
+    这条主线
+
+- 这批 RED/GREEN 也再次证明：
+  对 optional backends 的完整性修复，
+  最稳的路线
+  不是继续追逐
+  各家 native helper
+  的局部 binding，
+  而是优先复用仓库里
+  已经稳定存在的
+  pure-Pascal `TX509Certificate`
+  truth path
+
+- 这样做的好处是：
+  - `MbedTLS` / `WolfSSL`
+    不需要再分别维护
+    一套算法名映射
+  - `FreePascal` / optional backends
+    最少可以共享
+    同一份
+    OID -> Name
+    解析真相
+  - framework tests
+    也能围绕同一类
+    ECDSA fixture
+    写成可复用 contract
+
 - `WinSSL`
   这次最高价值缺口
   已经从

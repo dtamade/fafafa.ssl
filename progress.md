@@ -4,6 +4,93 @@
 
 ## 2026-05-20
 
+### Optional Backends Certificate Algorithm Metadata Completeness
+
+- `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py /home/dtamade/projects/fafafa.ssl`
+  - result: PASS
+  - summary:
+    - no catchup output surfaced
+    - current batch could proceed from the live worktree without session-recovery repair
+
+- `gh run view 26131410258 --json status,conclusion,jobs,workflowName,createdAt,updatedAt,headSha`
+  - result: PASS
+  - summary:
+    - latest active `CI` for `0343efe`
+      is fully green:
+      - `Minimal Gate (Linux)`: success
+      - `Code Quality (Light)`: success
+      - `FreePascal TLS 1.3 Completeness`: success
+    - this closes the previous observation window and clears the path for the next implementation batch
+
+- `mcp__ace_tool__.search_context(...)`
+- `sed -n '360,520p' src/fafafa.ssl.mbedtls.certificate.pas`
+- `sed -n '380,560p' src/fafafa.ssl.wolfssl.certificate.pas`
+- `sed -n '220,320p' src/fafafa.ssl.freepascal.lib.pas`
+- `sed -n '1,260p' src/fafafa.ssl.x509.pas`
+- `sed -n '300,420p' tests/test_mbedtls_framework.pas`
+- `sed -n '300,390p' tests/test_wolfssl_framework.pas`
+- `openssl x509 -in tests/certificate/test_certs/signer_ecdsa_cert.pem -text -noout | sed -n '1,80p'`
+  - result: PASS
+  - summary:
+    - confirmed the next real implementation gap:
+      - `MbedTLS` / `WolfSSL` certificate getters still publish fixed RSA defaults
+      - `FreePascal` already exposes real algorithm metadata via `TX509Certificate`
+      - the reusable ECDSA fixture truth is:
+        - `ecPublicKey`
+        - `ecdsa-with-SHA256`
+    - confirmed current framework tests are still frozen on the old default-shell expectation
+
+- update tests:
+  - `tests/test_mbedtls_framework.pas`
+  - `tests/test_wolfssl_framework.pas`
+  - change:
+    - replaced default-shell expectations with real ECDSA fixture contracts
+    - added `GetInfo` field parity checks
+
+- `mkdir -p tmp/test_mbedtls_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas && ./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+  - result: FAIL -> PASS
+  - summary:
+    - first RED proved live implementation drift:
+      - `TMbedTLSCertificate`
+        still published
+        `RSA` /
+        `SHA256withRSA`
+        for a loaded ECDSA fixture
+      - `GetInfo`
+        had not been kept in sync
+    - GREEN after implementation proved:
+      - `ecPublicKey`
+      - `ecdsa-with-SHA256`
+      are now exposed through getter + `GetInfo`
+      - final result: `119 passed / 0 failed`
+
+- `mkdir -p tmp/test_wolfssl_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas && ./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+  - result: FAIL -> PASS
+  - summary:
+    - first RED proved the same live drift on `WolfSSL`:
+      - getter surface still returned fixed RSA defaults
+      - `GetInfo`
+        had not mirrored real certificate truth
+    - GREEN after implementation proved:
+      - `ecPublicKey`
+      - `ecdsa-with-SHA256`
+      are now exposed through getter + `GetInfo`
+      - final result: `144 passed / 0 failed`
+
+- update implementation:
+  - `src/fafafa.ssl.mbedtls.certificate.pas`
+  - `src/fafafa.ssl.wolfssl.certificate.pas`
+  - change:
+    - added `TX509Certificate`-based algorithm metadata extraction
+    - used `Name` first and OID as fallback
+    - wired `GetInfo.PublicKeyAlgorithm` / `GetInfo.SignatureAlgorithm`
+      to the same truth source
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remain after the optional-backends certificate metadata batch
+
 ### WinSSL Auto Runtime Gate Activation
 
 - `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py /home/dtamade/projects/fafafa.ssl`

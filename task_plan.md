@@ -10,6 +10,110 @@
 
 ## Current Status
 
+- [completed] `optional backends certificate algorithm metadata completeness`
+  当前 focused 目标：
+  - 把
+    `MbedTLS` / `WolfSSL`
+    证书对象
+    对外发布的
+    算法元数据
+    从固定默认壳
+    收紧成
+    与真实证书内容一致的
+    public surface
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-optional-backends-certificate-algorithm-metadata-completeness.md`
+  - 修改实现：
+    - `src/fafafa.ssl.mbedtls.certificate.pas`
+    - `src/fafafa.ssl.wolfssl.certificate.pas`
+  - 修改 focused tests：
+    - `tests/test_mbedtls_framework.pas`
+    - `tests/test_wolfssl_framework.pas`
+  当前预判：
+  - 最新 `CI` run `26131410258`
+    已全部 `success`
+  - 所以下一条真实高价值缺口
+    不再是
+    workflow / Windows runtime
+    控制面
+  - 而是：
+    - `TMbedTLSCertificate.GetPublicKeyAlgorithm`
+      仍固定返回
+      `RSA`
+    - `TMbedTLSCertificate.GetSignatureAlgorithm`
+      仍固定返回
+      `SHA256withRSA`
+    - `TWolfSSLCertificate`
+      也保留同样默认壳
+  当前验证策略：
+  - 先把两组 framework tests
+    从
+    “默认值就是当前真相”
+    改成
+    “加载真实 `ECDSA` 夹具后要暴露真实算法”
+  - 再复用仓库已有
+    `TX509Certificate`
+    解析器
+    补齐：
+    - `GetPublicKeyAlgorithm`
+    - `GetSignatureAlgorithm`
+    - `GetInfo`
+      中对应字段
+  当前 done 条件：
+  - `MbedTLS` / `WolfSSL`
+    都能对
+    `tests/certificate/test_certs/signer_ecdsa_cert.pem`
+    发布：
+    - `ecPublicKey`
+    - `ecdsa-with-SHA256`
+    这类真实算法元数据
+  - focused framework tests
+    通过
+  - `git diff --check`
+    通过
+  当前最终收口证据：
+  - 新增两组 framework RED
+    首次运行直接各自打出 4 个失败：
+    - `MbedTLS`:
+      `GetPublicKeyAlgorithm` /
+      `GetSignatureAlgorithm` /
+      `GetInfo` 对应字段
+    - `WolfSSL`:
+      同样 4 个点
+  - GREEN 后证明：
+    - `TMbedTLSCertificate`
+      会对 `ECDSA` 夹具发布：
+      - `ecPublicKey`
+      - `ecdsa-with-SHA256`
+    - `TWolfSSLCertificate`
+      也会发布同样 truth
+    - `GetInfo`
+      中两字段
+      已与 getter 保持一致
+  focused verification 已通过：
+  - `tests/test_mbedtls_framework.pas`: `119 passed / 0 failed`
+  - `tests/test_wolfssl_framework.pas`: `144 passed / 0 failed`
+  - `git diff --check`
+  当前结论：
+  - 这批收掉的是
+    optional backends
+    在
+    `ISSLCertificate`
+    算法元数据 surface
+    上的真实实现缺口，
+    不是单纯文档措辞问题
+  当前下一条真实工作：
+  - 继续沿着
+    `certificate metadata completeness`
+    主线，
+    审查是否还存在：
+    - `PublicKeySize`
+    - `GetPublicKey`
+    - 更多 `GetInfo`
+      字段
+    在 optional backends
+    上仍为壳值或残缺值
 - [completed] `winssl auto runtime gate activation`
   当前 focused 目标：
   - 把

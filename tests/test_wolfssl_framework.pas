@@ -326,7 +326,6 @@ begin
     Test('Certificate created', LCert <> nil);
     Test('Certificate not loaded initially', LCert.GetNativeHandle = nil);
     Test('GetVersion returns default', LCert.GetVersion = 3);
-    Test('GetPublicKeyAlgorithm returns default', LCert.GetPublicKeyAlgorithm = 'RSA');
     Test('NotAfter unknown without X509', LCert.GetNotAfter = 0);
     Test('IsExpired returns False without X509', not LCert.IsExpired);
     Test('DaysUntilExpiry is 0 without X509', LCert.GetDaysUntilExpiry = 0);
@@ -335,6 +334,47 @@ begin
     LClone := nil;
   finally
     LCert.Free;
+  end;
+end;
+
+procedure TestWolfSSLCertificateAlgorithmMetadataContract;
+var
+  LLib: ISSLLibrary;
+  LCert: TWolfSSLCertificate;
+  LInfo: TSSLCertificateInfo;
+begin
+  WriteLn('');
+  WriteLn('=== WolfSSL Certificate Algorithm Metadata Contract ===');
+
+  LLib := CreateWolfSSLLibrary;
+  if not LLib.Initialize then
+  begin
+    WriteLn('  (Skipped - WolfSSL library not available)');
+    Test('Certificate algorithm metadata contract skipped', True);
+    Exit;
+  end;
+
+  LCert := TWolfSSLCertificate.Create;
+  try
+    if not LCert.LoadFromFile('tests/certificate/test_certs/signer_ecdsa_cert.pem') then
+    begin
+      WriteLn('  (Skipped - ECDSA fixture certificate unavailable)');
+      Test('Certificate algorithm metadata contract skipped', True);
+      Exit;
+    end;
+
+    LInfo := LCert.GetInfo;
+    Test('ECDSA fixture public-key algorithm exposes parsed truth',
+      SameText(LCert.GetPublicKeyAlgorithm, 'ecPublicKey'));
+    Test('ECDSA fixture signature algorithm exposes parsed truth',
+      SameText(LCert.GetSignatureAlgorithm, 'ecdsa-with-SHA256'));
+    Test('GetInfo public-key algorithm matches getter truth',
+      SameText(LInfo.PublicKeyAlgorithm, LCert.GetPublicKeyAlgorithm));
+    Test('GetInfo signature algorithm matches getter truth',
+      SameText(LInfo.SignatureAlgorithm, LCert.GetSignatureAlgorithm));
+  finally
+    LCert.Free;
+    LLib.Finalize;
   end;
 end;
 
@@ -1041,8 +1081,9 @@ begin
   TestWolfSSLCapabilities;
   TestWolfSSLCapabilityHelperLossContract;
 
-  // Certificate class tests (no library required)
+  // Certificate tests
   TestWolfSSLCertificateClass;
+  TestWolfSSLCertificateAlgorithmMetadataContract;
   TestWolfSSLCertificateCloneMaterializationContract;
   TestWolfSSLCertificateStore;
 
