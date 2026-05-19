@@ -2,6 +2,58 @@
 
 ## 2026-05-19
 
+### Live GitHub Follow-up: Handle Metadata
+
+- `gh workflow run wave-b-b2-manual.yml --ref master -f run_id=winssl_handle_metadata_20260519_google -f strict_closure=false -f winssl_session_host=www.google.com -f winssl_enable_native_probe=true`
+  - result: PASS
+  - summary:
+    - dispatched the first live Windows evidence run for commit `0751afc`
+
+- `gh api repos/dtamade/fafafa.ssl/actions/runs/26071754477/jobs`
+  - result: PASS
+  - summary:
+    - confirmed run `26071754477` head=`0751afc`
+    - final job results were:
+      - `linux-gate`: `success`
+      - `macos-gate`: `success`
+      - `windows-gate`: `failure`
+      - `summary`: `success`
+
+- `gh run download 26071754477 -n wave-b-windows-winssl_handle_metadata_20260519_google -D tmp/gh-run-26071754477/windows`
+  - result: PASS
+  - summary:
+    - downloaded the Windows evidence bundle for the handle-metadata run
+
+- `gh run download 26071754477 -n wave-b-summary-winssl_handle_metadata_20260519_google -D tmp/gh-run-26071754477/summary`
+  - result: PASS
+  - summary:
+    - downloaded the summary artifact bundle for the handle-metadata run
+
+- `rg -n "native_probe .*handle_metadata|native_probe .*stage=before_query_context_attributes|native_probe_worker exit_code|summary host=www.google.com" tmp/gh-run-26071754477/windows/winssl_runtime_suite_winssl_handle_metadata_20260519_google.log`
+  - result: PASS
+  - summary:
+    - live Windows transcript now proves:
+      - `backend=winssl`
+      - `handle_valid=true`
+      - `lower=0000000001658E70`
+      - `upper=0000000000010AD8`
+      - the worker still dies immediately after `stage=before_query_context_attributes`
+
+- `sed -n '1,220p' tmp/gh-run-26071754477/summary/wave_b_b2_closure_readiness_winssl_handle_metadata_20260519_google.md`
+  - result: PASS
+  - summary:
+    - live closure report now shows:
+      - `linux=PASS`
+      - `macos=PASS`
+      - `windows=FAIL`
+
+- `sed -n '1,220p' tmp/gh-run-26071754477/summary/wave_b_b2_handoff_bundle_winssl_handle_metadata_20260519_google.md`
+  - result: PASS
+  - summary:
+    - live handoff report stays aligned:
+      - `handoff_state: NEEDS_GATE_REPAIR`
+      - `consistency_status: CONSISTENT`
+
 ### WinSSL Session Shim Safe Fallback
 
 - `rg -n "CreateFromConnection\\(|fafafa\\.ssl\\.winssl\\.session|TWinSSLSession\\(" src tests docs`

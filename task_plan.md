@@ -10,6 +10,31 @@
 
 ## Current Status
 
+- [completed] WinSSL native-probe handle metadata 已完成第一轮 live Windows 取证：
+  - manual run `26071754477`，head=`0751afc`
+  - `linux-gate`: `success`
+  - `macos-gate`: `success`
+  - `windows-gate`: `failure`
+  - downloaded Windows artifact：
+    - `tmp/gh-run-26071754477/windows/winssl_runtime_suite_winssl_handle_metadata_20260519_google.log`
+  - live evidence 已明确证明：
+    - `backend=winssl`
+    - `handle_valid=true`
+    - `dwLower/dwUpper` 非零
+    - worker 仍在
+      - `stage=before_query_context_attributes`
+      之后立刻以 `-1073741819` 退出
+  - live summary artifact 也已确认：
+    - `closure readiness`
+      - `linux=PASS`
+      - `macos=PASS`
+      - `windows=FAIL`
+    - `handoff bundle`
+      - `handoff_state: NEEDS_GATE_REPAIR`
+      - `consistency_status: CONSISTENT`
+  - 当前结论：
+    - 当前残留已经不再是“句柄也许无效”
+    - 而是“在有效 WinSSL context 上查询 `SECPKG_ATTR_SESSION_INFO` 本身就会把 isolated worker 打死”
 - [completed] WinSSL session shim safe fallback 已完成本地收口：
   - 新增计划：`docs/plans/2026-05-19-winssl-session-shim-safe-fallback.md`
   - 新增 focused contract：

@@ -2,6 +2,30 @@
 
 ## 2026-05-19
 
+- `26071754477` 现在给了这条 WinSSL 线目前最强的一组 live 证据：
+  - `backend=winssl`
+  - `handle_valid=true`
+  - `dwLower/dwUpper` 非零
+  - 仍然在 `stage=before_query_context_attributes` 之后立即 crash
+
+- 这意味着我们已经可以把先前那种“也许 native handle 本身就是坏的”怀疑基本降到次要位置了：
+  - 同一 worker 里：
+    - `Supports(...)` 已通过
+    - `GetNativeHandle` 已通过
+    - `handle_valid=true`
+    - 早先的 `ValidateReuseTruth(...)` 还成功跑过 `GetConnectionInfo` / `GetPerformanceMetrics`
+  - 于是当前最合理的主结论已经很集中：
+    - 触发 crash 的关键点就是 `SECPKG_ATTR_SESSION_INFO` 这条 query 本身
+    - 而不是 generic WinSSL context 已经彻底失效
+
+- 这轮还顺手把顶层路线图又往前推进了一点：
+  - `26071754477` 的 `macos-gate` 这次已经是 `success`
+  - 所以当前 Wave B/B2 手动 gate 的主要残留已经进一步收缩成 Windows native-probe 这一条
+  - top-level reports 也与此重新对齐：
+    - `linux=PASS`
+    - `macos=PASS`
+    - `windows=FAIL`
+
 - 继续沿 WinSSL native-probe 做静态复核时，又挖出一条真正该立即收掉的实现漂移：
   - `src/fafafa.ssl.winssl.session.pas` 文档和 earlier plan 都把自己定位成 compatibility shim
   - 但这个 shim 里竟然还保留着一条未隔离的直接 `QueryContextAttributesW(...)` session-info probe
