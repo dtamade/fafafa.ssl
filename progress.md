@@ -9191,3 +9191,25 @@
   - result: PASS
   - summary:
     - current active capability-docs runtime-truth batch has no whitespace or patch-format issues
+
+### Auto-Backend PKCS#11 Capability Truth Contract
+
+- add `docs/plans/2026-05-19-auto-backend-pkcs11-capability-truth-contract.md`
+  - purpose:
+    - record the bounded batch that closes the remaining downstream proof gap for runtime-aware PKCS#11 selector truth
+
+- add `tests/test_auto_backend_pkcs11_capability_truth_contract.pas`
+  - change:
+    - prove auto-backend selection follows current published PKCS#11 capability truth
+    - require success when any available registered backend publishes `SupportsPKCS11=True`
+    - require failure when none do
+
+- `mkdir -p tmp/test_auto_backend_pkcs11_truth_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_auto_backend_pkcs11_truth_units -FEtmp/test_auto_backend_pkcs11_truth_units -otmp/test_auto_backend_pkcs11_truth_units/test_auto_backend_pkcs11_capability_truth_contract tests/test_auto_backend_pkcs11_capability_truth_contract.pas && ./tmp/test_auto_backend_pkcs11_truth_units/test_auto_backend_pkcs11_capability_truth_contract`
+  - result: PASS
+  - summary:
+    - selector / builder downstream PKCS#11 truth now has a dedicated runtime-aware contract
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current auto-backend PKCS#11 capability-truth batch has no whitespace or patch-format issues

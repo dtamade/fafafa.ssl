@@ -4329,3 +4329,28 @@
 - 因而当前 capability/completeness 路线的稳定结论又前进一步：
   - active source truth、focused contracts、active docs 三者现在要同时对齐
   - 后续再扫这条线时，应优先找仍残留“静态品牌能力心智”的入口示例，而不是重复怀疑已经收掉的单点实现
+
+- 再往下一层核对时，还补出一个更细的 proof gap：
+  - `OpenSSL SupportsPKCS11` 的 source truth 已改成 runtime-aware
+  - `hardware-key` shell contract 也已同步
+  - 但 selector / builder 的下游 focused proof 仍只覆盖了 `RequireTPM`
+  - `RequirePKCS11Support` 这条线还缺一条直接证明
+
+- 这类问题的风险在于：
+  - capability source 看起来已经没问题
+  - 但如果 downstream proof 没补，后续仍可能出现：
+    - selector/builder 行为继续被旧假设带偏
+    - 或者大家以为 “RequirePKCS11Support 在任何环境都应该失败/成功”
+
+- 这次选择的最小正确修法也因此保持很窄：
+  - 不动生产实现
+  - 只新增一条 runtime-aware downstream contract：
+    - 若当前任一已注册 backend 发布 `SupportsPKCS11=True`
+      - auto-backend selection 必须成功
+    - 否则必须失败
+  - 这样 selector / builder 的下游结果就重新锚回当前 capability truth，而不是锚回本机偶然环境
+
+- 因而当前这条线又形成了一个新基线：
+  - capability truth 不只是 source/doc/test 各自正确
+  - 还要补齐 selector / builder 下游 proof
+  - 后续若继续推进 completeness，优先值最高的是继续找这些“上游 truth 已收口，但下游 focused proof 还缺位”的点

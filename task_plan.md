@@ -2915,3 +2915,26 @@
    - 当前批收口后默认下一步应为：
      - 继续找其它 active docs / examples 是否仍把 runtime-aware capability 写成 unconditional truth
      - 优先复审 builder/selector 入口文档里的环境假设
+73. `auto-backend PKCS#11 capability truth` 已完成 focused 收口，并应作为当前 selector/builder completeness 的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-auto-backend-pkcs11-capability-truth-contract.md`
+   - 当前已确认的 proof gap：
+     - 上一轮已经收口：
+       - OpenSSL `SupportsPKCS11` runtime-aware source truth
+       - `hardware-key` shell contract
+     - 但 selector / builder 下游当前只有：
+       - `RequireTPM` focused contract
+     - 还没有：
+       - `RequirePKCS11Support` focused runtime-aware downstream contract
+   - 当前最小正确修法已落地：
+     - 不改 selector 算法
+     - 不改 builder 行为
+     - 只新增一条 focused contract：
+       - 若当前任一已注册 backend 发布 `SupportsPKCS11=True`，auto-backend selection 必须成功
+       - 否则必须失败并返回 `No suitable SSL backend found for requirements`
+   - 当前 focused proof 已覆盖：
+     - `mkdir -p tmp/test_auto_backend_pkcs11_truth_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_auto_backend_pkcs11_truth_units -FEtmp/test_auto_backend_pkcs11_truth_units -otmp/test_auto_backend_pkcs11_truth_units/test_auto_backend_pkcs11_capability_truth_contract tests/test_auto_backend_pkcs11_capability_truth_contract.pas && ./tmp/test_auto_backend_pkcs11_truth_units/test_auto_backend_pkcs11_capability_truth_contract`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 继续找其它“source truth 已 runtime-aware，但 downstream proof 还缺位”的 builder/selector 残余点
+     - 优先审 `RequirePKCS11Support` 相关文档/示例是否仍把本机 harness 现状误写成通用结论
