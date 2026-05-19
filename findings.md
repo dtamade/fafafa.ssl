@@ -4549,3 +4549,41 @@
 - 这样一来，`ISSLOCSPStapling` 这条线就和前面的 verify-result / ALPN / connection-info residual 路线一样，进入了“已分类冻结”的状态：
   - 后续不应再把这组 OCSP direct-core hits 当成普通 guidance 漂移反复拉起
   - 默认主线应继续回到更大的 backend implementation-completeness 审查
+
+- 把主线继续往实现结构层收时，又暴露出一个和 earlier early-data/server-OCSP gating 同类的 public-path drift：
+  - `tests/contract/test_backend_contract.pas` 的 `Contract 10` 一直要求：
+    - `OCSPStaplingSupport<>None` -> client connection 暴露 `ISSLOCSPStapling`
+    - `OCSPStaplingSupport=None` -> client connection 不暴露 `ISSLOCSPStapling`
+  - 但 `TOpenSSLConnection` / `TWolfSSLConnection` 之前仍直接实现 `ISSLOCSPStapling`
+  - 这意味着一旦 runtime capability 退到 `none`，public `CreateConnection(...)` 路径仍可能把 connection 误暴露成 OCSP-capable
+
+- 这不是普通文案或 residual archaeology，而是 public factory/context path 的结构性 capability drift：
+  - 问题不在 OCSP getter 逻辑本身
+  - 问题在于 class/interface 暴露矩阵没有跟 capability truth 一起收缩
+  - 和之前已修的：
+    - `ISSLEarlyDataContext`
+    - `ISSLEarlyDataConnection`
+    - `ISSLServerOCSPStaplingContext`
+    属于同一类风险
+
+- 当前最小正确修法也因此没有重写 runtime OCSP 行为：
+  - 只把 `OpenSSL` / `WolfSSL` 的 public connection creation path 改成 capability-aware subclass matrix：
+    - `base`
+    - `ocsp`
+    - `early-data`
+    - `early-data + ocsp`
+  - 让 `CreateConnection(ASocket/AStream)` 按当前 capability truth 选择正确 subclass
+
+- focused proof 现在已经把这条结构真相钉住：
+  - source contract 直接守住：
+    - base connection 不再无条件实现 `ISSLOCSPStapling`
+    - dedicated `ocsp` / `early-data` / combined connection subclass 都存在
+    - `CreateConnection(...)` 的 matrix selection 与 capability truth 对齐
+  - `tests/contract/test_backend_contract.pas` 重新编译并运行全绿：
+    - `OpenSSL` / `WolfSSL` 继续通过 `Contract 10`
+    - `MbedTLS` 继续保持 client-side `ISSLOCSPStapling` absent
+    - 其余 optional-interface contracts 没被这次矩阵调整打坏
+
+- 因而这条 `client-side ISSLOCSPStapling` optional-interface drift 现在也已经进入关闭状态：
+  - 后续不应再把 `OpenSSL` / `WolfSSL` client OCSP optional interface 当成未分类结构风险反复拉起
+  - 默认主线应继续回到更大的 backend implementation-completeness 审查

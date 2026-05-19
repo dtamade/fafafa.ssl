@@ -32,6 +32,7 @@ openssl_lib="src/fafafa.ssl.openssl.backed.pas"
 openssl_connection="src/fafafa.ssl.openssl.connection.pas"
 wolfssl_context="src/fafafa.ssl.wolfssl.context.pas"
 wolfssl_lib="src/fafafa.ssl.wolfssl.lib.pas"
+wolfssl_connection="src/fafafa.ssl.wolfssl.connection.pas"
 
 printf '[TEST] optional interface capability alignment contract\n'
 
@@ -52,17 +53,23 @@ require_match "$openssl_lib" \
   'OpenSSL library create-context path selects the optional-interface subclass that matches current capability truth'
 
 require_match "$openssl_connection" \
-  'TOpenSSLConnection = class\(TBaseSSLConnection, ISSLClientConnection,\s*ISSLOCSPStapling, ISSLNativeHandleAccess\)' \
-  'OpenSSL base connection no longer implements early-data connection unconditionally'
+  'TOpenSSLConnection = class\(TBaseSSLConnection, ISSLClientConnection,\s*ISSLNativeHandleAccess\)' \
+  'OpenSSL base connection no longer implements optional OCSP or early-data connection interfaces unconditionally'
+require_match "$openssl_connection" \
+  'TOpenSSLOCSPConnection = class\(TOpenSSLConnection, ISSLOCSPStapling\)' \
+  'OpenSSL declares a dedicated OCSP connection subclass'
 require_match "$openssl_connection" \
   'TOpenSSLEarlyDataConnection = class\(TOpenSSLConnection, ISSLEarlyDataConnection\)' \
   'OpenSSL declares a dedicated early-data connection subclass'
+require_match "$openssl_connection" \
+  'TOpenSSLAdvancedConnection = class\(TOpenSSLEarlyDataConnection, ISSLOCSPStapling\)' \
+  'OpenSSL declares a combined early-data plus OCSP connection subclass'
 require_match "$openssl_context" \
-  'function TOpenSSLContext\.CreateConnection\(ASocket: THandle\): ISSLConnection;.*?Supports\(Self, ISSLEarlyDataContext, LEarlyDataContext\).*?TOpenSSLEarlyDataConnection\.Create\(Self, ASocket\).*?TOpenSSLConnection\.Create\(Self, ASocket\)' \
-  'OpenSSL socket connection path only creates an early-data connection subclass when the parent context still exposes early-data capability'
+  'function TOpenSSLContext\.CreateConnection\(ASocket: THandle\): ISSLConnection;.*?LExposeEarlyData := Supports\(Self, ISSLEarlyDataContext, LEarlyDataContext\);.*?LExposeOCSP := HasClientOCSPCapability;.*?TOpenSSLAdvancedConnection\.Create\(Self, ASocket\).*?TOpenSSLEarlyDataConnection\.Create\(Self, ASocket\).*?TOpenSSLOCSPConnection\.Create\(Self, ASocket\).*?TOpenSSLConnection\.Create\(Self, ASocket\)' \
+  'OpenSSL socket connection path selects the OCSP/early-data subclass matrix that matches current capability truth'
 require_match "$openssl_context" \
-  'function TOpenSSLContext\.CreateConnection\(AStream: TStream\): ISSLConnection;.*?Supports\(Self, ISSLEarlyDataContext, LEarlyDataContext\).*?TOpenSSLEarlyDataConnection\.Create\(Self, AStream\).*?TOpenSSLConnection\.Create\(Self, AStream\)' \
-  'OpenSSL stream connection path only creates an early-data connection subclass when the parent context still exposes early-data capability'
+  'function TOpenSSLContext\.CreateConnection\(AStream: TStream\): ISSLConnection;.*?LExposeEarlyData := Supports\(Self, ISSLEarlyDataContext, LEarlyDataContext\);.*?LExposeOCSP := HasClientOCSPCapability;.*?TOpenSSLAdvancedConnection\.Create\(Self, AStream\).*?TOpenSSLEarlyDataConnection\.Create\(Self, AStream\).*?TOpenSSLOCSPConnection\.Create\(Self, AStream\).*?TOpenSSLConnection\.Create\(Self, AStream\)' \
+  'OpenSSL stream connection path selects the OCSP/early-data subclass matrix that matches current capability truth'
 
 require_match "$wolfssl_context" \
   'TWolfSSLContext = class\(TInterfacedObject, ISSLContext, ISSLNativeHandleAccess\)' \
@@ -76,5 +83,23 @@ require_match "$wolfssl_context" \
 require_match "$wolfssl_lib" \
   'LExposeEarlyData := GetCapabilities\.EarlyDataSupport <> sslSupportNone;.*?LExposeServerOCSP := \(AType in \[sslCtxServer, sslCtxBoth\]\) and\s*\(GetCapabilities\.OCSPStaplingSupport <> sslSupportNone\);.*?TWolfSSLAdvancedContext\.Create.*?TWolfSSLEarlyDataContext\.Create.*?TWolfSSLOCSPStaplingContext\.Create.*?TWolfSSLContext\.Create' \
   'WolfSSL library create-context path selects the optional-interface subclass that matches current capability truth'
+require_match "$wolfssl_connection" \
+  'TWolfSSLConnection = class\(TBaseSSLConnection, ISSLClientConnection,\s*ISSLNativeHandleAccess\)' \
+  'WolfSSL base connection no longer implements optional OCSP or early-data connection interfaces unconditionally'
+require_match "$wolfssl_connection" \
+  'TWolfSSLOCSPConnection = class\(TWolfSSLConnection, ISSLOCSPStapling\)' \
+  'WolfSSL declares a dedicated OCSP connection subclass'
+require_match "$wolfssl_connection" \
+  'TWolfSSLEarlyDataConnection = class\(TWolfSSLConnection, ISSLEarlyDataConnection\)' \
+  'WolfSSL declares a dedicated early-data connection subclass'
+require_match "$wolfssl_connection" \
+  'TWolfSSLAdvancedConnection = class\(TWolfSSLEarlyDataConnection, ISSLOCSPStapling\)' \
+  'WolfSSL declares a combined early-data plus OCSP connection subclass'
+require_match "$wolfssl_context" \
+  'function TWolfSSLContext\.CreateConnection\(ASocket: THandle\): ISSLConnection;.*?LExposeEarlyData := HasEarlyDataCapability;.*?LExposeOCSP := HasClientOCSPCapability;.*?TWolfSSLAdvancedConnection\.Create\(Self, ASocket\).*?TWolfSSLEarlyDataConnection\.Create\(Self, ASocket\).*?TWolfSSLOCSPConnection\.Create\(Self, ASocket\).*?TWolfSSLConnection\.Create\(Self, ASocket\)' \
+  'WolfSSL socket connection path selects the OCSP/early-data subclass matrix that matches current capability truth'
+require_match "$wolfssl_context" \
+  'function TWolfSSLContext\.CreateConnection\(AStream: TStream\): ISSLConnection;.*?LExposeEarlyData := HasEarlyDataCapability;.*?LExposeOCSP := HasClientOCSPCapability;.*?TWolfSSLAdvancedConnection\.Create\(Self, AStream\).*?TWolfSSLEarlyDataConnection\.Create\(Self, AStream\).*?TWolfSSLOCSPConnection\.Create\(Self, AStream\).*?TWolfSSLConnection\.Create\(Self, AStream\)' \
+  'WolfSSL stream connection path selects the OCSP/early-data subclass matrix that matches current capability truth'
 
 printf '[PASS] optional interface capability alignment contract passed\n'

@@ -77,6 +77,7 @@ type
     procedure ApplyVerifyMode;
     procedure ApplyOCSPStaplingConfiguration;
     function HasEarlyDataCapability: Boolean;
+    function HasClientOCSPCapability: Boolean;
     procedure RequireValidContext(const AMethodName: string);
 
   public
@@ -377,6 +378,12 @@ function TWolfSSLContext.HasEarlyDataCapability: Boolean;
 begin
   Result := (FLibrary <> nil) and
     (FLibrary.GetCapabilities.EarlyDataSupport <> sslSupportNone);
+end;
+
+function TWolfSSLContext.HasClientOCSPCapability: Boolean;
+begin
+  Result := (FLibrary <> nil) and
+    (FLibrary.GetCapabilities.OCSPStaplingSupport <> sslSupportNone);
 end;
 
 procedure TWolfSSLContext.ApplyOCSPStaplingConfiguration;
@@ -962,15 +969,29 @@ end;
 { 创建连接 }
 
 function TWolfSSLContext.CreateConnection(ASocket: THandle): ISSLConnection;
+var
+  LExposeEarlyData: Boolean;
+  LExposeOCSP: Boolean;
 begin
   RequireValidContext('CreateConnection');
-  if HasEarlyDataCapability then
+
+  LExposeEarlyData := HasEarlyDataCapability;
+  LExposeOCSP := HasClientOCSPCapability;
+
+  if LExposeEarlyData and LExposeOCSP then
+    Result := fafafa.ssl.wolfssl.connection.TWolfSSLAdvancedConnection.Create(Self, ASocket)
+  else if LExposeEarlyData then
     Result := fafafa.ssl.wolfssl.connection.TWolfSSLEarlyDataConnection.Create(Self, ASocket)
+  else if LExposeOCSP then
+    Result := fafafa.ssl.wolfssl.connection.TWolfSSLOCSPConnection.Create(Self, ASocket)
   else
     Result := fafafa.ssl.wolfssl.connection.TWolfSSLConnection.Create(Self, ASocket);
 end;
 
 function TWolfSSLContext.CreateConnection(AStream: TStream): ISSLConnection;
+var
+  LExposeEarlyData: Boolean;
+  LExposeOCSP: Boolean;
 begin
   RequireValidContext('CreateConnection');
 
@@ -981,8 +1002,15 @@ begin
   if not Assigned(wolfSSL_CTX_SetIORecv) or not Assigned(wolfSSL_CTX_SetIOSend) then
     raise ESSLException.Create('Stream-based connections require WolfSSL I/O callbacks which are not available');
 
-  if HasEarlyDataCapability then
+  LExposeEarlyData := HasEarlyDataCapability;
+  LExposeOCSP := HasClientOCSPCapability;
+
+  if LExposeEarlyData and LExposeOCSP then
+    Result := fafafa.ssl.wolfssl.connection.TWolfSSLAdvancedConnection.Create(Self, AStream)
+  else if LExposeEarlyData then
     Result := fafafa.ssl.wolfssl.connection.TWolfSSLEarlyDataConnection.Create(Self, AStream)
+  else if LExposeOCSP then
+    Result := fafafa.ssl.wolfssl.connection.TWolfSSLOCSPConnection.Create(Self, AStream)
   else
     Result := fafafa.ssl.wolfssl.connection.TWolfSSLConnection.Create(Self, AStream);
 end;

@@ -3111,3 +3111,29 @@
    - 当前批收口后默认下一步应为：
      - 不再重复拉起 OCSP residual archaeology
      - 继续切回更大的 backend implementation-completeness 审查
+78. `client-side OCSP optional interface capability alignment` 已完成并应作为当前 public-path optional-interface truth 的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-client-ocsp-optional-interface-capability-alignment.md`
+   - 当前已确认的结构性 drift：
+     - `tests/contract/test_backend_contract.pas` 的 `Contract 10` 早就要求：
+       - `OCSPStaplingSupport<>None` 时，client connection 必须暴露 `ISSLOCSPStapling`
+       - `OCSPStaplingSupport=None` 时，client connection 不应暴露 `ISSLOCSPStapling`
+     - 但 `TOpenSSLConnection` / `TWolfSSLConnection` 之前仍直接实现：
+       - `ISSLOCSPStapling`
+     - 这意味着 capability 若在特定 runtime 下回到 `none`，public `CreateConnection(...)` 仍可能把 connection 误暴露成 OCSP-capable
+   - 当前最小正确修法已落地：
+     - 不改 OCSP runtime 逻辑
+     - 只把 public connection creation path 改成 capability-aware subclass matrix：
+       - `base`
+       - `ocsp`
+       - `early-data`
+       - `early-data + ocsp`
+     - 并把现有 focused source contract 扩到 client-side OCSP connection gating
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_optional_interface_capability_alignment_contract.sh`
+     - `bash tests/scripts/test_optional_interface_capability_alignment_contract.sh`
+     - `mkdir -p tmp/test_backend_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_backend_contract -FEtmp/test_backend_contract -otmp/test_backend_contract/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/test_backend_contract/test_backend_contract`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 不再重复拉起 client-side OCSP optional-interface matrix drift
+     - 继续切回更大的 backend implementation-completeness 审查

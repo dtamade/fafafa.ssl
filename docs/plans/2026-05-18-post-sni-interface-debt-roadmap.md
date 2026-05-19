@@ -777,6 +777,27 @@ Recommended first bounded batch:
   - `ISSLOCSPStapling` 的 backend-specific runtime / contract residual proof 现在已被显式分类冻结
   - 默认主线应继续切回更大的 backend implementation-completeness 审查，而不是在这组 `GetOCSP*` 命中上反复打转
 
+## Progress Since The Client OCSP Optional Interface Capability Alignment Batch
+
+- 已交付：
+  - `OpenSSL` / `WolfSSL` client-side `ISSLOCSPStapling` connection exposure now follows capability-aware subclass selection
+  - focused source contract:
+    - `tests/scripts/test_optional_interface_capability_alignment_contract.sh`
+    - 现在同时覆盖：
+      - context-side early-data / server-OCSP gating
+      - connection-side client OCSP gating
+  - public `CreateConnection(...)` path 现在统一走：
+    - `base`
+    - `ocsp`
+    - `early-data`
+    - `early-data + ocsp`
+    subclass matrix
+
+- 当前更准确的 next step：
+  - 不再把 `OpenSSL` / `WolfSSL` client OCSP optional interface 当成仍未收口的结构风险
+  - optional-interface capability alignment 这条结构性路线当前又关闭了一层
+  - 默认主线应继续回到更大的 backend implementation-completeness 审查，而不是重复收 matrix gating
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

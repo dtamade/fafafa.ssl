@@ -29,7 +29,6 @@ uses
 type
   { TWolfSSLConnection - WolfSSL SSL 连接类 }
   TWolfSSLConnection = class(TBaseSSLConnection, ISSLClientConnection,
-    ISSLOCSPStapling,
     ISSLNativeHandleAccess)
   private
     FWolfSSLCtx: PWOLFSSL_CTX;
@@ -121,8 +120,16 @@ type
     function GetLastErrorString: string;
   end;
 
+  { 仅在运行时 OCSP capability 可用时才暴露该接口 }
+  TWolfSSLOCSPConnection = class(TWolfSSLConnection, ISSLOCSPStapling)
+  end;
+
   { 仅在运行时 early-data capability 可用时才暴露该接口 }
   TWolfSSLEarlyDataConnection = class(TWolfSSLConnection, ISSLEarlyDataConnection)
+  end;
+
+  { 同时暴露 early-data 与 OCSP 两类可选接口 }
+  TWolfSSLAdvancedConnection = class(TWolfSSLEarlyDataConnection, ISSLOCSPStapling)
   end;
 
 implementation

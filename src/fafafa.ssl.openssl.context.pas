@@ -87,6 +87,7 @@ type
     procedure ApplyOptions;
     procedure ApplyServerOCSPStaplingConfiguration;
     function GetSSLMethod: PSSL_METHOD;
+    function HasClientOCSPCapability: Boolean;
 
     { P0-1: 上下文验证守卫方法 - 消除代码重复 }
     procedure RequireValidContext(const AMethodName: string);
@@ -1063,6 +1064,12 @@ begin
       sslErrNotInitialized,
       AMethodName
     );
+end;
+
+function TOpenSSLContext.HasClientOCSPCapability: Boolean;
+begin
+  Result := (FLibrary <> nil) and
+    (FLibrary.GetCapabilities.OCSPStaplingSupport <> sslSupportNone);
 end;
 
 { P1-2: 私钥-证书匹配检查辅助方法 - 消除代码重复 }
@@ -2277,12 +2284,21 @@ end;
 function TOpenSSLContext.CreateConnection(ASocket: THandle): ISSLConnection;
 var
   LEarlyDataContext: ISSLEarlyDataContext;
+  LExposeEarlyData: Boolean;
+  LExposeOCSP: Boolean;
 begin
   RequireValidContext('TOpenSSLContext.CreateConnection');
 
   try
-    if Supports(Self, ISSLEarlyDataContext, LEarlyDataContext) then
+    LExposeEarlyData := Supports(Self, ISSLEarlyDataContext, LEarlyDataContext);
+    LExposeOCSP := HasClientOCSPCapability;
+
+    if LExposeEarlyData and LExposeOCSP then
+      Result := TOpenSSLAdvancedConnection.Create(Self, ASocket)
+    else if LExposeEarlyData then
       Result := TOpenSSLEarlyDataConnection.Create(Self, ASocket)
+    else if LExposeOCSP then
+      Result := TOpenSSLOCSPConnection.Create(Self, ASocket)
     else
       Result := TOpenSSLConnection.Create(Self, ASocket);
   except
@@ -2300,6 +2316,8 @@ end;
 function TOpenSSLContext.CreateConnection(AStream: TStream): ISSLConnection;
 var
   LEarlyDataContext: ISSLEarlyDataContext;
+  LExposeEarlyData: Boolean;
+  LExposeOCSP: Boolean;
 begin
   RequireValidContext('TOpenSSLContext.CreateConnection');
 
@@ -2310,8 +2328,15 @@ begin
     );
 
   try
-    if Supports(Self, ISSLEarlyDataContext, LEarlyDataContext) then
+    LExposeEarlyData := Supports(Self, ISSLEarlyDataContext, LEarlyDataContext);
+    LExposeOCSP := HasClientOCSPCapability;
+
+    if LExposeEarlyData and LExposeOCSP then
+      Result := TOpenSSLAdvancedConnection.Create(Self, AStream)
+    else if LExposeEarlyData then
       Result := TOpenSSLEarlyDataConnection.Create(Self, AStream)
+    else if LExposeOCSP then
+      Result := TOpenSSLOCSPConnection.Create(Self, AStream)
     else
       Result := TOpenSSLConnection.Create(Self, AStream);
   except

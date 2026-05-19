@@ -9593,3 +9593,90 @@
   - result: PASS
   - summary:
     - current OCSP residual-classification batch has no whitespace or patch-format issues
+
+### Client OCSP Optional Interface Capability Alignment
+
+- `sed -n '35,95p' src/fafafa.ssl.openssl.context.pas`
+- `sed -n '24,80p' src/fafafa.ssl.openssl.connection.pas`
+- `sed -n '35,105p' src/fafafa.ssl.wolfssl.context.pas`
+- `sed -n '24,80p' src/fafafa.ssl.wolfssl.connection.pas`
+  - result: PASS
+  - summary:
+    - static review confirmed the public-path drift was structural, not just wording:
+      - `TOpenSSLConnection` / `TWolfSSLConnection` still directly implemented `ISSLOCSPStapling`
+      - while capability truth for `OCSPStaplingSupport` remained runtime-aware
+
+- add `docs/plans/2026-05-19-client-ocsp-optional-interface-capability-alignment.md`
+  - change:
+    - record the bounded batch that closes client-side OCSP optional-interface drift on the public `CreateConnection(...)` path
+
+- update `tests/scripts/test_optional_interface_capability_alignment_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `OpenSSL base connection no longer implements optional OCSP or early-data connection interfaces unconditionally`
+      - current source still had `TOpenSSLConnection` directly implementing `ISSLOCSPStapling`
+    - GREEN after fix:
+      - the contract now also locks client-side OCSP connection gating for `OpenSSL` / `WolfSSL`
+      - it verifies dedicated `ocsp` / `early-data` / combined subclasses plus `CreateConnection(...)` matrix selection
+
+- update `src/fafafa.ssl.openssl.connection.pas`
+  - change:
+    - remove unconditional `ISSLOCSPStapling` exposure from `TOpenSSLConnection`
+    - add:
+      - `TOpenSSLOCSPConnection`
+      - `TOpenSSLAdvancedConnection`
+
+- update `src/fafafa.ssl.openssl.context.pas`
+  - change:
+    - add `HasClientOCSPCapability`
+    - make both `CreateConnection(ASocket)` and `CreateConnection(AStream)` select:
+      - `TOpenSSLConnection`
+      - `TOpenSSLOCSPConnection`
+      - `TOpenSSLEarlyDataConnection`
+      - `TOpenSSLAdvancedConnection`
+      according to current capability truth
+
+- update `src/fafafa.ssl.wolfssl.connection.pas`
+  - change:
+    - remove unconditional `ISSLOCSPStapling` exposure from `TWolfSSLConnection`
+    - add:
+      - `TWolfSSLOCSPConnection`
+      - `TWolfSSLAdvancedConnection`
+
+- update `src/fafafa.ssl.wolfssl.context.pas`
+  - change:
+    - add `HasClientOCSPCapability`
+    - make both `CreateConnection(ASocket)` and `CreateConnection(AStream)` select:
+      - `TWolfSSLConnection`
+      - `TWolfSSLOCSPConnection`
+      - `TWolfSSLEarlyDataConnection`
+      - `TWolfSSLAdvancedConnection`
+      according to current capability truth
+
+- `bash -n tests/scripts/test_optional_interface_capability_alignment_contract.sh`
+  - result: PASS
+  - summary:
+    - expanded optional-interface source contract syntax is valid
+
+- `bash tests/scripts/test_optional_interface_capability_alignment_contract.sh`
+  - result: PASS
+  - summary:
+    - client-side OCSP optional-interface gating now matches current capability truth for both `OpenSSL` and `WolfSSL`
+
+- `mkdir -p tmp/test_backend_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_backend_contract -FEtmp/test_backend_contract -otmp/test_backend_contract/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/test_backend_contract/test_backend_contract`
+  - result: PASS
+  - summary:
+    - compile emitted existing unrelated warnings only
+    - runtime contract summary:
+      - `Total Tests: 135`
+      - `Passed: 111`
+      - `Failed: 0`
+      - `Skipped: 24`
+    - `Contract 10` remained green for `OpenSSL`, `WolfSSL`, `MbedTLS`, and `FreePascal`
+    - the broader optional-interface contract set stayed intact after the new connection subclass matrix
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current client-side OCSP optional-interface alignment batch has no whitespace or patch-format issues
