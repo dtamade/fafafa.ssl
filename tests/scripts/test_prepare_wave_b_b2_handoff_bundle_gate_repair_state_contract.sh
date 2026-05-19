@@ -58,7 +58,11 @@ cat > "$WORK_DIR/windows_summary.md" <<EOF
 EOF
 
 : > "$WORK_DIR/winssl_quick_smoke_${RUN_ID}.log"
-: > "$WORK_DIR/winssl_runtime_suite_${RUN_ID}.log"
+cat > "$WORK_DIR/winssl_runtime_suite_${RUN_ID}.log" <<'EOF'
+[WINSSL-RUNTIME] suite_start total=8
+[WINSSL-RUNTIME] suite_summary passed=8 failed=0 total=8 success_rate=100
+[WINSSL-RUNTIME] suite_end status=PASS
+EOF
 
 bash "$ROOT_DIR/scripts/prepare_wave_b_b2_handoff_bundle.sh" \
   --run-id "$RUN_ID" \

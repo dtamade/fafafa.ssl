@@ -13,6 +13,7 @@ MACOS_PROBE=""
 MACOS_PROBE_EXPLICIT=false
 MACOS_SUMMARY=""
 WINDOWS_SUMMARY=""
+WINDOWS_RUNTIME_TRANSCRIPT=""
 OUTPUT_FILE=""
 DRY_RUN=false
 
@@ -33,6 +34,8 @@ Wave B Cross-Platform Summary Generator
   --macos-probe FILE        macOS probe json（可选；默认优先 test-reports/wave_b_macos_gate_probe_<run_id>.json）
   --macos-summary FILE      macOS gate summary markdown（可选）
   --windows-summary FILE    Windows gate summary markdown（可选）
+  --windows-runtime-transcript FILE
+                           Windows broader runtime transcript（可选；仅在明确 FAIL 时提升 Windows state）
   --output FILE             输出文件（默认 test-reports/wave_b_cross_platform_summary_<run_id>.md）
   --dry-run                 仅打印参数与判定，不写文件
   --help                    显示帮助
@@ -65,6 +68,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --windows-summary)
       WINDOWS_SUMMARY="$2"
+      shift 2
+      ;;
+    --windows-runtime-transcript)
+      WINDOWS_RUNTIME_TRANSCRIPT="$2"
       shift 2
       ;;
     --output)
@@ -159,6 +166,7 @@ LINUX_EXAMPLES_JSON_ABS="$(resolve_path "$LINUX_EXAMPLES_JSON")"
 MACOS_PROBE_ABS=""
 MACOS_SUMMARY_ABS=""
 WINDOWS_SUMMARY_ABS=""
+WINDOWS_RUNTIME_TRANSCRIPT_ABS=""
 if [[ -n "$MACOS_PROBE" ]]; then
   MACOS_PROBE_ABS="$(resolve_path "$MACOS_PROBE")"
 fi
@@ -167,6 +175,9 @@ if [[ -n "$MACOS_SUMMARY" ]]; then
 fi
 if [[ -n "$WINDOWS_SUMMARY" ]]; then
   WINDOWS_SUMMARY_ABS="$(resolve_path "$WINDOWS_SUMMARY")"
+fi
+if [[ -n "$WINDOWS_RUNTIME_TRANSCRIPT" ]]; then
+  WINDOWS_RUNTIME_TRANSCRIPT_ABS="$(resolve_path "$WINDOWS_RUNTIME_TRANSCRIPT")"
 fi
 
 if [[ -z "$LINUX_SUMMARY" || ! -f "$LINUX_SUMMARY_ABS" ]]; then
@@ -250,6 +261,13 @@ stable_check_state() {
   fi
 }
 
+read_windows_runtime_suite_end_status() {
+  local file="$1"
+  grep -aE "\\[WINSSL-RUNTIME\\] suite_end status=(PASS|FAIL)" "$file" \
+    | tail -1 \
+    | sed -E 's/.*status=([A-Z]+).*/\1/' || true
+}
+
 linux_overall_raw="$(read_linux_summary_field "$LINUX_SUMMARY_ABS" "Overall Status")"
 linux_overall="$(normalize_platform_state "$linux_overall_raw")"
 
@@ -329,6 +347,7 @@ fi
 
 windows_state="PENDING"
 windows_note="no evidence"
+windows_runtime_suite_end_status=""
 if [[ -n "$WINDOWS_SUMMARY" ]]; then
   if [[ -f "$WINDOWS_SUMMARY_ABS" ]]; then
     windows_overall="$(read_platform_summary_overall "$WINDOWS_SUMMARY_ABS")"
@@ -340,6 +359,19 @@ if [[ -n "$WINDOWS_SUMMARY" ]]; then
     fi
   else
     windows_note="summary: $WINDOWS_SUMMARY (missing file)"
+  fi
+fi
+if [[ -n "$WINDOWS_RUNTIME_TRANSCRIPT" && -f "$WINDOWS_RUNTIME_TRANSCRIPT_ABS" ]]; then
+  windows_runtime_suite_end_status="$(read_windows_runtime_suite_end_status "$WINDOWS_RUNTIME_TRANSCRIPT_ABS")"
+  if [[ "$windows_runtime_suite_end_status" == "FAIL" ]]; then
+    windows_state="FAIL"
+    if [[ -n "$WINDOWS_SUMMARY" && -f "$WINDOWS_SUMMARY_ABS" && -n "${windows_overall:-}" ]]; then
+      windows_note="summary: $WINDOWS_SUMMARY (overall=$windows_overall); runtime_transcript: $WINDOWS_RUNTIME_TRANSCRIPT (suite_end_status=FAIL)"
+    elif [[ -n "$WINDOWS_SUMMARY" && -f "$WINDOWS_SUMMARY_ABS" ]]; then
+      windows_note="summary: $WINDOWS_SUMMARY; runtime_transcript: $WINDOWS_RUNTIME_TRANSCRIPT (suite_end_status=FAIL)"
+    else
+      windows_note="runtime_transcript: $WINDOWS_RUNTIME_TRANSCRIPT (suite_end_status=FAIL)"
+    fi
   fi
 fi
 

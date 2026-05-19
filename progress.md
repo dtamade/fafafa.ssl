@@ -7894,3 +7894,77 @@
   - result: PASS
   - summary:
     - current native-handle owner-surface batch has no whitespace or patch-format issues
+
+### Wave B/B2 Opt-In Runtime Failure Truth
+
+- add `docs/plans/2026-05-19-wave-b-b2-opt-in-runtime-failure-truth.md`
+  - purpose:
+    - record the bounded workflow-truth batch for Windows opt-in runtime failure propagation
+
+- add `tests/scripts/test_wave_b_cross_platform_summary_windows_runtime_fail_contract.sh`
+  - change:
+    - lock that cross summary must promote Windows state to `FAIL` when an explicit runtime transcript reports `suite_end_status=FAIL`
+
+- add `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_runtime_fail_contract.sh`
+  - change:
+    - lock that handoff bundle must not remain `CLOSED` when sibling Windows runtime transcript explicitly ends with `FAIL`
+
+- update `scripts/generate_wave_b_cross_platform_summary.sh`
+  - change:
+    - add optional `--windows-runtime-transcript`
+    - when the transcript explicitly reports `suite_end_status=FAIL`, elevate Windows platform state to `FAIL` while preserving legacy behavior for missing or non-failing transcripts
+
+- update `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+  - change:
+    - pass sibling Windows runtime transcript through to cross-summary generation
+    - promote handoff state to `NEEDS_GATE_REPAIR` when transcript truth explicitly reports `suite_end_status=FAIL`
+    - emit a next-action message that points back to the WinSSL broader runtime/native-probe failure instead of pretending the batch is closed
+
+- update `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_gate_repair_state_contract.sh`
+  - change:
+    - replace the stale empty runtime-transcript fixture with a substantive PASS transcript so the contract matches the repo's current Windows runtime marker expectations
+
+- `bash -n tests/scripts/test_wave_b_cross_platform_summary_windows_runtime_fail_contract.sh`
+  - result: PASS
+  - summary:
+    - new cross-summary focused contract syntax is valid
+
+- `bash tests/scripts/test_wave_b_cross_platform_summary_windows_runtime_fail_contract.sh`
+  - result: PASS
+  - summary:
+    - explicit Windows runtime transcript failures now surface as `windows | FAIL` in the cross-platform summary
+
+- `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_runtime_fail_contract.sh`
+  - result: PASS
+  - summary:
+    - new handoff-bundle focused contract syntax is valid
+
+- `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_runtime_fail_contract.sh`
+  - result: PASS
+  - summary:
+    - handoff bundle no longer stays `CLOSED` when sibling Windows runtime transcript explicitly ends in `FAIL`
+
+- `bash tests/scripts/test_wave_b_cross_platform_summary_next_actions_contract.sh`
+  - result: PASS
+  - summary:
+    - existing cross-summary next-actions wording remained green after the Windows runtime truth propagation change
+
+- `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_gate_repair_state_contract.sh`
+  - result: PASS
+  - summary:
+    - gate-repair-state contract is green again after aligning the runtime-transcript fixture with current suite-marker truth
+
+- `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`
+  - result: PASS
+  - summary:
+    - Windows sibling artifact path derivation remained intact after passing runtime transcript through the cross-summary path
+
+- `bash tests/scripts/test_wave_b_b2_consistency_windows_runtime_substantive_contract.sh`
+  - result: PASS
+  - summary:
+    - current consistency semantics still hold for substantive Windows runtime transcripts after the top-level truth fix
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current Wave B/B2 opt-in runtime failure truth batch has no whitespace or patch-format issues

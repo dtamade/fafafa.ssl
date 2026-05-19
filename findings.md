@@ -3617,3 +3617,36 @@
   - 新 shell contract 已 PASS
   - `test_ssl_connection_local.pas` 已从 compile RED 转成 compile + runtime PASS：`27 passed / 0 failed`
   - 因而 `native-handle / owner-surface truth` 现在可以视为当前 canonical docs + generic smoke 的稳定真相
+
+- 当前 Windows/WinSSL workflow 又暴露出一条比实现更先要修的“顶层报告失真”问题：
+  - live GitHub run `26068984446` 里，`wave-b-b2-manual.yml` 的 opt-in native-probe 输入确实生效了：
+    - `host=www.google.com`
+    - `winssl_enable_native_probe=true`
+  - 但 Windows broader runtime transcript 只走到第一条 public signal：
+    - `signal label=initial_handshake reused=false info_resumed=false perf_reused=false`
+  - 没有任何 `native_probe ...` marker，随后 `WinSSL Session Resumption Truth` 以 `-1073741819` 失败
+  - 这说明当前活跃问题首先是“Windows opt-in runtime 在 live runner 上确实失败”，不是“只是本地无法复现”
+
+- 真正误导后续路线判断的根因，不在 runtime transcript 本身，而在报告链没有传播这条失败：
+  - 同一批生成的 `wave_b_cross_platform_summary_*.md` 仍写 `windows | PASS`
+  - 同一批生成的 `wave_b_b2_handoff_bundle_*.md` 仍写 `handoff_state: CLOSED`
+  - 根因是旧版 cross summary / handoff bundle 只信 Windows summary，对 sibling `winssl_runtime_suite_<run_id>.log` 的明确 `suite_end_status=FAIL` 没有任何提升逻辑
+
+- 这批最小正确修法因此应当非常窄：
+  - 不修改 `src/fafafa.ssl.winssl.connection.pas`
+  - 不重开 safer native probe seam
+  - 只让顶层 report/handoff 在 transcript 明确 `suite_end_status=FAIL` 时传播失败真相：
+    - `generate_wave_b_cross_platform_summary.sh` 新增可选 `--windows-runtime-transcript`
+    - 仅在 transcript 明确 `FAIL` 时，把 Windows state 提升成 `FAIL`
+    - `prepare_wave_b_b2_handoff_bundle.sh` 把 sibling runtime transcript 传给 cross summary
+    - 若 transcript 明确 `FAIL`，则 handoff state 至少落到 `NEEDS_GATE_REPAIR`
+
+- 这批也顺手把一个漂移 fixture 拉回了当前仓库真相：
+  - `test_prepare_wave_b_b2_handoff_bundle_gate_repair_state_contract.sh` 原先用空 runtime transcript，却还期待 consistency 为绿
+  - 这与当前仓库已经固定下来的“Windows runtime transcript 至少应带 suite markers”规则不一致
+  - 现在该 fixture 改成 substantive PASS transcript，避免以后把旧 fixture 噪声误认成新回归
+
+- 当前应保留的边界也已经很明确：
+  - `check_wave_b_b2_evidence_consistency.sh` 的 `CONSISTENT` 语义这批没有改
+  - 也就是说，`CONSISTENT` 目前仍代表 evidence chain 自洽，不等于 Windows gate 已通过
+  - 如果后续还要补 workflow truth，下一刀应单独收 `consistency` / `next actions` wording，而不是把实现调查、报告链修复、语义重写混成一批

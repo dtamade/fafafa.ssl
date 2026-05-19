@@ -2317,6 +2317,28 @@
      - 不再把 `GetNativeHandle` owner surface 当成文档/测试层的未定真相
      - 继续回到更大的 interface-design / backend completeness 审查
      - 优先找下一条“活跃 canonical docs / 活跃 generic tests / backend truth”仍互相打架的接口面
+67. `Wave B/B2 opt-in runtime failure truth` 已完成 focused 收口，并应作为当前 Windows workflow truth 的最新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-wave-b-b2-opt-in-runtime-failure-truth.md`
+   - 当前已确认的 route truth：
+     - live GitHub run `26068984446` 中，Windows broader runtime transcript 已明确给出 `suite_end_status=FAIL`
+     - 旧版 `generate_wave_b_cross_platform_summary.sh` 只消费 Windows summary，因此会把同批 broader runtime failure 继续写成 `windows PASS`
+     - 旧版 `prepare_wave_b_b2_handoff_bundle.sh` 也会在这种情况下继续给出 `handoff_state: CLOSED`
+     - 这条问题首先是 workflow/report truth 漏洞，而不是 WinSSL shared implementation 本身已经被修好或应当在同一批里重开
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_wave_b_cross_platform_summary_windows_runtime_fail_contract.sh`
+     - `bash tests/scripts/test_wave_b_cross_platform_summary_windows_runtime_fail_contract.sh`
+     - `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_runtime_fail_contract.sh`
+     - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_runtime_fail_contract.sh`
+     - `bash tests/scripts/test_wave_b_cross_platform_summary_next_actions_contract.sh`
+     - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_gate_repair_state_contract.sh`
+     - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`
+     - `bash tests/scripts/test_wave_b_b2_consistency_windows_runtime_substantive_contract.sh`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 不再把 `windows PASS` / `handoff_state: CLOSED` 当成 opt-in WinSSL runtime 已通过的可信信号
+     - 继续回到 WinSSL-specific native-probe runtime fail seam，直接定位为何 opt-in runtime 在首个 public signal 后以 `-1073741819` 退出
+     - 若还要补 workflow truth，下一刀更适合单独审 `check_wave_b_b2_evidence_consistency.sh` 的 next-actions wording，而不是把它和这批混修
 
 ## Verification Discipline
 

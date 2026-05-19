@@ -303,6 +303,7 @@ MACOS_SUMMARY_ARGS=()
 MACOS_CONSISTENCY_ARGS=()
 WINDOWS_SUMMARY_ARGS=()
 WINDOWS_EVIDENCE_ARGS=()
+WINDOWS_CROSS_ARGS=()
 macos_summary_exists=false
 if [[ -f "$(resolve_path "$MACOS_SUMMARY")" ]]; then
   macos_summary_exists=true
@@ -336,10 +337,12 @@ fi
 
 if [[ "$WINDOWS_SUMMARY_EXPLICIT" == "true" || "$windows_summary_exists" == "true" ]]; then
   WINDOWS_SUMMARY_ARGS=(--windows-summary "$WINDOWS_SUMMARY")
+  WINDOWS_CROSS_ARGS=(--windows-summary "$WINDOWS_SUMMARY")
   WINDOWS_EVIDENCE_ARGS=(
     --windows-quick-log "$(derive_sibling_artifact_path "$WINDOWS_SUMMARY" "winssl_quick_smoke_${RUN_ID}.log")"
     --windows-runtime-transcript "$(derive_sibling_artifact_path "$WINDOWS_SUMMARY" "winssl_runtime_suite_${RUN_ID}.log")"
   )
+  WINDOWS_CROSS_ARGS+=(--windows-runtime-transcript "${WINDOWS_EVIDENCE_ARGS[3]}")
 fi
 
 if [[ "$DRY_RUN" == "true" ]]; then
@@ -364,7 +367,7 @@ bash "$PROJECT_ROOT/scripts/generate_wave_b_cross_platform_summary.sh" \
   --linux-summary "$LINUX_SUMMARY" \
   --linux-examples "$LINUX_EXAMPLES" \
   "${MACOS_CROSS_ARGS[@]}" \
-  "${WINDOWS_SUMMARY_ARGS[@]}" \
+  "${WINDOWS_CROSS_ARGS[@]}" \
   --output "$CROSS_SUMMARY"
 
 bash "$PROJECT_ROOT/scripts/check_wave_b_b2_closure_readiness.sh" \
@@ -491,6 +494,7 @@ REPLAY_COMMAND="$(build_shell_command scripts/prepare_wave_b_b2_handoff_bundle.s
 windows_quick_log_missing=false
 windows_runtime_transcript_missing=false
 windows_runtime_transcript_marker_issue=false
+windows_runtime_transcript_suite_end_status=""
 if [[ ${#WINDOWS_EVIDENCE_ARGS[@]} -gt 0 ]]; then
   if [[ ! -f "$(resolve_path "${WINDOWS_EVIDENCE_ARGS[1]}")" ]]; then
     windows_quick_log_missing=true
@@ -501,7 +505,19 @@ if [[ ${#WINDOWS_EVIDENCE_ARGS[@]} -gt 0 ]]; then
     || ! grep -aF --quiet "[WINSSL-RUNTIME] suite_summary" "$(resolve_path "${WINDOWS_EVIDENCE_ARGS[3]}")" \
     || ! grep -aE --quiet "\\[WINSSL-RUNTIME\\] suite_end status=(PASS|FAIL)" "$(resolve_path "${WINDOWS_EVIDENCE_ARGS[3]}")"; then
     windows_runtime_transcript_marker_issue=true
+  else
+    windows_runtime_transcript_suite_end_status="$(
+      grep -aE "\\[WINSSL-RUNTIME\\] suite_end status=(PASS|FAIL)" "$(resolve_path "${WINDOWS_EVIDENCE_ARGS[3]}")" \
+        | tail -1 \
+        | sed -E 's/.*status=([A-Z]+).*/\1/'
+    )"
   fi
+fi
+
+if [[ "$handoff_state" != "NEEDS_REPORT_REPAIR" \
+  && "$handoff_state" != "NEEDS_EVIDENCE_SYNC" \
+  && "$windows_runtime_transcript_suite_end_status" == "FAIL" ]]; then
+  handoff_state="NEEDS_GATE_REPAIR"
 fi
 
 NEXT_ACTIONS=()
@@ -519,6 +535,8 @@ else
   fi
   if [[ "$windows_platform_state" != "PASS" ]]; then
     NEXT_ACTIONS+=("在 Windows runner 执行 live gate 并回填 Windows summary。")
+  elif [[ "$windows_runtime_transcript_suite_end_status" == "FAIL" ]]; then
+    NEXT_ACTIONS+=("WinSSL broader runtime suite 已失败（suite_end_status=FAIL）；修复 Windows runtime / native-probe 问题后，重新生成 broader runtime transcript 与 handoff bundle。")
   elif [[ "$windows_quick_log_missing" == "true" || "$windows_runtime_transcript_missing" == "true" ]]; then
     NEXT_ACTIONS+=("在 Windows runner 回填 WinSSL quick smoke 与 runtime suite artifacts。")
   elif [[ "$windows_runtime_transcript_marker_issue" == "true" ]]; then
