@@ -83,7 +83,7 @@ Ctx := TSSLContextBuilder.Create
 | 证书链验证    | ✅ 支持  | 系统证书存储                                                                           |
 | CRL 检查      | ✅ 支持  | 自动下载                                                                               |
 | OCSP          | ✅ 支持  | 自动检查                                                                               |
-| OCSP Stapling | ⚠️ 部分  | 服务器端（Schannel 系统级行为；fafafa.ssl 封装层不暴露 ISSLServerOCSPStaplingContext） |
+| OCSP Stapling | ❌ 当前 capability 不发布 | Schannel 可能存在系统级自动行为；但 fafafa.ssl 当前 `OCSPStaplingSupport=sslSupportNone`，且不暴露 `ISSLServerOCSPStaplingContext` |
 | 证书固定      | ✅ 支持  | 通过回调                                                                               |
 | SNI           | ✅ 支持  | 客户端/服务器                                                                          |
 | 系统证书存储  | ✅ 支持  | 原生集成                                                                               |
@@ -95,7 +95,7 @@ Ctx := TSSLContextBuilder.Create
 | Session 复用   | ⚠️ 实验性 | public surface 存在；当前 dedicated Windows CI runtime truth 为 `observed_reuse=false` / `session_configured=true` |
 | Session Ticket | ⚠️ 实验性 | Schannel surface 存在，但 fafafa.ssl 尚未在 dedicated Windows proof 中观测到真实 resumed handshake                 |
 | Session Cache  | ✅ 支持   | 系统管理；`SessionCacheSupport=sslSupportStable` 代表 context-level cache/control surface 已发布且已接线，不等于当前已 runtime-proven 的 resumed handshake |
-| 0-RTT          | ⚠️ 部分   | TLS 1.3（Schannel 有限支持；fafafa.ssl 封装层不暴露 ISSLEarlyDataContext）                                         |
+| 0-RTT          | ❌ 当前 capability 不发布 | Windows Schannel 可能存在 TLS 1.3 / early-data 平台潜力；但 fafafa.ssl 当前 `EarlyDataSupport=sslSupportNone`，且不暴露 `ISSLEarlyDataContext` |
 
 > 当前 dedicated Windows CI runtime truth 以 run `26037518301` 为准：
 > `observed_reuse=false`，`session_configured=true`。

@@ -2,6 +2,41 @@
 
 ## 2026-05-20
 
+- WinSSL 这次又验证了一条很重要的能力矩阵审查规则：
+  - top-level matrix 说对了
+  - source capability 也说对了
+  - 不代表 dedicated backend page
+    就一定还跟着对
+
+- `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  这次的 drift 很典型：
+  - 说明列里已经承认
+    `fafafa.ssl`
+    不暴露
+    `ISSLServerOCSPStaplingContext` /
+    `ISSLEarlyDataContext`
+  - 但“支持状态”那一列仍写
+    `⚠️ 部分`
+  - 这种写法会把“底层平台潜力”
+    误读成“当前库层 shipped capability”
+
+- 对 backend matrix 来说，
+  “状态列”优先级比说明列更高：
+  - 读者通常先看左边的支持状态，再决定是否继续下钻
+  - 所以如果状态列写 `⚠️ 部分`，
+    即使说明列补一句
+    “封装层不暴露”
+    也已经太晚了
+
+- 这也进一步说明，
+  我们后面做 backend 完整性审查时，
+  不能只看 source 和总矩阵：
+  - dedicated backend pages
+    本身也是 capability truth source
+  - 尤其要盯这种
+    “平台潜力 vs 当前 public surface”
+    是否被混成同一个状态词
+
 - FreePascal early-data 这次暴露的不是实现没跟上，
   而是 durable-default 实现先落地后，
   active docs / focused contract 没有一起追上：

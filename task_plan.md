@@ -10,6 +10,69 @@
 
 ## Current Status
 
+- [completed] `winssl none-capability surface doc alignment`
+  当前 focused 目标：
+  - 把 WinSSL backend 专页中
+    `OCSP Stapling`
+    与
+    `0-RTT`
+    这两行，
+    从“Schannel 可能有平台潜力”的叙事，
+    收回到当前 fafafa.ssl
+    真正发布的 capability / public surface truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-winssl-none-capability-surface-doc-alignment.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_winssl_none_capability_surface_doc_truth_contract.sh`
+  - 收口文档：
+    - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  当前预判：
+  - WinSSL source 已明确发布：
+    - `OCSPStaplingSupport=sslSupportNone`
+    - `EarlyDataSupport=sslSupportNone`
+  - top-level `BACKEND_CAPABILITY_MATRIX`
+    也已经把 WinSSL 的
+    `Early Data` / `OCSP Stapling`
+    汇总成 `❌`
+  - 但 dedicated `WINSSL_BACKEND_CAPABILITY_MATRIX`
+    仍写成：
+    - `OCSP Stapling | ⚠️ 部分`
+    - `0-RTT | ⚠️ 部分`
+  当前验证策略：
+  - 先加 focused shell contract 做 RED
+  - 然后只改 dedicated WinSSL matrix 两行 wording
+  - 再跑 focused contract + `git diff --check`
+  当前最终收口证据：
+  - focused shell contract 先红后绿：
+    - 初始 RED：
+      `WinSSL dedicated matrix must describe OCSP stapling as none-published capability`
+      直接证明专页和 source / top-level matrix 已经漂移
+    - GREEN 后：
+      - WinSSL 专页不再把 none-published capability
+        写成
+        `⚠️ 部分`
+      - 当前叙事已经明确区分：
+        - Schannel 的平台潜力
+        - fafafa.ssl 当前 shipped public capability
+  focused verification 已通过：
+  - `bash -n tests/scripts/test_winssl_none_capability_surface_doc_truth_contract.sh`
+  - `bash tests/scripts/test_winssl_none_capability_surface_doc_truth_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - 这批收掉的是 dedicated backend page 的 capability classification drift，
+    不是 WinSSL 实现缺口
+  - WinSSL 的 `0-RTT` / `Server OCSP Stapling`
+    现在在：
+    - source
+    - top-level matrix
+    - dedicated backend matrix
+    三层重新一致
+  当前下一条真实工作：
+  - 继续 server-side optional surface cross-backend audit
+  - 优先再看 dedicated backend pages
+    是否还有“平台潜力 / library public surface”
+    混写造成的 capability 漂移
 - [completed] `freepascal default durable replay doc truth alignment`
   当前 focused 目标：
   - 把 FreePascal server-side early-data 默认 durable replay-store

@@ -4,6 +4,56 @@
 
 ## 2026-05-20
 
+### WinSSL None-Capability Surface Doc Alignment
+
+- `rg -n "EarlyDataSupport :=|OCSPStaplingSupport :=|KnownIssues :=" src/fafafa.ssl.*lib.pas src/fafafa.ssl.*backed.pas`
+- `sed -n '530,625p' src/fafafa.ssl.winssl.lib.pas`
+- `sed -n '80,110p' docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+- `rg -n "### WinSSL 后端|0-RTT|Server OCSP Stapling|OCSP Stapling" docs/BACKEND_CAPABILITY_MATRIX.md docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  - result: PASS
+  - summary:
+    - confirmed a dedicated-backend-page drift:
+      - WinSSL source already publishes
+        `OCSPStaplingSupport=None`
+        and
+        `EarlyDataSupport=None`
+      - top-level backend matrix already summarizes WinSSL as `❌`
+      - only the dedicated WinSSL matrix still classified these rows as `⚠️ 部分`
+
+- add `docs/plans/2026-05-20-winssl-none-capability-surface-doc-alignment.md`
+- add `tests/scripts/test_winssl_none_capability_surface_doc_truth_contract.sh`
+  - change:
+    - recorded a bounded WinSSL dedicated-matrix truth-alignment batch
+    - added a focused contract freezing:
+      - source capability none truth
+      - top-level matrix none truth
+      - dedicated WinSSL matrix wording
+
+- `bash -n tests/scripts/test_winssl_none_capability_surface_doc_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new WinSSL none-capability docs contract syntax is valid
+
+- `bash tests/scripts/test_winssl_none_capability_surface_doc_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first proved the real drift:
+      - dedicated WinSSL matrix still did not describe OCSP stapling as a none-published capability
+    - GREEN after the doc update proves:
+      - WinSSL dedicated matrix now distinguishes
+        Schannel platform potential
+        from
+        current fafafa.ssl shipped public capability
+      - `OCSP Stapling` / `0-RTT`
+        no longer show up as `⚠️ 部分`
+
+- update docs:
+  - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  - change:
+    - rewrote the `OCSP Stapling` and `0-RTT` rows as
+      `❌ 当前 capability 不发布`
+    - preserved the underlying Schannel potential as explanatory context only
+
 ### FreePascal Default Durable Replay Doc Truth Alignment
 
 - `rg -n "default.*replay|replay truth|single-process|persistent replay|Install.*Replay|GetEarlyDataReplayLedger|ActiveEarlyDataReplayLedger|Create.*Replay|default path" src docs tests -S`
