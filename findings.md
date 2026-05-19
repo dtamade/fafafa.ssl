@@ -31,7 +31,25 @@
   - artifact-download contract 在 truth 对齐后恢复 GREEN
   - `gh auth status` 继续 PASS，说明后续可以直接 dispatch GitHub runner 做真实 host 调查
 
-- 因而下一步不该再继续猜 `observed_reuse=false` 是 host 问题还是 Schannel 行为，而应直接用这条 manual lane 派发一次非默认 host 调查，拿 dedicated Windows artifact 再说。
+- live dispatch 结果也已经把这条 lane 从“能配”推进到“已实跑”：
+  - pushed head: `81eebb1`
+  - manual run: `26068474291`
+  - URL: `https://github.com/dtamade/fafafa.ssl/actions/runs/26068474291`
+  - Windows runtime artifact 中明确出现：
+    - `summary host=www.google.com`
+    - `observed_reuse=false`
+    - `session_configured=true`
+
+- 这条 live 结果的含义很直接：
+  - 新增 workflow 输入和 env 注入链路是通的
+  - 非默认 host `www.google.com` 也没有把当前 WinSSL/Schannel reconnect 证据翻成 `observed_reuse=true`
+  - 因而当前现象已经不再只是“默认 Cloudflare host 的偶然值”，而更像：
+    - broader host-family behavior
+    - 或 WinSSL/Schannel reconnect/native probe 语义本身
+
+- 所以下一步如果继续沿这条线深入，不该再回头猜 workflow 或默认 host plumbing，而应：
+  - 扩一两个不同 TLS/server family 的 public host 做 bounded 对照
+  - 或单独打开 native probe lane，调查 `SECPKG_ATTR_SESSION_INFO` / ticket/reconnect 真相
 
 - WinSSL session-resumption 这条线在 active guides 收口后，剩下最像“还会继续误导后续实现判断”的 residual，并不是普通文档，而是专项 benchmark 程序与 benchmark guide：
   - `tests/winssl/test_winssl_session_reuse_benchmark.pas`

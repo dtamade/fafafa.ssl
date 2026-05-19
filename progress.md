@@ -100,6 +100,60 @@
   - summary:
     - GitHub CLI is logged in with `workflow` scope, so the new manual lane can be dispatched after push for real Windows-runner evidence
 
+- `git push origin master`
+  - result: PASS
+  - summary:
+    - pushed the previously queued local commits plus `81eebb1 ci(winssl): add manual host override investigation lane`
+
+- `gh workflow run wave-b-b2-manual.yml -f run_id=winssl_host_probe_20260519_google -f strict_closure=false -f winssl_session_host=www.google.com`
+  - result: PASS
+  - summary:
+    - dispatched the new manual host-override investigation lane against non-default host `www.google.com`
+
+- `gh run list --workflow wave-b-b2-manual.yml --limit 5 --json databaseId,displayTitle,headSha,status,conclusion,createdAt,event,workflowName`
+  - result: PASS
+  - summary:
+    - captured fresh run `26068474291` on head `81eebb1eb75466ade7d1bb3de382654b50a9afb3`
+
+- `gh run watch 26068474291 --exit-status`
+  - result: PASS
+  - summary:
+    - workflow completed `SUCCESS`
+    - `windows-gate` succeeded in `5m24s`
+    - `macos-gate`, `linux-gate`, and `summary` also succeeded
+
+- `gh run download 26068474291 -n wave-b-windows-winssl_host_probe_20260519_google -D tmp/gh-run-26068474291/windows`
+  - result: PASS
+  - summary:
+    - downloaded Windows evidence bundle including `winssl_runtime_suite_winssl_host_probe_20260519_google.log`
+
+- `gh run download 26068474291 -n wave-b-summary-winssl_host_probe_20260519_google -D tmp/gh-run-26068474291/summary`
+  - result: PASS
+  - summary:
+    - downloaded cross-platform summary bundle for the same run
+
+- `sed -n '1,260p' tmp/gh-run-26068474291/windows/winssl_runtime_suite_winssl_host_probe_20260519_google.log`
+  - result: PASS
+  - summary:
+    - confirmed the WinSSL session-resumption test executed inside the broader runtime suite
+    - confirmed runtime markers now record:
+      - `host=www.google.com`
+      - `observed_reuse=false`
+      - `session_configured=true`
+    - confirmed all four resumed attempts completed while keeping `reused=false`
+
+- `sed -n '1,260p' tmp/gh-run-26068474291/summary/wave_b_cross_platform_summary_winssl_host_probe_20260519_google.md`
+  - result: PASS
+  - summary:
+    - confirmed the final cross-platform summary reports `windows | PASS` for run `winssl_host_probe_20260519_google`
+
+- `gh run view 26068474291 --json url,conclusion,status,createdAt,updatedAt,workflowName,displayTitle,headSha`
+  - result: PASS
+  - summary:
+    - run URL: `https://github.com/dtamade/fafafa.ssl/actions/runs/26068474291`
+    - conclusion: `success`
+    - headSha: `81eebb1eb75466ade7d1bb3de382654b50a9afb3`
+
 ### WinSSL Session-Reuse Benchmark Truth Alignment
 
 - `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`

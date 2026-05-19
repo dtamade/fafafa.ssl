@@ -32,9 +32,18 @@
     - `bash tests/scripts/test_wave_b_b2_optional_runner_artifact_download_workflow_contract.sh`
     - `git diff --check`: PASS
     - `gh auth status`: PASS
+  - live GitHub verification 已通过：
+    - `git push origin master`: PASS
+    - `gh workflow run wave-b-b2-manual.yml -f run_id=winssl_host_probe_20260519_google -f strict_closure=false -f winssl_session_host=www.google.com`: PASS
+    - manual run `26068474291`: `SUCCESS`
+    - downloaded Windows runtime artifact confirms:
+      - `host=www.google.com`
+      - `observed_reuse=false`
+      - `session_configured=true`
   - 当前结论：
-    - repo 已具备 bounded、可复用的 GitHub Windows runner host-override 调查入口
-    - 下一步最值钱的是 push 后派发一次 manual workflow，确认 UI/runner/artifact 路径都真实接通
+    - repo 已具备 bounded、可复用、已实跑证明接通的 GitHub Windows runner host-override 调查入口
+    - 这次非默认 host 调查说明当前 `observed_reuse=false` 并不只是默认 `www.cloudflare.com` 单点现象
+    - 如果继续沿 WinSSL session runtime 深挖，下一步更适合继续扩样 host family 或打开 native probe 做更窄的 Schannel 证据，而不是再回头改 workflow plumbing
 - [completed] WinSSL session-reuse benchmark truth alignment 已完成 focused 收口：
   - 新增计划：`docs/plans/2026-05-19-winssl-session-reuse-benchmark-truth-alignment.md`
   - 新增 focused source contract：`tests/scripts/test_winssl_session_reuse_benchmark_truth_contract.sh`
