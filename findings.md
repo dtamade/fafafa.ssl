@@ -7743,3 +7743,49 @@
   - 再处理：
     `WinSSL Windows 7 SP1`
     平台支持表述
+123. `MbedTLS` 专页把 `Ed25519` 写成
+  `⚠️ 部分 | MbedTLS 3.x`
+  当前并不是一个 source-backed 的 fafafa.ssl published truth：
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+    的 capability record
+    没有任何 `Ed25519`-specific published capability
+  - `src/fafafa.ssl.mbedtls.certificate.pas`
+    当前 `GetPublicKeyAlgorithm`
+    仍返回：
+    - `RSA`
+  - 同文件里的 `GetSignatureAlgorithm`
+    当前仍返回：
+    - `SHA256withRSA`
+- 这意味着当前更准确的结论不是
+  `MbedTLS 3.x 理论上也许支持 Ed25519`
+  这种上游投影，
+  而是：
+  - fafafa.ssl 当前 MbedTLS backend
+    没有发布可证明的 `Ed25519`-specific capability / metadata surface
+  - 因而活跃专页应记为：
+    - `❌ 当前 capability 不发布`
+- 这批也让总路线图的阶段判断更清楚了：
+  - GitHub Actions `WinSSL Runtime Gate`
+    run `26130501368`
+    已 `success`
+  - GitHub Actions `CI`
+    run `26130974672`
+    已 `success`
+  - 所以当前 repo 已不再被
+    “Windows 没法 runtime 验证”
+    或
+    “主 CI 还不稳”
+    这类问题卡住
+  - 更高价值的剩余工作
+    继续集中在：
+    - residual capability / active-doc drift
+    - interface-design / backend completeness 主线
+- 因而当前批收口后的默认顺序应为：
+  - 先继续 residual：
+    `WinSSL Windows 7 SP1`
+    平台支持表述
+  - 再切回：
+    `ISSLConnection`
+    / `TSSLConfig`
+    / `ISSLServerConnection`
+    这组更大的 completeness 问题

@@ -15487,3 +15487,67 @@
     - recorded that the next residual queue should continue with:
       - `MbedTLS Ed25519`
       - `WinSSL Windows 7 SP1` platform-support wording
+
+### MbedTLS Ed25519 Capability Doc Truth Alignment
+
+- add `docs/plans/2026-05-20-mbedtls-ed25519-capability-doc-truth-alignment.md`
+  - change:
+    - define the bounded doc-truth closeout for the
+      `Ed25519` row in
+      `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+    - explicitly scope the truth to:
+      - no published `Ed25519`-specific capability / metadata surface
+      - current certificate algorithm getters still returning RSA defaults
+
+- add `tests/scripts/test_mbedtls_ed25519_capability_doc_truth_contract.sh`
+  - change:
+    - add a focused shell contract that freezes:
+      - current MbedTLS published key-exchange families
+      - `TMbedTLSCertificate.GetPublicKeyAlgorithm`
+      - `TMbedTLSCertificate.GetSignatureAlgorithm`
+      - the dedicated MbedTLS capability matrix wording
+
+- `bash -n tests/scripts/test_mbedtls_ed25519_capability_doc_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_mbedtls_ed25519_capability_doc_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first failed only because the dedicated MbedTLS doc still claimed:
+      - `| Ed25519 | ⚠️ 部分 | MbedTLS 3.x |`
+    - current source already proved a narrower truth:
+      - no `Ed25519`-specific capability is published from the MbedTLS backend
+      - certificate algorithm metadata still returns RSA defaults
+    - after tightening the dedicated doc row, the focused contract turned green
+
+- update `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+  - change:
+    - tighten the `Ed25519` row from upstream-theory wording to the current
+      shipped truth:
+      - `❌ 当前 capability 不发布`
+      - no published `Ed25519`-specific capability / metadata surface
+      - `GetPublicKeyAlgorithm / GetSignatureAlgorithm` still return RSA defaults
+
+- `git diff --check`
+  - result: PASS
+
+- `gh run view 26130974672 --json status,conclusion,jobs,updatedAt,url`
+  - result: PASS
+  - summary:
+    - current `CI` run completed with `conclusion=success`
+    - `Minimal Gate (Linux)` = PASS
+    - `FreePascal TLS 1.3 Completeness` = PASS
+    - `Code Quality (Light)` = PASS
+    - repo mainline CI remains green after the previous `MbedTLS async` closeout
+
+- update planning files:
+  - `task_plan.md`
+  - `findings.md`
+  - `progress.md`
+  - change:
+    - recorded this batch as a doc-truth closeout rather than a runtime/backend
+      implementation fix
+    - recorded the current route-map progress as:
+      - Windows runtime automation closed
+      - main Linux/FreePascal CI green
+      - next highest-value residual = `WinSSL Windows 7 SP1` wording

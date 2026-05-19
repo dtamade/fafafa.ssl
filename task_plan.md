@@ -7036,3 +7036,51 @@
        优先处理：
        - `MbedTLS Ed25519`
        - `WinSSL Windows 7 SP1` 平台支持表述
+106. `MbedTLS Ed25519 capability doc truth alignment` 这批现在应作为继续压缩 residual doc-truth 队列的最新收口批次保留：
+   - 新 plan：
+     - `docs/plans/2026-05-20-mbedtls-ed25519-capability-doc-truth-alignment.md`
+   - 当前 source / public-surface truth：
+     - `src/fafafa.ssl.mbedtls.lib.pas`
+       当前 capability record 只发布：
+       - `sslKexRSA`
+       - `sslKexDHE_RSA`
+       - `sslKexECDHE_RSA`
+       - `sslKexECDHE_ECDSA`
+     - `src/fafafa.ssl.mbedtls.certificate.pas`
+       当前证书算法 metadata 仍返回默认值：
+       - `GetPublicKeyAlgorithm -> 'RSA'`
+       - `GetSignatureAlgorithm -> 'SHA256withRSA'`
+     - `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+       之前却仍写：
+       - `| Ed25519 | ⚠️ 部分 | MbedTLS 3.x |`
+   - 当前最小修正：
+     - 把 `Ed25519`
+       这一行收紧为：
+       - `❌ 当前 capability 不发布`
+       - 并明确：
+         - 当前 backend 没有 published `Ed25519`-specific capability / metadata surface
+         - 不要把上游 MbedTLS 3.x 理论能力当成 fafafa.ssl 当前 backend truth
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_mbedtls_ed25519_capability_doc_truth_contract.sh`
+     - `bash tests/scripts/test_mbedtls_ed25519_capability_doc_truth_contract.sh`
+     - `git diff --check`
+   - 当前外部流程状态：
+     - GitHub Actions `CI`
+       run `26130974672`
+       已 `success`
+     - GitHub Actions `WinSSL Runtime Gate`
+       run `26130501368`
+       已 `success`
+   - 当前路线图进度判断：
+     - Windows / WinSSL 自动 runtime 验证已闭环到主线 workflow
+     - Linux / FreePascal 当前主 CI 也保持绿色
+     - repo 当前最高价值路径继续回到：
+       - residual capability / doc drift 收口
+       - 更大的 interface-design / backend completeness 审查
+   - 当前批收口后默认下一步应为：
+     - 继续同一组 residual doc-truth 审查：
+       - `WinSSL Windows 7 SP1` 平台支持表述
+     - 然后切回更大的 completeness 主线：
+       - `ISSLConnection`
+       - `TSSLConfig`
+       - `ISSLServerConnection`

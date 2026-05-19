@@ -67,7 +67,7 @@ Ctx := TSSLContextBuilder.Create
 | RSA-PKCS1 | ✅ 支持 | 兼容性 |
 | RSA-PSS | ✅ 支持 | 推荐 |
 | ECDSA | ✅ 支持 | 推荐 |
-| Ed25519 | ⚠️ 部分 | MbedTLS 3.x |
+| Ed25519 | ❌ 当前 capability 不发布 | 当前 backend 没有 published Ed25519-specific capability / metadata surface；`GetPublicKeyAlgorithm` / `GetSignatureAlgorithm` 当前仍返回 RSA 默认值；不要把上游 MbedTLS 3.x 理论能力当成 fafafa.ssl 当前 backend truth |
 
 ### 椭圆曲线
 
