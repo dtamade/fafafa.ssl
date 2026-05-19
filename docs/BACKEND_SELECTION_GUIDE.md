@@ -302,8 +302,10 @@ PreferredScore = (MatchedCount / TotalCount) * 20
 - SecurityScore: 90/100
 - PerformanceScore: 100/100
 - SupportsTLS13: Yes
-- SupportsPKCS11: Yes
+- SupportsPKCS11: Runtime-dependent (requires Provider / ENGINE readiness)
 - HasHardwareAcceleration: Yes
+
+平台分数 5.5/10 假设当前 OpenSSL runtime 已发布 PKCS#11 capability；若 Provider / ENGINE surface 不就绪，该项会更低。
 
 **测试结果**:
 

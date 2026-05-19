@@ -305,8 +305,8 @@ begin
 
   // Windows 平台推荐
   {$IFDEF WINDOWS}
-  if Caps.SupportsSystemCertStore and Caps.SupportsTPM then
-    WriteLn('Recommended for Windows: full system integration');
+  if Caps.SupportsSystemCertStore then
+    WriteLn('Recommended for Windows: system certificate integration available');
   {$ENDIF}
 end;
 ```
@@ -455,7 +455,7 @@ begin
     begin
       // Windows 桌面：优先使用 WinSSL（系统集成）
       Caps := TSSLFactory.GetLibrary(sslWinSSL).GetCapabilities;
-      if Caps.SupportsSystemCertStore and Caps.SupportsTPM then
+      if Caps.SupportsSystemCertStore then
         Exit(sslWinSSL);
     end;
 

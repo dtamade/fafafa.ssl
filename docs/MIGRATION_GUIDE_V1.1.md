@@ -644,9 +644,11 @@ end;
 | **DTLS**     | ✅        | ✅        | ✅        | ❌          |
 | **硬件加速** | ✅        | ✅        | ✅        | ✅          |
 | **系统证书** | ❌        | ❌        | ❌        | ✅          |
-| **PKCS#11**  | ✅        | ⚠️        | ⚠️        | ✅          |
-| **TPM**      | ❌        | ❌        | ❌        | ✅          |
-| **FIPS**     | ✅        | ❌        | ❌        | ✅          |
+| **PKCS#11**  | ⚠️ 依赖运行时 | ❌        | ❌        | ❌          |
+| **TPM**      | ❌        | ❌        | ❌        | ❌          |
+| **FIPS**     | ❌        | ❌        | ❌        | ✅          |
+
+OpenSSL 的 PKCS#11 capability 取决于 Provider / ENGINE runtime surface readiness；默认构建也不发布 FIPS capability。
 
 ### 相关文档
 

@@ -4299,3 +4299,33 @@
   - 不只是源码和 active docs 要对齐
   - focused shell contracts 也必须同步到同一套 capability truth
   - 后续若继续推进 capability/completeness 审查，应优先警惕这类“源码已收口，但静态合同还卡在旧 truth”的回漂点
+
+- 顺着这条思路继续复审 active docs，又压实了一条更上层的误导源：
+  - 不只是 shell contract 会卡在旧 truth
+  - 一些仍在项目根入口被看到的 active docs，也还保留着早期静态 capability 心智
+
+- 当前已经确认的 3 个代表性漂移都很具体：
+  - `docs/MIGRATION_GUIDE_V1.1.md`
+    - 仍把 `WinSSL PKCS#11` / `WinSSL TPM` 写成已支持
+    - 同时还把当前默认构建的 `OpenSSL FIPS` 写成已支持
+  - `docs/BACKEND_SELECTION_GUIDE.md`
+    - OpenSSL 评分示例仍把 `SupportsPKCS11: Yes` 写成 unconditional truth
+  - `docs/CAPABILITY_MATRIX_GUIDE.md`
+    - Windows 推荐代码示例仍要求：
+      - `SupportsSystemCertStore and SupportsTPM`
+    - 这会把当前并不存在的 WinSSL TPM published capability 再次暗示成真实入口条件
+
+- 这类问题的风险和测试滞后是同一类：
+  - 它们会把“runtime-aware truth”重新退回“品牌/平台静态能力”心智
+  - 下一次开发或审查很容易又从旧前提出发
+
+- 这批最小正确修法因此同样保持很窄：
+  - 不改 backend 实现
+  - 只把 3 份 active docs 重新锚回当前 truth：
+    - `OpenSSL PKCS#11` = runtime-aware
+    - `WinSSL PKCS11/TPM` = 当前 capability 不发布
+    - `OpenSSL FIPS` = 默认构建不发布
+
+- 因而当前 capability/completeness 路线的稳定结论又前进一步：
+  - active source truth、focused contracts、active docs 三者现在要同时对齐
+  - 后续再扫这条线时，应优先找仍残留“静态品牌能力心智”的入口示例，而不是重复怀疑已经收掉的单点实现

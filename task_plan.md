@@ -2884,3 +2884,34 @@
    - 当前批收口后默认下一步应为：
      - 继续找其它“合同/文档仍锚在旧 capability truth，但源码已切到 runtime-aware truth”的残余点
      - 再决定是否继续深挖新的 backend capability drift
+72. `active capability docs runtime truth` 已完成 focused 收口，并应作为当前 docs completeness 的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-active-capability-docs-runtime-truth-sweep.md`
+   - 当前已确认的 active-doc drift：
+     - `docs/MIGRATION_GUIDE_V1.1.md`
+       - 仍把：
+         - `WinSSL PKCS#11 = ✅`
+         - `WinSSL TPM = ✅`
+         - `OpenSSL FIPS = ✅`
+         当成当前 capability truth
+     - `docs/BACKEND_SELECTION_GUIDE.md`
+       - OpenSSL 评分示例仍把：
+         - `SupportsPKCS11: Yes`
+         写成 unconditional truth
+     - `docs/CAPABILITY_MATRIX_GUIDE.md`
+       - Windows 推荐示例仍要求：
+         - `SupportsSystemCertStore and SupportsTPM`
+       - 这已经不符合当前 WinSSL capability truth
+   - 当前最小正确修法已落地：
+     - 不改生产代码
+     - 只把上述 3 份 active docs 重新锚回：
+       - OpenSSL `PKCS#11` runtime-aware truth
+       - WinSSL `PKCS11/TPM` 非发布 truth
+       - OpenSSL 默认构建 `FIPS = False`
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_active_capability_docs_runtime_truth_contract.sh`
+     - `bash tests/scripts/test_active_capability_docs_runtime_truth_contract.sh`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 继续找其它 active docs / examples 是否仍把 runtime-aware capability 写成 unconditional truth
+     - 优先复审 builder/selector 入口文档里的环境假设

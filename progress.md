@@ -9138,3 +9138,56 @@
   - result: PASS
   - summary:
     - current hardware-key contract truth-resync batch has no whitespace or patch-format issues
+
+### Active Capability Docs Runtime Truth Sweep
+
+- add `docs/plans/2026-05-19-active-capability-docs-runtime-truth-sweep.md`
+  - purpose:
+    - record the bounded batch that realigns active capability docs with current runtime-aware source truth
+
+- add `tests/scripts/test_active_capability_docs_runtime_truth_contract.sh`
+  - change:
+    - guard that active docs no longer:
+      - market WinSSL `PKCS11/TPM` as published capability
+      - market OpenSSL `PKCS#11` as unconditional truth
+      - market OpenSSL default-build `FIPS` as published capability
+
+- `bash -n tests/scripts/test_active_capability_docs_runtime_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new active-capability-docs shell contract syntax is valid
+
+- `bash tests/scripts/test_active_capability_docs_runtime_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `Migration guide still advertises the stale PKCS#11 capability table`
+    - static review then confirmed the same active-doc family also still carried:
+      - stale WinSSL TPM truth
+      - stale OpenSSL default-build FIPS truth
+      - stale unconditional OpenSSL PKCS#11 example wording
+      - stale Windows recommendation wording tied to nonexistent TPM capability
+    - GREEN after fix:
+      - the active capability-doc family now matches current runtime-aware source truth
+
+- update `docs/MIGRATION_GUIDE_V1.1.md`
+  - change:
+    - replace stale `PKCS#11 / TPM / FIPS` table rows with current published truth
+    - add explicit note that OpenSSL PKCS#11 depends on Provider / ENGINE runtime readiness
+    - add explicit note that default-build OpenSSL does not publish FIPS capability
+
+- update `docs/BACKEND_SELECTION_GUIDE.md`
+  - change:
+    - change the OpenSSL scoring example from unconditional `SupportsPKCS11: Yes`
+      to runtime-dependent wording
+    - bound the example scoring text so PKCS#11-dependent platform score is explicitly conditional on runtime readiness
+
+- update `docs/CAPABILITY_MATRIX_GUIDE.md`
+  - change:
+    - stop tying the Windows recommendation snippet to nonexistent TPM published capability
+    - keep the recommendation anchored on `SupportsSystemCertStore`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current active capability-docs runtime-truth batch has no whitespace or patch-format issues
