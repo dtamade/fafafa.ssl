@@ -314,7 +314,8 @@ else
 case GetBackendType(Ctx) of
   sslOpenSSL, sslWinSSL, sslMbedTLS, sslWolfSSL:
     WriteLn('C library backend');
-  // 未来的纯 Pascal 后端会有新的枚举值
+  sslFreePascal:
+    WriteLn('Pure Pascal backend');
 end;
 ```
 

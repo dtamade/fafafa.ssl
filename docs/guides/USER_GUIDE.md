@@ -564,7 +564,7 @@ LContext.SetCipherSuites('TLS_AES_128_GCM_SHA256'); // 硬件加速
 **建议**:
 - 跨平台应用 → OpenSSL
 - Windows 企业应用 → WinSSL
-- 嵌入式/轻量 → MbedTLS (未来)
+- 嵌入式/轻量 → MbedTLS
 
 ### Q: 证书验证失败怎么办？
 

@@ -11,7 +11,7 @@
 v1.1.0 引入了架构改进，将 `GetNativeHandle` 方法从核心接口移至可选接口 `ISSLNativeHandleAccess`。此变更旨在：
 
 1. **清晰化抽象层** - 核心接口不再暴露 C 库特定实现细节
-2. **支持纯 Pascal 后端** - 为未来的 FreePascal 原生 TLS 实现铺平道路
+2. **支持纯 Pascal 后端** - 让 `sslFreePascal` 这类不暴露 native handle 的 backend 成为一等公民
 3. **提升类型安全** - 通过接口查询机制防止类型错误
 
 **向后兼容性**: ✅ 对于标准用户代码，此变更完全向后兼容，无需任何修改。
@@ -338,7 +338,7 @@ end;
 **A**: 主要原因：
 
 1. **架构清晰** - 核心接口不应暴露特定实现细节
-2. **支持纯 Pascal** - 为未来的 FreePascal 原生 TLS 后端铺平道路
+2. **支持纯 Pascal** - 让 `sslFreePascal` 这类不暴露 native handle 的 backend 成为一等公民
 3. **类型安全** - 通过接口查询防止运行时类型错误
 
 ### Q2: 这会破坏我的代码吗？
@@ -371,9 +371,9 @@ else
   // 使用标准接口方法
 ```
 
-### Q6: 未来的纯 Pascal 后端什么时候发布？
+### Q6: 纯 Pascal 后端现在是什么状态？
 
-**A**: 这是一个长期项目（2-3 年）。参见长期路线图文档。
+**A**: 当前仓库已经包含 `sslFreePascal` backend，并且这正是本次 native-handle optional boundary 的现实受益者之一。后续仍会继续完善 capability/runtime proof，但不再是“等待未来某个纯 Pascal backend 才能落地”的状态。
 
 ---
 

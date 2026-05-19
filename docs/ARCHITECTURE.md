@@ -295,7 +295,7 @@ public
   function IsNativeHandleValid: Boolean;
 end;
 
-// 纯 Pascal 后端（未来）
+// 纯 Pascal 后端（当前实现）
 TFreePascalSSLContext = class(TInterfacedObject, ISSLContext)
   // ✅ 仅实现 ISSLContext
   // ✅ 不实现 ISSLNativeHandleAccess

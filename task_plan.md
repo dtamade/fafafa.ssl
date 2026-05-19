@@ -10,6 +10,29 @@
 
 ## Current Status
 
+- [completed] Implemented backend future truth sweep 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-implemented-backend-future-truth-sweep.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_implemented_backend_future_truth_contract.sh`
+  - 当前已修正的活跃文档：
+    - `docs/reference/BACKEND_ABSTRACTION_LAYER_DESIGN.md`
+    - `docs/guides/USER_GUIDE.md`
+    - `docs/MIGRATION_GUIDE_V1.1.md`
+    - `docs/ARCHITECTURE.md`
+    - `docs/NATIVE_HANDLE_QUICK_REF.md`
+  - 当前已收掉的真问题：
+    - `FreePascal` 不再被 backend abstraction design 写成 `❌ 计划中`
+    - `USER_GUIDE` 不再把 `MbedTLS` 推荐写成“未来”
+    - `MIGRATION_GUIDE_V1.1` 不再把 `sslFreePascal` 描述成等待未来发布的 backend
+    - `ARCHITECTURE` / `NATIVE_HANDLE_QUICK_REF` 不再保留“纯 Pascal backend 还在未来”的旧示例心智
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_implemented_backend_future_truth_contract.sh`
+    - `bash tests/scripts/test_implemented_backend_future_truth_contract.sh`
+    - `git diff --check`: PASS
+  - 当前结论：
+    - 这批把“已实现 backend 仍被活跃文档说成未来态”的主要残留收掉了
+    - 后续接口/后端 completeness 审查现在能直接建立在当前 backend family truth 上
 - [completed] Active root doc link repair 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-active-root-doc-link-repair.md`

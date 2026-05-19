@@ -2,6 +2,27 @@
 
 ## 2026-05-19
 
+- 在收掉根入口 broken links 之后，下一层明显的路线图级误导其实不是坏链接，而是“未来态残留”：
+  - 几份活跃文档虽然能打开，但仍把已经存在的 backend 写成“计划中/未来”
+  - 这会比单纯 broken link 更隐蔽，因为阅读者会以为这是当前权威事实
+
+- 这批 focused sweep 明确暴露了 3 类 stale truth：
+  - `docs/reference/BACKEND_ABSTRACTION_LAYER_DESIGN.md`
+    - 仍把 `FreePascal` 写成 `❌ 计划中`
+  - `docs/guides/USER_GUIDE.md`
+    - 仍把 `MbedTLS` 推荐挂着 `(未来)`
+  - `docs/MIGRATION_GUIDE_V1.1.md` / `docs/ARCHITECTURE.md` / `docs/NATIVE_HANDLE_QUICK_REF.md`
+    - 仍把“纯 Pascal backend”讲成将来态，而不是当前已经存在的 `sslFreePascal`
+
+- 这类问题的真正风险在于它会扭曲我们对接口设计边界的理解：
+  - `GetNativeHandle` optional-boundary 的价值，会被误解成“为了将来某个 backend 提前设计”
+  - 而不是“当前 `sslFreePascal` 已经在使用这条边界”
+
+- 当前这批收口后的新基线应明确保留：
+  - `sslFreePascal` 是当前已实现、已进入工厂/能力矩阵/测试体系的 backend family
+  - `sslMbedTLS` 也已是当前可用 backend，不应继续被用户导向文档写成 future-only
+  - optional native-handle 设计的现实受益者之一就是当前 `sslFreePascal`
+
 - 在继续扫描活跃文档入口时，又确认了一条会明显拖慢后续审查节奏的现实问题：
   - 仓库里不只是有“个别 stale wording”，而是存在一批真实 broken links
   - 而且它们集中出现在最容易被先点开的根入口文档：

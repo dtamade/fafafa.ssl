@@ -2,6 +2,56 @@
 
 ## 2026-05-19
 
+### Implemented Backend Future Truth Sweep
+
+- add `docs/plans/2026-05-19-implemented-backend-future-truth-sweep.md`
+  - change:
+    - define the bounded stale-future-truth batch for implemented backend wording in active docs
+
+- add `tests/scripts/test_implemented_backend_future_truth_contract.sh`
+  - change:
+    - lock that active docs no longer describe `sslFreePascal` / `sslMbedTLS` as future-only backends
+
+- `bash -n tests/scripts/test_implemented_backend_future_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new implemented-backend future-truth contract syntax is valid
+
+- `bash tests/scripts/test_implemented_backend_future_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - backend abstraction design still described `FreePascal` as planned
+      - user guide still described `MbedTLS` as future-only
+      - migration / architecture / native-handle docs still taught a future-only pure-Pascal backend mindset
+    - GREEN after fix:
+      - active docs now reflect that `sslFreePascal` and `sslMbedTLS` are already part of the current backend family truth
+
+- update `docs/reference/BACKEND_ABSTRACTION_LAYER_DESIGN.md`
+  - change:
+    - replace stale `FreePascal | ❌ 计划中` row with current implemented-backend truth
+
+- update `docs/guides/USER_GUIDE.md`
+  - change:
+    - remove stale `(未来)` tail from the MbedTLS lightweight recommendation
+
+- update `docs/MIGRATION_GUIDE_V1.1.md`
+  - change:
+    - replace future-only FreePascal backend wording with current `sslFreePascal` optional-native-handle truth
+
+- update `docs/ARCHITECTURE.md`
+  - change:
+    - mark the pure Pascal backend snippet as current implementation instead of future-only
+
+- update `docs/NATIVE_HANDLE_QUICK_REF.md`
+  - change:
+    - replace the future enum comment with explicit `sslFreePascal` case handling
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current implemented-backend future-truth batch has no whitespace or patch-format issues
+
 ### Active Root Doc Link Repair
 
 - add `docs/plans/2026-05-19-active-root-doc-link-repair.md`

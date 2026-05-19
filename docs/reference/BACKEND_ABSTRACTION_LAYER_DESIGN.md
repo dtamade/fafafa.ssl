@@ -148,7 +148,7 @@ Ctx := TSSLContextBuilder.Create
 | OpenSSL | ✅ 完成 | 157/157 模块 |
 | MbedTLS | ✅ 完成 | 73/73 框架测试 |
 | WinSSL | ⚠️ 部分 | 待验证 |
-| FreePascal | ❌ 计划中 | - |
+| FreePascal | ✅ 已实现 | 活跃 backend，见 `docs/BACKEND_CAPABILITY_MATRIX.md` |
 
 ## 扩展新后端
 
