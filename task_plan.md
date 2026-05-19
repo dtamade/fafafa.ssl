@@ -10,6 +10,29 @@
 
 ## Current Status
 
+- [completed] PKCS12 helper guide active truth 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-pkcs12-helper-guide-active-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_pkcs12_helper_guide_active_truth_contract.sh`
+  - 当前已修正的活跃文档：
+    - `docs/guides/PKCS12_USER_GUIDE.md`
+    - `docs/reference/API_REFERENCE.md`
+  - 当前已收掉的真问题：
+    - `PKCS12_USER_GUIDE` 不再继续教授源码中不存在的：
+      - `LoadCertificateFromFile(...)`
+      - `LoadPrivateKeyFromFile(...)`
+    - PKCS#12 活跃指南现在明确区分：
+      - 高入口 helper：`TPKCS12Manager` / `DefaultPKCS12Options`
+      - OpenSSL raw API：`fafafa.ssl.openssl.api.pkcs12` / `fafafa.ssl.openssl.api.pem`
+    - `API_REFERENCE` 现在已补出 façade 上当前公开的 PKCS#12 helper 入口
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_pkcs12_helper_guide_active_truth_contract.sh`
+    - `bash tests/scripts/test_pkcs12_helper_guide_active_truth_contract.sh`
+    - `git diff --check`
+  - 当前结论：
+    - 这批修掉的是 PKCS#12 高入口指导仍把调用方带回不存在旧 API 的 docs completeness 问题，不是 runtime 缺口
+    - 后续再继续做证书/密钥文档完整性审查时，不应再把 `PKCS12_USER_GUIDE` 当成旧 helper 名称的来源
 - [completed] Capability precedence doc truth 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-capability-precedence-doc-truth.md`

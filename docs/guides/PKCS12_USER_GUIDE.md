@@ -10,6 +10,15 @@ PKCS#12 是一种用于存储和传输私钥、证书和其他敏感信息的标
 - `WinSSL`: 仅发布 PFX/P12 import path，不提供本指南中的 helper/API surface
 - `FreePascal` / `MbedTLS` / `WolfSSL`: 当前不发布 PKCS#12 bundle create / parse / import surface
 
+## 推荐入口
+
+推荐入口分两层：
+
+- 高入口 helper：`fafafa.ssl` / `TPKCS12Manager` / `DefaultPKCS12Options`
+  - 适合当前项目代码直接做 PKCS#12 导入/导出
+- OpenSSL raw API：`fafafa.ssl.openssl.api.pkcs12` + `fafafa.ssl.openssl.api.pem`
+  - 适合需要直接操作 `PPKCS12` / `PX509` / `PEVP_PKEY` 的低层场景
+
 ## 功能特性
 
 ### ✅ 已实现功能
@@ -104,95 +113,109 @@ const
 
 ## 使用示例
 
-### 示例 1：创建 PKCS12 文件
+### 示例 1：通过高入口 helper 创建 PKCS12 文件
 
-参考文件：`tests/certificate/test_p2_pkcs12_create_parse.pas`
+参考文件：
+
+- `tests/unit/test_pkcs12_full.pas`
+- `tests/test_cert_advanced_pkcs12_bio_contract.pas`
 
 ```pascal
+uses
+  SysUtils,
+  fafafa.ssl,
+  fafafa.ssl.cert;
+
 var
-  p12: PPKCS12;
-  cert: PX509;
-  pkey: PEVP_PKEY;
-  bio: PBIO;
+  KeyPair: IKeyPairWithCertificate;
+  Options: TPKCS12Options;
 begin
-  // 加载证书和私钥
-  cert := LoadCertificateFromFile('cert.pem');
-  pkey := LoadPrivateKeyFromFile('key.pem', '');
-  
-  // 创建 PKCS12 结构
-  p12 := PKCS12_create(
-    'password',           // 密码
-    'My Certificate',     // 友好名称
-    pkey,                 // 私钥
-    cert,                 // 证书
-    nil,                  // 证书链（可选）
-    0,                    // 使用默认加密算法
-    0,                    // 使用默认加密算法
-    0,                    // 使用默认迭代次数
-    0,                    // 使用默认 MAC 迭代次数
-    0                     // 密钥类型
+  KeyPair := TCertificate.CreateSelfSigned('pkcs12-demo.local');
+
+  Options := DefaultPKCS12Options;
+  Options.FriendlyName := 'Demo Certificate';
+  Options.Password := 'MyStr0ng!P@ssw0rd';
+  Options.Iterations := 2048;
+
+  TPKCS12Manager.CreatePKCS12ToFile(
+    KeyPair.Certificate,
+    KeyPair.PrivateKey,
+    'output.p12',
+    Options
   );
-  
-  if p12 <> nil then
-  begin
-    // 写入文件
-    bio := BIO_new_file('output.p12', 'wb');
-    i2d_PKCS12_bio(bio, p12);
-    BIO_free(bio);
-    
-    PKCS12_free(p12);
-  end;
-  
-  EVP_PKEY_free(pkey);
-  X509_free(cert);
 end;
 ```
 
-### 示例 2：解析 PKCS12 文件
+### 示例 2：通过高入口 helper 解析 PKCS12 文件
 
-参考文件：`tests/certificate/test_pkcs12_workflow.pas`
+参考文件：`tests/unit/test_pkcs12_full.pas`
 
 ```pascal
+uses
+  SysUtils,
+  fafafa.ssl;
+
+var
+  LoadedCert: ICertificate;
+  LoadedKey: IPrivateKey;
+begin
+  if TPKCS12Manager.LoadFromPKCS12File(
+    'input.p12',
+    'MyStr0ng!P@ssw0rd',
+    LoadedCert,
+    LoadedKey
+  ) then
+  begin
+    WriteLn('解析成功！');
+    WriteLn('证书主题: ', LoadedCert.Subject);
+    WriteLn('证书颁发者: ', LoadedCert.Issuer);
+  end;
+end;
+```
+
+### 示例 3：直接使用 OpenSSL raw API
+
+参考文件：
+
+- `tests/certificate/test_p2_pkcs12_create_parse.pas`
+- `tests/certificate/test_pkcs12_workflow.pas`
+
+```pascal
+uses
+  fafafa.ssl.openssl.api.bio,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.pem,
+  fafafa.ssl.openssl.api.pkcs12,
+  fafafa.ssl.openssl.api.x509;
+
 var
   p12: PPKCS12;
   cert: PX509;
   pkey: PEVP_PKEY;
-  ca: PSTACK_OF_X509;
-  bio: PBIO;
 begin
-  // 读取 PKCS12 文件
-  bio := BIO_new_file('input.p12', 'rb');
-  p12 := d2i_PKCS12_bio(bio, nil);
-  BIO_free(bio);
-  
+  cert := LoadCertificateFromPEM('cert.pem');
+  pkey := LoadPrivateKeyFromPEM('key.pem', '');
+
+  p12 := PKCS12_create(
+    'password',
+    'My Certificate',
+    pkey,
+    cert,
+    nil,
+    0, 0, 0, 0, 0
+  );
+
   if p12 <> nil then
-  begin
-    // 解析 PKCS12 结构
-    if PKCS12_parse(p12, 'password', @pkey, @cert, @ca) = 1 then
-    begin
-      WriteLn('解析成功！');
-      
-      // 使用证书和私钥
-      if cert <> nil then
-        WriteLn('证书主题: ', X509_get_subject_name_string(cert));
-      
-      if pkey <> nil then
-        WriteLn('私钥类型: ', EVP_PKEY_type(EVP_PKEY_id(pkey)));
-      
-      // 清理资源
-      if pkey <> nil then EVP_PKEY_free(pkey);
-      if cert <> nil then X509_free(cert);
-      if ca <> nil then sk_X509_pop_free(ca, @X509_free);
-    end
-    else
-      WriteLn('解析失败：密码错误或文件损坏');
-    
     PKCS12_free(p12);
-  end;
+
+  if pkey <> nil then
+    EVP_PKEY_free(pkey);
+  if cert <> nil then
+    X509_free(cert);
 end;
 ```
 
-### 示例 3：运行综合测试
+### 示例 4：运行综合测试
 
 ```bash
 # 编译综合测试
@@ -397,6 +420,8 @@ end;
 - `tests/certificate/test_p2_pkcs12_comprehensive.pas` - 综合功能测试
 - `tests/certificate/test_p2_pkcs12_create_parse.pas` - 创建解析测试
 - `tests/certificate/test_pkcs12_workflow.pas` - 工作流测试
+- `tests/unit/test_pkcs12_full.pas` - 高入口 helper 导入导出测试
+- `tests/test_cert_advanced_pkcs12_bio_contract.pas` - helper BIO guard / fail-safe 合同
 - `tests/unit/test_pkcs12*.pas` - 单元测试
 
 ### API 绑定
@@ -409,6 +434,11 @@ end;
 - [RFC 7292 - PKCS #12: Personal Information Exchange Syntax](https://tools.ietf.org/html/rfc7292)
 
 ## 更新日志
+
+### 2026-05-19
+- ✅ `PKCS12_USER_GUIDE` 重新锚到当前 helper/raw API truth
+- ✅ 高入口 helper 示例改为 `TPKCS12Manager` / `DefaultPKCS12Options`
+- ✅ raw API 示例改为 `LoadCertificateFromPEM` / `LoadPrivateKeyFromPEM`
 
 ### 2026-01-24
 - ✅ PKCS12 综合测试 100% 通过（34/34）
@@ -431,6 +461,6 @@ end;
 
 ---
 
-**文档版本**: 1.0  
-**最后更新**: 2026-01-24  
+**文档版本**: 1.1
+**最后更新**: 2026-05-19
 **维护者**: fafafa.ssl 项目组

@@ -2,6 +2,63 @@
 
 ## 2026-05-19
 
+### PKCS12 Helper Guide Active Truth
+
+- add `docs/plans/2026-05-19-pkcs12-helper-guide-active-truth.md`
+  - change:
+    - define the bounded docs batch for PKCS12 helper entrypoint truth and stale helper-name cleanup
+
+- add `tests/scripts/test_pkcs12_helper_guide_active_truth_contract.sh`
+  - change:
+    - lock that `PKCS12_USER_GUIDE`:
+      - distinguishes helper-vs-raw PKCS12 entrypoints
+      - uses `TPKCS12Manager.CreatePKCS12ToFile(...)`
+      - uses `TPKCS12Manager.LoadFromPKCS12File(...)`
+      - uses `LoadCertificateFromPEM(...)` / `LoadPrivateKeyFromPEM(...)` in raw examples
+      - no longer uses nonexistent `LoadCertificateFromFile(...)` / `LoadPrivateKeyFromFile(...)`
+    - lock that `API_REFERENCE` exposes the current façade PKCS12 helper section
+
+- read-only evidence triage
+  - summary:
+    - `PKCS12_USER_GUIDE` already had the right backend scope note, but its active examples still taught nonexistent helper names
+    - current source truth was re-confirmed in:
+      - `src/fafafa.ssl.pas`
+      - `src/fafafa.ssl.cert.advanced.pas`
+      - `src/fafafa.ssl.openssl.api.pem.pas`
+    - the real public/helper split is:
+      - façade helper: `TPKCS12Manager` / `DefaultPKCS12Options`
+      - raw OpenSSL helper: `LoadCertificateFromPEM(...)` / `LoadPrivateKeyFromPEM(...)`
+
+- `bash -n tests/scripts/test_pkcs12_helper_guide_active_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new PKCS12 helper-guide truth contract syntax is valid
+
+- `bash tests/scripts/test_pkcs12_helper_guide_active_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - initial RED proved `PKCS12_USER_GUIDE` still lacked an explicit helper-vs-raw entrypoint split
+    - an intermediate RED exposed shell command-substitution noise on backtick-containing literal patterns inside the new contract, which was fixed before final verification
+    - GREEN after fix proves the guide and API reference now point to current PKCS12 helper surfaces
+
+- update `docs/guides/PKCS12_USER_GUIDE.md`
+  - change:
+    - add an explicit helper-vs-raw entrypoint section
+    - replace nonexistent `LoadCertificateFromFile(...)` / `LoadPrivateKeyFromFile(...)` examples
+    - move active helper examples to `TPKCS12Manager.CreatePKCS12ToFile(...)` / `LoadFromPKCS12File(...)`
+    - keep a raw OpenSSL example but align it to `LoadCertificateFromPEM(...)` / `LoadPrivateKeyFromPEM(...)`
+    - refresh same-file tests/resources and update metadata date/version
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - add a dedicated PKCS12 helper section for `DefaultPKCS12Options` and `TPKCS12Manager`
+    - explain that the helper family maps to the OpenSSL full PKCS12 helper/API surface, while WinSSL only publishes the PFX/P12 import path
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - PKCS12 helper-guide batch is whitespace-clean after final doc/log sync
+
 ### Capability Precedence Doc Truth
 
 - add `docs/plans/2026-05-19-capability-precedence-doc-truth.md`

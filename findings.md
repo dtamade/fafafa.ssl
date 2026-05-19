@@ -2,6 +2,53 @@
 
 ## 2026-05-19
 
+- 在 capability / key-format 口径逐步收口后，又暴露出一条更前排的 docs completeness 残余：
+  - `docs/guides/PKCS12_USER_GUIDE.md`
+    之前虽然已经说明自己是 OpenSSL backend scoped
+    但示例里仍在使用：
+    - `LoadCertificateFromFile(...)`
+    - `LoadPrivateKeyFromFile(...)`
+  - 这两个名字当前在源码里并不存在，不是“旧但兼容保留”，而是会直接把读者带到死路
+
+- 当前源码里真正存在的 PKCS#12 入口分成两层：
+  - façade / helper 层：
+    - `src/fafafa.ssl.pas`
+      已导出：
+      - `TPKCS12Manager`
+      - `TPKCS12Options`
+      - `DefaultPKCS12Options`
+  - OpenSSL raw helper 层：
+    - `src/fafafa.ssl.openssl.api.pem.pas`
+      当前有：
+      - `LoadCertificateFromPEM(...)`
+      - `LoadPrivateKeyFromPEM(...)`
+    - `src/fafafa.ssl.openssl.api.pkcs12.pas`
+      当前有 raw `PKCS12_create` / `PKCS12_parse` / `d2i/i2d_PKCS12_bio`
+
+- 这类问题的风险非常实际：
+  - `PKCS12_USER_GUIDE` 会让调用方以为：
+    - 自己应该先找某个通用 `LoadCertificateFromFile` / `LoadPrivateKeyFromFile`
+  - 但当前 façade 真正给的高入口路径其实是：
+    - `TPKCS12Manager`
+    - `DefaultPKCS12Options`
+  - 如果文档不把 helper/raw 边界说清楚，后续做 PKCS#12 导入导出时还会反复走错层级
+
+- 当前最小正确修法因此是纯控制面收口：
+  - `PKCS12_USER_GUIDE` 顶部显式区分：
+    - 高入口 helper：`fafafa.ssl` / `TPKCS12Manager` / `DefaultPKCS12Options`
+    - OpenSSL raw API：`fafafa.ssl.openssl.api.pkcs12` + `fafafa.ssl.openssl.api.pem`
+  - 高入口示例改成：
+    - `TPKCS12Manager.CreatePKCS12ToFile(...)`
+    - `TPKCS12Manager.LoadFromPKCS12File(...)`
+  - raw API 示例改成：
+    - `LoadCertificateFromPEM(...)`
+    - `LoadPrivateKeyFromPEM(...)`
+  - `API_REFERENCE` 补出 façade 上实际公开的 PKCS#12 helper 参考段落
+
+- 这批收口后的新基线应明确保留：
+  - PKCS#12 文档不再只是“backend truth 对了”，而是连具体可复制示例也重新回到了当前代码入口
+  - 后续若继续做证书/密钥路线的完整性审查，应优先复查：
+    - 其它 specialized guide 是否也还残留同类“backend scope 已改对，但具体 helper 名还停在旧时代”的问题
 - capability dual-truth 这条线继续往下压后，当前剩得最明显的已不再是 runtime/serializer/diff 本身，而是高入口 capability 文档还没有把“谁才是真相源”讲清楚：
   - `src/fafafa.ssl.base.pas` 已经把：
     - `NormalizeLegacyCapabilityBooleans(...)`

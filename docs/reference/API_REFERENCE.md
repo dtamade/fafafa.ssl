@@ -1440,6 +1440,42 @@ function GetOpenSSLVersion: string;
 高入口普通文档不再把手动 OpenSSL loader 当成应用入口步骤。
 如需直接处理 OpenSSL API loader、`PX509` 或 `PEVP_PKEY`，请转到 backend-specific low-level units。
 
+### PKCS#12 Helper
+
+```pascal
+function DefaultPKCS12Options: TPKCS12Options;
+
+class function TPKCS12Manager.CreatePKCS12(
+  const ACert: ICertificate;
+  const AKey: IPrivateKey;
+  const AOptions: TPKCS12Options
+): TBytes;
+
+class function TPKCS12Manager.CreatePKCS12ToFile(
+  const ACert: ICertificate;
+  const AKey: IPrivateKey;
+  const AFile: string;
+  const AOptions: TPKCS12Options
+): Boolean;
+
+class function TPKCS12Manager.LoadFromPKCS12(
+  const APKCS12: TBytes;
+  const APassword: string;
+  out ACert: ICertificate;
+  out AKey: IPrivateKey
+): Boolean;
+
+class function TPKCS12Manager.LoadFromPKCS12File(
+  const AFile: string;
+  const APassword: string;
+  out ACert: ICertificate;
+  out AKey: IPrivateKey
+): Boolean;
+```
+
+这组 helper 当前对应 `OpenSSL` 的完整 PKCS#12 helper/API surface；`WinSSL` 仅发布 PFX/P12 import path，不提供这里的 helper 族。
+如果你只需要普通高入口 PKCS#12 导入/导出，优先使用 `fafafa.ssl` 门面重导出的 `TPKCS12Manager` / `DefaultPKCS12Options`；只有在需要直接操作 `PPKCS12` / `PX509` / `PEVP_PKEY` 时，才转到 `fafafa.ssl.openssl.api.pkcs12` / `fafafa.ssl.openssl.api.pem`。
+
 ### WinSSL 企业工具
 
 ```pascal
