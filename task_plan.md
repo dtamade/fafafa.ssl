@@ -10,6 +10,31 @@
 
 ## Current Status
 
+- [completed] WinSSL native-probe manual investigation lane 已完成本地收口：
+  - 新增计划：`docs/plans/2026-05-19-winssl-native-probe-manual-investigation-lane.md`
+  - 新增 focused workflow/source contract：`tests/scripts/test_wave_b_b2_winssl_native_probe_input_contract.sh`
+  - `wave-b-b2-manual.yml` / `.github/workflows/wave-b-b2-manual.yml.disabled`
+    - 当前已新增可选 `workflow_dispatch` 输入：
+      - `winssl_enable_native_probe`
+    - Windows `Run broader WinSSL runtime suite` step 现在只会在显式 truthy 输入时注入：
+      - `FAFAFA_WINSSL_ENABLE_NATIVE_PROBE=1`
+    - 留空或 `false` 时会显式记录：
+      - native probe disabled by default
+    - 当前仍不会自动注入：
+      - `FAFAFA_WINSSL_REQUIRE_NATIVE_REUSE`
+  - `.github/README.md`
+    - 当前已明确记录 `winssl_enable_native_probe` 是有风险的 Schannel evidence lane，默认关闭
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_wave_b_b2_winssl_native_probe_input_contract.sh`
+    - `bash tests/scripts/test_wave_b_b2_winssl_native_probe_input_contract.sh`
+    - `bash tests/scripts/test_wave_b_b2_winssl_session_host_input_contract.sh`
+    - `bash tests/scripts/test_wave_b_b2_strict_input_description_contract.sh`
+    - `bash tests/scripts/test_wave_b_b2_optional_runner_artifact_download_workflow_contract.sh`
+    - `bash tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+    - `git diff --check`: PASS
+  - 当前结论：
+    - repo 已具备 bounded native-probe manual investigation lane 的本地/contract truth
+    - 下一步最值钱的是 push 后派发一轮启用 native probe 的 GitHub Windows run，确认它到底会给出 marker 还是再次触发已知风险
 - [completed] WinSSL session runtime host-override investigation lane 已完成本地收口：
   - 新增计划：`docs/plans/2026-05-19-winssl-session-runtime-host-override-investigation.md`
   - 新增 focused workflow/source contract：`tests/scripts/test_wave_b_b2_winssl_session_host_input_contract.sh`

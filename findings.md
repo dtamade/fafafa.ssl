@@ -2,6 +2,37 @@
 
 ## 2026-05-19
 
+- host-override lane live 证明 `www.google.com` 仍然是 `observed_reuse=false / session_configured=true` 之后，下一步最值钱的就不再是继续改 workflow plumbing，而是把已有的 native-probe evidence 能力提升成 manual workflow 的显式 opt-in 调查入口。
+
+- 这个缺口的现状也已经确认清楚：
+  - `tests/winssl/test_winssl_session_resumption.pas` 早已支持 `FAFAFA_WINSSL_ENABLE_NATIVE_PROBE`
+  - `tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh` 已经锁住：
+    - native probe 必须保持 opt-in
+    - broader suite 默认 lane 必须 disabled by default
+  - 但 `wave-b-b2-manual.yml` 之前并没有把这个 opt-in 暴露成 `workflow_dispatch` 输入
+
+- 因而这批最小正确动作不是碰生产实现，而是把 native-probe 证据能力提升成 manual workflow 的一等入口：
+  - 增加 `winssl_enable_native_probe`
+  - broader runtime step 只在 truthy 输入时设置 `FAFAFA_WINSSL_ENABLE_NATIVE_PROBE=1`
+  - 显式记录：
+    - enabled 时是 risky Schannel evidence lane
+    - disabled 时仍走安全默认路径
+  - 同时保持 workflow 不自动注入 `FAFAFA_WINSSL_REQUIRE_NATIVE_REUSE`
+
+- focused 结果说明这批边界已经正确收住：
+  - 新增 native-probe input contract 先 RED 在缺失输入
+  - workflow / README 修复后转 GREEN
+  - host-override contract、strict input description contract、artifact-download contract 都继续 GREEN
+  - `test_winssl_session_resumption_runtime_truth_contract.sh` 继续 GREEN，说明这批没有破坏既有 opt-in truth
+
+- 因而这批本地收口后的下一步非常明确：
+  - push 到 GitHub
+  - 派发一轮 `winssl_enable_native_probe=true` 的 Windows manual run
+  - 让 artifact 直接回答：
+    - native probe 有没有真正执行
+    - 如果执行了，返回了什么 `SECPKG_ATTR_SESSION_INFO` truth
+    - 如果没执行成功，失败点是否仍和旧的 public-handle crash 模式一致
+
 - 当前 WinSSL session-resumption 这条线，普通 guide / benchmark wording 已经不是主问题；真正还会阻碍后续判断的一层，是 GitHub Actions manual lane 里还没有一个 repo 内建的“换 host 做真实调查”入口。
 
 - 这个缺口的性质也已经确认清楚：

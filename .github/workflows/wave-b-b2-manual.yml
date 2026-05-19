@@ -19,6 +19,10 @@ on:
         description: Optional host override for WinSSL session resumption runtime probe (e.g. www.google.com)
         required: false
         default: ""
+      winssl_enable_native_probe:
+        description: Optional opt-in WinSSL native probe for Schannel session evidence (may fail the broader runtime suite)
+        required: false
+        default: "false"
 
 permissions:
   contents: read
@@ -236,11 +240,18 @@ jobs:
           $runtimeLog = "test-reports/winssl_runtime_suite_${runId}.log"
           $runtimeOutput = @()
           $sessionHost = "${{ github.event.inputs.winssl_session_host }}"
+          $nativeProbeInput = "${{ github.event.inputs.winssl_enable_native_probe }}"
           if (-not [string]::IsNullOrWhiteSpace($sessionHost)) {
             $env:FAFAFA_WINSSL_SESSION_HOST = $sessionHost
             Write-Host ("[INFO] Using WinSSL session resumption host override: " + $sessionHost)
           } else {
             Write-Host "[INFO] Using default WinSSL session resumption host from test program"
+          }
+          if ($nativeProbeInput -match '^(?i:true|1|yes|on)$') {
+            $env:FAFAFA_WINSSL_ENABLE_NATIVE_PROBE = "1"
+            Write-Host "[INFO] Enabling risky WinSSL native probe for Schannel session evidence"
+          } else {
+            Write-Host "[INFO] Keeping WinSSL native probe disabled by default"
           }
           pwsh -NoProfile -ExecutionPolicy Bypass -File tests/run_winssl_tests.ps1 *>&1 | Tee-Object -Variable runtimeOutput
           $runtimeExitCode = $LASTEXITCODE

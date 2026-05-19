@@ -2,6 +2,101 @@
 
 ## 2026-05-19
 
+### WinSSL Native-Probe Manual Investigation Lane
+
+- `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
+  - result: PASS
+  - summary:
+    - no unsynced catchup output was needed before the WinSSL native-probe workflow batch
+
+- `rg -n "FAFAFA_WINSSL_ENABLE_NATIVE_PROBE|FAFAFA_WINSSL_REQUIRE_NATIVE_REUSE|native probe|SECPKG_ATTR_SESSION_INFO" .github/workflows/wave-b-b2-manual.yml .github/workflows/wave-b-b2-manual.yml.disabled tests/winssl/test_winssl_session_resumption.pas tests/run_winssl_tests.ps1 docs/plans docs/guides docs/reference src tests/scripts`
+  - result: PASS
+  - summary:
+    - confirmed the dedicated proof program already supports `FAFAFA_WINSSL_ENABLE_NATIVE_PROBE`
+    - confirmed the current workflow still lacked any manual native-probe input
+    - confirmed older plans/contracts already required the broader suite lane to keep native probe opt-in
+
+- `sed -n '1,260p' docs/plans/2026-05-18-winssl-native-probe-evidence-lane.md`
+  - result: PASS
+  - summary:
+    - confirmed the older dedicated proof plan already recorded the public-handle probe as risky on GitHub Windows runners
+    - confirmed the current batch should stay strictly on workflow/manual-investigation plumbing instead of reopening shared reconnect logic
+
+- `sed -n '1,340p' tests/winssl/test_winssl_session_resumption.pas`
+  - result: PASS
+  - summary:
+    - confirmed `FAFAFA_WINSSL_ENABLE_NATIVE_PROBE` and `FAFAFA_WINSSL_REQUIRE_NATIVE_REUSE` are already supported by the dedicated proof program
+    - confirmed the broader lane can unlock native probe through workflow-step env injection alone
+
+- `sed -n '1,260p' .github/workflows/wave-b-b2-manual.yml`
+  - result: PASS
+  - summary:
+    - confirmed the active workflow only exposed `winssl_session_host` and still lacked a manual native-probe input
+
+- `sed -n '1,220p' .github/README.md`
+  - result: PASS
+  - summary:
+    - confirmed the workflow README documented host override but still did not document a native-probe investigation lane
+
+- add `docs/plans/2026-05-19-winssl-native-probe-manual-investigation-lane.md`
+  - change:
+    - define the bounded manual-workflow batch for explicit native-probe opt-in evidence
+
+- add `tests/scripts/test_wave_b_b2_winssl_native_probe_input_contract.sh`
+  - change:
+    - lock the manual workflow to an explicit false-default `winssl_enable_native_probe` input
+    - require opt-in env injection, enabled/disabled logging, and no automatic `FAFAFA_WINSSL_REQUIRE_NATIVE_REUSE`
+
+- `bash -n tests/scripts/test_wave_b_b2_winssl_native_probe_input_contract.sh`
+  - result: PASS
+  - summary:
+    - native-probe input contract syntax is valid
+
+- `bash tests/scripts/test_wave_b_b2_winssl_native_probe_input_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED:
+      - `wave-b-b2-manual.yml` and `.disabled` did not yet expose `winssl_enable_native_probe`
+    - GREEN:
+      - both workflow files now expose the explicit native-probe opt-in input
+      - the Windows broader runtime step now logs whether native probe is enabled or kept disabled by default
+      - `.github/README.md` now documents the new risky Schannel evidence lane
+
+- update workflow native-probe truth sources:
+  - `.github/workflows/wave-b-b2-manual.yml`
+  - `.github/workflows/wave-b-b2-manual.yml.disabled`
+  - `.github/README.md`
+  - change:
+    - add optional `workflow_dispatch.inputs.winssl_enable_native_probe`
+    - inject `FAFAFA_WINSSL_ENABLE_NATIVE_PROBE=1` only for truthy manual input
+    - log enabled/disabled native-probe truth in the broader runtime step
+    - document the manual native-probe lane in the workflow README
+
+- `bash tests/scripts/test_wave_b_b2_winssl_session_host_input_contract.sh`
+  - result: PASS
+  - summary:
+    - the existing host-override workflow contract remained aligned after adding the native-probe input
+
+- `bash tests/scripts/test_wave_b_b2_strict_input_description_contract.sh`
+  - result: PASS
+  - summary:
+    - the strict-closure input description truth remained aligned after the new manual input
+
+- `bash tests/scripts/test_wave_b_b2_optional_runner_artifact_download_workflow_contract.sh`
+  - result: PASS
+  - summary:
+    - the required optional-artifact download semantics stayed aligned after the broader runtime-step change
+
+- `bash tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - the dedicated WinSSL session-resumption runtime-truth contract still confirms native probe remains opt-in and broader-suite safe by default
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current native-probe workflow batch has no whitespace or patch-format issues
+
 ### WinSSL Session Runtime Host-Override Investigation Lane
 
 - `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
