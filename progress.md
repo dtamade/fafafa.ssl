@@ -2,6 +2,53 @@
 
 ## 2026-05-19
 
+### Security Best Practices Pinning Helper Truth
+
+- add `docs/plans/2026-05-19-security-best-practices-pinning-helper-truth.md`
+  - change:
+    - define the bounded docs batch for pinning-example helper truth in `security-best-practices`
+
+- add `tests/scripts/test_security_best_practices_pinning_helper_truth_contract.sh`
+  - change:
+    - lock that the pinning example:
+      - no longer uses nonexistent `LoadCertificateFromFile(...)`
+      - uses `LoadCertificateFromPEM(...)`
+      - imports the needed OpenSSL raw helper units
+      - releases the `PX509` handle via `X509_free(...)`
+
+- read-only evidence triage
+  - summary:
+    - active docs scan had narrowed the next stale helper residue down to `security-best-practices`
+    - current source truth was re-confirmed in:
+      - `src/fafafa.ssl.cert.pinning.pas`
+      - `src/fafafa.ssl.openssl.api.pem.pas`
+    - the example was not backend-neutral:
+      - `TPinValidator.ExtractPublicKeyHash(...)` takes `PX509`
+      - therefore the current file-loader truth is `LoadCertificateFromPEM(...)`, not any generic `LoadCertificateFromFile(...)`
+
+- `bash -n tests/scripts/test_security_best_practices_pinning_helper_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new security-best-practices pinning helper contract syntax is valid
+
+- `bash tests/scripts/test_security_best_practices_pinning_helper_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - initial RED proved the guide still lacked an explicit raw-handle scope note
+    - GREEN after fix proves the example now aligns with the current PEM helper and handle-lifetime truth
+
+- update `docs/guides/security-best-practices.md`
+  - change:
+    - mark the pinning snippet as an OpenSSL raw certificate handle path
+    - replace nonexistent `LoadCertificateFromFile(...)` with `LoadCertificateFromPEM(...)`
+    - import `fafafa.ssl.openssl.api.pem` / `fafafa.ssl.openssl.api.x509`
+    - add explicit `X509_free(...)` cleanup to the sample
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - security-best-practices pinning-helper batch is whitespace-clean after final doc/log sync
+
 ### PKCS12 Helper Guide Active Truth
 
 - add `docs/plans/2026-05-19-pkcs12-helper-guide-active-truth.md`

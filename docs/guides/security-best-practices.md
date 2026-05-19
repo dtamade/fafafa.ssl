@@ -99,9 +99,13 @@ openssl s_client -connect example.com:443 | \
 
 #### 方法 2：使用 fafafa.ssl API
 
+这里走的是 OpenSSL raw certificate handle 路径，不是 backend-neutral helper。
+
 ```pascal
 uses
-  fafafa.ssl.cert.pinning;
+  fafafa.ssl.cert.pinning,
+  fafafa.ssl.openssl.api.pem,
+  fafafa.ssl.openssl.api.x509;
 
 var
   Validator: TPinValidator;
@@ -109,9 +113,10 @@ var
   PubKeyHash: TBytes;
 begin
   Validator := TPinValidator.Create;
+  Cert := nil;
   try
     // 从证书文件加载
-    Cert := LoadCertificateFromFile('server.crt');
+    Cert := LoadCertificateFromPEM('server.crt');
 
     // 提取公钥哈希
     PubKeyHash := Validator.ExtractPublicKeyHash(Cert);
@@ -119,6 +124,8 @@ begin
     // 转换为 Base64
     WriteLn('Public Key Pin: ', TEncodingUtils.BytesToBase64(PubKeyHash));
   finally
+    if Cert <> nil then
+      X509_free(Cert);
     Validator.Free;
   end;
 end;

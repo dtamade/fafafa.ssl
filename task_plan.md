@@ -10,6 +10,29 @@
 
 ## Current Status
 
+- [completed] Security best practices pinning helper truth 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-security-best-practices-pinning-helper-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_security_best_practices_pinning_helper_truth_contract.sh`
+  - 当前已修正的活跃文档：
+    - `docs/guides/security-best-practices.md`
+  - 当前已收掉的真问题：
+    - certificate pinning 示例不再继续教授不存在的：
+      - `LoadCertificateFromFile(...)`
+    - 示例现在明确回到：
+      - `LoadCertificateFromPEM(...)`
+      - `X509_free(...)`
+    - 文档也已明确说明：
+      - 这里走的是 OpenSSL raw certificate handle 路径
+      - 不是 backend-neutral helper
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_security_best_practices_pinning_helper_truth_contract.sh`
+    - `bash tests/scripts/test_security_best_practices_pinning_helper_truth_contract.sh`
+    - `git diff --check`
+  - 当前结论：
+    - 这批修掉的是 security specialized guide 中“复制即错”的 helper 名漂移，不是 runtime 缺口
+    - 后续继续扫 specialized guides 时，应优先找同类仍在教授不存在 helper/API 名称的片段
 - [completed] PKCS12 helper guide active truth 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-pkcs12-helper-guide-active-truth.md`

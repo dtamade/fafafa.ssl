@@ -2,6 +2,42 @@
 
 ## 2026-05-19
 
+- specialized guide 继续往下扫后，又确认了一条非常典型的“backend scope 虽然大致对了，但具体示例仍然复制即错”的残余：
+  - `docs/guides/security-best-practices.md`
+    的 certificate pinning 示例还在使用：
+    - `LoadCertificateFromFile(...)`
+  - 这个名字当前在源码里并不存在
+
+- 当前这段示例真正走的是 OpenSSL raw certificate handle 路径：
+  - `src/fafafa.ssl.cert.pinning.pas`
+    的 `TPinValidator.ExtractPublicKeyHash(...)`
+    直接接收：
+    - `PX509`
+  - `src/fafafa.ssl.openssl.api.pem.pas`
+    当前提供的真实文件 helper 是：
+    - `LoadCertificateFromPEM(...)`
+  - 既然示例直接持有 `PX509`，就还应该显式：
+    - `X509_free(...)`
+
+- 这类问题的风险同样很实际：
+  - 调用方如果直接照抄 `LoadCertificateFromFile(...)`
+    会立刻撞上不存在的 helper
+  - 就算自己猜到要切到 low-level `PX509` 路径，旧示例也没有释放句柄，会顺手把资源管理一起教错
+
+- 当前最小正确修法因此仍然是纯控制面收口：
+  - 不改 pinning runtime
+  - 只把 guide 示例改回：
+    - `LoadCertificateFromPEM(...)`
+    - `X509_free(...)`
+  - 并显式写明：
+    - 这里是 OpenSSL raw certificate handle 路径
+    - 不是 backend-neutral helper
+
+- 这批收口后的新基线应明确保留：
+  - 我们现在不仅在收 capability / factory / migration 这些高入口文档
+  - 也已经开始逐页拔 specialized guide 里的“复制即错”残余
+  - 后续若继续做文档完整性扫尾，应优先复查：
+    - 其它 certificate/security/pinning 相关指南里是否还有同类旧 helper 名
 - 在 capability / key-format 口径逐步收口后，又暴露出一条更前排的 docs completeness 残余：
   - `docs/guides/PKCS12_USER_GUIDE.md`
     之前虽然已经说明自己是 OpenSSL backend scoped
