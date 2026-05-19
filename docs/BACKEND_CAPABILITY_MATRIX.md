@@ -2,7 +2,7 @@
 
 本文档详细说明各 SSL/TLS 后端的功能支持情况。
 
-**更新时间**: 2026-05-04
+**更新时间**: 2026-05-19
 
 ---
 
@@ -13,7 +13,7 @@
 | **TLS 1.2**                  | ✅         | ✅      | ✅     | ✅      | ✅      |
 | **TLS 1.3**                  | ✅         | ✅      | ✅     | ⚠️      | ✅      |
 | **Early Data (0-RTT)**       | ⚠️         | ✅      | ❌     | ❌      | ⚠️      |
-| **Session Resumption**       | ✅         | ✅      | ✅     | ✅      | ✅      |
+| **Session Resumption**       | ⚠️         | ✅      | ⚠️     | ✅      | ✅      |
 | **OCSP Stapling**            | ⚠️         | ✅      | ❌     | ❌      | ⚠️      |
 | **Certificate Transparency** | ⚠️         | ❌      | ❌     | ❌      | ❌      |
 | **ALPN**                     | ✅         | ✅      | ✅     | ✅      | ✅      |
@@ -26,6 +26,10 @@
 - ✅ 完整支持
 - ⚠️ 部分支持或有限制（接口存在但功能受限）
 - ❌ 不支持
+
+`Session Resumption` 这一行按当前 runtime/capability truth 汇总：
+- `FreePascal`: public surface 已闭合，但 `SessionTicketsSupport` / `SessionCacheSupport` 仍发布为 `experimental`
+- `WinSSL`: public surface 存在，但当前 dedicated Windows runtime truth 仍是 `observed_reuse=false` / `session_configured=true`
 
 ---
 

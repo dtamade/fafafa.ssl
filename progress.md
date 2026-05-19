@@ -2,6 +2,90 @@
 
 ## 2026-05-19
 
+### Backend Capability Truth Tightening
+
+- add `docs/plans/2026-05-19-backend-capability-truth-tightening.md`
+  - change:
+    - define the bounded batch for optional-backend session-cache capability truth and WinSSL active-doc truth tightening
+
+- add `tests/scripts/test_optional_backends_session_cache_capability_contract.sh`
+  - change:
+    - lock that `MbedTLS / WolfSSL` cannot keep advertising `sslFeatSessionCache` while omitting `SessionCacheSupport`
+
+- update `tests/scripts/test_winssl_session_resumption_docs_truth_contract.sh`
+  - change:
+    - extend coverage to:
+      - `docs/BACKEND_CAPABILITY_MATRIX.md`
+      - `docs/guides/QUICKSTART.md`
+      - `docs/reference/WINSSL_DESIGN.md`
+      - `docs/reference/BACKEND_ABSTRACTION_LAYER_DESIGN.md`
+      - `docs/reference/BACKEND_SELECTOR_DESIGN.md`
+    - lock that these active docs no longer overclaim WinSSL session resumption / session ticket / OCSP truth
+
+- update `src/fafafa.ssl.mbedtls.lib.pas`
+  - change:
+    - publish `Result.SessionCacheSupport := sslSupportStable`
+
+- update `src/fafafa.ssl.wolfssl.lib.pas`
+  - change:
+    - publish `Result.SessionCacheSupport := sslSupportStable`
+
+- update `docs/BACKEND_CAPABILITY_MATRIX.md`
+  - change:
+    - tighten the top-level `Session Resumption` quick row to current runtime/capability truth
+    - add explicit notes for `FreePascal` experimental support and `WinSSL observed_reuse=false / session_configured=true`
+
+- update `docs/guides/QUICKSTART.md`
+  - change:
+    - remove WinSSL `70-90%` performance/success overclaim
+    - keep `ISSLSessionResumption` example, but rewrite output/caution to current dedicated Windows runtime truth
+
+- update `docs/reference/WINSSL_DESIGN.md`
+  - change:
+    - move top-level status from “runtime proof pending” to the current partial Windows-proof reality
+    - rewrite session-resumption flow so shared path no longer pretends `SECPKG_ATTR_SESSION_INFO` is a normal production truth source
+    - mark native session-info probe as `opt-in isolated worker / experimental evidence lane`
+    - remove the settled `70-90%` performance claim from the WinSSL/OpenSSL comparison table
+
+- update `docs/reference/BACKEND_ABSTRACTION_LAYER_DESIGN.md`
+  - change:
+    - stop claiming WinSSL `OCSP Stapling` and `Session Ticket` are both unconditional `✅`
+
+- update `docs/reference/BACKEND_SELECTOR_DESIGN.md`
+  - change:
+    - stop claiming WinSSL requirement matching covers stable `OCSP Stapling` and `Session Ticket`
+
+- `bash -n tests/scripts/test_optional_backends_session_cache_capability_contract.sh`
+  - result: PASS
+  - summary:
+    - new optional-backend session-cache contract syntax is valid
+
+- `bash tests/scripts/test_optional_backends_session_cache_capability_contract.sh`
+  - result: PASS
+  - summary:
+    - `MbedTLS / WolfSSL` now publish `SessionCacheSupport` in line with their existing session-cache feature truth
+
+- `bash -n tests/scripts/test_winssl_session_resumption_docs_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - expanded WinSSL docs-truth contract syntax is valid
+
+- `bash tests/scripts/test_winssl_session_resumption_docs_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - active WinSSL capability/design docs no longer overclaim session-resumption/runtime truth
+
+- `python3 scripts/compile_all_modules.py`
+  - result: PASS
+  - summary:
+    - full Pascal compile remained green after the capability/doc truth tightening batch
+    - compile summary: `187/187` success, `0` failed
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current backend capability truth tightening batch has no whitespace or patch-format issues
+
 ### WinSSL Session-Info Probe Allowlist
 
 - add `docs/plans/2026-05-19-winssl-session-info-probe-allowlist.md`

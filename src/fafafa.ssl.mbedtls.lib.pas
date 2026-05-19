@@ -513,6 +513,7 @@ begin
     Result.SessionTicketsSupport := sslSupportStable
   else
     Result.SessionTicketsSupport := sslSupportNone;
+  Result.SessionCacheSupport := sslSupportStable;
 
   // 密码算法支持（MbedTLS 主要针对嵌入式，算法精简）
   Result.SupportedCiphers := [

@@ -132,8 +132,8 @@ Ctx := TSSLContextBuilder.Create
 | 功能 | OpenSSL | MbedTLS | WinSSL |
 |------|---------|---------|--------|
 | TLS 1.3 | ✅ | ✅ | ✅* |
-| OCSP Stapling | ✅ | ❌ | ✅ |
-| Session Ticket | ✅ | ✅ | ✅ |
+| OCSP Stapling | ✅ | ❌ | ❌ |
+| Session Ticket | ✅ | ✅ | ⚠️ |
 | PSK | ✅ | ✅ | ❌ |
 | Ed25519 | ✅ | ⚠️ | ❌ |
 | FIPS | ✅ | ❌ | ✅ |

@@ -7,6 +7,11 @@ matrix_doc="$ROOT_DIR/docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md"
 perf_doc="$ROOT_DIR/docs/reference/WINSSL_PERFORMANCE_TUNING.md"
 api_ref="$ROOT_DIR/docs/reference/API_REFERENCE.md"
 status_report="$ROOT_DIR/docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md"
+top_matrix="$ROOT_DIR/docs/BACKEND_CAPABILITY_MATRIX.md"
+quickstart_doc="$ROOT_DIR/docs/guides/QUICKSTART.md"
+design_doc="$ROOT_DIR/docs/reference/WINSSL_DESIGN.md"
+abstraction_doc="$ROOT_DIR/docs/reference/BACKEND_ABSTRACTION_LAYER_DESIGN.md"
+selector_doc="$ROOT_DIR/docs/reference/BACKEND_SELECTOR_DESIGN.md"
 
 fail() {
   echo "[FAIL] $1"
@@ -28,12 +33,106 @@ do
 done
 
 for pattern in \
+  "| **Session Resumption**       | ✅         | ✅      | ✅     | ✅      | ✅      |"
+do
+  if grep -F -q -- "$pattern" "$top_matrix"; then
+    fail "Top-level backend capability matrix still overclaims session resumption truth: $pattern"
+  fi
+done
+
+for pattern in \
+  "| **Session Resumption**       | ⚠️         | ✅      | ⚠️     | ✅      | ✅      |" \
+  "observed_reuse=false" \
+  "session_configured=true"
+do
+  if ! grep -F -q -- "$pattern" "$top_matrix"; then
+    fail "Top-level backend capability matrix missing current session-resumption truth: $pattern"
+  fi
+done
+
+for pattern in \
   "ISSLSessionResumption" \
   "observed_reuse=false" \
   "session_configured=true"
 do
   if ! grep -F -q -- "$pattern" "$matrix_doc"; then
     fail "WinSSL backend capability matrix missing current session-resumption truth: $pattern"
+  fi
+done
+
+for pattern in \
+  "可显著提升连接性能（70-90%）" \
+  "✓ Session 复用成功 - 握手时间大幅减少" \
+  "Session 复用可减少 70-90% 的握手时间"
+do
+  if grep -F -q -- "$pattern" "$quickstart_doc"; then
+    fail "Quickstart still overclaims WinSSL session-resumption success/performance: $pattern"
+  fi
+done
+
+for pattern in \
+  "ISSLSessionResumption" \
+  "observed_reuse=false" \
+  "session_configured=true"
+do
+  if ! grep -F -q -- "$pattern" "$quickstart_doc"; then
+    fail "Quickstart missing current WinSSL runtime caution: $pattern"
+  fi
+done
+
+for pattern in \
+  "5. 调用 QueryContextAttributes(SECPKG_ATTR_SESSION_INFO) 获取 Session 信息" \
+  "function GetSessionInfo: SecPkgContext_SessionInfo;" \
+  "| **性能提升**     | 70-90%               | 70-90%               |"
+do
+  if grep -F -q -- "$pattern" "$design_doc"; then
+    fail "WinSSL design doc still presents native session-info or performance as settled production truth: $pattern"
+  fi
+done
+
+for pattern in \
+  "opt-in isolated worker / experimental evidence lane" \
+  "observed_reuse=false" \
+  "session_configured=true"
+do
+  if ! grep -F -q -- "$pattern" "$design_doc"; then
+    fail "WinSSL design doc missing current runtime/native-probe boundary truth: $pattern"
+  fi
+done
+
+for pattern in \
+  "| OCSP Stapling | ✅ | ❌ | ✅ |" \
+  "| Session Ticket | ✅ | ✅ | ✅ |"
+do
+  if grep -F -q -- "$pattern" "$abstraction_doc"; then
+    fail "Backend abstraction design still overclaims WinSSL capability truth: $pattern"
+  fi
+done
+
+for pattern in \
+  "| OCSP Stapling | ✅ | ❌ | ❌ |" \
+  "| Session Ticket | ✅ | ✅ | ⚠️ |"
+do
+  if ! grep -F -q -- "$pattern" "$abstraction_doc"; then
+    fail "Backend abstraction design missing tightened WinSSL capability truth: $pattern"
+  fi
+done
+
+for pattern in \
+  "| OCSP Stapling | ✅ | ✅ | ❌ |" \
+  "| Session Ticket | ✅ | ✅ | ✅ |"
+do
+  if grep -F -q -- "$pattern" "$selector_doc"; then
+    fail "Backend selector design still overclaims WinSSL requirement support: $pattern"
+  fi
+done
+
+for pattern in \
+  "| OCSP Stapling | ✅ | ❌ | ❌ |" \
+  "| Session Ticket | ✅ | ⚠️ | ✅ |"
+do
+  if ! grep -F -q -- "$pattern" "$selector_doc"; then
+    fail "Backend selector design missing tightened WinSSL selector truth: $pattern"
   fi
 done
 

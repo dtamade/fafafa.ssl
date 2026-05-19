@@ -10,6 +10,37 @@
 
 ## Current Status
 
+- [completed] Backend capability truth tightening 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-backend-capability-truth-tightening.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_optional_backends_session_cache_capability_contract.sh`
+  - 扩展 focused contract：
+    - `tests/scripts/test_winssl_session_resumption_docs_truth_contract.sh`
+  - 当前已修正的实现 / 文档真相：
+    - `src/fafafa.ssl.mbedtls.lib.pas`
+      - `SessionCacheSupport` 现已明确发布为 `sslSupportStable`
+    - `src/fafafa.ssl.wolfssl.lib.pas`
+      - `SessionCacheSupport` 现已明确发布为 `sslSupportStable`
+    - `docs/BACKEND_CAPABILITY_MATRIX.md`
+      - `Session Resumption` 快速参考现已收紧到：
+        - `FreePascal = ⚠️`
+        - `WinSSL = ⚠️`
+    - `docs/guides/QUICKSTART.md` / `docs/reference/WINSSL_DESIGN.md`
+      - 不再把 WinSSL session resumption 写成已 runtime-proven 的稳定成功/70-90% 性能收益
+    - `docs/reference/BACKEND_ABSTRACTION_LAYER_DESIGN.md` / `docs/reference/BACKEND_SELECTOR_DESIGN.md`
+      - 不再把 WinSSL `OCSP Stapling` / `Session Ticket` 写成无条件完整支持
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_optional_backends_session_cache_capability_contract.sh`
+    - `bash tests/scripts/test_optional_backends_session_cache_capability_contract.sh`
+    - `bash -n tests/scripts/test_winssl_session_resumption_docs_truth_contract.sh`
+    - `bash tests/scripts/test_winssl_session_resumption_docs_truth_contract.sh`
+    - `python3 scripts/compile_all_modules.py`: `187/187 PASS`
+    - `git diff --check`: PASS
+  - 当前结论：
+    - 这批修掉的不是单纯文案味道，而是：
+      - optional backend `SessionCacheSupport` 发布缺口
+      - WinSSL 活跃 capability/docs truth 对后续路线判断的误导
 - [completed] WinSSL session-info probe allowlist 已完成本地收口：
   - 新增计划：`docs/plans/2026-05-19-winssl-session-info-probe-allowlist.md`
   - 新增 focused contract：

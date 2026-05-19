@@ -2,6 +2,45 @@
 
 ## 2026-05-19
 
+- 继续沿“接口设计 + 各 backend completeness”做横向静态审查时，挖出来一条比文档漂移更实的能力发布裂缝：
+  - `TMbedTLSLibrary.IsFeatureSupported(sslFeatSessionCache)` 早就返回 `True`
+  - `TWolfSSLLibrary.IsFeatureSupported(sslFeatSessionCache)` 也早就返回 `True`
+  - 但两边的 `GetCapabilities` 却都没有给 `SessionCacheSupport` 赋值
+
+- 这条裂缝的风险并不只停留在“字段没填完整”：
+  - `src/fafafa.ssl.backend.selector.pas` 对 `sslFeatSessionCache` 的必需特性判断，看的正是 `SessionCacheSupport <> sslSupportNone`
+  - 所以如果继续放着不修：
+    - backend 自己说“支持 session cache”
+    - selector 却可能把它当“不支持”
+  - 这会直接污染“能力选择器 / capability matrix / 后端文档”三条线的共同真相
+
+- 当前最小正确修法也因此非常明确：
+  - 不重开 `mbedtls` / `wolfssl` 的 session 实现线
+  - 只把当前 source 已经公开宣称的 `session cache` truth 显式发布到 `GetCapabilities`
+  - 让 `IsFeatureSupported` 与 `SessionCacheSupport` 重新一致
+
+- 同一轮审查里，WinSSL 的活跃文档也暴露出另一类真正会误导开发路线的漂移：
+  - `docs/BACKEND_CAPABILITY_MATRIX.md` 还把 `Session Resumption` 对所有 backend 一律写成 `✅`
+  - `docs/guides/QUICKSTART.md` 还在写 WinSSL `70-90%` 性能收益和“复用成功”口径
+  - `docs/reference/WINSSL_DESIGN.md` 还把 `QueryContextAttributes(SECPKG_ATTR_SESSION_INFO)` 写成 shared session flow 的正常一步
+  - `docs/reference/BACKEND_ABSTRACTION_LAYER_DESIGN.md` / `docs/reference/BACKEND_SELECTOR_DESIGN.md`
+    还把 WinSSL `OCSP Stapling` / `Session Ticket` 画成无条件完整支持
+
+- 这些漂移的共同问题，不是“历史文档老一点”这么简单，而是它们会直接扭曲我们对下一步路线的判断：
+  - 会让人误以为 WinSSL session resumption 已经 runtime-proven
+  - 会让人误以为 WinSSL 的 `Session Ticket` / `OCSP Stapling` 已经可被 selector 当作稳定需求
+  - 也会掩盖 native `SECPKG_ATTR_SESSION_INFO` probe 当前仍应只停留在
+    `opt-in isolated worker / experimental evidence lane`
+
+- 因而这批 focused 收口后的新基线应明确保留：
+  - `MbedTLS / WolfSSL`
+    - `SessionCacheSupport` 现已与 source feature truth 对齐
+  - `FreePascal`
+    - quick matrix 上的 `Session Resumption` 不应再被写成 `✅`，因为 `SessionTicketsSupport / SessionCacheSupport` 仍是 `experimental`
+  - `WinSSL`
+    - 当前 public truth 仍是 `observed_reuse=false / session_configured=true`
+    - 活跃文档不应再把它表述成稳定 runtime 闭环或通用性能结论
+
 - 这次 `winssl.session.pas` 漂移暴露出来之后，最该补的并不是更多解释，而是 repo 级 allowlist guard：
   - 因为只要 `SECPKG_ATTR_SESSION_INFO` 还可以在别的 WinSSL 文件里悄悄出现
   - 我们就可能不断重复抓到“新的未隔离 probe 残留”

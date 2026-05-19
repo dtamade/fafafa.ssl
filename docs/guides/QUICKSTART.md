@@ -85,8 +85,9 @@ end.
 
 ### 3.1) WinSSL Session 复用（Windows 平台）
 
-> WinSSL 后端支持 TLS Session 复用，可显著提升连接性能（70-90%）。
-> 适用于需要频繁连接同一服务器的场景（如 REST API 客户端）。
+> WinSSL 的 `ISSLSessionResumption` public surface 已可用，但当前 dedicated Windows CI runtime truth 仍可能是
+> `observed_reuse=false / session_configured=true`。
+> 因此这里的示例更适合作为 API 用法参考，而不是“已 runtime-proven 会稳定命中 resumed handshake”的承诺。
 
 **基本 Session 复用示例**:
 ```pascal
@@ -147,9 +148,9 @@ begin
     // 检查是否复用了 Session
     if Supports(Conn2, ISSLSessionResumption, SessionResumption2) and
        SessionResumption2.IsSessionReused then
-      WriteLn('✓ Session 复用成功 - 握手时间大幅减少')
+      WriteLn('当前连接命中了 resumed handshake')
     else
-      WriteLn('✗ Session 未复用 - 执行了完整握手');
+      WriteLn('当前 dedicated Windows CI runtime truth 仍可能是 observed_reuse=false / session_configured=true');
 
     Conn2.Shutdown;
   end;
@@ -215,9 +216,9 @@ begin
         if Supports(Conn, ISSLSessionResumption, SessionResumption) then
         begin
           if SessionResumption.IsSessionReused then
-            WriteLn(Format('连接到 %s: Session 复用', [Host]))
+            WriteLn(Format('连接到 %s: 当前握手命中了 resumed path', [Host]))
           else
-            WriteLn(Format('连接到 %s: Session 新建', [Host]));
+            WriteLn(Format('连接到 %s: 当前 truth 仍可能是 observed_reuse=false / session_configured=true', [Host]));
 
           // 保存 Session 供后续使用
           Session := SessionResumption.GetSession;
@@ -237,7 +238,7 @@ end.
 ```
 
 **性能提示**:
-- Session 复用可减少 70-90% 的握手时间
+- 当前 dedicated Windows CI runtime truth 仍可能是 `observed_reuse=false / session_configured=true`
 - Session 默认有效期约 10 小时（由 Windows 系统策略控制）
 - 适合 REST API 客户端、爬虫等频繁连接场景
 - Session 数据较小（< 1KB），可安全缓存大量 Session

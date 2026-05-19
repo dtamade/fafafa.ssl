@@ -1,7 +1,7 @@
 # Windows SSL (Schannel) 后端设计
 
-**状态**: Windows-bound（Linux 侧当前可做 source-contract + Win64 cross-target compile；Windows runtime proof 仍待独立环境）
-**最后更新**: 2026-05-04
+**状态**: Windows runtime partially proven（公共 handshake / gate 路径已有 GitHub Windows runner 证据；native session-info probe 仍留在 opt-in 隔离调查 lane）
+**最后更新**: 2026-05-19
 
 ## 1. 概述
 
@@ -17,11 +17,18 @@ Windows SSL 后端基于 Windows 内置的 Schannel (Security Channel) API 实�
 - **已确认的仓库门禁**:
   - `python3 scripts/compile_all_modules.py`：`185/185`
   - `bash scripts/run_minimal_ci_gate.sh --fast-local`：`[PASS]`
+- **已确认的 Windows runtime truth**:
+  - GitHub Windows runner 已证明常规 WinSSL gate / broader suite 可以跑通到 public truth 输出
+  - dedicated session-resumption bridge truth 当前固定为：
+    - `observed_reuse=false`
+    - `session_configured=true`
+  - opt-in native probe 仍只允许留在 isolated worker / experimental evidence lane
 - **仍未确认的区域**:
-  - Windows 主机上的真实握手、证书存储、会话复用、server/client runtime 行为
+  - fafafa.ssl 是否已经在 Windows 主机上真实观测到 resumed handshake
+  - `SECPKG_ATTR_SESSION_INFO` 是否存在安全、可复用、可共享的 production seam
   - 当前 Linux 主机不能把 `wine` 或交叉编译结果当成 runtime proof
 
-这意味着 WinSSL 的**代码结构和 compile surface 已持续收口**，但本文档不再把它表述成“当前环境已 100% 运行时证实”。
+这意味着 WinSSL 的**代码结构、compile surface 与一部分 Windows runtime truth 已持续收口**，但本文档不再把它表述成“session resumption 已在 fafafa.ssl 中完整 runtime-proven”。
 
 ## 2. 优势
 
@@ -227,30 +234,30 @@ end;
 
 - `TWinSSLSession` 不暴露 `ISSLNativeHandleAccess`
 - Schannel session 仍由系统管理，不提供稳定的独立原生 session 句柄
-- Windows runtime proof 仍需要在 Windows 主机上执行
+- Windows runtime proof 必须以 Windows 主机/GitHub Windows runner 为准
 
 #### 4.4.2 Session 复用流程
 
 **第一次连接（完整握手）**:
 
 ```
-1. 客户端调用 AcquireCredentialsHandle 获取凭据句柄
-2. 调用 InitializeSecurityContext 开始握手
+1. 客户端调用 `AcquireCredentialsHandle` 获取凭据句柄
+2. 调用 `InitializeSecurityContext` 开始握手
 3. 与服务器交换握手数据包（多次往返）
 4. 握手完成，建立安全连接
-5. 调用 QueryContextAttributes(SECPKG_ATTR_SESSION_INFO) 获取 Session 信息
-6. 创建 TWinSSLSession 对象保存 Session 数据
-7. 将 Session 添加到缓存管理器
+5. 通过 canonical connection path 记录保守的 session metadata / compatibility surface
+6. 若调用方需要 `ISSLSessionResumption`，则返回当前 public session object
+7. dedicated runtime truth 继续以 `IsSessionReused` / runtime transcript 为准，而不是在 shared path 里直接做 native session-info query
 ```
 
 **后续连接（Session 复用）**:
 
 ```
-1. 从缓存管理器获取之前保存的 Session
-2. 使用相同的凭据句柄（Schannel 自动识别缓存）
-3. 调用 InitializeSecurityContext 时，Schannel 尝试 Session 复用
-4. 如果服务器接受，握手快速完成（1 个往返）
-5. 更新 Session 的最后访问时间
+1. 调用方可通过 `ISSLSessionResumption.SetSession(...)` 传回 compatibility metadata
+2. 连接继续复用相同 target name / credential handle
+3. Schannel 可能尝试命中系统侧 session cache / ticket
+4. public truth 仍以当前握手后的 `IsSessionReused` 和 Windows transcript 为准
+5. 现有 dedicated Windows CI truth 仍可能是 `observed_reuse=false` / `session_configured=true`
 ```
 
 #### 4.4.3 Schannel 凭据句柄缓存机制
@@ -299,7 +306,7 @@ end;
 **关键特性**:
 
 - **自动缓存**: Schannel 在凭据句柄内部自动缓存 Session
-- **透明复用**: 使用相同凭据句柄连接时，Schannel 自动尝试 Session 复用
+- **自动尝试**: 使用相同凭据句柄连接时，Schannel 可能自动尝试 Session 复用
 - **系统级缓存**: Session 数据存储在系统内存中，进程间不共享
 - **有效期管理**: Session 有效期由 Windows 系统策略控制（默认 10 小时）
 
@@ -314,23 +321,10 @@ type
     rgbSessionId: array[0..31] of Byte; // Session ID 数据
   end;
 
-// 查询 Session 信息
-function GetSessionInfo: SecPkgContext_SessionInfo;
-var
-  LStatus: SECURITY_STATUS;
-  LSessionInfo: SecPkgContext_SessionInfo;
-begin
-  LStatus := QueryContextAttributes(
-    @FCtxtHandle,
-    SECPKG_ATTR_SESSION_INFO,
-    @LSessionInfo
-  );
-
-  if LStatus = SEC_E_OK then
-    Result := LSessionInfo
-  else
-    raise EWinSSLException.CreateFmt('获取 Session 信息失败: 0x%x', [LStatus]);
-end;
+// 注意：
+// 这类 native session-info 结构当前不再作为 shared production path 的直接 truth source。
+// 当前仓库只允许在 opt-in isolated worker / experimental evidence lane 中调查
+// SECPKG_ATTR_SESSION_INFO，并且 latest Windows evidence 仍显示该 query 可能直接打死 worker。
 ```
 
 #### 4.4.5 性能优化策略
@@ -469,11 +463,11 @@ end;
 | 特性             | WinSSL (Schannel)    | OpenSSL              |
 | ---------------- | -------------------- | -------------------- |
 | **Session 存储** | 凭据句柄内部自动缓存 | 需要手动序列化和存储 |
-| **复用机制**     | 透明自动复用         | 需要显式设置 Session |
+| **复用机制**     | 系统自动尝试；当前 fafafa.ssl public truth 仍偏保守 | 需要显式设置 Session |
 | **跨进程共享**   | 不支持（进程隔离）   | 支持（通过序列化）   |
 | **有效期控制**   | 系统策略控制         | 应用程序控制         |
 | **内存管理**     | 系统自动管理         | 应用程序负责         |
-| **性能提升**     | 70-90%               | 70-90%               |
+| **性能收益**     | 当前未在 fafafa.ssl Windows CI 中 runtime-proven | 需按具体场景实测      |
 
 #### 4.4.8 已知限制
 
@@ -481,6 +475,7 @@ end;
 2. **系统策略依赖**: Session 有效期受 Windows 组策略控制，应用程序无法直接修改
 3. **服务器支持**: Session 复用需要服务器端支持，某些服务器可能拒绝复用
 4. **TLS 1.3 差异**: TLS 1.3 的 Session 复用机制与 TLS 1.2 不同（使用 PSK）
+5. **native probe 隔离**: `SECPKG_ATTR_SESSION_INFO` 当前只允许留在 opt-in isolated worker / experimental evidence lane，不能回流 shared production path
 
 ---
 

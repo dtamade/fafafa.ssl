@@ -88,8 +88,8 @@ type
 | 需求 | OpenSSL | WinSSL | MbedTLS |
 |------|---------|--------|---------|
 | TLS 1.3 | ✅ | ✅* | ✅ |
-| OCSP Stapling | ✅ | ✅ | ❌ |
-| Session Ticket | ✅ | ✅ | ✅ |
+| OCSP Stapling | ✅ | ❌ | ❌ |
+| Session Ticket | ✅ | ⚠️ | ✅ |
 | 客户端证书 | ✅ | ✅ | ✅ |
 | PSK | ✅ | ❌ | ✅ |
 | Ed25519 | ✅ | ❌ | ⚠️ |

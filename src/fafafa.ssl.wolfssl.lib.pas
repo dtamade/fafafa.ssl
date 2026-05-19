@@ -461,6 +461,7 @@ begin
     Result.SessionTicketsSupport := sslSupportStable
   else
     Result.SessionTicketsSupport := sslSupportNone;
+  Result.SessionCacheSupport := sslSupportStable;
   if FCapabilities.HasTLS13 and Assigned(wolfSSL_write_early_data) and
     Assigned(wolfSSL_get_early_data_status) and
     Assigned(wolfSSL_CTX_set_max_early_data) and
