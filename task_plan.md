@@ -10,6 +10,89 @@
 
 ## Current Status
 
+- [completed] `mbedtls protocol capability doc truth alignment`
+  当前 focused 目标：
+  - 收掉
+    `MBEDTLS_BACKEND_CAPABILITY_MATRIX`
+    协议支持表里
+    `TLS 1.0 / TLS 1.1 / DTLS 1.0 / DTLS 1.2`
+    仍沿用旧 capability 表
+    的漂移
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-mbedtls-protocol-capability-doc-truth-alignment.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_mbedtls_protocol_capability_doc_truth_contract.sh`
+  - 收口文档：
+    - `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+  当前预判：
+  - source 已经明确发布：
+    - `sslProtocolTLS10=False`
+    - `sslProtocolTLS11=False`
+    - `sslProtocolDTLS10=False`
+    - `sslProtocolDTLS12=False`
+    - `MinTLSVersion=sslProtocolTLS12`
+    - `SupportsDTLS=False`
+  - 但 dedicated MbedTLS page
+    仍把：
+    - `TLS 1.0 / 1.1`
+      写成
+      `⚠️ 可选`
+    - `DTLS 1.0`
+      写成
+      `⚠️ 可选`
+    - `DTLS 1.2`
+      写成
+      `✅ 支持`
+  - 这说明专页保留的是旧协议兼容表，
+    不是当前 published capability truth
+  当前验证策略：
+  - 用 focused shell contract
+    同时冻结：
+    - MbedTLS source protocol truth
+    - `test_mbedtls_framework`
+      里的 DTLS unsupported truth
+    - dedicated matrix 的四行新表述
+    - 旧 optional / supported 行必须消失
+  当前最终收口证据：
+  - 新 contract 第一次 RED
+    先暴露的是 contract 自己对反引号行的 quoting 问题，
+    不是产品 drift
+  - 修正 quoting 后，
+    第一处真实 RED
+    就是
+    `TLS 1.0`
+    仍未收回到
+    `当前 capability 不发布`
+  - GREEN 后证明：
+    - MbedTLS dedicated protocol table
+      不再发布
+      `TLS 1.0 / 1.1`
+      与
+      `DTLS 1.0 / 1.2`
+      的旧支持承诺
+    - 活跃专页已重新回到
+      `TLS 1.2+`
+      与
+      `SupportsDTLS=False`
+      这组 source truth
+  focused verification 已通过：
+  - `bash -n tests/scripts/test_mbedtls_protocol_capability_doc_truth_contract.sh`
+  - `bash tests/scripts/test_mbedtls_protocol_capability_doc_truth_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - 这批收掉的是
+    MbedTLS dedicated backend page
+    的协议 capability-table drift，
+    不是 MbedTLS 新协议实现缺口
+  当前下一条真实工作：
+  - 继续按同一方法审查 active backend / guide / reference docs
+  - 优先再找：
+    - 旧平台表
+    - `⚠️ 部分`
+    - “上游/平台潜力”
+    被单独保留在活跃入口里，
+    但 source truth 已经收紧的地方
 - [completed] `winssl dtls doc truth alignment`
   当前 focused 目标：
   - 收掉

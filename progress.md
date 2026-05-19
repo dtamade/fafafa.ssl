@@ -4,6 +4,59 @@
 
 ## 2026-05-20
 
+### MbedTLS Protocol Capability Doc Truth Alignment
+
+- `rg -n "function TMbedTLSLibrary\\.IsProtocolSupported|SupportsDTLS :=|sslProtocolDTLS10|sslProtocolDTLS12|HasTLS13|HasALPN|HasSNI" src/fafafa.ssl.mbedtls.lib.pas src/fafafa.ssl.mbedtls*.pas tests/test_mbedtls_framework.pas -S`
+- `sed -n '360,520p' src/fafafa.ssl.mbedtls.lib.pas`
+- `sed -n '830,860p' tests/test_mbedtls_framework.pas`
+- `rg -n "DTLS 1\\.0|DTLS 1\\.2|SupportsDTLS|MbedTLS.*DTLS|DTLS.*MbedTLS" docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md docs/guides/MBEDTLS_USER_GUIDE.md docs/reference/API_REFERENCE.md tests/scripts -S`
+  - result: PASS
+  - summary:
+    - confirmed a real dedicated-doc protocol-table drift:
+      - source hard-disables `TLS 1.0 / 1.1 / DTLS 1.0 / 1.2`
+      - `MinTLSVersion` is already `TLS 1.2`
+      - but the active MbedTLS backend matrix still kept TLS 1.0/1.1 as optional and DTLS 1.2 as supported
+
+- add `docs/plans/2026-05-20-mbedtls-protocol-capability-doc-truth-alignment.md`
+- add `tests/scripts/test_mbedtls_protocol_capability_doc_truth_contract.sh`
+  - change:
+    - recorded a bounded MbedTLS protocol doc-truth batch
+    - added a focused contract freezing:
+      - source protocol-support truth
+      - MbedTLS framework DTLS assertions
+      - dedicated matrix protocol rows
+
+- `bash -n tests/scripts/test_mbedtls_protocol_capability_doc_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new MbedTLS protocol docs contract syntax was valid
+
+- `bash tests/scripts/test_mbedtls_protocol_capability_doc_truth_contract.sh`
+  - result: FAIL -> FAIL -> PASS
+  - summary:
+    - first failure was contract-side, not product-side:
+      - unescaped backticks in the new protocol-row needles triggered shell command substitution
+    - after fixing quoting,
+      the first real RED proved the live drift:
+      - dedicated MbedTLS matrix still did not classify `TLS 1.0` as unpublished capability
+    - GREEN after the doc update proves:
+      - MbedTLS dedicated matrix no longer publishes TLS 1.0/1.1 as optional support
+      - MbedTLS dedicated matrix no longer publishes DTLS 1.0/1.2 support claims
+      - the active page now follows the source-level `TLS 1.2+` and `SupportsDTLS=False` truth
+
+- update docs:
+  - `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+  - change:
+    - rewrote `TLS 1.0 / 1.1` as
+      `❌ 当前 capability 不发布`
+    - rewrote `DTLS 1.0 / 1.2` as
+      `❌ 当前 capability 不发布`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remain after the MbedTLS protocol doc closeout
+
 ### WinSSL DTLS Doc Truth Alignment
 
 - `mcp__ace_tool__.search_context(...)`

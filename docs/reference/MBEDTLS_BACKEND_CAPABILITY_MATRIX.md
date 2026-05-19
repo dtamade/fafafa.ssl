@@ -32,12 +32,12 @@ Ctx := TSSLContextBuilder.Create
 
 | 功能 | 支持状态 | 说明 |
 |------|----------|------|
-| TLS 1.0 | ⚠️ 可选 | 需编译时启用，不推荐 |
-| TLS 1.1 | ⚠️ 可选 | 需编译时启用，不推荐 |
+| TLS 1.0 | ❌ 当前 capability 不发布 | 当前 MbedTLS runtime path 以 TLS 1.2+ 为起点；`sslProtocolTLS10` 当前返回 `False` |
+| TLS 1.1 | ❌ 当前 capability 不发布 | 当前 MbedTLS runtime path 以 TLS 1.2+ 为起点；`sslProtocolTLS11` 当前返回 `False` |
 | TLS 1.2 | ✅ 支持 | 默认启用，推荐 |
 | TLS 1.3 | ✅ 支持 | MbedTLS 3.x 支持 |
-| DTLS 1.0 | ⚠️ 可选 | 需编译时启用 |
-| DTLS 1.2 | ✅ 支持 | 默认启用 |
+| DTLS 1.0 | ❌ 当前 capability 不发布 | 当前 `SupportsDTLS=False`；`sslProtocolDTLS10` 当前返回 `False` |
+| DTLS 1.2 | ❌ 当前 capability 不发布 | 当前 `SupportsDTLS=False`；`sslProtocolDTLS12` 当前返回 `False` |
 
 ### 密码套件
 

@@ -2,6 +2,39 @@
 
 ## 2026-05-20
 
+- `MbedTLS`
+  这次协议表说明了：
+  dedicated backend page
+  不只是会在“高级能力族”上漂，
+  也会在最基础的 protocol table
+  上继续保留旧时代认知
+
+- source 已经明确给出：
+  - `TLS 1.0 / 1.1 = False`
+  - `DTLS 1.0 / 1.2 = False`
+  - `MinTLSVersion = TLS 1.2`
+  这种情况下，
+  active docs
+  就不能再写：
+  - `⚠️ 可选`
+  - `✅ 支持`
+
+- 也就是说，
+  “上游库理论上可能支持 / 某些编译配置可能存在”
+  并不等于
+  `fafafa.ssl`
+  当前 runtime path
+  已发布这条 capability
+
+- 所以协议表和能力表的审查原则
+  其实和前几批一样：
+  - 先看当前 source/runtime path
+  - 再决定 active docs
+    能不能继续保留
+    “可选” / “支持” / 平台表
+  - 不能因为它看起来是基础协议行，
+    就默认它一定没漂
+
 - `WinSSL`
   这次 DTLS 行暴露的是
   dedicated backend page
