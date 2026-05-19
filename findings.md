@@ -2,6 +2,48 @@
 
 ## 2026-05-19
 
+- 在 closure truth 收口后，当前 WinSSL native-probe 这条线最高价值的残留已经进一步缩成“probe body 内部没有阶段性 marker”：
+  - `pending=true` 只能证明已经进入 isolated worker
+  - 但它无法区分 crash 是发生在：
+    - `Supports(...)`
+    - `GetNativeHandle`
+    - 还是 `QueryContextAttributesW(...)`
+
+- 因而这批最小正确动作也非常窄：
+  - 不动 `src/fafafa.ssl.winssl.connection.pas`
+  - 不改共享 reconnect/session-info 逻辑
+  - 只在 `tests/winssl/test_winssl_session_resumption.pas` 的 `TryQueryNativeSessionReuse(...)` 内补齐 stage markers
+
+- 这批本地收口后，当前 native probe 的 evidence 形状已经显著变强：
+  - helper 现在显式接收 `label`
+  - probe body 已经能区分：
+    - `before_supports`
+    - `after_supports`
+    - `before_get_native_handle`
+    - `after_get_native_handle`
+    - `before_query_context_attributes`
+    - `query_failed`
+    - `after_query_context_attributes`
+    - `exception`
+  - 所以下一轮 Windows artifact 的 `last_marker` 一旦更新，就会直接指出 crash 的精确边界
+
+- focused 结果说明这批边界没有带坏现有 worker quarantine truth：
+  - 新增 stage-marker contract 先 RED 在 helper 还没有 label/stage markers
+  - 修复后转 GREEN
+  - 既有：
+    - worker quarantine contract
+    - session-resumption runtime-truth contract
+    - Win64 cross compile
+    都继续 GREEN
+
+- 因而当前最合理的后续顺序已经很明确：
+  1. 用 GitHub Windows runner 消费这批新 markers
+  2. 看 `last_marker` 停在哪一层
+  3. 再决定是否要把后续修复收缩到：
+     - owner-surface boundary
+     - native handle cast
+     - `QueryContextAttributesW(...)` 调用边界
+
 - 最新一轮 WinSSL native-probe worker 隔离 run `26070488337` 暴露的最高价值 residual，不再是 WinSSL 实现本身，而是 Wave B/B2 顶层 report chain 里 `closure_readiness` 的 truth 漂移：
   - `cross summary` 已能把
     - `windows summary overall=PASS`

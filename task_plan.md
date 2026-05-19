@@ -10,6 +10,34 @@
 
 ## Current Status
 
+- [completed] WinSSL native-probe stage markers 已完成本地收口：
+  - 新增计划：`docs/plans/2026-05-19-winssl-native-probe-stage-markers.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_winssl_native_probe_stage_markers_contract.sh`
+  - `tests/winssl/test_winssl_session_resumption.pas`
+    - `TryQueryNativeSessionReuse(...)` 现在已接收显式 `label`
+    - 当前 probe body 已补齐阶段性 `native_probe` markers：
+      - `stage=before_supports`
+      - `stage=after_supports`
+      - `stage=before_get_native_handle`
+      - `stage=after_get_native_handle`
+      - `stage=before_query_context_attributes`
+      - `stage=query_failed`
+      - `stage=after_query_context_attributes`
+      - `stage=exception`
+    - 初始握手与 same-context attempt 的 native probe 调用点现在都会把对应 label 传进 helper
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_winssl_native_probe_stage_markers_contract.sh`
+    - `bash tests/scripts/test_winssl_native_probe_stage_markers_contract.sh`
+    - `bash tests/scripts/test_winssl_native_probe_worker_quarantine_contract.sh`
+    - `bash tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+    - `fpc -Twin64 ... tests/winssl/test_winssl_session_resumption.pas`
+    - `git diff --check`: PASS
+  - 当前结论：
+    - 下一轮 GitHub Windows native-probe worker 即使继续以 `-1073741819` 退出，`last_marker` 也不应再只停在 `pending=true`
+    - 当前最高价值下一步已经重新收敛为：
+      - 用 Windows runner 实证 `last_marker` 新落点
+      - 再决定下一刀是 owner-surface / native handle / `QueryContextAttributesW` 哪个边界
 - [completed] Wave B/B2 closure Windows runtime truth 已完成 focused 收口：
   - 新增计划：`docs/plans/2026-05-19-wave-b-b2-closure-windows-runtime-truth.md`
   - 新增 focused contracts：

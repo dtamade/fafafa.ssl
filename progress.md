@@ -2,6 +2,71 @@
 
 ## 2026-05-19
 
+### WinSSL Native-Probe Stage Markers
+
+- `sed -n '1,220p' tests/winssl/test_winssl_session_resumption.pas`
+  - result: PASS
+  - summary:
+    - confirmed the risky probe body still had only `pending=true` pre-probe markers and no stage-level evidence inside `TryQueryNativeSessionReuse(...)`
+
+- `sed -n '220,460p' tests/winssl/test_winssl_session_resumption.pas`
+  - result: PASS
+  - summary:
+    - confirmed the narrow crash window was still:
+      - `Supports(...)`
+      - `GetNativeHandle`
+      - `QueryContextAttributesW(...)`
+    - confirmed the helper could safely be strengthened without touching shared WinSSL implementation
+
+- add `docs/plans/2026-05-19-winssl-native-probe-stage-markers.md`
+  - change:
+    - define the bounded local batch that strengthens isolated-worker stage evidence inside the probe helper
+
+- add `tests/scripts/test_winssl_native_probe_stage_markers_contract.sh`
+  - change:
+    - lock explicit `label` plumbing for `TryQueryNativeSessionReuse(...)`
+    - lock the stage markers around owner-surface, native handle, and query boundaries
+
+- `bash -n tests/scripts/test_winssl_native_probe_stage_markers_contract.sh`
+  - result: PASS
+  - summary:
+    - new stage-marker contract syntax is valid
+
+- `bash tests/scripts/test_winssl_native_probe_stage_markers_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED:
+      - `TryQueryNativeSessionReuse(...)` still lacked the explicit `label` parameter and all stage markers
+    - GREEN:
+      - helper now carries label-scoped stage evidence through the risky probe body
+
+- update `tests/winssl/test_winssl_session_resumption.pas`
+  - change:
+    - extend `TryQueryNativeSessionReuse(...)` to accept `label`
+    - emit `native_probe` stage markers before/after `Supports`, before/after `GetNativeHandle`, before query, on query failure, on query success, and on exception
+    - pass `initial_handshake` / `same_context_attempt_%d` labels into the native-probe helper call sites
+
+- `bash tests/scripts/test_winssl_native_probe_worker_quarantine_contract.sh`
+  - result: PASS
+  - summary:
+    - stage-marker strengthening did not regress isolated-worker quarantine semantics
+
+- `bash tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - stage-marker strengthening did not break the broader session-resumption runtime-truth surface
+
+- `mkdir -p tmp/winssl_native_probe_stage_markers_win64 && fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/winssl_native_probe_stage_markers_win64 -FEtmp/winssl_native_probe_stage_markers_win64 -otmp/winssl_native_probe_stage_markers_win64/test_winssl_session_resumption.exe tests/winssl/test_winssl_session_resumption.pas`
+  - result: PASS
+  - summary:
+    - Win64 cross-target compile remained green after the stage-marker changes
+    - existing warnings stayed in the historical warning pool; no fresh compile break surfaced
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - stage-marker batch has no whitespace or patch-format issues
+
 ### Wave B/B2 Closure Windows Runtime Truth
 
 - `git status --short --branch`

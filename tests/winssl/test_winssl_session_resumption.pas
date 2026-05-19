@@ -275,7 +275,7 @@ begin
 end;
 
 function TryQueryNativeSessionReuse(const AConn: ISSLConnection;
-  out AReused: Boolean; out ADetails: string): Boolean;
+  const ALabel: string; out AReused: Boolean; out ADetails: string): Boolean;
 var
   LNativeAccess: ISSLNativeHandleAccess;
   LCtxtHandle: PCtxtHandle;
@@ -286,13 +286,24 @@ begin
   AReused := False;
   ADetails := '';
 
+  EmitResumeMarker(Format('native_probe label=%s stage=before_supports',
+    [ALabel]));
   if not Supports(AConn, ISSLNativeHandleAccess, LNativeAccess) then
   begin
+    EmitResumeMarker(Format('native_probe label=%s stage=supports_unavailable',
+      [ALabel]));
     ADetails := 'native_handle_access_unavailable';
     Exit;
   end;
 
+  EmitResumeMarker(Format('native_probe label=%s stage=after_supports',
+    [ALabel]));
+  EmitResumeMarker(Format('native_probe label=%s stage=before_get_native_handle',
+    [ALabel]));
   LCtxtHandle := PCtxtHandle(LNativeAccess.GetNativeHandle);
+  EmitResumeMarker(Format(
+    'native_probe label=%s stage=after_get_native_handle handle_nil=%s',
+    [ALabel, BoolText(LCtxtHandle = nil)]));
   if LCtxtHandle = nil then
   begin
     ADetails := 'native_handle_nil';
@@ -301,21 +312,33 @@ begin
 
   FillChar(LSessionInfo, SizeOf(LSessionInfo), 0);
   try
+    EmitResumeMarker(Format(
+      'native_probe label=%s stage=before_query_context_attributes',
+      [ALabel]));
     LStatus := QueryContextAttributesW(LCtxtHandle, SECPKG_ATTR_SESSION_INFO,
       @LSessionInfo);
     if not IsSuccess(LStatus) then
     begin
+      EmitResumeMarker(Format(
+        'native_probe label=%s stage=query_failed status=0x%x',
+        [ALabel, LStatus]));
       ADetails := Format('status=0x%x', [LStatus]);
       Exit;
     end;
 
     AReused := (LSessionInfo.dwFlags and SSL_SESSION_RECONNECT) <> 0;
+    EmitResumeMarker(Format(
+      'native_probe label=%s stage=after_query_context_attributes status=0x%x reused=%s flags=0x%x',
+      [ALabel, LStatus, BoolText(AReused), LSessionInfo.dwFlags]));
     ADetails := Format('status=0x%x flags=0x%x',
       [LStatus, LSessionInfo.dwFlags]);
     Result := True;
   except
     on E: Exception do
     begin
+      EmitResumeMarker(Format(
+        'native_probe label=%s stage=exception class=%s message=%s',
+        [ALabel, E.ClassName, E.Message]));
       ADetails := Format('exception=%s:%s', [E.ClassName, E.Message]);
       Result := False;
     end;
@@ -486,7 +509,8 @@ begin
       begin
         EmitResumeMarker(
           'native_probe label=initial_handshake pending=true mode=isolated_worker');
-        if TryQueryNativeSessionReuse(LConn, LNativeReused, LNativeDetails) then
+        if TryQueryNativeSessionReuse(LConn, 'initial_handshake', LNativeReused,
+          LNativeDetails) then
         begin
           LNativeProbeSucceeded := True;
           Check('initial native probe must not report reconnect', not LNativeReused,
@@ -563,7 +587,9 @@ begin
           EmitResumeMarker(Format(
             'native_probe label=same_context_attempt_%d pending=true mode=isolated_worker',
             [LAttempt]));
-          if TryQueryNativeSessionReuse(LConn, LNativeReused, LNativeDetails) then
+          if TryQueryNativeSessionReuse(LConn,
+            Format('same_context_attempt_%d', [LAttempt]), LNativeReused,
+            LNativeDetails) then
           begin
             LNativeProbeSucceeded := True;
             EmitResumeMarker(Format(
