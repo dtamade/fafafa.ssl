@@ -6895,3 +6895,47 @@
      - 当前 selector / builder 行为与
        `SupportsSystemCertStore` published truth 对齐，
        不必再为这条线反复从头拉起
+
+120. `PreferHardwareAccel` 这批进一步把 selector / builder 的
+   downstream proof 路线钉得更细了一层：
+   - 对 `prefer` 类语义，
+     最危险的误判不是“source truth 错了”，
+     也不是“没命中偏好就是 bug”，
+     而是：
+     - capability record 里继续发布了
+       `HasHardwareAcceleration`
+     - 但 selector score / 排序 / builder 下游
+       未必真的消费了它
+   - 这次更稳的 proof 方式不是猜
+     “偏好开启后一定会选哪个 backend”，
+     因为 `prefer` 的语义本来就只是加权，
+     不是硬性 requirement
+   - 真正 durable 的检查点应该是三层：
+     - baseline 与 preferred requirements
+       的 qualifying backend 集合保持一致
+     - `HasHardwareAcceleration=True` 的 backend
+       score 必须按当前公式获得固定加分
+     - `HasHardwareAcceleration=False` 的 backend
+       score 必须保持不变
+   - 在此基础上，再验证：
+     - `SelectBestBackend(...)`
+       是否真的返回 preferred 排序后的第一名
+     - builder 下游是否沿用同一个 selected backend
+   - 这条路线比“断言某个 backend 必须永远获胜”更稳，
+     因为它直接钉住了 preference truth
+     真正进入 score / selection / builder 的事实
+   - 所以这批的正确结论仍然不是
+     “又发现 backend 实现缺口”，而是：
+     - `PreferHardwareAccel` 的 downstream proof gap
+       已经闭环
+     - 当前 `HasHardwareAcceleration` published truth
+       已经被 selector / builder 真实消费
+   - 当前 selector / builder 主线的 focused proof
+     现在已经覆盖：
+     - `RequirePKCS11Support`
+     - `RequireTPM`
+     - `RequireSystemCertStore`
+     - `PreferHardwareAccel`
+   - 同类下一条最直接的残口
+     应该转向：
+     - `PreferOSNative`

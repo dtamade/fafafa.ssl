@@ -14366,3 +14366,44 @@
   - change:
     - recorded this batch as a downstream proof-gap closeout rather than a
       backend implementation fix
+
+### Auto-Backend Hardware-Accel Preference Truth
+
+- add `docs/plans/2026-05-20-auto-backend-hardware-accel-preference-truth-contract.md`
+  - change:
+    - define the bounded runtime-aware downstream contract batch for
+      `PreferHardwareAccel` / auto-backend selection truth
+
+- add `tests/test_auto_backend_hardware_accel_preference_truth_contract.pas`
+  - change:
+    - add a focused Pascal contract that compares:
+      - baseline auto-selection requirements
+      - baseline + `PreferHardwareAccel`
+    - verify that:
+      - qualifying backend set stays the same
+      - hardware-accelerated backends receive the expected score delta
+      - non-accelerated backends keep the same score
+      - `SelectBestBackend(...)` returns the top-ranked preferred candidate
+      - builder uses the same selected backend
+
+- `mkdir -p tmp/test_auto_backend_hardware_accel_truth_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_auto_backend_hardware_accel_truth_units -FEtmp/test_auto_backend_hardware_accel_truth_units -otmp/test_auto_backend_hardware_accel_truth_units/test_auto_backend_hardware_accel_preference_truth_contract tests/test_auto_backend_hardware_accel_preference_truth_contract.pas && ./tmp/test_auto_backend_hardware_accel_truth_units/test_auto_backend_hardware_accel_preference_truth_contract`
+  - result: PASS
+  - summary:
+    - focused contract compiled and ran green on the first bounded pass
+    - current proof shows:
+      - enabling `PreferHardwareAccel` does not change the qualifying backend set
+      - each backend with `HasHardwareAcceleration=True` receives the current
+        fixed preferred-score bonus
+      - each backend with `HasHardwareAcceleration=False` keeps the same score
+      - `SelectBestBackend(...)` stays aligned with the first entry from
+        `SelectBestBackends(...)`
+      - `TSSLContextBuilder.WithAutoBackendSelection(...)` uses the same backend
+        selected by the selector
+
+- update planning files:
+  - `task_plan.md`
+  - `findings.md`
+  - `progress.md`
+  - change:
+    - recorded this batch as a preference proof-gap closeout rather than a
+      backend implementation fix

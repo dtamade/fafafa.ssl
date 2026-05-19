@@ -10,6 +10,59 @@
 
 ## Current Status
 
+- [completed] `auto-backend hardware-accel preference truth`
+  当前 focused 目标：
+  - 给 `PreferHardwareAccel` / auto-backend selection
+    补一条 runtime-aware focused contract，
+    证明 `HasHardwareAcceleration`
+    会真实进入 selector 的 score / 排序，
+    并且 builder 下游沿用同一个 selection truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-auto-backend-hardware-accel-preference-truth-contract.md`
+  - 新增 focused contract：
+    - `tests/test_auto_backend_hardware_accel_preference_truth_contract.pas`
+  当前预判：
+  - `HasHardwareAcceleration` 的 source truth
+    本身没有先暴露出新的 backend drift，
+    真正缺的是 selector / builder 是否真实消费了这条 preference truth
+  当前最终收口证据：
+  - focused contract 用两组 requirements 对照：
+    - baseline：
+      `CreateDefaultRequirements(optBalanced)` + 三项最低分数门槛清零
+    - preferred：
+      baseline +
+      `PlatformPreferences.PreferHardwareAccel := True`
+  - 当前合同已证明：
+    - qualifying backend 集合保持一致
+    - `HasHardwareAcceleration=True` 的 backend
+      在 preferred requirements 下按当前公式获得固定加分
+    - `HasHardwareAcceleration=False` 的 backend
+      分数保持不变
+    - `SelectBestBackend(...)`
+      返回 `SelectBestBackends(...)` preferred 排序后的第一名
+    - `TSSLContextBuilder.Create.WithAutoBackendSelection(...).TryBuildClient(...)`
+      成功，并沿用 selector 选中的 backend
+  focused verification 已通过：
+  - `mkdir -p tmp/test_auto_backend_hardware_accel_truth_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_auto_backend_hardware_accel_truth_units -FEtmp/test_auto_backend_hardware_accel_truth_units -otmp/test_auto_backend_hardware_accel_truth_units/test_auto_backend_hardware_accel_preference_truth_contract tests/test_auto_backend_hardware_accel_preference_truth_contract.pas && ./tmp/test_auto_backend_hardware_accel_truth_units/test_auto_backend_hardware_accel_preference_truth_contract`
+  当前结论：
+  - 当前 selector / builder
+    已经真实消费 `HasHardwareAcceleration` published truth
+  - 这批收掉的是 preference downstream proof gap，
+    不是新的 backend implementation bug
+  当前总路线图进度：
+  - selector / builder focused downstream proof
+    已完成：
+    - `RequirePKCS11Support`
+    - `RequireTPM`
+    - `RequireSystemCertStore`
+    - `PreferHardwareAccel`
+  - 当前最直接未收口的同类残口：
+    - `PreferOSNative`
+  当前下一条真实工作：
+  - 继续沿 selector / builder 主线，
+    补 `PreferOSNative` 的 runtime-aware preference proof
+  - 然后再回到更大的接口设计与 backend completeness 主线
 - [completed] `auto-backend system-cert-store capability truth`
   当前 focused 目标：
   - 给 `RequireSystemCertStore` / auto-backend selection
