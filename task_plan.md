@@ -10,6 +10,48 @@
 
 ## Current Status
 
+- [completed] `specialized owner-surface reasoning`
+  当前 focused 目标：
+  - 把 specialized optional-interface guides 中 direct connection owner path 的
+    使用原因写清楚，避免读者把 owner-surface 示例误解成 generic facade 主路径
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-specialized-owner-surface-reasoning.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_specialized_owner_surface_reasoning_contract.sh`
+  - 同步更新：
+    - `docs/guides/OCSP_USAGE_GUIDE.md`
+    - `docs/guides/CT_IMPLEMENTATION_GUIDE.md`
+  当前最终收口证据：
+  - `OCSP_USAGE_GUIDE.md` 现在明确：
+    - direct `CreateConnection(...)` 是因为 stapled OCSP runtime state 通过
+      `ISSLOCSPStapling` 挂在连接对象上
+    - 握手失败时的 verify 结果也通过
+      `ISSLCertificateVerification` 从连接侧读取
+    - 不需要这层 owner surface 时，普通客户端仍可把握手入口保持在
+      `TSSLConnector` / `TSSLStream`
+  - `CT_IMPLEMENTATION_GUIDE.md` 现在明确：
+    - direct `CreateConnection(...)` 是因为
+      `ISSLCertificateTransparency` /
+      `ISSLCertificateTransparencyValidation`
+      挂在连接对象上
+    - 不需要读取 CT owner surface 时，
+      普通客户端仍可把握手入口保持在 `TSSLConnector` / `TSSLStream`
+  focused verification 已通过：
+  - `bash -n tests/scripts/test_specialized_owner_surface_reasoning_contract.sh`
+  - `bash tests/scripts/test_specialized_owner_surface_reasoning_contract.sh`
+  - `bash tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+  - `bash tests/scripts/test_isslocspstapling_active_guidance_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - specialized owner-surface guides 当前并不是接口名或 runtime truth 出错，
+    而是还需要把“为什么这里必须走 connection owner path”讲透。
+  - 现在 OCSP / CT 这两页也被拉回到了同一套 direct-path 分层体系。
+  当前下一条真实工作：
+  - 继续从 remaining specialized guides / owner-surface docs 往下扫：
+    - 例如 session / diagnostics / certificate-verification 之外
+      还有没有类似“示例是 intentional owner path，但原因没写透”的 residual
+
 - [completed] `high-frequency guides direct-path reasoning`
   当前 focused 目标：
   - 把几份高频 active 页面里 direct `CreateConnection(...)` 的使用原因讲清楚，

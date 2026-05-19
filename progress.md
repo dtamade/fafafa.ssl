@@ -13905,3 +13905,54 @@
   - result: PASS
   - summary:
     - current high-frequency direct-path reasoning batch has no whitespace or patch-format issues
+
+### Specialized Owner-Surface Reasoning
+
+- add `docs/plans/2026-05-20-specialized-owner-surface-reasoning.md`
+  - change:
+    - define the bounded specialized-guide batch for explaining why OCSP/CT runtime examples intentionally use connection owner paths
+
+- add `tests/scripts/test_specialized_owner_surface_reasoning_contract.sh`
+  - change:
+    - lock that specialized OCSP/CT guides must explain why they intentionally drop to the connection owner path instead of the generic facade main entry
+
+- `bash -n tests/scripts/test_specialized_owner_surface_reasoning_contract.sh`
+  - result: PASS
+  - summary:
+    - new specialized owner-surface reasoning contract syntax is valid
+
+- `bash tests/scripts/test_specialized_owner_surface_reasoning_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `OCSP_USAGE_GUIDE` still used the direct connection path without explicitly explaining why the guide intentionally reads the owner surface from the connection object
+    - GREEN after fix:
+      - `OCSP_USAGE_GUIDE` now explains why OCSP runtime state + verify result are read from the connection owner path
+      - `CT_IMPLEMENTATION_GUIDE` now explains why CT runtime owner surfaces are read from the connection object
+
+- update `docs/guides/OCSP_USAGE_GUIDE.md`
+  - change:
+    - explain that stapled OCSP runtime state is exposed through `ISSLOCSPStapling` on the connection object
+    - explain that handshake verify result is also read from the connection owner path
+    - point ordinary clients without owner-surface needs back to `TSSLConnector` / `TSSLStream`
+
+- update `docs/guides/CT_IMPLEMENTATION_GUIDE.md`
+  - change:
+    - explain that `ISSLCertificateTransparency` / `ISSLCertificateTransparencyValidation`
+      are connection owner surfaces
+    - point ordinary clients without CT owner-surface needs back to `TSSLConnector` / `TSSLStream`
+
+- `bash tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - specialized owner-surface explanation did not regress certificate-verification owner-path truth
+
+- `bash tests/scripts/test_isslocspstapling_active_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - specialized owner-surface explanation did not regress OCSP owner-path truth
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current specialized owner-surface batch has no whitespace or patch-format issues

@@ -13,6 +13,8 @@
 
 当前 pure Pascal TLS 1.3 client 已经支持在握手期间请求 `status_request`，并通过连接对象暴露 stapled OCSP response surface。
 
+这里直接回到 `CreateConnection(...)`，是因为 stapled OCSP runtime state 通过 `ISSLOCSPStapling` 挂在连接对象上，握手失败时的 verify 结果也通过 `ISSLCertificateVerification` 从连接侧读取；如果你只是普通客户端接入而不需要这层 owner surface，握手入口仍可保持在 `TSSLConnector` / `TSSLStream`。
+
 最短用法是：
 
 ```pascal

@@ -91,6 +91,8 @@ end;
 
 如果你已经在用 `ISSLContext` / `ISSLConnection`，最直接的方式不是自己构造 `TSCTValidator`，而是从连接对象读取 CT surface。
 
+这里直接回到 `CreateConnection(...)`，是因为 `ISSLCertificateTransparency` / `ISSLCertificateTransparencyValidation` 这组 CT runtime owner surface 挂在连接对象上；如果你只是普通客户端接入而不需要读取 CT owner surface，握手入口仍可保持在 `TSSLConnector` / `TSSLStream`。
+
 ```pascal
 uses
   SysUtils,

@@ -6610,3 +6610,25 @@
      这些既有 contract 在新增说明后都仍保持绿色
    - 现在新的稳定基线应记为：
      - 高频专题页也不会再把场景化 direct path 示例误教成 generic main entry
+
+110. specialized owner-surface guides 里还存在最后一类容易让人误解的 direct path：
+   - `OCSP_USAGE_GUIDE`
+   - `CT_IMPLEMENTATION_GUIDE`
+   - 它们其实早就在用正确的 optional interface / owner surface：
+     - `ISSLOCSPStapling`
+     - `ISSLCertificateTransparency`
+     - `ISSLCertificateTransparencyValidation`
+   - 真正缺的不是 owner path 迁移，而是：
+     - 为什么这里必须回到 `CreateConnection(...)`
+     - 以及如果不需要这些 owner surface，generic main path 仍是什么
+   - 当前最小正确修法已经压实为：
+     - `OCSP_USAGE_GUIDE`
+       明确 OCSP runtime state 与 verify result 都属于连接 owner surface
+     - `CT_IMPLEMENTATION_GUIDE`
+       明确 CT runtime owner surface 挂在连接对象上
+   - 这批也顺手证明：
+     - `ISSLCertificateVerification` owner-path guidance
+     - `ISSLOCSPStapling` owner-path guidance
+     在新增 specialized owner-path 解释之后仍保持绿色
+   - 现在新的稳定基线应记为：
+     - OCSP / CT specialized guides 不会再把 owner-surface 示例误读成 generic facade 主路径
