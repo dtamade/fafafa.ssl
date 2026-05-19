@@ -10,6 +10,42 @@
 
 ## Current Status
 
+- [completed] Migration guide active truth 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-migration-guide-active-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_migration_guide_active_truth_contract.sh`
+  - 当前已修正的高入口活跃文档：
+    - `docs/guides/MIGRATION_GUIDE.md`
+  - 当前已收掉的真问题：
+    - `MIGRATION_GUIDE` 顶部不再停在：
+      - `v0.8`
+      - `v0.7/v0.8` 作为当前 active 迁移主线
+    - 活跃迁移示例不再继续使用：
+      - `fafafa.ssl.abstract.intf`
+      - 不存在的 `fafafa.ssl.openssl` facade unit
+      - backend-specific `CreateOpenSSLLibrary` 作为主迁移入口
+    - 迁移主路径现在明确重新回到：
+      - `fafafa.ssl`
+      - `fafafa.ssl.context.builder`
+      - `TSSLFactory`
+      - `TSSLConnector`
+      - `TSSLStream`
+    - client SNI / hostname 当前迁移心智现在明确回到：
+      - `TSSLConnector.ConnectSocket(..., ServerName)`
+      - 或 `ISSLClientConnection.SetServerName(...)`
+    - WinSSL enterprise helper 当前名称不再写旧：
+      - `IsFIPSEnabled`
+      - `GetTrustedRoots`
+      - `GetAllPolicies`
+    - OpenSSL low-level error helper 当前不再被误写成 generic public facade API
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_migration_guide_active_truth_contract.sh`
+    - `bash tests/scripts/test_migration_guide_active_truth_contract.sh`
+    - `git diff --check`
+  - 当前结论：
+    - 这批修掉的是高入口迁移指南把旧版本叙事、旧单元名和旧 helper 教成现行主路径的问题
+    - 后续如果继续扫 migration / onboarding 文档，不应再把 `MIGRATION_GUIDE` 当成 `v0.x` 时代的旧入口
 - [completed] Active connection API docs truth 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-active-connection-api-docs-truth.md`

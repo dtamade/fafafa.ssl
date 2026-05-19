@@ -2,6 +2,67 @@
 
 ## 2026-05-19
 
+### Migration Guide Active Truth
+
+- add `docs/plans/2026-05-19-migration-guide-active-truth.md`
+  - change:
+    - define the bounded active-doc truth batch for stale migration-guide versioning, unit names, and helper boundaries
+
+- add `tests/scripts/test_migration_guide_active_truth_contract.sh`
+  - change:
+    - lock that `MIGRATION_GUIDE` no longer teaches:
+      - `v0.8` as current version
+      - removed `abstract.intf` / nonexistent facade unit usage
+      - stale WinSSL enterprise helper names
+      - OpenSSL low-level helper as generic public facade API
+
+- read-only evidence triage
+  - summary:
+    - `MIGRATION_GUIDE` still carried a full `v0.7/v0.8` migration storyline
+    - active code examples still used removed or nonexistent unit names
+    - current public migration truth remained anchored in:
+      - `src/fafafa.ssl.base.pas`
+      - `src/fafafa.ssl.pas`
+      - `src/fafafa.ssl.tls.pas`
+      - `docs/reference/API_REFERENCE.md`
+
+- `bash -n tests/scripts/test_migration_guide_active_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new migration-guide active-truth contract syntax is valid
+
+- `bash tests/scripts/test_migration_guide_active_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `MIGRATION_GUIDE` still declared `v0.8`
+      - the whole guide still taught pre-`v1.0` migration as current active truth
+      - old unit names and stale enterprise helper names were still present
+    - GREEN after fix:
+      - `MIGRATION_GUIDE` now uses rolling/current truth anchors
+      - migration examples now use current public facade/builder/connector paths
+      - WinSSL enterprise and OpenSSL low-level helper boundaries are now stated correctly
+
+- update `docs/guides/MIGRATION_GUIDE.md`
+  - change:
+    - replace the old `v0.x`-centered guide with a current migration guide
+    - anchor truth to source + canonical API reference
+    - move client migration guidance to:
+      - `fafafa.ssl`
+      - `fafafa.ssl.context.builder`
+      - `TSSLConnector`
+      - `TSSLStream`
+    - add current raw-connection fallback snippet with:
+      - `Supports(LConn, ISSLClientConnection, ...)`
+      - `SetServerName(...)`
+    - correct WinSSL enterprise helper names
+    - bound OpenSSL low-level error helpers to `fafafa.ssl.openssl.api.err`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current migration-guide batch has no whitespace or patch-format issues
+
 ### Active Connection API Docs Truth
 
 - add `docs/plans/2026-05-19-active-connection-api-docs-truth.md`

@@ -2,6 +2,53 @@
 
 ## 2026-05-19
 
+- 继续沿着“高入口文档是否仍在教授旧 public entrypoint”这条线往下压时，`MIGRATION_GUIDE` 暴露的是另一类更重的漂移：
+  - 它不只是某几个代码片段旧，而是整份迁移主线仍停在 `v0.7 / v0.8`
+  - 顶部版本、迁移叙事、helper 命名、单元引用一起落在旧时期心智上
+
+- 当前压实的具体问题非常明确：
+  - 顶部仍写：
+    - `v0.8`
+  - 仍把：
+    - `v0.7 → v0.8`
+    - `v0.6 → v0.7`
+    当成当前 active migration 章节
+  - 迁移代码仍使用已经不存在的：
+    - `fafafa.ssl.abstract.intf`
+    - `fafafa.ssl.openssl` facade unit
+  - WinSSL 企业 helper 仍写成旧名称：
+    - `IsFipsModeEnabled`
+    - `GetEnterpriseTrustedRoots`
+    - `GetGroupPolicies`
+  - OpenSSL 低层 error helper 仍被混成 generic 迁移 API
+
+- 这类问题的风险不只是“文档旧”，而是会直接把迁移用户带进错误入口：
+  - 新用户会先学到不存在的单元名
+  - 也会误以为 backend-specific helper 是跨 backend 统一 contract
+  - 更糟的是，整个 guide 会继续把 `v0.x` 历史快照包装成当前 `v1.5.0` 的迁移主路径
+
+- 这条线当前最小正确修法不是继续在旧结构上补注释，而是直接把 active migration guide 重写回当前主路径：
+  - 以：
+    - `src/fafafa.ssl.base.pas`
+    - `src/fafafa.ssl.pas`
+    - `src/fafafa.ssl.tls.pas`
+    - `docs/reference/API_REFERENCE.md`
+    作为当前 truth anchor
+  - 迁移示例回到：
+    - `fafafa.ssl`
+    - `fafafa.ssl.context.builder`
+    - `TSSLConnector`
+    - `TSSLStream`
+  - client SNI/hostname 明确回到：
+    - `TSSLConnector.ConnectSocket(..., ServerName)`
+    - 或 `ISSLClientConnection.SetServerName(...)`
+  - WinSSL enterprise / OpenSSL low-level helper 的边界重新分类清楚
+
+- 当前这批收口后的新基线应明确保留：
+  - `MIGRATION_GUIDE` 已不再是 `v0.x` 历史快照伪装成 active guide
+  - 当前迁移入口已经重新锚回当前公开门面与连接语义
+  - 后续如果继续做 onboarding / migration 审查，不需要再把这份 guide 当成未收口的旧版本主入口
+
 - 继续沿着“高入口 active docs 是否还在教授旧 public surface”这条线往下压时，又压实了一批直接影响上手用户的连接 API 漂移：
   - `docs/reference/API_DOCUMENTATION.md`
     还停在旧的连接时代：
