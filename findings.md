@@ -2,6 +2,47 @@
 
 ## 2026-05-20
 
+- OCSP 这组 core surface 之前停在一个“半收口”状态：
+  - active docs 已经转向 `ISSLOCSPStapling`
+  - source comments 也已经把 core `GetOCSP*` 标成 compatibility-core mirrors
+  - residual direct-core tests 也已经缩到 4 个 intentional backend/runtime proofs
+  - 但 public declaration 本身还没有进入 compiler-deprecated
+
+- 这意味着之前的真相其实还缺最后一层：
+  - 文档说“仅兼容保留”
+  - 注释说“owner 是 `ISSLOCSPStapling`”
+  - 但源码声明本身还像普通 core shipped API
+  - 这种 source/declaration 级别的松动，会继续把 `ISSLConnection` 误读成合理的 OCSP 首选入口
+
+- 这批之后，OCSP 这组 surface 才真正进入和 session / diagnostics / connection-info 相同的路线：
+  - `GetOCSPStaplingEnabled`
+  - `GetOCSPResponse`
+  - `IsOCSPResponseVerified`
+  - `GetOCSPResponseStatus`
+  都已经成为 compiler-deprecated compatibility-core mirrors
+  - owner path 统一明确为 `ISSLOCSPStapling`
+
+- 这里还有一个 workflow 经验也值得记下来：
+  - 当一条老 contract 锁的是“兼容保留”旧文案，
+    而我们把它推进到“compiler-deprecated compatibility mirror”时，
+    最容易卡住的不是源码，而是旧 contract 自己成了旧真相
+  - 这次 `test_isslocspstapling_residual_classification_contract.sh`
+    就属于这种情况
+  - 以后看到“新 contract 绿、旧 contract 红”的场景，要先判断是不是旧 contract 本身需要升级，而不是急着回滚源码
+
+- 另一个小经验是：
+  - Pascal 的 `{$PUSH}` / `{$POP}` 是编译期指令，不是运行时分支语义
+  - 不能把 `{$POP}` 放进 `if ... Exit` 分支里指望只走一条路径
+  - 这次 OpenSSL regression test 的第一次编译失败
+    `A POP without a preceding PUSH`
+    就是这个典型坑
+
+- 从主线路线图看，这批的意义不只是“又补了一组 deprecation”：
+  - 它证明 `ISSLConnection` slimming 已经不再只是 freeze / docs clarification
+  - 我们现在已经在对 core 表面做真实、可验证、可渐进的 source-level 收窄
+  - 下一批可以继续按这个模式挑剩余 core residual，
+    而不是重新回到大而散的 interface 讨论
+
 - capability 双真相这条线现在可以再向前收一层：
   - 之前我们已经收掉了：
     - selector / builder 的 support-level 消费

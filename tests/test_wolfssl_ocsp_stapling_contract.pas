@@ -178,9 +178,11 @@ begin
 
   LClientCtx := LLib.CreateContext(sslCtxClient);
   LConn := LClientCtx.CreateConnection(THandle(0));
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   CheckTrue('WolfSSL connection OCSP stapling enabled defaults false without stapled response',
     not LConn.GetOCSPStaplingEnabled,
     'GetOCSPStaplingEnabled should reflect an actual stapled response, not just symbol presence');
+  {$POP}
 end;
 
 begin

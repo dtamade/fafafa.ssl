@@ -91,6 +91,7 @@ begin
       // 测试 OCSP API
       WriteLn;
       WriteLn('OCSP API Results:');
+      {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
       WriteLn('  GetOCSPStaplingEnabled: ', LConn.GetOCSPStaplingEnabled);
       WriteLn('  GetOCSPResponse length: ', Length(LConn.GetOCSPResponse));
       WriteLn('  IsOCSPResponseVerified: ', LConn.IsOCSPResponseVerified);
@@ -111,6 +112,7 @@ begin
       begin
         WriteLn('✅ Status message correctly indicates MbedTLS limitation');
       end;
+      {$POP}
 
       LConn.Shutdown;
     end;

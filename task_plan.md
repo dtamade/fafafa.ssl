@@ -10,6 +10,59 @@
 
 ## Current Status
 
+- [completed] `isslocspstapling compiler deprecation alignment`
+  当前 focused 目标：
+  - 把 `ISSLConnection` 上的 4 个 OCSP compatibility-core mirrors
+    - `GetOCSPStaplingEnabled`
+    - `GetOCSPResponse`
+    - `IsOCSPResponseVerified`
+    - `GetOCSPResponseStatus`
+    收成和当前 owner-path truth 一致的 compiler-deprecated public surface
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-isslocspstapling-compiler-deprecation.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_isslocspstapling_compiler_deprecated_contract.sh`
+  - 收口源码 / docs / residual tests：
+    - `src/fafafa.ssl.base.pas`
+    - `docs/reference/API_REFERENCE.md`
+    - `docs/reference/INTERFACE_DESIGN_V2.md`
+    - `tests/mbedtls/test_mbedtls_ocsp_capability.pas`
+    - `tests/openssl/test_ocsp_connection_verification_regression.pas`
+    - `tests/test_openssl_connection_ocsp_storectx_issuer_contract.pas`
+    - `tests/test_wolfssl_ocsp_stapling_contract.pas`
+    - `tests/scripts/test_isslocspstapling_residual_classification_contract.sh`
+  当前最终收口证据：
+  - focused compiler-deprecated contract 先红后绿：
+    - 初始 RED：
+      `GetOCSPStaplingEnabled`
+      还没有任何 compiler-deprecated 声明
+    - GREEN 后：
+      四个 core `GetOCSP*` 声明
+      都已经进入
+      `deprecated 'Use ISSLOCSPStapling....'`
+  - 相关 OCSP truth contracts 继续通过：
+    - `tests/scripts/test_isslocspstapling_compiler_deprecated_contract.sh`
+    - `tests/scripts/test_isslocspstapling_residual_classification_contract.sh`
+    - `tests/scripts/test_isslocspstapling_active_guidance_contract.sh`
+  - intentional residual tests 已重新编译通过：
+    - `tests/mbedtls/test_mbedtls_ocsp_capability.pas`
+    - `tests/openssl/test_ocsp_connection_verification_regression.pas`
+    - `tests/test_openssl_connection_ocsp_storectx_issuer_contract.pas`
+    - `tests/test_wolfssl_ocsp_stapling_contract.pas`
+  当前结论：
+  - OCSP 这组 surface 现在不再只是
+    “注释和文档说它是 compatibility mirror”
+  - source declaration 自己也已经进入 compiler-deprecated，
+    与 `ISSLOCSPStapling` owner path 对齐
+  - 这批收掉的是 `ISSLConnection` core fatness 的一条真实源码切片，
+    不是单纯 docs 治理
+  当前下一条真实工作：
+  - 继续沿 `ISSLConnection` slimming 主线，
+    优先考虑还没进入 compiler-deprecated / owner-primacy 的 core residual
+  - 与此同时继续盯
+    client / server public surface
+    是否还存在未明确建模的不对称残口
 - [completed] `capability support-level source normalization`
   当前 focused 目标：
   - 把 backend `GetCapabilities` 的 paired capability producer

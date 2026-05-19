@@ -60,7 +60,7 @@ for pattern in "${required_conn_base_patterns[@]}"; do
   require_pattern "$conn_base_file" "$pattern"
 done
 
-require_pattern "$api_reference_file" "\`GetOCSPStaplingEnabled\` / \`GetOCSPResponse\` / \`IsOCSPResponseVerified\` / \`GetOCSPResponseStatus\` 在 \`ISSLConnection\` 上仅作为 \`v1.x\` compatibility-core mirrors 保留；新代码优先通过 \`ISSLOCSPStapling\` owner surface 访问。"
+require_pattern "$api_reference_file" "\`GetOCSPStaplingEnabled\` / \`GetOCSPResponse\` / \`IsOCSPResponseVerified\` / \`GetOCSPResponseStatus\` 在 \`ISSLConnection\` 上当前也只作为 \`v1.x\` compatibility-core mirrors 保留；当前源码声明已经是编译期 \`deprecated\`，需要 stapled OCSP runtime state 时，新代码优先通过 \`ISSLOCSPStapling\` owner surface 访问。"
 
 expected_hits="$(cat <<'EOF'
 tests/mbedtls/test_mbedtls_ocsp_capability.pas

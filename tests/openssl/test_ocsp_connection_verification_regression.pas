@@ -602,17 +602,21 @@ begin
 
     LOpenSSLResp := nil; // Ownership transferred to SSL instance
 
+    {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
     LStatus := LConn.GetOCSPResponseStatus;
+    {$POP}
     if LStatus <> 'Successful' then
     begin
       LogFail('Expected OCSP status = Successful, got: ' + LStatus);
       Exit;
     end;
 
+    {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
     if LConn.IsOCSPResponseVerified then
       LogFail('Successful/basic stapled fixture must NOT be treated as verified without peer cert context')
     else
       LogPass('Successful/basic stapled fixture is correctly rejected without peer cert context');
+    {$POP}
 
   except
     on E: Exception do

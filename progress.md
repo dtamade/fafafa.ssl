@@ -4,6 +4,99 @@
 
 ## 2026-05-20
 
+### ISSLOCSPStapling Compiler Deprecation Alignment
+
+- `rg -n "GetOCSPStaplingEnabled|GetOCSPResponse\\b|IsOCSPResponseVerified|GetOCSPResponseStatus|ISSLOCSPStapling" src/fafafa.ssl.base.pas src/fafafa.ssl.connection.base.pas docs/reference/API_REFERENCE.md docs/reference/INTERFACE_DESIGN_V2.md docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md tests tests/scripts`
+- `rg -n '\b(?:LConn|Conn|Connection)\.(GetOCSPStaplingEnabled|GetOCSPResponse|IsOCSPResponseVerified|GetOCSPResponseStatus)\b' tests --glob '!tests/scripts/**'`
+  - result: PASS
+  - summary:
+    - confirmed OCSP was the next real source-facing slimming slice:
+      - owner-path docs/comments were already on `ISSLOCSPStapling`
+      - residual direct-core test set was already narrowed to 4 intentional files
+      - but the core `GetOCSP*` declarations themselves were not compiler-deprecated yet
+
+- add `docs/plans/2026-05-20-isslocspstapling-compiler-deprecation.md`
+- add `tests/scripts/test_isslocspstapling_compiler_deprecated_contract.sh`
+  - change:
+    - recorded the bounded OCSP compiler-deprecation batch
+    - added a focused contract freezing:
+      - four compiler-deprecated core `GetOCSP*` declarations
+      - API / V2 doc wording
+      - intentional residual test warning quarantine
+
+- `bash -n tests/scripts/test_isslocspstapling_compiler_deprecated_contract.sh`
+  - result: PASS
+  - summary:
+    - new focused contract syntax is valid
+
+- `bash tests/scripts/test_isslocspstapling_compiler_deprecated_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first proved the real gap was still live:
+      - `GetOCSPStaplingEnabled` had zero compiler-deprecated declarations
+    - GREEN after the source/docs/test edits proves:
+      - all four core `GetOCSP*` declarations now carry
+        `deprecated 'Use ISSLOCSPStapling....'`
+      - API reference and V2 design doc now record these mirrors as compiler-deprecated
+      - intentional residual tests now explicitly quarantine the deprecation warnings
+
+- update source/docs/tests:
+  - `src/fafafa.ssl.base.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/INTERFACE_DESIGN_V2.md`
+  - `tests/mbedtls/test_mbedtls_ocsp_capability.pas`
+  - `tests/openssl/test_ocsp_connection_verification_regression.pas`
+  - `tests/test_openssl_connection_ocsp_storectx_issuer_contract.pas`
+  - `tests/test_wolfssl_ocsp_stapling_contract.pas`
+  - `tests/scripts/test_isslocspstapling_residual_classification_contract.sh`
+  - change:
+    - moved OCSP core mirrors into compiler-deprecated status
+    - aligned active docs / design docs with the stronger source truth
+    - preserved the 4-file intentional direct-core OCSP residual set while making the warning quarantine explicit
+
+- `bash tests/scripts/test_isslocspstapling_residual_classification_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - first failure was not a production regression
+    - it proved the old residual contract itself still pinned the pre-deprecation wording
+    - after updating the contract text, the residual allowlist returned to green under the stronger compiler-deprecated truth
+
+- `bash tests/scripts/test_isslocspstapling_active_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - active docs still prefer `ISSLOCSPStapling` owner-path guidance after the compiler-deprecation tightening
+
+- `mkdir -p tmp/test_isslocspstapling_mbedtls_units tmp/test_isslocspstapling_mbedtls_bin && fpc -B -Fu./src -Fu./tests -Fu./examples -FUtmp/test_isslocspstapling_mbedtls_units -FEtmp/test_isslocspstapling_mbedtls_bin -otmp/test_isslocspstapling_mbedtls_bin/test_mbedtls_ocsp_capability tests/mbedtls/test_mbedtls_ocsp_capability.pas`
+  - result: FAIL -> PASS
+  - summary:
+    - first compile failure was environmental, not caused by the deprecation batch:
+      - missing unit search path for `fafafa.examples.tcp`
+    - after adding `-Fu./examples`, the test compiled successfully
+
+- `mkdir -p tmp/test_isslocspstapling_wolfssl_units tmp/test_isslocspstapling_wolfssl_bin && fpc -B -Fu./src -Fu./tests -FUtmp/test_isslocspstapling_wolfssl_units -FEtmp/test_isslocspstapling_wolfssl_bin -otmp/test_isslocspstapling_wolfssl_bin/test_wolfssl_ocsp_stapling_contract tests/test_wolfssl_ocsp_stapling_contract.pas`
+  - result: PASS
+  - summary:
+    - WolfSSL intentional direct-core OCSP residual still compiles cleanly under the new deprecation status
+
+- `mkdir -p tmp/test_isslocspstapling_storectx_units tmp/test_isslocspstapling_storectx_bin && fpc -B -Fu./src -Fu./tests -FUtmp/test_isslocspstapling_storectx_units -FEtmp/test_isslocspstapling_storectx_bin -otmp/test_isslocspstapling_storectx_bin/test_openssl_connection_ocsp_storectx_issuer_contract tests/test_openssl_connection_ocsp_storectx_issuer_contract.pas`
+  - result: PASS
+  - summary:
+    - OpenSSL storectx issuer fail-closed residual still compiles cleanly under the new deprecation status
+
+- `mkdir -p tmp/test_isslocspstapling_openssl_reg_units tmp/test_isslocspstapling_openssl_reg_bin && fpc -B -Fu./src -Fu./tests -FUtmp/test_isslocspstapling_openssl_reg_units -FEtmp/test_isslocspstapling_openssl_reg_bin -otmp/test_isslocspstapling_openssl_reg_bin/test_ocsp_connection_verification_regression tests/openssl/test_ocsp_connection_verification_regression.pas`
+  - result: FAIL -> PASS
+  - summary:
+    - first compile failure exposed a verification-script bug, not a production regression:
+      - `A POP without a preceding PUSH`
+      - caused by placing Pascal warning directives across an `if ... Exit` path
+    - after splitting the deprecation-warning quarantine into two linear `PUSH/POP` regions,
+      the OpenSSL regression test compiled successfully
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - the ISSLOCSPStapling compiler-deprecation batch is whitespace-clean
+
 ### Capability Support-Level Source Normalization
 
 - `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`

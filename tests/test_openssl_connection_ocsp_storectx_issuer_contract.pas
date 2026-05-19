@@ -466,7 +466,9 @@ begin
     LVerified := True;
     LDetail := '';
     try
+      {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
       LVerified := LConn.IsOCSPResponseVerified;
+      {$POP}
     except
       on E: Exception do
       begin
