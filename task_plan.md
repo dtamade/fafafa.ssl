@@ -4232,3 +4232,38 @@
      - 继续审查：
        - 其它 guide/reference 是否还残留相同的“历史快照混入当前正文 truth”问题
        - 尤其优先看仍保留 phase 完成度 / 性能基准截图 / 通过率段落的文档
+91. `PKCS7 guide status/performance truth` 已完成 focused 收口，并应作为当前 PKCS7 specialized guide 的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-pkcs7-guide-status-performance-truth.md`
+   - 当前已确认的真实 drift：
+     - `docs/guides/PKCS7_USER_GUIDE.md`
+       - 仍把：
+         - `Production Ready (100% 测试通过)`
+         - 固定 `2 ms` 签名/加密/解密数字
+         - 固定 `500 ops/s`
+         - 固定 `158/158`
+         直接写成当前正文 truth
+       - 同时没有交代：
+         - 当前指南只覆盖 `OpenSSL` backend PKCS7 surface
+         - 当前 public 入口既有 helper，也有 raw API
+         - `PKCS7` 当前没有一对一 capability 字段
+   - 当前最小正确修法已落地：
+     - 不改生产实现
+     - 只把 `PKCS7_USER_GUIDE` 重新锚回当前 public/source truth：
+       - 明确 `OpenSSL` backend raw API + helper surface
+       - 明确 `SignData` / `VerifySignedData` / `EncryptData` / `DecryptData`
+       - 明确 `LoadPKCS7Functions` + `osmPKCS7` + focused tests 的支持判定口径
+       - 保留 BIO ownership 规则
+       - 用“验证入口 + 成功标准 + 以当前运行结果为准”替换固定状态/性能/通过率快照
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_pkcs7_guide_status_performance_truth_contract.sh`
+     - `bash tests/scripts/test_pkcs7_guide_status_performance_truth_contract.sh`
+     - `npx prettier --write docs/guides/PKCS7_USER_GUIDE.md`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 优先继续审查高入口 truth drift 页面：
+       - `docs/guides/WINSSL_USER_GUIDE.md`
+       - `docs/guides/QUICKSTART_30SEC.md`
+       - `docs/guides/5_MINUTE_QUICKSTART.md`
+       - `docs/reference/ARCHITECTURE.md`
+     - 性能类文档如 `PERFORMANCE_GUIDE` / `PERFORMANCE_OPTIMIZATION_GUIDE` 暂排在这些高入口页之后

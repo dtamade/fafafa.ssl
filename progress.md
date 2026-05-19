@@ -11978,3 +11978,85 @@
     - first check caught trailing whitespace in the CMS guide version/update footer
     - GREEN after removing the markdown trailing spaces:
       - current specialized-guide snapshot cleanup batch has no whitespace or patch-format issues
+
+### PKCS7 Guide Status/Performance Truth
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - batch started from a clean `master...origin/master` worktree
+
+- `rg -n "100%|158/158|2 ms|500 ops/s|Production Ready|状态|性能|测试覆盖" docs/guides/PKCS7_USER_GUIDE.md`
+  - result: PASS
+  - summary:
+    - static scan confirmed `PKCS7_USER_GUIDE.md` still embedded fixed status/performance/test snapshots as current guide truth
+
+- `rg -n "PKCS7|LoadPKCS7Functions|模块加载状态|direct capability|无直接字段|测试结果" docs/reference/P2_MINIMUM_API_CAPABILITY_MATRIX.md tests/certificate tests`
+  - result: PASS
+  - summary:
+    - reference truth already existed for the PKCS7 batch:
+      - no direct capability field
+      - support depends on `LoadPKCS7Functions`
+      - module-loaded truth uses `osmPKCS7`
+      - current support is evidenced through focused tests
+
+- `rg -n "CreatePKCS7SignedData|VerifyPKCS7SignedData|EncryptData|DecryptData|LoadPKCS7Functions" src/fafafa.ssl.openssl.api.pkcs.pas src/fafafa.ssl.openssl.api.pkcs7.pas tests`
+  - result: PASS
+  - summary:
+    - source audit confirmed the current public PKCS7 surface is not only raw `PKCS7_sign` / `PKCS7_encrypt`
+    - published helper entrypoints also exist in `fafafa.ssl.openssl.api.pkcs7`:
+      - `SignData`
+      - `VerifySignedData`
+      - `EncryptData`
+      - `DecryptData`
+
+- add `docs/plans/2026-05-19-pkcs7-guide-status-performance-truth.md`
+  - change:
+    - recorded the bounded docs-only plan for PKCS7 guide status/performance truth cleanup
+
+- add `tests/scripts/test_pkcs7_guide_status_performance_truth_contract.sh`
+  - change:
+    - added a focused shell contract that guards:
+      - presence of current backend-surface boundary wording
+      - presence of no-direct-capability-field wording
+      - presence of helper entrypoint wording
+      - absence of hardcoded `Production Ready`, `100%`, `158/158`, `2 ms`, `500 ops/s`
+
+- update docs:
+  - `docs/guides/PKCS7_USER_GUIDE.md`
+  - change:
+    - rewrote the guide to state the current `OpenSSL` backend scope
+    - added helper-vs-raw entrypoint guidance
+    - documented the current verification files and success criteria
+    - kept the BIO ownership rules
+    - removed fixed status/performance/test-count snapshots
+
+- `bash -n tests/scripts/test_pkcs7_guide_status_performance_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new PKCS7 guide truth contract syntax is valid
+
+- `bash tests/scripts/test_pkcs7_guide_status_performance_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - PKCS7 guide no longer presents historical status/performance snapshots as current truth
+
+- `npx prettier --write docs/guides/PKCS7_USER_GUIDE.md`
+  - result: PASS
+  - summary:
+    - PKCS7 guide formatting remains stable
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current PKCS7 guide truth batch has no whitespace or patch-format issues
+
+- `rg -n "Production Ready|100%|30/30|预期输出|2 ms|500 ops/s|完成度|完成总结|通过率|总测试数" docs/guides/WINSSL_USER_GUIDE.md docs/guides/5_MINUTE_QUICKSTART.md docs/guides/QUICKSTART_30SEC.md docs/reference/ARCHITECTURE.md docs/guides/PERFORMANCE_GUIDE.md docs/guides/PERFORMANCE_OPTIMIZATION_GUIDE.md`
+  - result: PASS
+  - summary:
+    - next residual high-entry truth drift has been narrowed to:
+      - `WINSSL_USER_GUIDE.md`
+      - `QUICKSTART_30SEC.md`
+      - `5_MINUTE_QUICKSTART.md`
+      - `ARCHITECTURE.md`
+    - performance-doc cleanup still exists, but remains lower priority than the high-entry pages above

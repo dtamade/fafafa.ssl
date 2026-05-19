@@ -5818,3 +5818,47 @@
     - guide 直接示范错 API
     - guide 把历史统计快照当 current truth
   - 后面继续推进时，就可以更系统地扫描剩余 specialized guides / performance docs / historical pages
+
+- 顺着 specialized guides 继续往下扫时，又确认了 `PKCS7_USER_GUIDE.md` 里还有一类高入口 drift：
+  - 它不是 helper/API 假路径
+  - 也不只是 `预期输出`
+  - 而是直接把固定状态、固定性能、固定通过率写成当前正文结论：
+    - `Production Ready`
+    - `100%`
+    - `158/158`
+    - 固定 `2 ms`
+    - 固定 `500 ops/s`
+
+- 这类 drift 的危险性在于：
+  - 调用方会把某次历史跑数当作长期 capability/status truth
+  - 甚至误以为 PKCS7 已经有某种稳定“完成度字段”或发布承诺
+  - 但当前 source/reference 真相并不是这样
+
+- 这批收口后，PKCS7 这条线的稳定结论更清楚了：
+  - `PKCS7_USER_GUIDE` 当前应该明确只覆盖 `OpenSSL` backend surface
+  - 当前 public 入口不只是 raw `PKCS7_sign` 这组函数
+  - 还包括同单元里已经发布的 helper：
+    - `SignData`
+    - `VerifySignedData`
+    - `EncryptData`
+    - `DecryptData`
+
+- 同时，`PKCS7` 当前能力判断也必须继续和 matrix truth 对齐：
+  - 它没有一对一 capability 字段
+  - 正确口径是：
+    - `LoadPKCS7Functions`
+    - 模块加载状态 `osmPKCS7`
+    - focused tests
+
+- 这批对总体路线图也有帮助：
+  - 我们现在已经连续收掉三类文档回漂源：
+    - guide 直接示范不存在的 API
+    - guide 把历史测试统计快照写成 current truth
+    - guide 把固定性能/状态结论写成 current truth
+  - 所以下一步优先级继续放在高入口页是对的，不需要回头重扫已经闭合的 capability/source 线
+
+- 新一轮 residual scan 也已经把下一队列收窄了：
+  - `WINSSL_USER_GUIDE.md` 还残留固定运行数据表述
+  - `QUICKSTART_30SEC.md` / `5_MINUTE_QUICKSTART.md` 还残留 captured `预期输出`
+  - `ARCHITECTURE.md` 还残留阶段完成度口径
+  - `PERFORMANCE_GUIDE` / `PERFORMANCE_OPTIMIZATION_GUIDE` 还有 phase/baseline 类旧叙事，但优先级低于前面的高入口页
