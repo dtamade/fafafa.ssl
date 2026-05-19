@@ -7084,3 +7084,54 @@
        - `ISSLConnection`
        - `TSSLConfig`
        - `ISSLServerConnection`
+107. `WinSSL platform support doc truth alignment` 这批现在应作为把 `Windows 7 SP1 / 1903+` 平台口径完全收回到 source truth 的最新收口批次保留：
+   - 新 plan：
+     - `docs/plans/2026-05-20-winssl-platform-support-doc-truth-alignment.md`
+   - 当前 source truth：
+     - `src/fafafa.ssl.winssl.lib.pas`
+       当前明确：
+       - `Initialize`: `Windows Vista+`
+       - `TLS 1.1 / 1.2`: `Windows 7+`
+       - `TLS 1.3`: `Windows 10 Build 18362+`
+   - 当前 active-doc drift：
+     - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+       之前仍把：
+       - `Windows 7 SP1`
+         写成：
+         - `⚠️ 部分 | 需更新`
+       - `Windows Server 2019`
+         写成：
+         - `TLS 1.3 = ⚠️`
+     - `docs/PLATFORM_SUPPORT.md`
+       之前仍写：
+       - `Windows 10 20348+ 或 Windows 11`
+     - `docs/ZERO_DEPENDENCY_DEPLOYMENT.md`
+       之前仍按：
+       - `20348`
+         切 Windows 10 的 TLS 1.3 门槛
+   - 当前最小修正：
+     - 把 WinSSL dedicated matrix 收紧为：
+       - `Windows 7 SP1 = ✅ 支持 / TLS 1.0/1.1/1.2`
+       - `Windows Server 2019 = ✅ 支持 / TLS 1.2`
+     - 把活跃文档里的 `20348+`
+       统一改回：
+       - `18362`
+       - `Windows 10 1903+`
+   - 当前 focused proof 已覆盖：
+     - `bash -n tests/scripts/test_winssl_platform_support_doc_truth_contract.sh`
+     - `bash tests/scripts/test_winssl_platform_support_doc_truth_contract.sh`
+     - `git diff --check`
+   - 当前外部流程状态：
+     - GitHub Actions `CI`
+       run `26131189318`
+       已 `success`
+     - GitHub Actions `WinSSL Runtime Gate`
+       run `26130501368`
+       已 `success`
+   - 当前路线图进度判断：
+     - 当前主要 WinSSL 平台支持口径 drift 已收口
+     - 近期最高价值的 residual doc-truth 队列已进一步缩短
+     - 下一步默认应切回更大的 completeness 主线：
+       - `ISSLConnection`
+       - `TSSLConfig`
+       - `ISSLServerConnection`

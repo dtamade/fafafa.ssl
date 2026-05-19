@@ -15551,3 +15551,71 @@
       - Windows runtime automation closed
       - main Linux/FreePascal CI green
       - next highest-value residual = `WinSSL Windows 7 SP1` wording
+
+### WinSSL Platform Support Doc Truth Alignment
+
+- add `docs/plans/2026-05-20-winssl-platform-support-doc-truth-alignment.md`
+  - change:
+    - define the bounded doc-truth closeout for active WinSSL platform-support
+      wording
+    - explicitly scope the truth to:
+      - `Vista+` initialize baseline
+      - `Windows 7+` for TLS 1.1 / 1.2
+      - `Windows 10 1903+` for TLS 1.3
+
+- add `tests/scripts/test_winssl_platform_support_doc_truth_contract.sh`
+  - change:
+    - add a focused shell contract that freezes:
+      - WinSSL source version gates
+      - the dedicated WinSSL platform matrix rows
+      - platform-support guidance wording
+      - zero-dependency deployment Windows version guidance
+
+- `bash -n tests/scripts/test_winssl_platform_support_doc_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_platform_support_doc_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first failed because active docs still described:
+      - `Windows 7 SP1` as partial / update-needed
+      - `Windows Server 2019` TLS 1.3 as uncertain
+      - `Windows 10 TLS 1.3` with the stale `20348+` gate
+    - current source already proved the narrower truth:
+      - `Vista+` initialize baseline
+      - `Windows 7+` for TLS 1.1 / 1.2
+      - `Windows 10 1903+` for TLS 1.3
+    - after tightening the active docs, the focused contract turned green
+
+- update active docs:
+  - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  - `docs/PLATFORM_SUPPORT.md`
+  - `docs/ZERO_DEPENDENCY_DEPLOYMENT.md`
+  - change:
+    - removed the stale `20348+` TLS 1.3 gate wording
+    - reclassified `Windows 7 SP1` as supported up to TLS 1.2
+    - reclassified `Windows Server 2019` as TLS 1.2 only
+
+- `git diff --check`
+  - result: PASS
+
+- `gh run view 26131189318 --json status,conclusion,jobs,updatedAt,url`
+  - result: PASS
+  - summary:
+    - current `CI` run completed with `conclusion=success`
+    - `Minimal Gate (Linux)` = PASS
+    - `FreePascal TLS 1.3 Completeness` = PASS
+    - `Code Quality (Light)` = PASS
+    - mainline CI stayed green after the previous `MbedTLS Ed25519` closeout
+
+- update planning files:
+  - `task_plan.md`
+  - `findings.md`
+  - `progress.md`
+  - change:
+    - recorded this batch as a WinSSL platform doc-truth closeout
+    - recorded that the next default route should return to the larger
+      completeness cluster:
+      - `ISSLConnection`
+      - `TSSLConfig`
+      - `ISSLServerConnection`

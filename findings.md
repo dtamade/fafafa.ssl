@@ -7789,3 +7789,40 @@
     / `TSSLConfig`
     / `ISSLServerConnection`
     这组更大的 completeness 问题
+124. `WinSSL` 平台支持这条 residual 当前已经可以更明确地定性为：
+  - 不是实现缺口
+  - 而是多份活跃文档里仍残留旧的 `20348+` / `需更新` / `部分支持` 口径
+- `src/fafafa.ssl.winssl.lib.pas`
+  当前 source truth 已经很清楚：
+  - `Initialize`: `Vista+`
+  - `TLS 1.1 / 1.2`: `Windows 7+`
+  - `TLS 1.3`: `Windows 10 Build 18362+`
+- 因而：
+  - `Windows 7 SP1`
+    不应再写成：
+    - `⚠️ 部分`
+    - `需更新`
+  - `Windows Server 2019`
+    也不应再写成：
+    - `TLS 1.3 = ⚠️`
+  - `Windows 10 TLS 1.3`
+    也不应继续按：
+    - `20348+`
+    讲解
+- 这批收口后的路线图判断也更稳定了：
+  - GitHub Actions `CI`
+    run `26131189318`
+    已 `success`
+  - GitHub Actions `WinSSL Runtime Gate`
+    run `26130501368`
+    已 `success`
+  - 所以当前 repo 不再被：
+    - Linux 主线 CI
+    - WinSSL Windows runtime automation
+    - WinSSL 平台支持表述
+    这几条 control-plane / doc-truth 基线卡住
+- 因而当前默认下一步应正式切回：
+  - `ISSLConnection`
+  - `TSSLConfig`
+  - `ISSLServerConnection`
+  这组更大的 interface-design / backend completeness 主线

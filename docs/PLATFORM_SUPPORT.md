@@ -55,7 +55,7 @@ fafafa.ssl 是一个跨平台的 SSL/TLS 抽象框架,支持多个操作系统�
 
 2. **WinSSL (Schannel)** (零依赖客户端 baseline 已验证)
    - 版本: Windows Vista+
-   - TLS 1.3 支持: Windows 10 20348+ 或 Windows 11
+   - TLS 1.3 支持: Windows 10 1903+ 或 Windows 11
    - 状态: 已纳入当前 `v1.5.0` 已发布主线
    - 会话复用 / Session Ticket: 仍按 experimental public surface 理解
    - 当前 dedicated Windows runtime truth: `observed_reuse=false` / `session_configured=true`

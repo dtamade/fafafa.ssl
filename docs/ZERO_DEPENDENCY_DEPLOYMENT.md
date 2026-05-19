@@ -501,14 +501,14 @@ MyApp_Portable.7z (约 250 KB)
 |-------------|---------|---------|---------|---------|
 | Windows 7 SP1 | ✅ | ✅ | ✅ | ❌ |
 | Windows 8.1 | ✅ | ✅ | ✅ | ❌ |
-| Windows 10 (< 20348) | ✅ | ✅ | ✅ | ❌ |
-| Windows 10 (≥ 20348) | ✅ | ✅ | ✅ | ✅ |
+| Windows 10 (< 18362) | ✅ | ✅ | ✅ | ❌ |
+| Windows 10 (≥ 18362) | ✅ | ✅ | ✅ | ✅ |
 | Windows 11 | ✅ | ✅ | ✅ | ✅ |
 | Windows Server 2012+ | ✅ | ✅ | ✅ | ⚠️ |
 
 **建议**:
 - 目标 TLS 1.2（所有 Windows 7+ 支持）
-- TLS 1.3 需要 Windows 10 20348+ 或 Windows 11
+- TLS 1.3 需要 Windows 10 1903+ 或 Windows 11
 
 ---
 
@@ -1046,7 +1046,7 @@ end;
 **A**: WinSSL 基于 Schannel，支持：
 - ✅ Windows Vista / Server 2008+（基本支持）
 - ✅ Windows 7 / Server 2008 R2+（TLS 1.0/1.1/1.2）
-- ✅ Windows 10 (≥ 20348) / Server 2022+（TLS 1.3）
+- ✅ Windows 10 (≥ 18362) / Server 2022+（TLS 1.3）
 - ✅ Windows 11（完整 TLS 1.3）
 
 **不支持**:

@@ -138,9 +138,9 @@ Ctx := TSSLContextBuilder.Create
 | Windows 10 1903+    | ✅ 完整  | ✅      | 推荐    |
 | Windows 10 1809-    | ✅ 支持  | ❌      | TLS 1.2 |
 | Windows 8.1         | ✅ 支持  | ❌      | TLS 1.2 |
-| Windows 7 SP1       | ⚠️ 部分  | ❌      | 需更新  |
+| Windows 7 SP1       | ✅ 支持  | ❌      | TLS 1.0/1.1/1.2 |
 | Windows Server 2022 | ✅ 完整  | ✅      | 推荐    |
-| Windows Server 2019 | ✅ 支持  | ⚠️      | 需更新  |
+| Windows Server 2019 | ✅ 支持  | ❌      | TLS 1.2 |
 | Windows Server 2016 | ✅ 支持  | ❌      | TLS 1.2 |
 
 ## 使用示例
