@@ -9049,3 +9049,54 @@
   - result: PASS
   - summary:
     - current hardware-key capability truth batch has no whitespace or patch-format issues
+
+### OpenSSL PKCS#11 Capability Runtime Truth
+
+- add `docs/plans/2026-05-19-openssl-pkcs11-capability-runtime-truth.md`
+  - purpose:
+    - record the bounded batch that tightens OpenSSL `SupportsPKCS11` from unconditional truth to runtime-readiness truth
+
+- update `tests/openssl/test_openssl_features.pas`
+  - change:
+    - add `TestPKCS11CapabilityMatrixRuntimeDriftContract`
+    - prove that:
+      - OpenSSL published PKCS#11 capability must match `TPKCS11BackendFactory.IsBackendAvailable(btAuto)`
+      - capability must drop back to `False` when neither Provider nor ENGINE runtime surface is ready
+
+- `mkdir -p tmp/test_openssl_features_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_openssl_features_units -FEtmp/test_openssl_features_units -otmp/test_openssl_features_units/test_openssl_features tests/openssl/test_openssl_features.pas && ./tmp/test_openssl_features_units/test_openssl_features`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `PKCS#11 capability must match PKCS#11 backend auto-detection readiness`
+    - runtime proof tightened further by temporarily dropping:
+      - `OSSL_PROVIDER_load`
+      - `OSSL_STORE_open`
+      - `OSSL_STORE_expect`
+      - `ENGINE_by_id`
+      - `ENGINE_init`
+      - `ENGINE_load_private_key`
+    - GREEN after fix:
+      - `PKCS#11 capability matrix runtime drift contract verified`
+      - focused OpenSSL feature suite returned `All tests passed`
+
+- update `src/fafafa.ssl.openssl.backed.pas`
+  - change:
+    - import `fafafa.ssl.pkcs11.backend`
+    - compute `LPKCS11Ready := TPKCS11BackendFactory.IsBackendAvailable(btAuto)`
+    - publish `Result.SupportsPKCS11 := LPKCS11Ready`
+    - stop treating the mere existence of a shipped loader path as unconditional runtime capability truth
+
+- update `docs/BACKEND_CAPABILITY_MATRIX.md`
+  - change:
+    - restate OpenSSL PKCS#11 row as runtime-readiness-based support
+    - document that capability truth follows Provider / ENGINE backend readiness
+
+- `python3 scripts/compile_all_modules.py`
+  - result: PASS
+  - summary:
+    - session `37481` completed with `187/187` core modules compiled successfully
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current OpenSSL PKCS#11 capability runtime-truth batch has no whitespace or patch-format issues

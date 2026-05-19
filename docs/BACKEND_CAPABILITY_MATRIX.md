@@ -273,13 +273,20 @@ if not Supports(Ctx, ISSLEarlyDataContext) then
 
 ### OpenSSL 后端
 
-**状态**: ✅ 完整支持
+**状态**: ✅ 支持（依赖 Provider / ENGINE runtime surface readiness）
 
 **功能**:
 
 - ✅ 从 PKCS#11 令牌加载私钥
 - ✅ 支持 PIN 保护
 - ✅ URI 格式
+
+**说明**:
+
+- 当前 capability truth 跟随 `TPKCS11BackendFactory.IsBackendAvailable(btAuto)`
+- 也就是说：
+  - 仓库里仍有 shipped PKCS#11 loader path
+  - 但若当前 OpenSSL 运行时缺少 Provider / ENGINE 必需 surface，`SupportsPKCS11` 会降为 `False`
 
 **示例**:
 

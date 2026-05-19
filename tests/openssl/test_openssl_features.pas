@@ -16,10 +16,14 @@ uses
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.ec,
   fafafa.ssl.openssl.api.ssl,
+  fafafa.ssl.openssl.api.provider,
+  fafafa.ssl.openssl.api.store,
+  fafafa.ssl.openssl.api.engine,
   fafafa.ssl.openssl.api.pkcs12,
   fafafa.ssl.openssl.api.pkcs,
   fafafa.ssl.openssl.api.rsa,
-  fafafa.ssl.openssl.api.consts;
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.pkcs11.backend;
 
 procedure Require(ACondition: Boolean; const AMessage: string);
 begin
@@ -872,6 +876,78 @@ begin
   WriteLn('✅ TPM public capability truth contract verified');
 end;
 
+procedure TestPKCS11CapabilityMatrixRuntimeDriftContract;
+var
+  SSLLib: TOpenSSLLibrary;
+  LOrigProviderLoad: TOSSL_PROVIDER_load;
+  LOrigStoreOpen: TOSSL_STORE_open;
+  LOrigStoreExpect: TOSSL_STORE_expect;
+  LOrigEngineById: TENGINE_by_id;
+  LOrigEngineInit: TENGINE_init;
+  LOrigEngineLoadPrivateKey: TENGINE_load_private_key;
+  LCaps: TSSLBackendCapabilities;
+  LRuntimeReady: Boolean;
+begin
+  WriteLn;
+  WriteLn('Testing PKCS#11 Capability Matrix Runtime Drift Contract');
+  WriteLn('========================================================');
+
+  SSLLib := TOpenSSLLibrary.Create;
+  try
+    if not SSLLib.Initialize then
+    begin
+      WriteLn('Failed to initialize OpenSSL');
+      Exit;
+    end;
+
+    LRuntimeReady := TPKCS11BackendFactory.IsBackendAvailable(btAuto);
+    LCaps := SSLLib.GetCapabilities;
+    Require(LCaps.SupportsPKCS11 = LRuntimeReady,
+      'PKCS#11 capability must match PKCS#11 backend auto-detection readiness');
+  finally
+    SSLLib.Free;
+  end;
+
+  SSLLib := TOpenSSLLibrary.Create;
+  try
+    if not SSLLib.Initialize then
+    begin
+      WriteLn('Failed to initialize OpenSSL');
+      Exit;
+    end;
+
+    LOrigProviderLoad := OSSL_PROVIDER_load;
+    LOrigStoreOpen := OSSL_STORE_open;
+    LOrigStoreExpect := OSSL_STORE_expect;
+    LOrigEngineById := ENGINE_by_id;
+    LOrigEngineInit := ENGINE_init;
+    LOrigEngineLoadPrivateKey := ENGINE_load_private_key;
+
+    OSSL_PROVIDER_load := nil;
+    OSSL_STORE_open := nil;
+    OSSL_STORE_expect := nil;
+    ENGINE_by_id := nil;
+    ENGINE_init := nil;
+    ENGINE_load_private_key := nil;
+    try
+      LCaps := SSLLib.GetCapabilities;
+      Require(not LCaps.SupportsPKCS11,
+        'PKCS#11 capability must stop claiming supported when neither Provider nor ENGINE backend is runtime-ready');
+    finally
+      OSSL_PROVIDER_load := LOrigProviderLoad;
+      OSSL_STORE_open := LOrigStoreOpen;
+      OSSL_STORE_expect := LOrigStoreExpect;
+      ENGINE_by_id := LOrigEngineById;
+      ENGINE_init := LOrigEngineInit;
+      ENGINE_load_private_key := LOrigEngineLoadPrivateKey;
+    end;
+
+    WriteLn('✅ PKCS#11 capability matrix runtime drift contract verified');
+  finally
+    SSLLib.Free;
+  end;
+end;
+
 procedure TestChaChaPolyCapabilityMatrixRuntimeDriftContract;
 var
   SSLLib: TOpenSSLLibrary;
@@ -1532,6 +1608,7 @@ begin
     TestCertificateTransparencyCapabilityMatrixRuntimeDriftContract;
     TestCertificateTransparencyPublicSurfaceTruthContract;
     TestTPMPublicCapabilityTruthContract;
+    TestPKCS11CapabilityMatrixRuntimeDriftContract;
     TestChaChaPolyCapabilityMatrixRuntimeDriftContract;
     TestPKCS12CapabilityMatrixRuntimeDriftContract;
     TestTLS13CapabilityMatrixPolicyAwareContract;

@@ -4235,3 +4235,41 @@
   - `WinSSL` 不再把平台潜在硬件密钥能力误写成已发布 `PKCS11/TPM` capability
   - 后续若继续审这组字段，默认下一刀应是 `OpenSSL SupportsPKCS11` 是否还需要更细的 runtime-readiness gate
   - 不应再把本轮已收掉的 WinSSL / TPM 假阳性重新拉起
+
+- 顺着这条线继续压，一条更细但同样真实的 capability 漂移也被钉实了：
+  - `OpenSSL` 当前虽然保留了 shipped `PKCS#11` loader path
+  - 但 `src/fafafa.ssl.openssl.backed.pas` 里的 `SupportsPKCS11`
+    之前仍是 unconditional `True`
+  - 这会把“仓库里存在 PKCS#11 bridge”误写成“当前运行时一定具备 Provider/ENGINE backend readiness”
+
+- 这类问题的风险不是文案层面的：
+  - `GetCapabilities` 是 selector / caller / active capability doc 会共同消费的公开 truth
+  - 一旦它把运行时缺失的 Provider/ENGINE surface 仍发布成 capability-positive，
+    后续就会把“加载桥存在”和“backend 真能在当前 runtime 工作”混成一件事
+
+- 这次确认到的更细真相已经足够形成稳定边界：
+  - `TPKCS11BackendFactory.IsBackendAvailable(btAuto)` 已经是现成的 runtime truth source
+  - 它检查的不是 token/slot 业务配置，而是当前 OpenSSL runtime 至少是否具备：
+    - Provider path:
+      - `OSSL_PROVIDER_load`
+      - `OSSL_STORE_open`
+      - `OSSL_STORE_expect`
+    - ENGINE path:
+      - `ENGINE_by_id`
+      - `ENGINE_init`
+      - `ENGINE_load_private_key`
+  - 因而当前最小正确修法不是砍掉 `OpenSSL PKCS#11` capability，
+    而是让 `SupportsPKCS11` 跟随这条现成 readiness truth
+
+- focused RED/GREEN 也把这条边界钉实了：
+  - 新增 runtime contract 首先红在：
+    - `PKCS#11 capability must match PKCS#11 backend auto-detection readiness`
+  - 在临时切掉 Provider / ENGINE 关键 surface 后，同一套测试继续要求：
+    - `PKCS#11 capability must stop claiming supported when neither Provider nor ENGINE backend is runtime-ready`
+  - 回到 runtime-aware 实现后，focused OpenSSL feature suite 重新转绿
+
+- 因而当前 `OpenSSL PKCS#11 capability truth` 这条线已经形成稳定结论：
+  - `OpenSSL` 继续保留已发布的 PKCS#11 public surface
+  - 但 `SupportsPKCS11` 不再是 unconditional `True`
+  - 当前 public capability truth 必须跟随 `TPKCS11BackendFactory.IsBackendAvailable(btAuto)`
+  - 后续若继续深审 capability rows，应优先继续找其它“helper/binding exists 就被误抬成 capability true”的残余点，而不是重开已关闭的 TPM / WinSSL 路线

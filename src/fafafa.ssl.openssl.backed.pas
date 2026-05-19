@@ -143,6 +143,7 @@ uses
   fafafa.ssl.context.config,
   fafafa.ssl.openssl.context,
   fafafa.ssl.openssl.certstore,
+  fafafa.ssl.pkcs11.backend,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.pem,
   fafafa.ssl.factory;
@@ -933,6 +934,7 @@ var
   LDERPrivateKeyReady: Boolean;
   LPKCS8PrivateKeyReady: Boolean;
   LPasswordProtectedKeysReady: Boolean;
+  LPKCS11Ready: Boolean;
 begin
   // P2-2 + v1.2: 返回 OpenSSL 后端完整能力矩阵（带缓存）
 
@@ -970,6 +972,7 @@ begin
     LEncryptedDERPKCS8PrivateKeyReady;
   LPasswordProtectedKeysReady := OpenSSLPasswordProtectedKeySurfaceReady or
     LEncryptedDERPKCS8PrivateKeyReady;
+  LPKCS11Ready := TPKCS11BackendFactory.IsBackendAvailable(btAuto);
 
   // ===== v1.1.0 保留字段（向后兼容）=====
 
@@ -1120,7 +1123,7 @@ begin
   {$ELSE}
   Result.SupportsSystemCertStore := False;
   {$ENDIF}
-  Result.SupportsPKCS11 := True;           // shipped PKCS#11 loader path exists
+  Result.SupportsPKCS11 := LPKCS11Ready;   // shipped loader path exists, but capability must follow backend readiness
   Result.SupportsTPM := False;             // current backend does not publish a TPM public/runtime path
 
   // ----- 安全特性 -----

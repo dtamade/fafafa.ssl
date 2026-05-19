@@ -2828,3 +2828,36 @@
    - 当前批收口后默认下一步应为：
      - 继续找下一条“平台潜在能力 / 低层 helper 可用性被误抬成 public capability truth”的 backend drift
      - 优先复审 `OpenSSL SupportsPKCS11` 是否还需要更细的 runtime-readiness gate，而不是重开已关闭的 TPM / WinSSL hardware-key 假阳性路线
+70. `OpenSSL PKCS#11 capability runtime truth` 已完成 focused 收口，并应作为当前 capability/public-surface 审查的新基线保留：
+   - 新 plan：
+     - `docs/plans/2026-05-19-openssl-pkcs11-capability-runtime-truth.md`
+   - 当前已确认的 route truth：
+     - `src/fafafa.ssl.openssl.context.pas`
+       - 继续保留 shipped `LoadPrivateKeyFromPKCS11(...)` 路径
+     - `src/fafafa.ssl.pkcs11.backend.pas`
+       - `TPKCS11BackendFactory.IsBackendAvailable(btAuto)` 已经提供现成的 runtime readiness truth
+       - 当前 auto truth 由两组 surface 共同决定：
+         - Provider:
+           - `OSSL_PROVIDER_load`
+           - `OSSL_STORE_open`
+           - `OSSL_STORE_expect`
+         - ENGINE:
+           - `ENGINE_by_id`
+           - `ENGINE_init`
+           - `ENGINE_load_private_key`
+     - `src/fafafa.ssl.openssl.backed.pas`
+       - 之前仍把 `SupportsPKCS11` 硬编码成 `True`
+       - 这会把“仓库里有 shipped loader path”误抬成“当前运行时一定具备 PKCS#11 backend readiness”
+   - 当前最小正确修法已落地：
+     - 不新增 PKCS#11 实现
+     - 不改 builder / selector API
+     - 只把 OpenSSL `SupportsPKCS11` 改为跟随：
+       - `TPKCS11BackendFactory.IsBackendAvailable(btAuto)`
+     - 同步把 active capability doc 改成 runtime-readiness 口径
+   - 当前 focused proof 已覆盖：
+     - `mkdir -p tmp/test_openssl_features_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_openssl_features_units -FEtmp/test_openssl_features_units -otmp/test_openssl_features_units/test_openssl_features tests/openssl/test_openssl_features.pas && ./tmp/test_openssl_features_units/test_openssl_features`
+     - `python3 scripts/compile_all_modules.py`
+     - `git diff --check`
+   - 当前批收口后默认下一步应为：
+     - 继续找下一条“低层 binding/helper readiness 被误抬成 public capability truth”的 backend drift
+     - 优先看其它 backend / feature rows 是否还存在“helper exists => capability true”的残余点
