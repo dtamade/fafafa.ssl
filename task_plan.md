@@ -10,6 +10,44 @@
 
 ## Current Status
 
+- [completed] `winssl user guide direct-path classification`
+  当前 focused 目标：
+  - 把 `WINSSL_USER_GUIDE` 中 direct `ISSLConnection` /
+    `CreateConnection(...)` 的使用原因写清楚，
+    避免读者把 WinSSL 入口页里的 backend-facing 示例误解成 generic facade 主路径
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-winssl-user-guide-direct-path-classification.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_winssl_user_guide_direct_path_classification_contract.sh`
+  - 同步更新：
+    - `docs/guides/WINSSL_USER_GUIDE.md`
+  当前预判：
+  - 这页当前 capability / runtime truth 没问题，
+    缺口更像“为什么入口页会直接展示 WinSSL-specific / connection-level path”的解释层
+  当前最终收口证据：
+  - `WINSSL_USER_GUIDE.md` 明确：
+    - direct path 属于 WinSSL-specific / backend-facing path
+    - generic facade 主入口仍是
+      `TSSLContextBuilder` + `TSSLConnector` + `TSSLStream`
+    - SNI 连接级 published surface 的原因被写清楚
+  focused verification 已通过：
+  - `bash -n tests/scripts/test_winssl_user_guide_direct_path_classification_contract.sh`
+  - `bash tests/scripts/test_winssl_user_guide_direct_path_classification_contract.sh`
+  - `bash tests/scripts/test_winssl_quickstart_runtime_truth_contract.sh`
+  - `bash tests/scripts/test_active_direct_context_servername_surface_classification_contract.sh`
+  - `bash tests/scripts/test_winssl_user_guide_performance_truth_contract.sh`
+  - `git diff --check`
+  当前结论：
+  - `WINSSL_USER_GUIDE` 当前并不是 WinSSL capability / runtime truth 出错，
+    而是入口页还需要把 direct `ISSLConnection` 标回 WinSSL-specific / connection-owned path。
+  - 现在 WinSSL 用户入口与 WinSSL quickstart 也回到了同一套主路径/专项路径分层体系。
+  当前下一条真实工作：
+  - 继续扫 remaining active guides / WinSSL 专题页：
+    - 例如 `WINSSL_BEST_PRACTICES` / `PERFORMANCE_PROFILING_GUIDE`
+      这类仍展示 direct `CreateConnection(...)` 的页面，
+      是否也还缺“为什么这里必须走 backend-facing / low-level path”的说明
+
 - [completed] `early-data owner-surface reasoning`
   当前 focused 目标：
   - 把 `EARLY_DATA_GUIDE` 中 direct context/connection owner path 的使用原因写清楚，

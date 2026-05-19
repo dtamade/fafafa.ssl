@@ -101,6 +101,7 @@ MyApp.exe (210 KB)                 ← 仅需这一个文件
 
 WinSSL 与 OpenSSL/WolfSSL/MbedTLS 共享统一的核心 public interface，但具体 published capability 仍以后端的 `ISSLLibrary.GetCapabilities` 为准。
 像 password callback、DER/PKCS8 私钥导入、PKCS#12 helper 范围这类能力，仍然属于 backend-specific published truth。
+这页作为 WinSSL-specific 用户指南，会直接展示 `ISSLConnection` / `CreateConnection(...)` 这类 backend-facing path；如果你只是普通跨后端 HTTPS 客户端，优先使用通用的 `TSSLContextBuilder` + `TSSLConnector` + `TSSLStream`。
 
 ```pascal
 // 核心创建路径保持一致，只需改变库类型
@@ -350,6 +351,8 @@ Ctx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
 Conn := Ctx.CreateConnection(Socket);
 (Conn as ISSLClientConnection).SetServerName('www.example.com');
 ```
+
+这里直接写 `CreateConnection(...)` + `ISSLClientConnection.SetServerName(...)`，是因为 hostname/SNI 的 published surface 挂在连接对象上；如果你不需要直接操作这层 WinSSL-specific path，也可以改用 `TSSLConnector.ConnectSocket(..., 'www.example.com')`。
 
 ### 证书验证
 

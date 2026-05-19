@@ -13998,3 +13998,53 @@
   - result: PASS
   - summary:
     - current early-data owner-surface batch has no whitespace or patch-format issues
+
+### WinSSL User Guide Direct-Path Classification
+
+- add `docs/plans/2026-05-20-winssl-user-guide-direct-path-classification.md`
+  - change:
+    - define the bounded WinSSL user-guide batch for classifying direct connection examples as WinSSL-specific paths
+
+- add `tests/scripts/test_winssl_user_guide_direct_path_classification_contract.sh`
+  - change:
+    - lock that `WINSSL_USER_GUIDE` must explain why it intentionally uses backend-facing direct connection examples
+
+- `bash -n tests/scripts/test_winssl_user_guide_direct_path_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - new WinSSL user-guide direct-path classification contract syntax is valid
+
+- `bash tests/scripts/test_winssl_user_guide_direct_path_classification_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `WINSSL_USER_GUIDE` still showed direct connection examples without explicitly classifying them as WinSSL-specific paths
+    - GREEN after fix:
+      - `WINSSL_USER_GUIDE` now explains that the page intentionally shows backend-facing `ISSLConnection` / `CreateConnection(...)`
+      - `WINSSL_USER_GUIDE` now explains why the SNI example intentionally uses the connection-level published surface
+
+- update `docs/guides/WINSSL_USER_GUIDE.md`
+  - change:
+    - explain that the page is a WinSSL-specific guide and therefore intentionally shows backend-facing direct connection paths
+    - point ordinary cross-backend HTTPS clients back to `TSSLContextBuilder` + `TSSLConnector` + `TSSLStream`
+    - explain that hostname/SNI is published on the connection object and point the higher-level alternative back to `TSSLConnector.ConnectSocket(...)`
+
+- `bash tests/scripts/test_winssl_quickstart_runtime_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - WinSSL quickstart runtime truth remained aligned after the user-guide direct-path note
+
+- `bash tests/scripts/test_active_direct_context_servername_surface_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - active direct-context ServerName classifications remained confined after the user-guide note
+
+- `bash tests/scripts/test_winssl_user_guide_performance_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - WinSSL user-guide performance/runtime truth remained aligned after the direct-path explanation
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current WinSSL user-guide direct-path batch has no whitespace or patch-format issues

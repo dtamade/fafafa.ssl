@@ -6653,3 +6653,28 @@
        在新增 owner-surface 说明之后仍保持绿色
    - 现在新的稳定基线应记为：
      - `EARLY_DATA_GUIDE` 不会再把 early-data owner-surface 示例误读成 generic facade 主路径
+
+112. `WINSSL_USER_GUIDE` 说明了另一种高入口 residual：
+   - 这页的 capability / runtime truth 原本就大体正确
+   - 真正缺的不是 WinSSL runtime 事实修复，而是：
+     - 为什么入口页会直接展示 `ISSLConnection` / `CreateConnection(...)`
+     - 为什么这里的 SNI 示例要落到连接对象上
+     - 以及普通跨后端 HTTPS 客户端的 generic main path 仍是什么
+   - 当前最小正确修法已经压实为：
+     - 在 `统一 API` 段落后明确：
+       - 这页作为 WinSSL-specific 用户指南，会直接展示 backend-facing path
+       - 普通跨后端 HTTPS 客户端仍优先
+         `TSSLContextBuilder` + `TSSLConnector` + `TSSLStream`
+     - 在 `SNI 主机名` 段落后明确：
+       - direct `CreateConnection(...)` +
+         `ISSLClientConnection.SetServerName(...)`
+         是因为 hostname/SNI 的 published surface 挂在连接对象上
+       - 如果不需要直接操作这层 WinSSL-specific path，
+         也可以改用 `TSSLConnector.ConnectSocket(..., host)`
+   - 这批也顺手证明：
+     - `test_winssl_quickstart_runtime_truth_contract.sh`
+     - `test_active_direct_context_servername_surface_classification_contract.sh`
+     - `test_winssl_user_guide_performance_truth_contract.sh`
+     在新增 direct-path 解释之后仍保持绿色
+   - 现在新的稳定基线应记为：
+     - `WINSSL_USER_GUIDE` 不会再把 WinSSL backend-facing 示例误读成 generic facade 主入口
