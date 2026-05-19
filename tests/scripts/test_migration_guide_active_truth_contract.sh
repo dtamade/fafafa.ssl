@@ -57,6 +57,8 @@ require_fixed "$migration_guide" '`TSSLEnterpriseConfig` 当前 helper 名称是
   "MIGRATION_GUIDE must use current WinSSL enterprise helper names"
 require_fixed "$migration_guide" '`GetFriendlyErrorMessage(...)` / `GetOpenSSLErrorCategory(...)` 当前来自 `fafafa.ssl.openssl.api.err`，属于 OpenSSL-specific low-level helper，不是通用 public facade API。' \
   "MIGRATION_GUIDE must bound OpenSSL low-level helper scope"
+require_fixed "$migration_guide" "LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);" \
+  "MIGRATION_GUIDE low-level helper example must use the current library entrypoint"
 
 require_absent "$migration_guide" "> **版本**: v0.8" \
   "MIGRATION_GUIDE must stop advertising stale v0.8 as current version"
@@ -72,5 +74,7 @@ require_absent "$migration_guide" "GetGroupPolicies" \
   "MIGRATION_GUIDE must stop using stale enterprise helper name GetGroupPolicies"
 require_absent "$migration_guide" "CreateOpenSSLLibrary;" \
   "MIGRATION_GUIDE must stop promoting backend-specific CreateOpenSSLLibrary in active migration examples"
+require_absent "$migration_guide" "LLib := TSSLFactory.GetLibrary(sslOpenSSL);" \
+  "MIGRATION_GUIDE low-level helper example must stop using stale GetLibrary entrypoint"
 
 echo "[PASS] migration guide active truth contract passed"

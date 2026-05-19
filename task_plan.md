@@ -10,6 +10,26 @@
 
 ## Current Status
 
+- [completed] Migration guide low-level helper entrypoint truth 已完成 focused 收口：
+  - 新增计划：
+    - `docs/plans/2026-05-19-migration-guide-lowlevel-helper-entrypoint-truth.md`
+  - 收紧 existing contract：
+    - `tests/scripts/test_migration_guide_active_truth_contract.sh`
+  - 当前已修正的活跃文档：
+    - `docs/guides/MIGRATION_GUIDE.md`
+  - 当前已收掉的真问题：
+    - OpenSSL low-level helper 片段不再继续使用旧：
+      - `TSSLFactory.GetLibrary(...)`
+    - 迁移指南现在统一回到：
+      - `TSSLFactory.GetLibraryInstance(...)`
+      即使是在 backend-specific low-level helper 语境里也不再回流旧工厂入口
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_migration_guide_active_truth_contract.sh`
+    - `bash tests/scripts/test_migration_guide_active_truth_contract.sh`
+    - `git diff --check`
+  - 当前结论：
+    - 这批修掉的是 migration guide 里的单点旧工厂调用残余，不是新的 runtime 缺口
+    - 后续继续扫 migration / specialized docs 时，应优先找这种已缩到单个示例片段的旧入口残留
 - [completed] Security best practices pinning helper truth 已完成 focused 收口：
   - 新增计划：
     - `docs/plans/2026-05-19-security-best-practices-pinning-helper-truth.md`

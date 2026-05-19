@@ -2,6 +2,45 @@
 
 ## 2026-05-19
 
+### Migration Guide Low-Level Helper Entrypoint Truth
+
+- add `docs/plans/2026-05-19-migration-guide-lowlevel-helper-entrypoint-truth.md`
+  - change:
+    - define the bounded docs batch for the remaining old factory call inside the migration guide low-level helper example
+
+- update `tests/scripts/test_migration_guide_active_truth_contract.sh`
+  - change:
+    - extend the existing migration-guide truth contract to also lock:
+      - the OpenSSL low-level helper example uses `TSSLFactory.GetLibraryInstance(...)`
+      - the example no longer falls back to `TSSLFactory.GetLibrary(...)`
+
+- read-only evidence triage
+  - summary:
+    - active-doc scan had already narrowed the remaining stale public helper residue down to a single `MIGRATION_GUIDE` line
+    - source/reference truth remained:
+      - `TSSLFactory.GetLibraryInstance(...)` is the current public entrypoint
+      - `GetFriendlyErrorMessage(...)` / `GetOpenSSLErrorCategory(...)` are still OpenSSL-specific low-level helpers
+    - the real remaining problem was just that the low-level helper example still mixed in the old factory call
+
+- `bash -n tests/scripts/test_migration_guide_active_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - tightened migration-guide contract syntax remains valid
+
+- `bash tests/scripts/test_migration_guide_active_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - the focused fix kept the whole migration-guide truth contract green while tightening the low-level helper entrypoint rule
+
+- update `docs/guides/MIGRATION_GUIDE.md`
+  - change:
+    - replace the last remaining `TSSLFactory.GetLibrary(sslOpenSSL)` occurrence with `TSSLFactory.GetLibraryInstance(sslOpenSSL)` inside the OpenSSL low-level helper example
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - migration-guide low-level-helper batch is whitespace-clean after final doc/log sync
+
 ### Security Best Practices Pinning Helper Truth
 
 - add `docs/plans/2026-05-19-security-best-practices-pinning-helper-truth.md`

@@ -255,7 +255,7 @@ var
   LLib: ISSLLibrary;
   LError: Cardinal;
 begin
-  LLib := TSSLFactory.GetLibrary(sslOpenSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   LError := LLib.GetLastError;
   WriteLn(GetFriendlyErrorMessage(LError));
   WriteLn(GetOpenSSLErrorCategory(LError));

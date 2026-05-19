@@ -2,6 +2,40 @@
 
 ## 2026-05-19
 
+- 在前面连续收掉 specialized guides 的旧 helper 名之后，active docs 扫描结果已经明显收窄：
+  - 当前只剩 `docs/guides/MIGRATION_GUIDE.md`
+    里 OpenSSL low-level helper 片段还保留了一处：
+    - `TSSLFactory.GetLibrary(sslOpenSSL)`
+
+- 这条残余虽然只是单点，但性质和前几批完全一致：
+  - 它会把读者重新带回旧工厂调用名
+  - 而当前仓库的高入口 public library-entrypoint 已经明确统一为：
+    - `TSSLFactory.GetLibraryInstance(...)`
+
+- 这次的关键点在于：
+  - 该片段是在讲：
+    - `GetFriendlyErrorMessage(...)`
+    - `GetOpenSSLErrorCategory(...)`
+    这种 OpenSSL-specific low-level helper
+  - 但即使示例处在 low-level helper 语境里，也没有必要再回流旧 `GetLibrary(...)`
+  - 换句话说：
+    - “backend-specific low-level helper”
+      不等于
+    - “可以继续使用旧工厂入口”
+
+- 当前最小正确修法因此非常干净：
+  - 不改整份 migration guide 其它段落
+  - 不新开一套并行 contract
+  - 只把现有 `test_migration_guide_active_truth_contract.sh` 收紧一条：
+    - 该 low-level helper 片段必须使用 `GetLibraryInstance(...)`
+    - 并且不再允许 `GetLibrary(...)`
+
+- 这批收口后的新基线应明确保留：
+  - `MIGRATION_GUIDE` 的高入口工厂心智现在进一步完整
+  - active docs 扫描也证明我们已经开始进入：
+    - “每次只剩单个示例残余”的收尾阶段
+  - 后续若继续做文档完整性扫尾，应优先复查：
+    - 还有哪些 backend-specific snippet 虽然大方向对了，但还藏着旧 creator / old factory 名称
 - specialized guide 继续往下扫后，又确认了一条非常典型的“backend scope 虽然大致对了，但具体示例仍然复制即错”的残余：
   - `docs/guides/security-best-practices.md`
     的 certificate pinning 示例还在使用：
