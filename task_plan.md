@@ -10,6 +10,85 @@
 
 ## Current Status
 
+- [completed] `docs readme isslconnection slice truth closeout`
+  当前 focused 目标：
+  - 收掉 `docs/README.md`
+    这个最高可见入口里
+    `ISSLConnection`
+    摘要仍容易被误读成“完整 shipped interface”的问题：
+    - 代码块本质上只是框架集成最小关注面
+    - 但此前没有像
+      `ARCHITECTURE.md`
+      那样显式标注
+    - 现有 convenience-surface contract
+      也还没有覆盖到 README 这一层
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-docs-readme-isslconnection-slice-truth-closeout.md`
+  - 修改文档：
+    - `docs/README.md`
+  - 修改 focused contract：
+    - `tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+  当前实施判断：
+  - 这不是签名错误，
+    而是入口语义漂移：
+    - 文档列的是最小关注面
+    - 读者却容易把它理解成完整 source truth
+  - 所以最小正确修法不是扩写整份 README，
+    而是：
+    - 先让 focused contract
+      把 README 也纳入守护
+    - 拿到预期 RED
+    - 再补最小 classification wording
+  当前 focused proof：
+  - `bash -n tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+    - 首轮：
+      FAIL
+      - 预期 RED：
+        `docs README missing current ISSLConnection slice truth`
+    - 修复后：
+      PASS
+  - `bash tests/scripts/test_facade_main_entry_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前状态：
+  - `docs/README.md`
+    现已明确：
+    - 那段
+      `ISSLConnection`
+      代码块只是面向框架集成的最小关注面
+    - 不是
+      `v1.5.0`
+      当前 shipped source 的完整逐行镜像
+    - 完整 source truth
+      仍应回到
+      `docs/reference/API_REFERENCE.md`
+    - 当前 shipped source
+      还保留：
+      `Close`
+      /
+      `DoHandshake`
+      /
+      `ReadString`
+      /
+      `WriteString`
+      /
+      timeout/blocking
+      等 connection-adjacent / compatibility-core 方法
+  最新收口：
+  - 这批把文档中心首页
+    与
+    `ARCHITECTURE`
+    /
+    `API_REFERENCE`
+    的三层路线重新说成同一张图：
+    - README = 最小关注面入口
+    - architecture/design = conceptual / route truth
+    - API reference = 完整 shipped source truth
+
 - [completed] `mbedtls guide connection surface truth closeout`
   当前 focused 目标：
   - 收掉 `docs/guides/MBEDTLS_USER_GUIDE.md`

@@ -12,6 +12,7 @@ api_doc="docs/reference/API_REFERENCE.md"
 design_doc="docs/reference/INTERFACE_DESIGN_V2.md"
 architecture_doc="docs/ARCHITECTURE.md"
 audit_doc="docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md"
+docs_readme="docs/README.md"
 
 declare -a source_patterns=(
   'function ReadString(out AStr: string): Boolean;'
@@ -80,6 +81,18 @@ declare -a architecture_patterns=(
 for pattern in "${architecture_patterns[@]}"; do
   if ! grep -F -q "$pattern" "$architecture_doc"; then
     echo "[FAIL] architecture doc missing current convenience-surface truth: $pattern"
+    exit 1
+  fi
+done
+
+declare -a docs_readme_patterns=(
+  '下面代码块列的是面向框架集成的最小关注面，不是 `v1.5.0` 当前 shipped source 的完整逐行镜像。'
+  '当前 shipped source 还公开 `Close` / `DoHandshake` / `ReadString` / `WriteString` / timeout/blocking 等 connection-adjacent 或 compatibility-core 方法；完整 source-truth 请看 `docs/reference/API_REFERENCE.md`。'
+)
+
+for pattern in "${docs_readme_patterns[@]}"; do
+  if ! grep -F -q "$pattern" "$docs_readme"; then
+    echo "[FAIL] docs README missing current ISSLConnection slice truth: $pattern"
     exit 1
   fi
 done

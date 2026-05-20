@@ -144,7 +144,8 @@ docs/
 
 ## ISSLConnection 核心接口
 
-框架集成只需关注这些方法：
+下面代码块列的是面向框架集成的最小关注面，不是 `v1.5.0` 当前 shipped source 的完整逐行镜像。
+当前 shipped source 还公开 `Close` / `DoHandshake` / `ReadString` / `WriteString` / timeout/blocking 等 connection-adjacent 或 compatibility-core 方法；完整 source-truth 请看 `docs/reference/API_REFERENCE.md`。
 
 ```pascal
 ISSLConnection = interface

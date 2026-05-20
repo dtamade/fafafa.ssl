@@ -6,6 +6,76 @@
 
 ## 2026-05-21
 
+### Docs README ISSLConnection Slice Truth Closeout
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-docs-readme-isslconnection-slice-truth-closeout.md`
+  - change:
+    - recorded a bounded
+      docs README
+      `ISSLConnection`
+      slice-truth batch
+    - explicitly framed the problem as
+      `landing-doc semantic drift + missing contract coverage`
+
+- update focused contract first:
+  - `tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+  - change:
+    - extended the existing convenience-surface guard to cover
+      `docs/README.md`
+    - required README to say its
+      `ISSLConnection`
+      block is a minimal attention slice,
+      not the full shipped source truth
+
+- existing RED from this batch:
+  - `bash -n tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+    - result: FAIL
+    - summary:
+      - captured the intended RED:
+        `docs README missing current ISSLConnection slice truth`
+      - confirmed the current landing doc still lacked the same
+        conceptual-slice disclaimer
+        already present in
+        `ARCHITECTURE.md`
+
+- update implementation:
+  - `docs/README.md`
+  - change:
+    - added an explicit note that the
+      `ISSLConnection`
+      block is a
+      framework-integration
+      minimal attention slice,
+      not the full
+      `v1.5.0`
+      shipped interface
+    - routed full source truth back to
+      `docs/reference/API_REFERENCE.md`
+    - explicitly recorded that current shipped source still keeps
+      `Close`
+      /
+      `DoHandshake`
+      /
+      `ReadString`
+      /
+      `WriteString`
+      /
+      timeout/blocking
+      and related connection-adjacent / compatibility-core surface
+
+- `bash -n tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+- `bash tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+- `bash tests/scripts/test_facade_main_entry_truth_contract.sh`
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - the convenience-surface classification contract is now green with README coverage
+    - facade/main-entry README truth still holds
+    - patch formatting is clean
+
 ### MbedTLS Guide Connection Surface Truth Closeout
 
 - add focused batch inputs:

@@ -2,6 +2,62 @@
 
 ## 2026-05-21
 
+- `docs/README.md`
+  里的
+  `ISSLConnection`
+  摘要此前虽然没有直接写错签名，
+  但仍存在高价值 active drift：
+  - 它列的是框架集成最小关注面
+  - 却没有显式说明：
+    这不是完整 shipped source truth
+  - 对新读者来说，
+    这会自然滑向
+    “`ISSLConnection` 当前就只有这些方法”
+    的错误心智
+
+- 更关键的是，
+  现有
+  `tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+  此前只守：
+  - `API_REFERENCE`
+  - `INTERFACE_DESIGN_V2`
+  - `ARCHITECTURE`
+  - 设计审计报告
+  但没有守住
+  `docs/README.md`
+  这层最高可见入口
+
+- 因而这批的 workflow 收口点是：
+  - `README` 这类 landing doc
+    即使不是 canonical full reference，
+    也必须被纳入 focused contract
+  - 否则就会再次出现：
+    - canonical docs 已经说清楚
+    - 入口文档却仍在继续发布模糊心智
+
+- 这批收口后的 durable truth 是：
+  - `docs/README.md`
+    里的
+    `ISSLConnection`
+    代码块现在明确只是：
+    - 面向框架集成的最小关注面
+  - 完整 shipped source truth
+    仍以：
+    - `src/fafafa.ssl.base.pas`
+    - `docs/reference/API_REFERENCE.md`
+    为准
+  - `Close`
+    /
+    `DoHandshake`
+    /
+    `ReadString`
+    /
+    `WriteString`
+    /
+    timeout/blocking
+    这类 connection-adjacent / compatibility-core 方法
+    不会再被首页摘要静默“消失”
+
 - `docs/guides/MBEDTLS_USER_GUIDE.md`
   里还残留着一条真实的 active API drift：
   - 示例在
