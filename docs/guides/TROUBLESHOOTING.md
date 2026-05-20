@@ -660,7 +660,7 @@ certmgr.msc
 # 导入根证书到系统存储
 certutil -addstore Root ca-cert.crt
 
-# 或使用代码导入
+# 或把根证书加入当前进程使用的验证 store
 ```
 
 ```pascal
@@ -669,14 +669,21 @@ var
   LCert: ISSLCertificate;
 begin
   LStore := LLib.CreateCertificateStore;
-  LStore.Open(SSL_STORE_ROOT);
+  if not LStore.LoadSystemStore then
+    raise Exception.Create('加载系统证书存储失败');
 
   LCert := LLib.CreateCertificate;
-  LCert.LoadFromFile('ca-cert.crt');
+  if not LCert.LoadFromFile('ca-cert.crt') then
+    raise Exception.Create('加载 CA 证书失败');
 
-  LStore.AddCertificate(LCert);
+  if not LStore.AddCertificate(LCert) then
+    raise Exception.Create('把 CA 证书加入当前验证 store 失败');
 end;
 ```
+
+上面这段只影响当前进程里注入的验证 store；
+如果你需要持久写入 Windows 系统证书存储，继续优先使用
+`certutil` 或 WinSSL 专用 helper。
 
 3. **临时禁用验证（仅用于测试）**
 ```pascal

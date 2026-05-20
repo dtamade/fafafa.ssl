@@ -10767,3 +10767,60 @@
   - active troubleshooting guide
   - representative OpenSSL cert test
   三层终于重新对齐
+
+- 继续沿
+  `ISSLCertificateStore`
+  public truth
+  往下看时，
+  又抓到一条更典型的
+  active-doc drift：
+  `docs/guides/TROUBLESHOOTING.md`
+  里还在把
+  `LStore.Open(SSL_STORE_ROOT);`
+  写进一个
+  `ISSLCertificateStore`
+  变量示例
+
+- 这条 drift
+  的问题不在
+  “WinSSL helper 不该存在”，
+  而在于它把两层 surface
+  混写成一层：
+  - generic public store flow
+  - WinSSL concrete-only helper flow
+  当前 shipped public interface
+  只有：
+  - `LoadFromFile`
+  - `LoadFromPath`
+  - `LoadSystemStore`
+  - `AddCertificate`
+  - `FindBy...`
+  并没有
+  `Open(...)`
+
+- 因此这批最小正确修法
+  不是去补 public `Open(...)`
+  或扩 runtime，
+  而是把活跃 troubleshooting
+  重新写回：
+  - `LoadSystemStore`
+  - `AddCertificate`
+  的 public flow
+  同时明确说明：
+  - 这只是给当前进程里注入的
+    验证 store
+    增加 CA
+  - 若要持久写入 Windows
+    系统证书存储，
+    继续使用
+    `certutil`
+    或 WinSSL
+    专用 helper
+
+- 这类修法的价值在于：
+  它继续把仓库从
+  “接口签名表面完整”
+  推进到
+  “活跃排障文档也不再误教
+  concrete-only 能力
+  是 public contract”

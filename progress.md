@@ -17863,6 +17863,58 @@
   - summary:
     - no whitespace or patch-format drift remains before commit
 
+### Troubleshooting Store Public API Truth
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-20-troubleshooting-store-public-api-truth.md`
+  - `tests/scripts/test_troubleshooting_store_public_api_truth_contract.sh`
+  - change:
+    - recorded the new troubleshooting-store truth-sync batch for active public store guidance
+
+- `rg -n "LStore\\.Open\\(SSL_STORE_ROOT\\)|SSL_STORE_ROOT" docs/guides/TROUBLESHOOTING.md`
+  - result: RED
+  - summary:
+    - active troubleshooting guide still taught concrete
+      `Open(SSL_STORE_ROOT)`
+      usage on an
+      `ISSLCertificateStore`
+      variable
+    - this proved the generic public store flow and WinSSL concrete helper flow were still mixed together in a live guide
+
+- update active truth surfaces:
+  - `docs/guides/TROUBLESHOOTING.md`
+  - change:
+    - replaced the stale
+      `Open(SSL_STORE_ROOT)`
+      snippet with
+      `LoadSystemStore`
+      plus
+      `AddCertificate`
+      public-store flow
+    - clarified that the code path augments the current process verification store,
+      while persistent Windows system-store writes should keep using
+      `certutil`
+      or WinSSL-specific helpers
+
+- `bash -n tests/scripts/test_troubleshooting_store_public_api_truth_contract.sh`
+- `bash tests/scripts/test_troubleshooting_store_public_api_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - focused contract now locks:
+      - `ISSLCertificateStore.LoadSystemStore`
+        as the generic public guide path
+      - absence of
+        `Open(SSL_STORE_ROOT)`
+        and
+        `SSL_STORE_ROOT`
+        in the active troubleshooting snippet
+      - presence of the current-process verification-store boundary note
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains before commit
+
 ### Certificate Public SAN Array Semantics Truth
 
 - add focused batch inputs:

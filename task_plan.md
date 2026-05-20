@@ -10845,3 +10845,99 @@
        public-surface completeness
        查下一条
        活跃 doc/test/example residual
+119. `troubleshooting store public API truth` 这批用于把活跃排障文档里的 `ISSLCertificateStore` 示例重新对齐到当前 public store surface：
+   - 新 plan：
+     - `docs/plans/2026-05-20-troubleshooting-store-public-api-truth.md`
+   - 当前新发现：
+     - `docs/guides/TROUBLESHOOTING.md`
+       里仍有一段：
+       - `LStore := LLib.CreateCertificateStore;`
+       - `LStore.Open(SSL_STORE_ROOT);`
+     - 但当前 shipped
+       `ISSLCertificateStore`
+       公共接口只暴露：
+       - `LoadFromFile`
+       - `LoadFromPath`
+       - `LoadSystemStore`
+       - `AddCertificate`
+       - `FindBy...`
+     - `Open(...)`
+       与
+       `SSL_STORE_ROOT`
+       只是
+       `fafafa.ssl.winssl.certstore`
+       concrete helper，
+       不是 generic public store flow
+   - 当前最小修法：
+     - 保留 OS 工具
+       `certutil`
+       的持久导入建议
+     - 把文档里的代码示例
+       改成：
+       - `LoadSystemStore`
+       - `AddCertificate`
+       这条跨后端 public store flow
+     - 显式补一句语义说明：
+       - 这段代码只影响
+         当前进程里注入的验证 store
+       - 若要持久写入 Windows
+         系统存储，
+         继续使用
+         `certutil`
+         或 WinSSL
+         专用 helper
+     - 新增 focused contract：
+       - `tests/scripts/test_troubleshooting_store_public_api_truth_contract.sh`
+   - 当前 focused proof：
+     - `bash -n tests/scripts/test_troubleshooting_store_public_api_truth_contract.sh`
+     - `bash tests/scripts/test_troubleshooting_store_public_api_truth_contract.sh`
+     - `git diff --check`
+   - 当前最终收口证据：
+     - 首轮 RED：
+       - `TROUBLESHOOTING.md`
+         当前仍命中：
+         - `LStore.Open(SSL_STORE_ROOT);`
+         - `SSL_STORE_ROOT`
+     - 最小修复后：
+       - guide
+         改回
+         `LoadSystemStore`
+         / `AddCertificate`
+         public flow
+       - 并补出：
+         - “只影响当前进程验证 store”
+           这条边界说明
+       - focused shell contract
+         PASS
+   - 当前结论：
+     - 这批把
+       generic public store flow
+       与
+       WinSSL concrete store helper flow
+       在活跃排障文档里重新分层清楚，
+       避免继续传播
+       `Open(SSL_STORE_ROOT)`
+       的错误 public 心智
+   - 当前总路线图进度：
+     - `接口设计`
+       继续从
+       “签名存在”
+       推进到
+       “活跃排障与用法教学也不再混 concrete-only 能力”
+     - `后端实现`
+       本批仍不改 runtime，
+       说明这次 residual
+       依旧落在
+       public surface truth sync
+     - `测试与文档`
+       新增：
+       - focused troubleshooting contract
+       - 活跃 store guide truth sync
+   - 当前批收口后的默认下一步：
+     - 先提交并推送本批
+     - 再继续扫
+       活跃 guide/example/test
+       里是否还有
+       `ISSLCertificateStore`
+       public / concrete
+       混用残留
