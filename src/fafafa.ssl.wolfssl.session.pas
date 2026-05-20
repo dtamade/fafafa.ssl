@@ -17,7 +17,7 @@ unit fafafa.ssl.wolfssl.session;
 interface
 
 uses
-  SysUtils, Classes, DateUtils,
+  SysUtils, Classes, DateUtils, ctypes,
   fafafa.ssl.base,
   fafafa.ssl.wolfssl.base,
   fafafa.ssl.wolfssl.native_handle,
@@ -164,6 +164,82 @@ begin
   end;
 
   Result := True;
+end;
+
+function TryExtractNativeSessionID(ASession: PWOLFSSL_SESSION;
+  out ASessionID: string): Boolean;
+var
+  LIDLen: Cardinal;
+  LIDPtr: PByte;
+  I: Cardinal;
+begin
+  ASessionID := '';
+  if (ASession = nil) or (not Assigned(wolfSSL_SESSION_get_id)) then
+    Exit(False);
+
+  LIDLen := 0;
+  LIDPtr := wolfSSL_SESSION_get_id(ASession, @LIDLen);
+  if (LIDPtr = nil) or (LIDLen = 0) then
+    Exit(False);
+
+  SetLength(ASessionID, LIDLen * 2);
+  for I := 0 to LIDLen - 1 do
+  begin
+    ASessionID[I * 2 + 1] := HEX_DIGITS[(PByte(LIDPtr + I)^ shr 4) and $0F];
+    ASessionID[I * 2 + 2] := HEX_DIGITS[PByte(LIDPtr + I)^ and $0F];
+  end;
+  Result := True;
+end;
+
+function TryExtractNativeSessionCreationTime(ASession: PWOLFSSL_SESSION;
+  out ACreationTime: TDateTime): Boolean;
+var
+  LUnixTime: clong;
+begin
+  ACreationTime := 0;
+  if (ASession = nil) or (not Assigned(wolfSSL_SESSION_get_time)) then
+    Exit(False);
+
+  LUnixTime := wolfSSL_SESSION_get_time(ASession);
+  if LUnixTime <= 0 then
+    Exit(False);
+
+  ACreationTime := UnixToDateTime(LUnixTime);
+  Result := True;
+end;
+
+function TryExtractNativeSessionTimeout(ASession: PWOLFSSL_SESSION;
+  out ATimeout: Integer): Boolean;
+var
+  LTimeout: clong;
+begin
+  ATimeout := 0;
+  if (ASession = nil) or (not Assigned(wolfSSL_SESSION_get_timeout)) then
+    Exit(False);
+
+  LTimeout := wolfSSL_SESSION_get_timeout(ASession);
+  if LTimeout <= 0 then
+    Exit(False);
+
+  ATimeout := LTimeout;
+  Result := True;
+end;
+
+function TryExtractNativeSessionCipherName(ASession: PWOLFSSL_SESSION;
+  out ACipherName: string): Boolean;
+var
+  LName: PAnsiChar;
+begin
+  ACipherName := '';
+  if (ASession = nil) or (not Assigned(wolfSSL_SESSION_CIPHER_get_name)) then
+    Exit(False);
+
+  LName := wolfSSL_SESSION_CIPHER_get_name(ASession);
+  if LName = nil then
+    Exit(False);
+
+  ACipherName := string(LName);
+  Result := ACipherName <> '';
 end;
 
 function DuplicateWolfSSLSessionHandle(ASession: PWOLFSSL_SESSION): PWOLFSSL_SESSION;
@@ -364,18 +440,30 @@ begin
 end;
 
 procedure TWolfSSLSession.ExtractSessionInfo;
+var
+  LSessionID: string;
+  LCreationTime: TDateTime;
+  LTimeout: Integer;
+  LCipherName: string;
 begin
   if FSession = nil then Exit;
 
   // 生成会话 ID
   FSessionID := GenerateSessionID;
   FCreationTime := Now;
+  if TryExtractNativeSessionID(FSession, LSessionID) then
+    FSessionID := LSessionID;
+  if TryExtractNativeSessionCreationTime(FSession, LCreationTime) then
+    FCreationTime := LCreationTime;
+  if TryExtractNativeSessionTimeout(FSession, LTimeout) then
+    FTimeout := LTimeout;
 
   // WolfSSL 会话信息提取需要额外 API
-  // 仅有 session 句柄时无法可靠提取协议与套件
-  // 返回显式 unknown，避免误导性默认值
+  // 当前仍缺稳定 protocol getter；套件可直接读取 session getter。
   FProtocolVersion := sslProtocolUnknown;
   FCipherName := 'unknown';
+  if TryExtractNativeSessionCipherName(FSession, LCipherName) then
+    FCipherName := LCipherName;
 end;
 
 function TWolfSSLSession.GenerateSessionID: string;
@@ -405,6 +493,8 @@ end;
 procedure TWolfSSLSession.SetTimeout(ATimeout: Integer);
 begin
   FTimeout := ATimeout;
+  if (FSession <> nil) and Assigned(wolfSSL_SSL_SESSION_set_timeout) then
+    wolfSSL_SSL_SESSION_set_timeout(FSession, ATimeout);
 end;
 
 function TWolfSSLSession.IsValid: Boolean;
@@ -518,20 +608,23 @@ begin
 
       FSession := LSession;
       FOwnsSession := True;
+      ExtractSessionInfo;
       if LHasEnvelope then
       begin
-        FSessionID := LSessionID;
-        FCreationTime := LCreationTime;
-        FTimeout := LTimeout;
-        FProtocolVersion := LProtocolVersion;
-        FCipherName := LCipherName;
+        if LSessionID <> '' then
+          FSessionID := LSessionID;
+        if LCreationTime > 0 then
+          FCreationTime := LCreationTime;
+        if LTimeout > 0 then
+          FTimeout := LTimeout;
+        if LProtocolVersion <> sslProtocolUnknown then
+          FProtocolVersion := LProtocolVersion;
+        if LCipherName <> '' then
+          FCipherName := LCipherName;
         FSerializedData := Copy(AData);
       end
       else
-      begin
         FSerializedData := Copy(LNativeData);
-        ExtractSessionInfo;
-      end;
       FPeerCertificate := nil;
       Result := True;
     end;

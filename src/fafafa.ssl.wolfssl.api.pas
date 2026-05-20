@@ -125,6 +125,8 @@ type
   // 会话管理 (新增)
   TwolfSSL_get_session = function(ssl: PWOLFSSL): PWOLFSSL_SESSION; cdecl;
   TwolfSSL_set_session = function(ssl: PWOLFSSL; session: PWOLFSSL_SESSION): Integer; cdecl;
+  TwolfSSL_SSL_SESSION_set_timeout = function(session: PWOLFSSL_SESSION; t: clong): clong; cdecl;
+  TwolfSSL_SESSION_set_time = function(session: PWOLFSSL_SESSION; t: clong): clong; cdecl;
   TwolfSSL_SESSION_dup = function(session: PWOLFSSL_SESSION): PWOLFSSL_SESSION; cdecl;
   TwolfSSL_SESSION_free = procedure(session: PWOLFSSL_SESSION); cdecl;
   TwolfSSL_session_reused = function(ssl: PWOLFSSL): Integer; cdecl;
@@ -133,6 +135,10 @@ type
   TwolfSSL_i2d_SSL_SESSION = function(session: PWOLFSSL_SESSION; pp: PPByte): Integer; cdecl;
   TwolfSSL_d2i_SSL_SESSION = function(session: PPWOLFSSL_SESSION; const pp: PPByte; length: Integer): PWOLFSSL_SESSION; cdecl;
   TwolfSSL_SESSION_get_max_early_data = function(session: PWOLFSSL_SESSION): Cardinal; cdecl;
+  TwolfSSL_SESSION_get_timeout = function(const session: PWOLFSSL_SESSION): clong; cdecl;
+  TwolfSSL_SESSION_get_time = function(const session: PWOLFSSL_SESSION): clong; cdecl;
+  TwolfSSL_SESSION_get_id = function(const sess: PWOLFSSL_SESSION; idLen: PCardinal): PByte; cdecl;
+  TwolfSSL_SESSION_CIPHER_get_name = function(const session: PWOLFSSL_SESSION): PAnsiChar; cdecl;
 
   // ALPN 支持 (新增)
   TwolfSSL_UseALPN = function(ssl: PWOLFSSL; const protocol_name_list: PAnsiChar;
@@ -269,6 +275,8 @@ var
   // 会话管理 (新增)
   wolfSSL_get_session: TwolfSSL_get_session = nil;
   wolfSSL_set_session: TwolfSSL_set_session = nil;
+  wolfSSL_SSL_SESSION_set_timeout: TwolfSSL_SSL_SESSION_set_timeout = nil;
+  wolfSSL_SESSION_set_time: TwolfSSL_SESSION_set_time = nil;
   wolfSSL_SESSION_dup: TwolfSSL_SESSION_dup = nil;
   wolfSSL_SESSION_free: TwolfSSL_SESSION_free = nil;
   wolfSSL_session_reused: TwolfSSL_session_reused = nil;
@@ -277,6 +285,10 @@ var
   wolfSSL_i2d_SSL_SESSION: TwolfSSL_i2d_SSL_SESSION = nil;
   wolfSSL_d2i_SSL_SESSION: TwolfSSL_d2i_SSL_SESSION = nil;
   wolfSSL_SESSION_get_max_early_data: TwolfSSL_SESSION_get_max_early_data = nil;
+  wolfSSL_SESSION_get_timeout: TwolfSSL_SESSION_get_timeout = nil;
+  wolfSSL_SESSION_get_time: TwolfSSL_SESSION_get_time = nil;
+  wolfSSL_SESSION_get_id: TwolfSSL_SESSION_get_id = nil;
+  wolfSSL_SESSION_CIPHER_get_name: TwolfSSL_SESSION_CIPHER_get_name = nil;
 
   // ALPN 支持 (新增)
   wolfSSL_UseALPN: TwolfSSL_UseALPN = nil;
@@ -541,6 +553,10 @@ begin
   // 会话管理 (新增)
   wolfSSL_get_session := TwolfSSL_get_session(GetProc('wolfSSL_get_session'));
   wolfSSL_set_session := TwolfSSL_set_session(GetProc('wolfSSL_set_session'));
+  wolfSSL_SSL_SESSION_set_timeout := TwolfSSL_SSL_SESSION_set_timeout(
+    GetProc('wolfSSL_SSL_SESSION_set_timeout'));
+  wolfSSL_SESSION_set_time := TwolfSSL_SESSION_set_time(
+    GetProc('wolfSSL_SESSION_set_time'));
   wolfSSL_SESSION_dup := TwolfSSL_SESSION_dup(GetProc('wolfSSL_SESSION_dup'));
   wolfSSL_SESSION_free := TwolfSSL_SESSION_free(GetProc('wolfSSL_SESSION_free'));
   wolfSSL_session_reused := TwolfSSL_session_reused(GetProc('wolfSSL_session_reused'));
@@ -553,6 +569,14 @@ begin
   except
     wolfSSL_SESSION_get_max_early_data := nil;
   end;
+  wolfSSL_SESSION_get_timeout := TwolfSSL_SESSION_get_timeout(
+    GetProc('wolfSSL_SESSION_get_timeout'));
+  wolfSSL_SESSION_get_time := TwolfSSL_SESSION_get_time(
+    GetProc('wolfSSL_SESSION_get_time'));
+  wolfSSL_SESSION_get_id := TwolfSSL_SESSION_get_id(
+    GetProc('wolfSSL_SESSION_get_id'));
+  wolfSSL_SESSION_CIPHER_get_name := TwolfSSL_SESSION_CIPHER_get_name(
+    GetProc('wolfSSL_SESSION_CIPHER_get_name'));
 
   // ALPN 支持 (新增)
   wolfSSL_UseALPN := TwolfSSL_UseALPN(GetProc('wolfSSL_UseALPN'));
@@ -710,6 +734,8 @@ begin
   // 会话管理
   wolfSSL_get_session := nil;
   wolfSSL_set_session := nil;
+  wolfSSL_SSL_SESSION_set_timeout := nil;
+  wolfSSL_SESSION_set_time := nil;
   wolfSSL_SESSION_dup := nil;
   wolfSSL_SESSION_free := nil;
   wolfSSL_session_reused := nil;
@@ -718,6 +744,10 @@ begin
   wolfSSL_i2d_SSL_SESSION := nil;
   wolfSSL_d2i_SSL_SESSION := nil;
   wolfSSL_SESSION_get_max_early_data := nil;
+  wolfSSL_SESSION_get_timeout := nil;
+  wolfSSL_SESSION_get_time := nil;
+  wolfSSL_SESSION_get_id := nil;
+  wolfSSL_SESSION_CIPHER_get_name := nil;
 
   // ALPN 支持
   wolfSSL_UseALPN := nil;

@@ -92,6 +92,22 @@ const
   MBEDTLS_SESSION_SERIALIZATION_MAGIC = 'fafafa-mbedtls-session-v1';
   HEX_DIGITS: array[0..15] of Char = '0123456789ABCDEF';
 
+type
+  {$PUSH}
+  {$PACKRECORDS C}
+  TMbedTLSSessionNativeView = record
+    mfl_code: Byte;
+    exported: Byte;
+    endpoint: Byte;
+    tls_version: LongInt;
+    start: NativeInt;
+    ciphersuite: LongInt;
+    id_len: NativeUInt;
+    id: array[0..31] of Byte;
+  end;
+  {$POP}
+  PMbedTLSSessionNativeView = ^TMbedTLSSessionNativeView;
+
 function ParseMbedTLSVersionString(const AVersion: string): TSSLProtocolVersion;
 begin
   if Pos('TLSv1.3', AVersion) > 0 then
@@ -115,6 +131,16 @@ end;
 function HasSessionDeserializeHelpers: Boolean;
 begin
   Result := Assigned(mbedtls_ssl_session_load);
+end;
+
+function NativeMbedTLSProtocolToSSL(AProtocol: LongInt): TSSLProtocolVersion;
+begin
+  case AProtocol of
+    MBEDTLS_SSL_VERSION_TLS1_2: Result := sslProtocolTLS12;
+    MBEDTLS_SSL_VERSION_TLS1_3: Result := sslProtocolTLS13;
+  else
+    Result := sslProtocolUnknown;
+  end;
 end;
 
 function HexNibbleValue(ACh: Char; out AValue: Byte): Boolean;
@@ -180,6 +206,84 @@ begin
   end;
 
   Result := True;
+end;
+
+function TryGetNativeSessionView(ASession: Pmbedtls_ssl_session;
+  out ASessionView: PMbedTLSSessionNativeView): Boolean;
+begin
+  ASessionView := nil;
+  if ASession = nil then
+    Exit(False);
+
+  ASessionView := PMbedTLSSessionNativeView(ASession);
+  Result := ASessionView <> nil;
+end;
+
+function TryExtractNativeSessionID(ASession: Pmbedtls_ssl_session;
+  out ASessionID: string): Boolean;
+var
+  LView: PMbedTLSSessionNativeView;
+  LIDBytes: TBytes;
+begin
+  ASessionID := '';
+  if not TryGetNativeSessionView(ASession, LView) then
+    Exit(False);
+  if (LView^.id_len = 0) or (LView^.id_len > Length(LView^.id)) then
+    Exit(False);
+
+  SetLength(LIDBytes, LView^.id_len);
+  Move(LView^.id[0], LIDBytes[0], LView^.id_len);
+  ASessionID := BytesToHexString(LIDBytes);
+  Result := ASessionID <> '';
+end;
+
+function TryExtractNativeSessionCreationTime(ASession: Pmbedtls_ssl_session;
+  out ACreationTime: TDateTime): Boolean;
+var
+  LView: PMbedTLSSessionNativeView;
+begin
+  ACreationTime := 0;
+  if not TryGetNativeSessionView(ASession, LView) then
+    Exit(False);
+  if LView^.start <= 0 then
+    Exit(False);
+
+  ACreationTime := UnixToDateTime(LView^.start);
+  Result := True;
+end;
+
+function TryExtractNativeSessionProtocolVersion(ASession: Pmbedtls_ssl_session;
+  out AProtocolVersion: TSSLProtocolVersion): Boolean;
+var
+  LView: PMbedTLSSessionNativeView;
+begin
+  AProtocolVersion := sslProtocolUnknown;
+  if not TryGetNativeSessionView(ASession, LView) then
+    Exit(False);
+
+  AProtocolVersion := NativeMbedTLSProtocolToSSL(LView^.tls_version);
+  Result := AProtocolVersion <> sslProtocolUnknown;
+end;
+
+function TryExtractNativeSessionCipherName(ASession: Pmbedtls_ssl_session;
+  out ACipherName: string): Boolean;
+var
+  LView: PMbedTLSSessionNativeView;
+  LCipherSuiteInfo: Pmbedtls_ssl_ciphersuite_info;
+begin
+  ACipherName := '';
+  if not TryGetNativeSessionView(ASession, LView) then
+    Exit(False);
+  if (LView^.ciphersuite <= 0) or
+     (not Assigned(mbedtls_ssl_ciphersuite_from_id)) then
+    Exit(False);
+
+  LCipherSuiteInfo := mbedtls_ssl_ciphersuite_from_id(LView^.ciphersuite);
+  if (LCipherSuiteInfo = nil) or (LCipherSuiteInfo^.name = nil) then
+    Exit(False);
+
+  ACipherName := string(LCipherSuiteInfo^.name);
+  Result := ACipherName <> '';
 end;
 
 function MaterializeMbedTLSPeerCertificate(ACert: Pmbedtls_x509_crt): ISSLCertificate;
@@ -368,6 +472,11 @@ begin
 end;
 
 procedure TMbedTLSSession.ExtractSessionInfo;
+var
+  LSessionID: string;
+  LCreationTime: TDateTime;
+  LProtocolVersion: TSSLProtocolVersion;
+  LCipherName: string;
 begin
   if FSession = nil then Exit;
 
@@ -375,6 +484,15 @@ begin
   FCreationTime := Now;
   FProtocolVersion := sslProtocolTLS12;
   FCipherName := '';
+
+  if TryExtractNativeSessionID(FSession, LSessionID) then
+    FSessionID := LSessionID;
+  if TryExtractNativeSessionCreationTime(FSession, LCreationTime) then
+    FCreationTime := LCreationTime;
+  if TryExtractNativeSessionProtocolVersion(FSession, LProtocolVersion) then
+    FProtocolVersion := LProtocolVersion;
+  if TryExtractNativeSessionCipherName(FSession, LCipherName) then
+    FCipherName := LCipherName;
 end;
 
 function TMbedTLSSession.GenerateSessionID: string;
@@ -523,20 +641,22 @@ begin
 
   FSession := LSession;
   FOwnsSession := True;
+  ExtractSessionInfo;
   if LHasEnvelope then
   begin
-    FSessionID := LSessionID;
-    FCreationTime := LCreationTime;
+    if LSessionID <> '' then
+      FSessionID := LSessionID;
+    if LCreationTime > 0 then
+      FCreationTime := LCreationTime;
     FTimeout := LTimeout;
-    FProtocolVersion := LProtocolVersion;
-    FCipherName := LCipherName;
+    if LProtocolVersion <> sslProtocolUnknown then
+      FProtocolVersion := LProtocolVersion;
+    if LCipherName <> '' then
+      FCipherName := LCipherName;
     FSerializedData := Copy(AData);
   end
   else
-  begin
     FSerializedData := Copy(LNativeData);
-    ExtractSessionInfo;
-  end;
   FPeerCertificate := nil;
   Result := True;
 end;

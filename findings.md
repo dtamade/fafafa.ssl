@@ -2,6 +2,94 @@
 
 ## 2026-05-21
 
+- `MbedTLS/WolfSSL`
+  session metadata
+  这条线继续往下挖之后，
+  暴露出的不是
+  `Deserialize(...)`
+  成不成功，
+  而是：
+  session object
+  自己会不会继续伪造
+  `ID`
+  /
+  `creation time`
+  /
+  `timeout`
+  /
+  `cipher`
+
+- 这批 durable truth 是：
+  - `TMbedTLSSession`
+    不该再对 native session
+    回退到
+    GUID
+    /
+    `Now`
+    /
+    `TLS1.2`
+    /
+    empty cipher
+  - `TWolfSSLSession`
+    也不该再对 native session
+    回退到
+    GUID
+    /
+    `Now`
+    /
+    field-only timeout
+    /
+    `unknown`
+
+- `WolfSSL`
+  这里还补了一条很容易反复踩的 ABI truth：
+  - 当前 Linux/CI target
+    上 session getter 的时间/超时
+    应按
+    `clong`
+  - 所以：
+    - `src/fafafa.ssl.wolfssl.session.pas`
+      需要显式引入
+      `ctypes`
+    - focused tests
+      里的
+      `StubWolfSSLSessionGetTime`
+      /
+      `StubWolfSSLSessionGetTimeout`
+      也必须跟着改成
+      `clong`
+
+- 更关键的是，
+  前一批引入 metadata envelope 之后，
+  本批 native getter 一旦让
+  raw `Deserialize(...)`
+  也重新拿回真实
+  `protocol/cipher/id/time/timeout`，
+  旧的 session-class 断言：
+  - “serialize 后必须原样回吐 raw native bytes”
+  就不再是真 contract
+
+- 这条线现在真正应该被锁住的是：
+  - session 在拿回 native metadata truth 之后，
+    `Serialize(...)`
+    产出的是
+    non-empty
+    metadata-complete snapshot
+  - 而 public contract
+    真正关心的是：
+    reload 之后
+    metadata 还能不能保持真值，
+    而不是 payload
+    是否仍逐字节等于旧 raw bytes
+
+- 这也把后续
+  `SetSession(...) -> IsSessionReused`
+  的准备条件补齐了：
+  - 之后如果 reuse proof 失败，
+    我们就不需要再怀疑
+    session object
+    本身是不是还在伪造基础 metadata
+
 - `MbedTLS`
   /
   `WolfSSL`

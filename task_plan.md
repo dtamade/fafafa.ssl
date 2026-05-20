@@ -10,6 +10,110 @@
 
 ## Current Status
 
+- [completed] `clibrary session native metadata truth`
+  当前 focused 目标：
+  - 收掉
+    `MbedTLS`
+    /
+    `WolfSSL`
+    session object
+    仍会伪造
+    `ID`
+    /
+    `creation time`
+    /
+    `timeout`
+    /
+    `cipher`
+    的 residual drift，
+    让下一批
+    `SetSession(...) -> IsSessionReused`
+    proof
+    建立在真实 metadata 上
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-clibrary-session-native-metadata-truth.md`
+  - 修改实现：
+    - `src/fafafa.ssl.mbedtls.session.pas`
+    - `src/fafafa.ssl.wolfssl.api.pas`
+    - `src/fafafa.ssl.wolfssl.session.pas`
+  - 修改 focused framework tests：
+    - `tests/test_mbedtls_framework.pas`
+    - `tests/test_wolfssl_framework.pas`
+  当前实施判断：
+  - 这批比之前
+    `deserialize metadata completeness`
+    更基础：
+    - 如果 session object
+      自己还在造
+      GUID
+      /
+      `Now`
+      /
+      field-only timeout
+      /
+      placeholder cipher
+    - 后面就算接上
+      resumption/reuse
+      proof，
+      public truth
+      也仍然会漂
+  - 同时这批还暴露出一个 durable contract 变化：
+    - 一旦 native getter
+      让 session 重新拿回真实 metadata
+    - `Serialize(...)`
+      的正确 contract
+      就不该再是
+      “原样回吐 raw native bytes”
+    - 而应是：
+      metadata-complete snapshot
+      可重载且保真
+  当前 focused proof：
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`
+    - PASS
+  - `./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+    - PASS
+    - `250 passed / 0 failed`
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas`
+    - PASS
+  - `./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+    - PASS
+    - `265 passed / 0 failed`
+  当前状态：
+  - `TMbedTLSSession`
+    现在会尽量从当前 native session
+    提取：
+    - `session id`
+    - `creation time`
+    - `protocol`
+    - `cipher`
+  - `TWolfSSLSession`
+    现在通过动态绑定的
+    session getter
+    提取：
+    - `session id`
+    - `creation time`
+    - `timeout`
+    - `cipher`
+  - `WolfSSL`
+    focused tests
+    也已固定
+    Linux/CI
+    上 getter 返回类型
+    必须按
+    `clong`
+  - session-class contract
+    已同步从
+    raw-bytes
+    假设
+    收紧成：
+    - serialize 产出非空 metadata-complete snapshot
+    - reload 后继续保留 native metadata truth
+  下一刀：
+  - 优先继续验证连接侧：
+    `deserialized session -> SetSession(...) -> IsSessionReused`
+    真值链路
+
 - [completed] `clibrary session deserialize metadata completeness`
   当前 focused 目标：
   - 收掉
