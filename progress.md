@@ -4,6 +4,57 @@
 
 ## 2026-05-20
 
+### WinSSL CertStore Chain Runtime Contract
+
+- `mcp__ace_tool__.search_context(...)`
+- `nl -ba src/fafafa.ssl.winssl.certstore.pas | sed -n '624,692p'`
+- `nl -ba tests/winssl/test_winssl_certstore.pas | sed -n '1,420p'`
+- `sed -n '1,260p' tests/run_winssl_tests.ps1`
+- `sed -n '1,260p' .github/workflows/winssl-tests.yml`
+  - result: PASS
+  - summary:
+    - confirmed WinSSL still had no focused partial/full chain runtime contract
+    - confirmed a deeper runtime bug in `BuildCertificateChain`:
+      it stored interface objects in `TList` as raw pointers, bypassing refcount retention
+    - confirmed a workflow-truth bug in `test_winssl_certstore.pas`:
+      assertion failures did not propagate a non-zero exit code to CI
+
+- add focused plan/test:
+  - `docs/plans/2026-05-20-winssl-certstore-chain-runtime-contract.md`
+  - `tests/winssl/test_winssl_certstore.pas`
+  - `tests/run_winssl_tests.ps1`
+  - change:
+    - recorded a bounded WinSSL certstore chain batch
+    - added a generated
+      `root -> intermediate -> leaf`
+      runtime contract for:
+      - partial chain with only intermediate present
+      - full chain with intermediate plus root present
+    - aligned the runtime-suite description with the expanded certstore contract scope
+
+- update implementation:
+  - `src/fafafa.ssl.winssl.certstore.pas`
+  - change:
+    - `BuildCertificateChain`
+      no longer puts interface objects into `TList` as raw pointers
+    - chain results are now appended directly to the output array, preserving interface lifetime/refcount truth
+
+- update WinSSL certstore test harness:
+  - `tests/winssl/test_winssl_certstore.pas`
+  - change:
+    - added WinSSL memory-store chain contract coverage
+    - made the test program exit non-zero when any assertion fails
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remain before the Windows CI proof step
+
+- pending remote proof:
+  - next action is to push this batch and inspect the triggered
+    `WinSSL Runtime Gate`
+    for the real Windows runtime result
+
 ### OpenSSL CertStore Full-Chain Termination Contract
 
 - `gh run view 26138586148 --json status,conclusion,name,workflowName,headSha,url`

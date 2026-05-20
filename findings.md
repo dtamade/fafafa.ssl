@@ -2,6 +2,65 @@
 
 ## 2026-05-20
 
+- `WinSSL`
+  当前
+  `BuildCertificateChain`
+  还有一条更隐蔽但更硬的
+  runtime 风险：
+  它把
+  `ISSLCertificate`
+  先转成
+  raw pointer
+  存进 `TList`，
+  再在后面转回 interface
+
+- 这会绕开
+  interface refcount；
+  一旦循环里
+  `ChainCert`
+  被下一次赋值覆盖，
+  较早的链元素
+  就可能先释放，
+  留下悬空引用
+
+- 所以这条问题
+  不是简单的
+  “数组转换风格不优雅”，
+  而是
+  WinSSL chain result
+  在多元素链上
+  存在 use-after-free
+  级别风险
+
+- 另外，
+  `tests/winssl/test_winssl_certstore.pas`
+  目前还有一个
+  workflow 真相问题：
+  即使有
+  `Assert` 失败，
+  程序结尾
+  也不会
+  `Halt(1)`
+
+- 这意味着：
+  - Windows runtime suite
+    即使跑到了失败断言
+  - `run_winssl_tests.ps1`
+    仍可能因为
+    进程退出码是 `0`
+    而把该测试记成 PASS
+
+- 所以这一批
+  除了补 WinSSL
+  partial/full chain
+  contract 本身，
+  还必须顺手修掉
+  certstore test harness
+  的 failure propagation；
+  否则新增 contract
+  也不具备真正的
+  CI 证明力
+
 - `OpenSSL`
   当前
   `BuildCertificateChain`

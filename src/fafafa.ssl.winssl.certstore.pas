@@ -626,7 +626,6 @@ var
   ChainPara: CERT_CHAIN_PARA;
   ChainContext: PCCERT_CHAIN_CONTEXT;
   CertContext: PCCERT_CONTEXT;
-  ChainList: TList;
   i, j: Integer;
   SimpleChain: PCERT_SIMPLE_CHAIN;
   ChainCert: ISSLCertificate;
@@ -658,32 +657,21 @@ begin
     Exit;
 
   try
-    // 提取证书链
-    ChainList := TList.Create;
-    try
-      // 遍历所有简单链（通常只有一个）
-      for i := 0 to ChainContext^.cChain - 1 do
+    // 直接写入结果数组，保持 interface 引用计数，
+    // 避免把接口对象作为裸指针塞进 TList 造成悬空引用。
+    for i := 0 to ChainContext^.cChain - 1 do
+    begin
+      SimpleChain := ChainContext^.rgpChain[i];
+
+      for j := 0 to SimpleChain^.cElement - 1 do
       begin
-        SimpleChain := ChainContext^.rgpChain[i];
-
-        // 遍历链中的所有证书
-        for j := 0 to SimpleChain^.cElement - 1 do
-        begin
-          ChainCert := CreateWinSSLCertificateFromContext(
-            CertDuplicateCertificateContext(SimpleChain^.rgpElement[j]^.pCertContext),
-            True
-          );
-          ChainList.Add(Pointer(ChainCert));
-        end;
+        ChainCert := CreateWinSSLCertificateFromContext(
+          CertDuplicateCertificateContext(SimpleChain^.rgpElement[j]^.pCertContext),
+          True
+        );
+        SetLength(Result, Length(Result) + 1);
+        Result[High(Result)] := ChainCert;
       end;
-
-      // 转换为数组
-      SetLength(Result, ChainList.Count);
-      for i := 0 to ChainList.Count - 1 do
-        Result[i] := ISSLCertificate(ChainList[i]);
-
-    finally
-      ChainList.Free;
     end;
 
   finally

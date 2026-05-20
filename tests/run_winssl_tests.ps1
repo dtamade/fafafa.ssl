@@ -43,7 +43,7 @@ $tests = @(
         Name = "WinSSL CertStore DN Query Contract"
         Lpi = "test_winssl_certstore.lpi"
         Exe = "bin\test_winssl_certstore.exe"
-        Description = "系统 store + 确定性 memory-store DN query contract 测试"
+        Description = "系统 store + memory-store DN query / partial-full chain contract 测试"
     },
     @{
         Name = "WinSSL Peer Certificate Surface"

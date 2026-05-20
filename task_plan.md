@@ -10,6 +10,76 @@
 
 ## Current Status
 
+- [in_progress] `winssl certstore chain runtime contract`
+  当前 focused 目标：
+  - 补齐
+    `TWinSSLCertificateStore.BuildCertificateChain`
+    的
+    partial/full chain
+    runtime contract
+  - 同时修掉
+    结果收集阶段
+    把 `ISSLCertificate`
+    裸指针塞进 `TList`
+    的接口保活风险
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-winssl-certstore-chain-runtime-contract.md`
+  - 修改实现：
+    - `src/fafafa.ssl.winssl.certstore.pas`
+  - 修改 focused test：
+    - `tests/winssl/test_winssl_certstore.pas`
+    - `tests/run_winssl_tests.ps1`
+  当前预判：
+  - 当前 WinSSL chain builder
+    本身走的是
+    `CertGetCertificateChain`
+    原生链引擎
+  - 但结果收集时
+    先放进
+    `TList`
+    的 raw pointer
+    再转回 interface，
+    这会绕开 refcount
+  - 另外
+    `test_winssl_certstore.pas`
+    当前即使存在
+    `Assert` 失败，
+    结尾也不会
+    非零退出
+  当前实施策略：
+  - 先在
+    WinSSL certstore test
+    里加入
+    `root -> intermediate -> leaf`
+    的两条 contract：
+    - store 只有 intermediate
+      -> 长度 `2`
+    - store 有
+      `intermediate + root`
+      -> 长度 `3`
+  - 同时让 test harness
+    对失败真实
+    `Halt(1)`
+  - 最小修复：
+    - `BuildCertificateChain`
+      改为直接写入结果数组，
+      不再用
+      `TList`
+      存裸接口指针
+  当前总路线图进度：
+  - `接口设计`
+    正在继续把
+    certstore / chain-building
+    这条 public surface
+    从 OpenSSL
+    推进到 WinSSL
+  - `测试完整性`
+    开始补
+    Windows runtime
+    下之前缺失的
+    chain contract
+    与 failure propagation truth
 - [completed] `openssl certstore full-chain termination contract`
   当前 focused 目标：
   - 修掉

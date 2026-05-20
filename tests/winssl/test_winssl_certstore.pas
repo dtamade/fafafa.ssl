@@ -34,6 +34,7 @@ uses
   {$ENDIF}
   SysUtils, Classes,
   fafafa.ssl.base,
+  fafafa.ssl.cert.utils,
   fafafa.ssl.exceptions,
   fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.api,
@@ -66,6 +67,20 @@ begin
   Result := '  ' + LowerCase(Result) + '  ';
 end;
 
+function NormalizeHexish(const AValue: string): string;
+var
+  I: Integer;
+  LChar: Char;
+begin
+  Result := '';
+  for I := 1 to Length(AValue) do
+  begin
+    LChar := UpCase(AValue[I]);
+    if LChar in ['0'..'9', 'A'..'F'] then
+      Result := Result + LChar;
+  end;
+end;
+
 function CreateMemoryBackedStore: TWinSSLCertificateStore;
 var
   LStoreHandle: HCERTSTORE;
@@ -85,6 +100,69 @@ end;
 function OpenConcreteSystemStore(const AStoreName: string): TWinSSLCertificateStore;
 begin
   Result := TWinSSLCertificateStore.Create(AStoreName);
+end;
+
+procedure GenerateChainMaterial(
+  out ARootCertPEM, ARootKeyPEM, AInterCertPEM, AInterKeyPEM, ALeafCertPEM, ALeafKeyPEM: string);
+var
+  LRootOptions: TCertGenOptions;
+  LInterOptions: TCertGenOptions;
+  LLeafOptions: TCertGenOptions;
+begin
+  LRootOptions := TCertificateUtils.DefaultGenOptions;
+  LRootOptions.CommonName := 'winssl-chain-root.local';
+  LRootOptions.Organization := 'fafafa.ssl';
+  LRootOptions.IsCA := True;
+  if not TCertificateUtils.GenerateSelfSigned(LRootOptions, ARootCertPEM, ARootKeyPEM) then
+    raise Exception.Create('GenerateSelfSigned(root) failed');
+
+  LInterOptions := TCertificateUtils.DefaultGenOptions;
+  LInterOptions.CommonName := 'winssl-chain-intermediate.local';
+  LInterOptions.Organization := 'fafafa.ssl';
+  LInterOptions.IsCA := True;
+  if not TCertificateUtils.GenerateSigned(
+    LInterOptions,
+    ARootCertPEM,
+    ARootKeyPEM,
+    AInterCertPEM,
+    AInterKeyPEM
+  ) then
+    raise Exception.Create('GenerateSigned(intermediate) failed');
+
+  LLeafOptions := TCertificateUtils.DefaultGenOptions;
+  LLeafOptions.CommonName := 'winssl-chain-leaf.local';
+  LLeafOptions.Organization := 'fafafa.ssl';
+  LLeafOptions.IsCA := False;
+  if not TCertificateUtils.GenerateSigned(
+    LLeafOptions,
+    AInterCertPEM,
+    AInterKeyPEM,
+    ALeafCertPEM,
+    ALeafKeyPEM
+  ) then
+    raise Exception.Create('GenerateSigned(leaf) failed');
+end;
+
+function LoadPEMCertificate(const APEM: string): ISSLCertificate;
+begin
+  Result := TWinSSLCertificate.Create(nil, False);
+  if Result = nil then
+    raise Exception.Create('Create WinSSL certificate failed');
+  if not Result.LoadFromPEM(APEM) then
+    raise Exception.Create('LoadFromPEM failed');
+end;
+
+procedure AssertChainFingerprint(const AChain: TSSLCertificateArray; AIndex: Integer;
+  const AExpectedFingerprint, AMessage: string);
+var
+  LMatches: Boolean;
+begin
+  LMatches := False;
+  if (AIndex >= 0) and (AIndex < Length(AChain)) then
+    LMatches :=
+      NormalizeHexish(AChain[AIndex].GetFingerprintSHA256) =
+      NormalizeHexish(AExpectedFingerprint);
+  Assert(LMatches, AMessage);
 end;
 
 procedure TestStoreCreation;
@@ -356,6 +434,77 @@ begin
   WriteLn;
 end;
 
+procedure TestBuildCertificateChainContract;
+var
+  LRootCertPEM: string;
+  LRootKeyPEM: string;
+  LInterCertPEM: string;
+  LInterKeyPEM: string;
+  LLeafCertPEM: string;
+  LLeafKeyPEM: string;
+  LLeafCert: ISSLCertificate;
+  LInterCert: ISSLCertificate;
+  LRootCert: ISSLCertificate;
+  LStore: TWinSSLCertificateStore;
+  LChain: TSSLCertificateArray;
+begin
+  WriteLn('【测试 8B】WinSSL 证书链构建契约');
+  WriteLn('---');
+
+  try
+    GenerateChainMaterial(
+      LRootCertPEM, LRootKeyPEM,
+      LInterCertPEM, LInterKeyPEM,
+      LLeafCertPEM, LLeafKeyPEM
+    );
+
+    LLeafCert := LoadPEMCertificate(LLeafCertPEM);
+    Assert(LLeafCert <> nil, '加载 leaf 证书成功');
+    LInterCert := LoadPEMCertificate(LInterCertPEM);
+    Assert(LInterCert <> nil, '加载 intermediate 证书成功');
+    LRootCert := LoadPEMCertificate(LRootCertPEM);
+    Assert(LRootCert <> nil, '加载 root 证书成功');
+
+    LStore := CreateMemoryBackedStore;
+    Assert(LStore <> nil, '创建 memory-backed store 成功');
+    if LStore <> nil then
+    begin
+      Assert(LStore.AddCertificate(LInterCert), 'memory store 接受 intermediate 证书');
+      LChain := LStore.BuildCertificateChain(LLeafCert);
+      Assert(Length(LChain) = 2,
+        'store 只有 intermediate 时返回最小链');
+      AssertChainFingerprint(LChain, 1, LInterCert.GetFingerprintSHA256,
+        '最小链第二张证书应为 intermediate');
+      LStore.Close;
+    end;
+
+    LStore := CreateMemoryBackedStore;
+    Assert(LStore <> nil, '重新创建 memory-backed store 成功');
+    if LStore <> nil then
+    begin
+      Assert(LStore.AddCertificate(LInterCert), 'full-chain store 接受 intermediate 证书');
+      Assert(LStore.AddCertificate(LRootCert), 'full-chain store 接受 root 证书');
+      LChain := LStore.BuildCertificateChain(LLeafCert);
+      Assert(Length(LChain) = 3,
+        'store 有 intermediate + root 时返回完整链');
+      AssertChainFingerprint(LChain, 1, LInterCert.GetFingerprintSHA256,
+        '完整链第二张证书应为 intermediate');
+      AssertChainFingerprint(LChain, 2, LRootCert.GetFingerprintSHA256,
+        '完整链第三张证书应为 root');
+      LStore.Close;
+    end;
+
+  except
+    on E: Exception do
+    begin
+      Inc(GTestsFailed);
+      WriteLn('  ✗ FAILED: WinSSL 证书链构建契约异常 - ', E.Message);
+    end;
+  end;
+
+  WriteLn;
+end;
+
 procedure TestFindBySerialNumber;
 var
   LStore: TWinSSLCertificateStore;
@@ -574,6 +723,7 @@ begin
   begin
     WriteLn;
     WriteLn('✗ 有测试失败，请检查证书存储实现');
+    Halt(1);
   end;
   WriteLn('=========================================');
 end;
@@ -602,6 +752,7 @@ begin
     TestFindBySubject;
     TestFindByIssuer;
     TestDeterministicDNQueryContract;
+    TestBuildCertificateChainContract;
     TestFindBySerialNumber;
     TestFindByFingerprint;
     TestContainsCertificate;
