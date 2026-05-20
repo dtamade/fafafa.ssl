@@ -17936,6 +17936,28 @@
     - this clears the way for the next completeness slice to continue from current truth,
       not from an unresolved red gate
 
+- `git commit -m "docs(capability): freeze public support-level truth"`
+- `git push`
+- `gh run list --limit 8 --json databaseId,workflowName,headSha,status,conclusion,url`
+  - result: PASS
+  - summary:
+    - committed the public-truth freeze batch as:
+      - `fe435c4`
+        `docs(capability): freeze public support-level truth`
+    - pushed `master` successfully:
+      - `2582cac..fe435c4`
+    - GitHub now shows the new run:
+      - `26167070948`
+        `CI`
+        `in_progress`
+    - the previous pushed batch remains green:
+      - `26165848256`
+        `TLS13 Signer Gate`
+        `success`
+      - `26165848419`
+        `CI`
+        `success`
+
 - `gh run list --branch master --limit 8`
   - result: PASS
   - summary:

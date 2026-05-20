@@ -10369,12 +10369,26 @@
        在 runtime/source/serializer/diff
        层面的主真相已经基本收口；
        当前更值钱的是把入口话术一起锁死
+     - 当前本地 focused proof
+       已完成，
+       并已形成提交：
+       - `fe435c4`
+         `docs(capability): freeze public support-level truth`
    - 当前批收口后的默认下一步：
-     - 若
+     - 当前上一批
        `2582cac`
        的远端
-       GitHub Actions
-       转绿，
+       `TLS13 Signer Gate`
+       /
+       `CI`
+       已确认转绿
+     - 当前新 push
+       `fe435c4`
+       已触发：
+       - `26167070948`
+         `CI`
+         `in_progress`
+     - 若这轮新 CI 转绿，
        则继续回到：
        - `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
          里的
