@@ -17863,6 +17863,101 @@
   - summary:
     - no whitespace or patch-format drift remains before commit
 
+### X509 Ed25519 Algorithm Metadata Truth
+
+- `gh run view 26179498925 --json status,conclusion,jobs,url`
+  - result: PASS
+  - summary:
+    - the previous pushed
+      `WinSSL Runtime Gate`
+      is now fully green:
+      - `Run Windows Wave B gate` = success
+      - `Run broader WinSSL runtime suite` = success
+    - this closes the previous remote-proof wait state before the next batch
+
+- add `docs/plans/2026-05-21-x509-ed25519-algorithm-metadata-truth.md`
+- add `tests/test_x509_ed25519_algorithm_truth.pas`
+  - change:
+    - recorded the bounded parser-truth batch around
+      `Ed25519`
+      certificate algorithm metadata
+    - added a focused Pascal contract that generates a real
+      `Ed25519`
+      self-signed certificate and freezes:
+      - `PublicKeyInfo.Algorithm.Name`
+      - `PublicKeyInfo.Algorithm.OID`
+      - `PublicKeyInfo.KeyType`
+      - `PublicKeyInfo.KeySize`
+      - `SignatureAlgorithm.Name`
+      - `SignatureAlgorithm.OID`
+
+- `mkdir -p tmp/test_x509_ed25519_algorithm_truth_units tmp/test_x509_ed25519_algorithm_truth_bin && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_x509_ed25519_algorithm_truth_units -FEtmp/test_x509_ed25519_algorithm_truth_bin -otmp/test_x509_ed25519_algorithm_truth_bin/test_x509_ed25519_algorithm_truth tests/test_x509_ed25519_algorithm_truth.pas && ./tmp/test_x509_ed25519_algorithm_truth_bin/test_x509_ed25519_algorithm_truth`
+  - result: RED -> GREEN
+  - summary:
+    - first RED proved the shared parser residual was live:
+      - `Algorithm.Name` still exposed `1.3.101.112`
+      - `KeyType` still exposed `Unknown`
+      - `KeySize` still exposed `0`
+      - `SignatureAlgorithm.Name` still exposed `1.3.101.112`
+    - after the parser fix,
+      the focused contract turned green with:
+      - `Total Tests: 7`
+      - `Passed: 7`
+      - `Failed: 0`
+
+- update source:
+  - `src/fafafa.ssl.asn1.pas`
+  - `src/fafafa.ssl.x509.pas`
+  - change:
+    - added
+      `Ed25519`
+      /
+      `Ed448`
+      OID name mappings to the shared ASN.1 table
+    - taught
+      `TX509Certificate.ParsePublicKeyInfo(...)`
+      to publish Edwards key type truth
+      and derive key size from parsed public-key bytes
+
+- update docs/contracts:
+  - `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+  - `tests/scripts/test_mbedtls_ed25519_capability_doc_truth_contract.sh`
+  - summary:
+    - replaced the stale
+      “getter still returns RSA defaults”
+      wording
+      with the current split truth:
+      - handshake capability still not published
+      - certificate metadata truth is now published through the parser
+
+- `bash -n tests/scripts/test_mbedtls_ed25519_capability_doc_truth_contract.sh && bash tests/scripts/test_mbedtls_ed25519_capability_doc_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - the dedicated MbedTLS Ed25519 doc contract now freezes:
+      - unchanged key-exchange family publication truth
+      - parser-side
+        `Ed25519`
+        OID / key-type / key-size source markers
+      - the corrected dedicated matrix wording
+
+- `mkdir -p tmp/test_cert_utils_ed25519_contract_units tmp/test_cert_utils_ed25519_contract_bin && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_cert_utils_ed25519_contract_units -FEtmp/test_cert_utils_ed25519_contract_bin -otmp/test_cert_utils_ed25519_contract_bin/test_cert_utils_ed25519_contract tests/test_cert_utils_ed25519_contract.pas && ./tmp/test_cert_utils_ed25519_contract_bin/test_cert_utils_ed25519_contract`
+  - result: PASS
+  - summary:
+    - adjacent
+      `cert_utils`
+      Ed25519
+      contract remained green:
+      - `Total tests: 24`
+      - `Passed: 24`
+      - `Failed: 0`
+    - this confirms the parser metadata fix did not regress the earlier
+      certificate-generation truth
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains before commit
+
 ### OpenSSL And WinSSL Certificate Store Serial Query Parity
 
 - add focused batch inputs:

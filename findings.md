@@ -11224,3 +11224,60 @@
   - 带 `:`
   - 带首尾空白
   仍能稳定命中同一张证书
+
+- `Ed25519`
+  这条线当前真正的残缺
+  不在
+  `MbedTLS`
+  /
+  `WolfSSL`
+  getter 壳逻辑本身，
+  而在它们共同依赖的
+  `TX509Certificate`
+  parser truth
+
+- focused RED 证明：
+  - `Algorithm.Name`
+    仍暴露
+    `1.3.101.112`
+  - `KeyType`
+    仍是
+    `Unknown`
+  - `KeySize`
+    仍是
+    `0`
+  - `SignatureAlgorithm.Name`
+    也仍暴露 OID
+
+- 因而这批最小正确修法
+  不是去补新的 backend-native API，
+  而是直接在 shared parser
+  里补：
+  - OID name mapping
+  - Edwards key type truth
+  - Edwards key size truth
+
+- 修完后，
+  `Ed25519`
+  证书的 public metadata truth
+  已明确变成：
+  - `Algorithm.Name = Ed25519`
+  - `KeyType = Ed25519`
+  - `KeySize = 256`
+  - `SignatureAlgorithm.Name = Ed25519`
+
+- `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+  里原先把
+  `Ed25519`
+  讲成“getter 仍返回 RSA 默认值”
+  的说法
+  已经不再符合当前源码真相；
+  更准确的 active truth 是：
+  - handshake capability
+    仍未发布
+  - 但 parser-backed certificate metadata
+    已能暴露
+    `Ed25519`
+    算法名与
+    `256-bit`
+    公钥大小

@@ -303,7 +303,7 @@ type
   end;
 
 const
-  OID_TABLE: array[0..51] of TOIDEntry = (
+  OID_TABLE: array[0..53] of TOIDEntry = (
     // X.500 属性类型
     (OID: '2.5.4.3';  Name: 'CN'),              // CommonName
     (OID: '2.5.4.4';  Name: 'SN'),              // Surname
@@ -341,6 +341,8 @@ const
     (OID: '1.2.840.10045.4.3.2';   Name: 'ecdsa-with-SHA256'),
     (OID: '1.2.840.10045.4.3.3';   Name: 'ecdsa-with-SHA384'),
     (OID: '1.2.840.10045.4.3.4';   Name: 'ecdsa-with-SHA512'),
+    (OID: '1.3.101.112';           Name: 'Ed25519'),
+    (OID: '1.3.101.113';           Name: 'Ed448'),
 
     // 哈希算法
     (OID: '1.3.14.3.2.26';        Name: 'sha1'),

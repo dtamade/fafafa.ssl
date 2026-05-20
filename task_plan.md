@@ -11375,3 +11375,64 @@
        是否接受新的
        fingerprint query
        memory-store contract
+
+### 2026-05-21 Ed25519 证书算法元数据真相收口
+
+- 当前远端基线已补齐：
+  - `CI`
+    run
+    `26179499027`
+    = success
+  - `WinSSL Runtime Gate`
+    run
+    `26179498925`
+    = success
+- 当前新收口的不是旧文档措辞问题，
+  而是纯 Pascal
+  `TX509Certificate`
+  在
+  `Ed25519`
+  证书上仍有真实 parser residual：
+  - `Algorithm.Name`
+    暴露 OID
+  - `KeyType`
+    仍是
+    `Unknown`
+  - `KeySize`
+    仍是
+    `0`
+  - `SignatureAlgorithm.Name`
+    也仍是 OID
+- 最小正确修法：
+  - `ASN.1`
+    OID 表补
+    `Ed25519`
+    /
+    `Ed448`
+  - `ParsePublicKeyInfo(...)`
+    补
+    `Ed25519`
+    /
+    `Ed448`
+    key type / size truth
+  - `MbedTLS`
+    dedicated matrix
+    改成区分：
+    - handshake capability 未发布
+    - certificate metadata truth 已发布
+- 当前 focused proof：
+  - `tests/test_x509_ed25519_algorithm_truth.pas`
+    `7 passed / 0 failed`
+  - `tests/test_cert_utils_ed25519_contract.pas`
+    `24 passed / 0 failed`
+  - `tests/scripts/test_mbedtls_ed25519_capability_doc_truth_contract.sh`
+    PASS
+  - `git diff --check`
+    PASS
+- 当前批收口后的默认下一步：
+  - 提交并推送本批
+  - 看新的
+    GitHub Actions
+    是否接受这条
+    parser/doc truth
+    修正

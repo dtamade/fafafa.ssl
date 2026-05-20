@@ -864,6 +864,18 @@ begin
           FPublicKeyInfo.KeySize := (Length(FPublicKeyInfo.ECPoint) - 1) * 4;
         end;
       end;
+
+      '1.3.101.112':  // Ed25519
+      begin
+        FPublicKeyInfo.KeyType := 'Ed25519';
+        FPublicKeyInfo.KeySize := Length(FPublicKeyInfo.PublicKey) * 8;
+      end;
+
+      '1.3.101.113':  // Ed448
+      begin
+        FPublicKeyInfo.KeyType := 'Ed448';
+        FPublicKeyInfo.KeySize := Length(FPublicKeyInfo.PublicKey) * 8;
+      end;
     else
       FPublicKeyInfo.KeyType := 'Unknown';
     end;
