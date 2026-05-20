@@ -10,6 +10,64 @@
 
 ## Current Status
 
+- [completed] `context servername dead seam removal`
+  当前 focused 目标：
+  - 把
+    `context-level ServerName`
+    迁移主线里
+    已经恒为 no-op 的
+    shared compatibility seam
+    从源码里彻底删掉
+  - 避免后续审查
+    再把
+    `src/fafafa.ssl.context.compat.pas`
+    误判成
+    仍然有效的 inherited fallback 兼容桥
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-context-servername-dead-seam-removal.md`
+  - 删除实现：
+    - `src/fafafa.ssl.context.compat.pas`
+  - 修改实现：
+    - `src/fafafa.ssl.openssl.connection.pas`
+    - `src/fafafa.ssl.wolfssl.connection.pas`
+    - `src/fafafa.ssl.mbedtls.connection.pas`
+    - `src/fafafa.ssl.winssl.connection.pas`
+  - 修改 focused contract：
+    - `tests/scripts/test_context_server_name_compat_shim_contract.sh`
+  - 修改路线图 / 报告：
+    - `docs/plans/2026-05-18-context-servername-compatibility-migration-roadmap.md`
+    - `docs/plans/2026-05-18-shared-client-context-sni-fallback-cut.md`
+    - `docs/test_reports/INTERFACE_AND_BACKEND_VERIFICATION_2026-05-18.md`
+  当前实施判断：
+  - 这批不是新增功能，
+    也不是再改
+    compatibility behavior；
+    而是删除
+    “行为已经切断、源码仍保留”
+    的 dead seam
+  - helper 继续存在的代价
+    已经大于价值：
+    - 它不再转发 context-level `ServerName`
+    - 却持续误导后续审查，
+      让人以为 backend 还保留 inherited fallback
+  当前 focused proof：
+  - `bash -n tests/scripts/test_context_server_name_compat_shim_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_context_server_name_compat_shim_contract.sh`
+    - PASS
+  - `tests/test_cross_backend_client_context_server_name_clarification.pas`
+    - PASS (`20 passed, 0 failed, 1 skipped`)
+  - `git diff --check`
+    - PASS
+  当前批收口后的默认下一步：
+  - 回到
+    `context-level ServerName`
+    剩余 public surface
+    的最终 slimming / freeze：
+    - `TSSLConfig.ServerName`
+    - direct `ISSLContext.SetServerName/GetServerName`
+    - `WithSNI(...)`
 - [completed] `winssl certstore dn query runtime closeout`
   当前 focused 目标：
   - 收掉

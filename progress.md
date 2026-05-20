@@ -16624,3 +16624,57 @@
     - `Run Windows Wave B gate` = PASS
     - `Run broader WinSSL runtime suite` = PASS
     - this confirms the WinSSL DN-query closeout no longer blocks Windows runtime validation
+
+### Context ServerName Dead Seam Removal
+
+- `mcp__ace_tool__.search_context(...)`
+  - result: PASS
+  - summary:
+    - re-mapped the full `context-level ServerName` migration lane
+    - confirmed the remaining seam was no longer behavioral
+    - identified the dead helper as the next highest-value source-truth closeout
+
+- static source + doc review:
+  - `git diff -- src/fafafa.ssl.openssl.connection.pas src/fafafa.ssl.wolfssl.connection.pas src/fafafa.ssl.mbedtls.connection.pas src/fafafa.ssl.winssl.connection.pas src/fafafa.ssl.context.compat.pas tests/scripts/test_context_server_name_compat_shim_contract.sh docs/plans/2026-05-20-context-servername-dead-seam-removal.md`
+  - `rg -n "GetContextLevelServerNameCompatibilityValue|fafafa\\.ssl\\.context\\.compat|shared context ServerName compatibility shim|still route through the shared helper|shared shim|no-op seam" .`
+  - result: PASS
+  - summary:
+    - confirmed the implementation batch had already removed the helper and four backend calls
+    - confirmed the remaining unsynced truth sat in roadmap/report/task-memory files
+    - confirmed no other production source still referenced `GetContextLevelServerNameCompatibilityValue(...)`
+
+- `bash -n tests/scripts/test_context_server_name_compat_shim_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_context_server_name_compat_shim_contract.sh`
+  - result: PASS
+  - summary:
+    - final source contract now guards helper absence rather than helper presence
+    - all backends stay off direct context-level fallback reads
+
+- `mkdir -p tmp/test_cross_backend_client_context_server_name_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_cross_backend_client_context_server_name_clarification -FEtmp/test_cross_backend_client_context_server_name_clarification -otmp/test_cross_backend_client_context_server_name_clarification/test_cross_backend_client_context_server_name_clarification tests/test_cross_backend_client_context_server_name_clarification.pas && ./tmp/test_cross_backend_client_context_server_name_clarification/test_cross_backend_client_context_server_name_clarification`
+  - result: PASS
+  - summary:
+    - `20 passed, 0 failed, 1 skipped`
+    - FreePascal / OpenSSL / WolfSSL / MbedTLS all still show the same no-inheritance runtime truth
+    - WinSSL remained skipped on Linux host as expected; the Windows runtime lane for this repo is already covered by GitHub Actions
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remain after the dead-seam cleanup
+
+- update working memory + truth docs:
+  - `task_plan.md`
+  - `findings.md`
+  - `progress.md`
+  - `docs/plans/2026-05-18-context-servername-compatibility-migration-roadmap.md`
+  - `docs/plans/2026-05-18-shared-client-context-sni-fallback-cut.md`
+  - `docs/test_reports/INTERFACE_AND_BACKEND_VERIFICATION_2026-05-18.md`
+  - `docs/plans/2026-05-20-context-servername-dead-seam-removal.md`
+  - change:
+    - synced the historical record from
+      `shared helper kept as no-op seam`
+      to
+      `dead seam removed entirely`
+    - recorded the next default route as remaining public compatibility surface slimming

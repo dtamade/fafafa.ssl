@@ -49,19 +49,12 @@ Current caveat discovered by live focused retest:
 
 ### 2. Backend fallback read paths
 
-以下 constructor path 仍保留 shared seam 痕迹，但不再把 context-level `ServerName` 兼容继承到连接实例：
-
-- `src/fafafa.ssl.openssl.connection.pas`
-- `src/fafafa.ssl.wolfssl.connection.pas`
-- `src/fafafa.ssl.mbedtls.connection.pas`
-- `src/fafafa.ssl.winssl.connection.pas`
-
 当前最新真相是：
 
-- direct deprecated `AContext.GetServerName` / `FContext.GetServerName` 读取已经从这五个 backend 的构造路径移除
-- OpenSSL / WolfSSL / MbedTLS / WinSSL 仍统一经由 `src/fafafa.ssl.context.compat.pas`
-- `src/fafafa.ssl.freepascal.connection.pas` 已经不再调用 shared helper
-- shared helper 现在对任意非空 context 返回 `''`，因此它保留的是 no-inheritance seam，而不是 inherited fallback
+- 五个 backend connection constructor 都已经不再 direct read deprecated `AContext.GetServerName` / `FContext.GetServerName`
+- `src/fafafa.ssl.context.compat.pas` 已在 `2026-05-20` 删除，不再保留 shared no-op seam
+- OpenSSL / WolfSSL / MbedTLS / WinSSL constructor 现在也不再经由 shared helper 间接读取 context-level `ServerName`
+- 新建 client connection 的 hostname/SNI 现在必须来自 per-connection path，而不是 context-level inherited fallback
 - compatibility truth 仍然保留在 context API surface 本身，但它已经不再自动流入新的 client connection
 
 ### 3. Tests that intentionally lock the compatibility boundary
@@ -266,6 +259,16 @@ Delivered fifth cut:
   - helper required in OpenSSL / WolfSSL / MbedTLS / WinSSL
   - helper forbidden in FreePascal
   - direct context getter fallback forbidden in helper and backend sources
+
+Delivered sixth cut:
+
+- `src/fafafa.ssl.context.compat.pas` was deleted after the helper became a permanent no-op seam
+- OpenSSL / WolfSSL / MbedTLS / WinSSL constructor paths no longer call `GetContextLevelServerNameCompatibilityValue(...)`
+- `tests/scripts/test_context_server_name_compat_shim_contract.sh` now guards the final source truth:
+  - helper file must not exist
+  - no backend may reference the removed helper
+  - no backend may reintroduce direct `(AContext|FContext).GetServerName` fallback reads
+- focused re-verification kept `tests/test_cross_backend_client_context_server_name_clarification.pas` green, proving the seam deletion did not reintroduce inherited fallback
 
 ### Phase D: Final Surface Cleanup
 

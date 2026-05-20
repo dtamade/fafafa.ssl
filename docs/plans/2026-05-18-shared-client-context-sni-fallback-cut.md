@@ -7,10 +7,14 @@
 ## Status
 
 - completed on 2026-05-18
+- historical intermediate state only; superseded on 2026-05-20 by `docs/plans/2026-05-20-context-servername-dead-seam-removal.md`
 - implementation truth:
-  - `src/fafafa.ssl.context.compat.pas` now keeps the seam but returns `''` for any non-nil context
-  - OpenSSL / WolfSSL / MbedTLS / WinSSL still route through the shared seam, but the seam no longer forwards deprecated context state
-  - FreePascal remains off the shared helper and keeps the same no-inheritance rule
+  - on 2026-05-18, `src/fafafa.ssl.context.compat.pas` kept the seam but returned `''` for any non-nil context
+  - on 2026-05-20, that dead seam was removed entirely
+  - current source truth is:
+    - all backends follow the same no-inheritance rule
+    - OpenSSL / WolfSSL / MbedTLS / WinSSL no longer route through a shared helper
+    - `src/fafafa.ssl.context.compat.pas` no longer exists
 
 ## Architecture
 
@@ -62,3 +66,7 @@
   - helper required in OpenSSL / WolfSSL / MbedTLS / WinSSL
   - helper forbidden in FreePascal
   - direct `(AContext|FContext).GetServerName` reads forbidden everywhere
+- later follow-up closeout on 2026-05-20 removed the helper entirely:
+  - `src/fafafa.ssl.context.compat.pas` deleted
+  - OpenSSL / WolfSSL / MbedTLS / WinSSL no longer reference `GetContextLevelServerNameCompatibilityValue(...)`
+  - the focused contract now guards helper absence rather than helper presence

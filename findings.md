@@ -8827,3 +8827,62 @@
   - 而不是再回头重查
     certstore query
     为什么匹配不到
+
+- `context-level ServerName`
+  这条主线
+  当前又暴露出一种
+  很容易让项目停滞的
+  “历史中间态误导”：
+  - `src/fafafa.ssl.context.compat.pas`
+    已经恒返回 `''`
+  - OpenSSL / WolfSSL / MbedTLS / WinSSL
+    constructor
+    继续调用它
+    也不再产生任何 inherited fallback 行为
+
+- 这意味着：
+  - shared helper
+    继续存在
+    已经不是兼容保护，
+    而是考古噪音
+  - 它会持续制造一种假象：
+    仿佛 backend
+    还保留了一条
+    context-to-connection
+    的兼容桥
+
+- 所以这批的正确收口
+  不是再改 warning
+  或继续写
+  “helper 还在但没效果”
+  的说明，
+  而是：
+  - 直接删除 helper file
+  - 同时删掉四个 backend constructor
+    的 dead helper call
+  - 把 focused contract
+    改成守
+    “helper 不存在”
+    这条最终真相
+
+- focused retest
+  也已经证明
+  这一步只是在收源码真相，
+  不是在改变 runtime 边界：
+  - `tests/test_cross_backend_client_context_server_name_clarification.pas`
+    仍然通过
+  - 这说明：
+    - deprecated context state
+      仍可在 context API 上观察到
+    - 但新 client connection
+      继续不继承这份 state
+
+- 因而当前
+  `context-level ServerName`
+  主线里
+  最值得继续审的
+  已经不再是 backend seam，
+  而是剩余 public compatibility surface：
+  - `TSSLConfig.ServerName`
+  - direct `ISSLContext.SetServerName/GetServerName`
+  - `WithSNI(...)`

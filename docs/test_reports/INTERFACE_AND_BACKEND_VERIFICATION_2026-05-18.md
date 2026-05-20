@@ -276,6 +276,10 @@
 
 ## 增量收口：backend shared compatibility shim
 
+- 这一节记录的是 `2026-05-18` 的中间态，不再代表最新源码真相：
+  - shared helper 当时是必要收拢 seam
+  - 但它已经在 `2026-05-20` 的 dead-seam removal 中被彻底删除
+
 - 在 Phase B 的高层写入面收窄之后，backend constructor fallback 仍然有一个明显的结构问题：
   - OpenSSL / FreePascal / WolfSSL / MbedTLS / WinSSL 五个实现各自 direct read deprecated context `GetServerName`
   - 这让 compile warning、后续迁移、以及行为删改的控制面继续分散
@@ -738,6 +742,44 @@
   - 当前剩下的更尖锐边界回到了最后一个 direct server-context legacy-state control case：
     - builder / factory 为什么还要继续保留 context state
     - 当这份 state 已经不再对任何新 client connection 产生 inherited fallback
+
+- 这同样只是 `2026-05-18` 的阶段性终点，不再是当前最终源码边界：
+  - 当时 shared helper 仍保留为 no-op seam
+  - 到 `2026-05-20`，该 seam 已被整体删除，避免后续审查再误以为 backend 仍存在 inherited-fallback 兼容桥
+
+## 增量收口：dead shared compatibility seam 删除
+
+- 在 shared helper 已经恒为 no-op 之后，repo 还继续保留：
+  - `src/fafafa.ssl.context.compat.pas`
+  - 以及 OpenSSL / WolfSSL / MbedTLS / WinSSL constructor 中对它的调用
+- 这已经不再提供 runtime compatibility，只会制造新的审查误导：
+  - 看起来像 backend 仍有一条 inherited context fallback 兼容桥
+  - 实际 helper 早已不再把任何 context-level `ServerName` 流入新连接
+
+- 当前最小且高价值的收口不是再改 warning 文案，而是把 dead seam 彻底删掉：
+  - 删除 `src/fafafa.ssl.context.compat.pas`
+  - 删除四个 backend constructor 的 helper 调用
+  - 把 source contract 改成最终真相，而不是继续守一个历史中间态
+
+- focused 证据说明这次删除只是在收源码真相，不是在回退行为：
+  - `bash -n tests/scripts/test_context_server_name_compat_shim_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_context_server_name_compat_shim_contract.sh`
+    - PASS
+  - `tests/test_cross_backend_client_context_server_name_clarification.pas`
+    - PASS (`20 passed, 0 failed, 1 skipped`)
+    - 说明 context API 上残留的 deprecated state 仍可观察
+    - 但新 client connection 继续不继承这份 state
+  - `git diff --check`
+    - PASS
+
+- 这一步之后，`context-level ServerName` 主线的源码边界终于更干净了：
+  - 不再有 shared no-op seam
+  - 不再有 backend constructor 间接兼容桥假象
+  - 剩余兼容面只集中在公开 surface 本身：
+    - `TSSLConfig.ServerName`
+    - direct `ISSLContext.SetServerName/GetServerName`
+    - `WithSNI(...)`
 
 ## 增量收口：high-level context ServerName write surfaces 改成 warning + ignore
 
