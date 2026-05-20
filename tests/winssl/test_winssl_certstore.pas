@@ -67,6 +67,30 @@ begin
   Result := '  ' + LowerCase(Result) + '  ';
 end;
 
+function ResolveRepoFixturePath(const ARepoRelativePath: string): string;
+const
+  CandidatePrefixes: array[0..3] of string = (
+    '',
+    '../',
+    '../../',
+    '../../../'
+  );
+var
+  I: Integer;
+  LCandidate: string;
+begin
+  Result := '';
+  for I := Low(CandidatePrefixes) to High(CandidatePrefixes) do
+  begin
+    LCandidate := ExpandFileName(CandidatePrefixes[I] + ARepoRelativePath);
+    if FileExists(LCandidate) then
+    begin
+      Result := LCandidate;
+      Exit;
+    end;
+  end;
+end;
+
 function NormalizeHexish(const AValue: string): string;
 var
   I: Integer;
@@ -399,6 +423,7 @@ var
   LCert: ISSLCertificate;
   LSubjectVariant: string;
   LIssuerVariant: string;
+  LFixturePath: string;
 begin
   WriteLn('【测试 8A】确定性 DN 查询契约');
   WriteLn('---');
@@ -409,7 +434,16 @@ begin
 
     LCert := TWinSSLCertificate.Create(nil, False);
     Assert(LCert <> nil, '创建夹具证书对象成功');
-    Assert(LCert.LoadFromFile('tests/certificate/test_certs/signer_cert.pem'),
+    LFixturePath := ResolveRepoFixturePath('tests/certificate/test_certs/signer_cert.pem');
+    Assert(LFixturePath <> '', '定位 distinct-issuer fixture 路径成功');
+    if LFixturePath = '' then
+    begin
+      LStore.Close;
+      WriteLn;
+      Exit;
+    end;
+
+    Assert(LCert.LoadFromFile(LFixturePath),
       '加载 distinct-issuer fixture 成功');
     Assert(LStore.AddCertificate(LCert), '夹具证书加入内存存储成功');
 

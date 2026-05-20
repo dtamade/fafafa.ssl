@@ -83,6 +83,28 @@
   补齐到
   DER + PEM
 
+- 继续深挖同一段远端日志后，
+  更直接的失败边界
+  也被钉住了：
+  `TestDeterministicDNQueryContract`
+  在
+  `tests/winssl`
+  工作目录下
+  仍然拿
+  repo-root
+  相对路径去读 fixture
+
+- 也就是说，
+  上一轮红灯
+  实际同时暴露了两件事：
+  - WinSSL `LoadFromFile`
+    的 PEM fallback
+    还不够完整
+  - WinSSL certstore test
+    自己的 fixture-path
+    也没有对 runtime
+    工作目录做收口
+
 - `OpenSSL`
   当前
   `BuildCertificateChain`

@@ -80,6 +80,17 @@
       now attempts DER first and falls back to PEM decoding when the file payload contains a certificate PEM block
     - this preserves the shared public expectation that certificate files may be PEM-backed across backends
 
+- second remote rerun:
+  - `gh run view 26139630678 --json status,conclusion,jobs,url`
+  - `gh run view 26139630678 --job 76882270786 --log-failed`
+  - `gh run view 26139630678 --job 76882270786 --log | sed -n '8530,8660p'`
+  - result: FAIL
+  - summary:
+    - confirmed the WinSSL chain contract still passed on real Windows runtime after the PEM fallback change
+    - refined the remaining failing boundary:
+      the DN-query test was still resolving its fixture path relative to the runtime-suite working directory incorrectly
+    - added a repo-fixture path resolver to the WinSSL certstore test so the contract can actually open the shared PEM fixture from `tests/winssl`
+
 ### OpenSSL CertStore Full-Chain Termination Contract
 
 - `gh run view 26138586148 --json status,conclusion,name,workflowName,headSha,url`

@@ -54,6 +54,16 @@
     对仓库常用的
     `*.pem` fixture
     并不会自动成功
+  - 深挖日志后又确认：
+    更直接的失败边界
+    其实是
+    `TestDeterministicDNQueryContract`
+    在
+    `tests/winssl`
+    工作目录下
+    还在用
+    repo-root
+    相对路径取 fixture
   当前实施策略：
   - 先在
     WinSSL certstore test
@@ -78,6 +88,11 @@
       在 DER
       失败时
       fallback 到 PEM
+    - `TestDeterministicDNQueryContract`
+      增加 fixture path
+      解析 helper，
+      保证 Windows runtime
+      真正命中仓库 fixture
   当前总路线图进度：
   - `接口设计`
     正在继续把
