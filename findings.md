@@ -3,6 +3,55 @@
 ## 2026-05-20
 
 - `WinSSL`
+  当前 public
+  `GetSubject`
+  /
+  `GetIssuer`
+  的真正漂移点
+  不是
+  certstore query
+  本身，
+  而是 getter
+  仍停在
+  `CERT_NAME_SIMPLE_DISPLAY_TYPE`
+
+- 这会导致：
+  - public getter
+    暴露的
+    仍偏向
+    display name
+  - 但同仓库里
+    `FindBySubject`
+    /
+    `FindByIssuer`
+    已经基于
+    full DN
+    做匹配
+
+- 所以这里更稳的修复
+  不是继续补
+  query-side
+  normalization，
+  而是让 public getter
+  直接回到
+  native
+  `CERT_INFO.Subject/Issuer`
+  的
+  `CertNameToStrW(..., CERT_X500_NAME_STR or CERT_NAME_STR_COMMA_FLAG, ...)`
+  full-DN path
+
+- 这也说明
+  `WinSSL certstore`
+  之前的 distinct-issuer runtime closeout
+  并没有覆盖
+  public getter truth；
+  需要把确定性 fixture
+  的 getter 断言
+  并入
+  `tests/winssl/test_winssl_certstore.pas`
+  才能避免之后再从静态审查重拉
+
+- `WinSSL`
   当前
   `BuildCertificateChain`
   还有一条更隐蔽但更硬的

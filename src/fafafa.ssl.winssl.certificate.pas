@@ -148,6 +148,41 @@ begin
     Result := nil;
 end;
 
+function CertNameBlobToX500String(AName: PCERT_NAME_BLOB): string;
+var
+  LSize: DWORD;
+  LWritten: DWORD;
+  LBuffer: UnicodeString;
+begin
+  Result := '';
+  if (AName = nil) or (AName^.cbData = 0) or (AName^.pbData = nil) then
+    Exit;
+
+  LSize := CertNameToStrW(
+    X509_ASN_ENCODING or PKCS_7_ASN_ENCODING,
+    AName,
+    CERT_X500_NAME_STR or CERT_NAME_STR_COMMA_FLAG,
+    nil,
+    0
+  );
+  if LSize <= 1 then
+    Exit;
+
+  SetLength(LBuffer, LSize);
+  LWritten := CertNameToStrW(
+    X509_ASN_ENCODING or PKCS_7_ASN_ENCODING,
+    AName,
+    CERT_X500_NAME_STR or CERT_NAME_STR_COMMA_FLAG,
+    PWideChar(LBuffer),
+    LSize
+  );
+  if LWritten <= 1 then
+    Exit;
+
+  SetLength(LBuffer, LWritten - 1);
+  Result := UTF8Encode(WideString(LBuffer));
+end;
+
 function TWinSSLCertificate.BinaryToHexString(const AData: PByte; ASize: DWORD): string;
 var
   i: Integer;
@@ -440,48 +475,28 @@ end;
 
 function TWinSSLCertificate.GetSubject: string;
 var
-  Buffer: array[0..511] of WideChar;
-  Size: DWORD;
+  LCertInfo: PCERT_INFO;
 begin
   Result := '';
-  
-  if FCertContext = nil then
+
+  LCertInfo := GetCertInfo;
+  if LCertInfo = nil then
     Exit;
-  
-  Size := CertGetNameStringW(
-    FCertContext,
-    CERT_NAME_SIMPLE_DISPLAY_TYPE,
-    0,
-    nil,
-    @Buffer[0],
-    Length(Buffer)
-  );
-  
-  if Size > 1 then
-    Result := WideCharToString(@Buffer[0]);
+
+  Result := CertNameBlobToX500String(@LCertInfo^.Subject);
 end;
 
 function TWinSSLCertificate.GetIssuer: string;
 var
-  Buffer: array[0..511] of WideChar;
-  Size: DWORD;
+  LCertInfo: PCERT_INFO;
 begin
   Result := '';
-  
-  if FCertContext = nil then
+
+  LCertInfo := GetCertInfo;
+  if LCertInfo = nil then
     Exit;
-  
-  Size := CertGetNameStringW(
-    FCertContext,
-    CERT_NAME_SIMPLE_DISPLAY_TYPE,
-    CERT_NAME_ISSUER_FLAG,
-    nil,
-    @Buffer[0],
-    Length(Buffer)
-  );
-  
-  if Size > 1 then
-    Result := WideCharToString(@Buffer[0]);
+
+  Result := CertNameBlobToX500String(@LCertInfo^.Issuer);
 end;
 
 function TWinSSLCertificate.GetSerialNumber: string;

@@ -10,6 +10,62 @@
 
 ## Current Status
 
+- [completed] `winssl certificate identity getter full-dn truth`
+  当前 focused 目标：
+  - 把
+    `TWinSSLCertificate.GetSubject`
+    /
+    `GetIssuer`
+    从当前
+    simple display name
+    语义
+    收口到和
+    `WinSSL certstore`
+    以及其它 backend
+    一致的
+    full DN truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-winssl-certificate-identity-getter-full-dn-truth.md`
+  - 新增 focused static contract：
+    - `tests/scripts/test_winssl_certificate_identity_getter_truth_contract.sh`
+  - 修改实现：
+    - `src/fafafa.ssl.winssl.certificate.pas`
+  - 修改 Windows runtime suite：
+    - `tests/winssl/test_winssl_certstore.pas`
+  当前实施判断：
+  - 这批不是
+    `FindBySubject`
+    /
+    `FindByIssuer`
+    再次失真，
+    而是
+    query lane
+    已经对齐 full DN 之后，
+    public getter
+    仍停在更弱语义
+  - 更稳的修法
+    不是再走
+    `CertGetNameStringW(..., CERT_NAME_SIMPLE_DISPLAY_TYPE, ...)`，
+    而是直接复用
+    native
+    `CERT_INFO.Subject/Issuer`
+    的 X.500 name blob
+  当前 focused proof：
+  - `bash -n tests/scripts/test_winssl_certificate_identity_getter_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_winssl_certificate_identity_getter_truth_contract.sh`
+    - FAIL -> PASS
+  - `git diff --check`
+    - PASS
+  当前批收口后的默认下一步：
+  - push 当前 batch
+  - 观察
+    `CI`
+    /
+    `WinSSL Runtime Gate`
+    是否在真实 Windows runner
+    上继续转绿
 - [completed] `migration guide raw connection truth alignment`
   当前 focused 目标：
   - 把

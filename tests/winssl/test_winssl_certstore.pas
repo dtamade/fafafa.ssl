@@ -424,6 +424,8 @@ var
   LSubjectVariant: string;
   LIssuerVariant: string;
   LFixturePath: string;
+  LSubjectText: string;
+  LIssuerText: string;
 begin
   WriteLn('【测试 8A】确定性 DN 查询契约');
   WriteLn('---');
@@ -445,6 +447,16 @@ begin
 
     Assert(LCert.LoadFromFile(LFixturePath),
       '加载 distinct-issuer fixture 成功');
+    LSubjectText := UpperCase(LCert.GetSubject);
+    LIssuerText := UpperCase(LCert.GetIssuer);
+    Assert(Pos('CN=TEST SIGNER', LSubjectText) > 0,
+      'GetSubject returns full DN CN component');
+    Assert(Pos('O=TEST ORG', LSubjectText) > 0,
+      'GetSubject returns full DN O component');
+    Assert(Pos('CN=TEST CA', LIssuerText) > 0,
+      'GetIssuer returns full DN CN component');
+    Assert(Pos('O=TEST CA', LIssuerText) > 0,
+      'GetIssuer returns full DN O component');
     Assert(LStore.AddCertificate(LCert), '夹具证书加入内存存储成功');
 
     LSubjectVariant := BuildLooseDNQueryVariant('O=Test Org,CN=Test Signer');

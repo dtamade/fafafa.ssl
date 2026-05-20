@@ -4,6 +4,89 @@
 
 ## 2026-05-20
 
+### WinSSL Certificate Identity Getter Full-DN Truth
+
+- `mcp__ace_tool__.search_context(...)`
+- `nl -ba src/fafafa.ssl.base.pas | sed -n '1678,1715p'`
+- `nl -ba src/fafafa.ssl.winssl.certificate.pas | sed -n '420,500p'`
+- `nl -ba src/fafafa.ssl.openssl.certificate.pas | sed -n '530,595p'`
+- `nl -ba src/fafafa.ssl.wolfssl.certificate.pas | sed -n '610,690p'`
+- `nl -ba src/fafafa.ssl.mbedtls.certificate.pas | sed -n '625,705p'`
+- `nl -ba tests/winssl/test_winssl_certstore.pas | sed -n '420,485p'`
+  - result: PASS
+  - summary:
+    - confirmed
+      `ISSLCertificate.GetSubject`
+      /
+      `GetIssuer`
+      has no stronger semantic wording in the base interface
+    - confirmed
+      `OpenSSL`
+      /
+      `WolfSSL`
+      /
+      `MbedTLS`
+      already expose full-DN style identity truth
+    - confirmed only
+      `WinSSL`
+      still used
+      `CERT_NAME_SIMPLE_DISPLAY_TYPE`
+      in its public getters
+    - confirmed
+      `test_winssl_certstore`
+      already loads the deterministic distinct-issuer fixture on the active Windows runtime lane
+
+- add focused plan / RED coverage:
+  - `docs/plans/2026-05-20-winssl-certificate-identity-getter-full-dn-truth.md`
+  - `tests/scripts/test_winssl_certificate_identity_getter_truth_contract.sh`
+  - `tests/winssl/test_winssl_certstore.pas`
+  - change:
+    - recorded a bounded batch for WinSSL public certificate identity getter truth
+    - added a static contract that forbids
+      `CERT_NAME_SIMPLE_DISPLAY_TYPE`
+      in the public getters
+    - extended the deterministic WinSSL certstore runtime suite with explicit
+      `CN=` / `O=`
+      full-DN component assertions
+
+- `bash -n tests/scripts/test_winssl_certificate_identity_getter_truth_contract.sh`
+- `bash tests/scripts/test_winssl_certificate_identity_getter_truth_contract.sh`
+  - result: FAIL
+  - summary:
+    - captured the expected RED immediately
+    - confirmed the current source still used
+      `CERT_NAME_SIMPLE_DISPLAY_TYPE`
+      in
+      `GetSubject`
+      and
+      `GetIssuer`
+
+- update implementation:
+  - `src/fafafa.ssl.winssl.certificate.pas`
+  - change:
+    - added a local
+      `CertNameBlobToX500String(...)`
+      helper using
+      `CertNameToStrW(..., CERT_X500_NAME_STR or CERT_NAME_STR_COMMA_FLAG, ...)`
+    - switched
+      `GetSubject`
+      and
+      `GetIssuer`
+      to read the native
+      `CERT_INFO.Subject`
+      /
+      `Issuer`
+      name blobs directly
+
+- `bash -n tests/scripts/test_winssl_certificate_identity_getter_truth_contract.sh`
+- `bash tests/scripts/test_winssl_certificate_identity_getter_truth_contract.sh`
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - the new static contract is now green
+    - focused runtime coverage is present in the active WinSSL suite
+    - no whitespace or patch-format issues remain before commit / push
+
 ### WinSSL CertStore Chain Runtime Contract
 
 - `mcp__ace_tool__.search_context(...)`
