@@ -123,3 +123,39 @@ GitHub Windows runtime
   / `WinSSL`
   三条主后端上
   更接近一致
+
+## Execution Result
+
+- PASS
+- 首次提交
+  `77e55dc`
+  把修复方向推进到了正确位置，
+  但
+  GitHub Actions
+  `WinSSL Runtime Gate`
+  run `26140587186`
+  在 quick smoke
+  编译阶段暴露出：
+  - `CERT_CONTEXT.pCertInfo`
+    在当前 bridge
+    里仍是裸 `Pointer`
+  - 调用点必须先转成
+    `PCERT_INFO`
+- 二次小修提交
+  `b4a93d3`
+  只补：
+  - `PCERT_INFO` 显式转换
+  - `UnicodeString -> UTF-8`
+    的显式转换
+- 最终远端验证：
+  - `CI`
+    run `26140837184`
+    `success`
+  - `WinSSL Runtime Gate`
+    run `26140837156`
+    `success`
+  - Windows gate
+    已通过：
+    - `Run quick WinSSL smoke`
+    - `Run Windows Wave B gate`
+    - `Run broader WinSSL runtime suite`

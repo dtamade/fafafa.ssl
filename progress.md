@@ -16598,3 +16598,29 @@
         to `PCERT_INFO`
         before reading
         `Issuer` / `Subject`
+
+- `git push origin master`
+  - result: PASS
+  - summary:
+    - pushed follow-up commit `b4a93d3`
+      `fix(winssl): cast cert info before dn extraction`
+    - triggered:
+      - `CI` run `26140837184`
+      - `WinSSL Runtime Gate` run `26140837156`
+
+- `gh run view 26140837184 --json status,conclusion,jobs,url`
+  - result: PASS
+  - summary:
+    - current `CI` run completed with `conclusion=success`
+    - `Minimal Gate (Linux)` = PASS
+    - `FreePascal TLS 1.3 Completeness` = PASS
+    - `Code Quality (Light)` = PASS
+
+- `gh run view 26140837156 --json status,conclusion,jobs,url`
+  - result: PASS
+  - summary:
+    - current `WinSSL Runtime Gate` run completed with `conclusion=success`
+    - `Run quick WinSSL smoke` = PASS
+    - `Run Windows Wave B gate` = PASS
+    - `Run broader WinSSL runtime suite` = PASS
+    - this confirms the WinSSL DN-query closeout no longer blocks Windows runtime validation

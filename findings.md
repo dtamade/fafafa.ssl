@@ -8798,3 +8798,32 @@
   `PCERT_INFO`
   再取
   `Issuer` / `Subject`
+127. 这次 `WinSSL CertStore DN Query` 收口后的最终结论已经比较清楚：
+  - 真正让 Windows runtime 红灯转绿的关键
+    不是去改整个 public getter family，
+    而是：
+    - 在 certstore query lane
+      切回 native full-DN truth
+    - 再补上
+      `PCERT_INFO` 的显式类型转换
+  - 最终
+    `CI`
+    run `26140837184`
+    与
+    `WinSSL Runtime Gate`
+    run `26140837156`
+    都已通过
+- 因而当前 `FindBySubject`
+  / `FindByIssuer`
+  的 WinSSL runtime contract
+  可以视为已闭环；
+  后续若还要继续沿这个方向深挖，
+  应该把问题正式切换成：
+  - `TWinSSLCertificate.GetSubject`
+    / `GetIssuer`
+    本身的 public 语义
+    是否也要和其它 backend
+    对齐为 full-DN truth
+  - 而不是再回头重查
+    certstore query
+    为什么匹配不到

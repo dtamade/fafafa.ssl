@@ -10,7 +10,7 @@
 
 ## Current Status
 
-- [in_progress] `winssl certstore dn query runtime closeout`
+- [completed] `winssl certstore dn query runtime closeout`
   当前 focused 目标：
   - 收掉
     GitHub Windows runtime
@@ -95,6 +95,48 @@
     而是
     Windows 上剩余的
     DN semantic drift
+  当前最终收口证据：
+  - 首次 push
+    `77e55dc`
+    虽然方向正确，
+    但
+    GitHub Actions
+    `WinSSL Runtime Gate`
+    run `26140587186`
+    在 quick smoke
+    编译期暴露出：
+    `CERT_CONTEXT.pCertInfo`
+    需要先显式转成
+    `PCERT_INFO`
+  - 二次修正提交：
+    `b4a93d3`
+    `fix(winssl): cast cert info before dn extraction`
+    后：
+    - `CI`
+      run `26140837184`
+      `success`
+    - `WinSSL Runtime Gate`
+      run `26140837156`
+      `success`
+  - 第二次 Windows gate
+    已明确通过：
+    - `Run quick WinSSL smoke`
+    - `Run Windows Wave B gate`
+    - `Run broader WinSSL runtime suite`
+  当前批收口后的默认下一步：
+  - 回到更大的
+    interface-design / backend completeness
+    主线：
+    - `ISSLConnection`
+    - `TSSLConfig`
+    - `ISSLServerConnection`
+  - 如果继续沿 cert surface 深挖，
+    一个值得单独排期的问题是：
+    `TWinSSLCertificate.GetSubject`
+    / `GetIssuer`
+    目前仍更像 display-oriented getter，
+    是否要继续和其它 backend 的 full-DN surface
+    做公开语义对齐
 - [completed] `winssl certstore chain runtime contract`
   当前 focused 目标：
   - 补齐
