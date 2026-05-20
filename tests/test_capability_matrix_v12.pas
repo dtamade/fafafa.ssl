@@ -81,6 +81,25 @@ begin
       [BoolToStr(ACaps.SupportsSessionTickets, True), Ord(ACaps.SessionTicketsSupport)]));
 end;
 
+procedure RecordFeatureParityContracts(const ABackendName: string;
+  ALib: ISSLLibrary; const ACaps: TSSLBackendCapabilities);
+var
+  LSessionCacheSupported: Boolean;
+  LSessionTicketsSupported: Boolean;
+begin
+  LSessionCacheSupported := ALib.IsFeatureSupported(sslFeatSessionCache);
+  RecordContract(ABackendName + ' session-cache feature matches SessionCacheSupport',
+    LSessionCacheSupported = FeatureLevelPresent(ACaps.SessionCacheSupport),
+    Format('IsFeatureSupported(SessionCache)=%s SessionCacheSupport=%d',
+      [BoolToStr(LSessionCacheSupported, True), Ord(ACaps.SessionCacheSupport)]));
+
+  LSessionTicketsSupported := ALib.IsFeatureSupported(sslFeatSessionTickets);
+  RecordContract(ABackendName + ' session-tickets feature matches SessionTicketsSupport',
+    LSessionTicketsSupported = FeatureLevelPresent(ACaps.SessionTicketsSupport),
+    Format('IsFeatureSupported(SessionTickets)=%s SessionTicketsSupport=%d',
+      [BoolToStr(LSessionTicketsSupported, True), Ord(ACaps.SessionTicketsSupport)]));
+end;
+
 procedure RecordBackendSpecificContracts(ABackend: TSSLLibraryType;
   const ACaps: TSSLBackendCapabilities);
 begin
@@ -110,6 +129,21 @@ begin
           ACaps.CertTransparencySupport = sslSupportNone,
           Format('CertTransparencySupport=%d',
             [Ord(ACaps.CertTransparencySupport)]));
+        RecordContract('OpenSSL session tickets support is stable',
+          ACaps.SessionTicketsSupport = sslSupportStable,
+          Format('SessionTicketsSupport=%d',
+            [Ord(ACaps.SessionTicketsSupport)]));
+        RecordContract('OpenSSL PKCS12 support is published',
+          ACaps.SupportsPKCS12,
+          Format('SupportsPKCS12=%s', [BoolToStr(ACaps.SupportsPKCS12, True)]));
+        RecordContract('OpenSSL custom cipher suites are published',
+          ACaps.SupportsCustomCipherSuites,
+          Format('SupportsCustomCipherSuites=%s',
+            [BoolToStr(ACaps.SupportsCustomCipherSuites, True)]));
+        RecordContract('OpenSSL callbacks are published',
+          ACaps.SupportsCallbacks,
+          Format('SupportsCallbacks=%s',
+            [BoolToStr(ACaps.SupportsCallbacks, True)]));
       end;
 
     sslFreePascal:
@@ -141,6 +175,13 @@ begin
           ACaps.SessionTicketsSupport = sslSupportExperimental,
           Format('SessionTicketsSupport=%d',
             [Ord(ACaps.SessionTicketsSupport)]));
+        RecordContract('FreePascal session cache support is experimental',
+          ACaps.SessionCacheSupport = sslSupportExperimental,
+          Format('SessionCacheSupport=%d',
+            [Ord(ACaps.SessionCacheSupport)]));
+        RecordContract('FreePascal 0-RTT support is experimental',
+          ACaps.ZeroRTTSupport = sslSupportExperimental,
+          Format('ZeroRTTSupport=%d', [Ord(ACaps.ZeroRTTSupport)]));
         RecordContract('FreePascal early-data support is experimental',
           ACaps.EarlyDataSupport = sslSupportExperimental,
           Format('EarlyDataSupport=%d', [Ord(ACaps.EarlyDataSupport)]));
@@ -226,10 +267,14 @@ begin
     WriteLn('  OCSPStaplingSupport: ', Ord(Caps.OCSPStaplingSupport));
     WriteLn('  CertTransparencySupport: ', Ord(Caps.CertTransparencySupport));
     WriteLn('  SessionTicketsSupport: ', Ord(Caps.SessionTicketsSupport));
+    WriteLn('  SessionCacheSupport: ', Ord(Caps.SessionCacheSupport));
+    WriteLn('  ZeroRTTSupport: ', Ord(Caps.ZeroRTTSupport));
+    WriteLn('  EarlyDataSupport: ', Ord(Caps.EarlyDataSupport));
     WriteLn;
 
     WriteLn('[Capability Truth Contracts]');
     RecordProjectionContracts(ABackendName, Caps, AType);
+    RecordFeatureParityContracts(ABackendName, Lib, Caps);
     RecordBackendSpecificContracts(AType, Caps);
     WriteLn;
 

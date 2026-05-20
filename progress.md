@@ -6,6 +6,134 @@
 
 ## 2026-05-21
 
+### Shared Capability Matrix Session And Publication Hardening
+
+- inspect current shared-entrypoint candidate truth:
+  - `tests/test_capability_matrix_v12.pas`
+  - `src/fafafa.ssl.openssl.backed.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `tests/test_backend_custom_cipher_capability_truth_contract.pas`
+  - `tests/test_backend_callback_capability_truth_contract.pas`
+  - `tests/test_optional_backends_pkcs12_capability_truth_contract.pas`
+  - `tests/test_capability_cache.pas`
+  - change:
+    - narrowed this batch to
+      shared session/publication hardening
+    - selected the highest-value additions as:
+      - `OpenSSL`
+        session tickets
+        + published PKCS12/custom-cipher/callback truth
+      - `FreePascal`
+        session-cache / 0-RTT support-level truth
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-shared-capability-matrix-session-and-publication-hardening.md`
+  - `tests/scripts/test_capability_matrix_v12_session_and_publication_contract.sh`
+  - change:
+    - documented the batch as the next shared hardening step
+    - added a source-level guard for the new runtime-truth anchors
+
+- first-pass shared regression hardening exposed a fresh RED:
+  - `tests/test_capability_matrix_v12.pas`
+  - change:
+    - initial implementation tried to freeze
+      `OpenSSL SessionCacheSupport`
+      as
+      `sslSupportStable`
+  - verification:
+    - `tests/test_capability_matrix_v12.pas`
+      - result: FAIL
+      - summary:
+        - current Linux host
+          reported:
+          - `OpenSSL SessionCacheSupport: 0`
+        - failure:
+          - `OpenSSL session cache support is stable`
+      - important conclusion:
+        - the issue was not a bad test harness
+        - current
+          `OpenSSL`
+          session-cache truth
+          remains runtime-helper-gated on this host
+
+- refine shared hardening from fixed truth to parity truth:
+  - `tests/test_capability_matrix_v12.pas`
+  - `docs/plans/2026-05-21-shared-capability-matrix-session-and-publication-hardening.md`
+  - `tests/scripts/test_capability_matrix_v12_session_and_publication_contract.sh`
+  - change:
+    - replaced the fixed
+      `OpenSSL SessionCacheSupport=stable`
+      assertion with shared parity contracts for:
+      - `sslFeatSessionCache`
+        vs
+        `SessionCacheSupport`
+      - `sslFeatSessionTickets`
+        vs
+        `SessionTicketsSupport`
+    - kept the rest of the batch focused on:
+      - `OpenSSL`
+        session-ticket / PKCS12 / custom-cipher / callback publication truth
+      - `FreePascal`
+        session-cache / 0-RTT experimental truth
+    - extended shared diagnostics to print:
+      - `SessionCacheSupport`
+      - `ZeroRTTSupport`
+      - `EarlyDataSupport`
+
+- verify static contract:
+  - `bash -n tests/scripts/test_capability_matrix_v12_session_and_publication_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_capability_matrix_v12_session_and_publication_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed the shared regression now contains:
+        - session feature/capability parity anchors
+        - `OpenSSL`
+          publication anchors
+        - `FreePascal`
+          experimental support-level anchors
+
+- verify shared runtime regression:
+  - `mkdir -p tmp/test_capability_matrix_v12 && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_capability_matrix_v12 -FEtmp/test_capability_matrix_v12 -otmp/test_capability_matrix_v12/test_capability_matrix_v12 tests/test_capability_matrix_v12.pas && ./tmp/test_capability_matrix_v12/test_capability_matrix_v12`
+    - result: PASS
+    - summary:
+      - executed backends:
+        - `OpenSSL`
+        - `FreePascal`
+      - skipped backends:
+        - `WolfSSL` backend not enabled
+        - `MbedTLS` backend not enabled
+        - `WinSSL` backend not registered on Linux
+      - final counters:
+        - `Backends executed: 2`
+        - `Backends skipped: 3`
+        - `Contract checks: 48`
+        - `Contract failures: 0`
+      - important conclusion:
+        - shared regression now catches:
+          - session feature/support-level parity drift
+          - `OpenSSL`
+            session-ticket / PKCS12 / custom-cipher / callback publication drift
+          - `FreePascal`
+            session-cache / 0-RTT support-level drift
+
+- re-run focused publication proofs:
+  - `mkdir -p tmp/test_backend_custom_cipher_capability_truth_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_backend_custom_cipher_capability_truth_contract -FEtmp/test_backend_custom_cipher_capability_truth_contract -otmp/test_backend_custom_cipher_capability_truth_contract/test_backend_custom_cipher_capability_truth_contract tests/test_backend_custom_cipher_capability_truth_contract.pas && ./tmp/test_backend_custom_cipher_capability_truth_contract/test_backend_custom_cipher_capability_truth_contract`
+    - result: PASS
+    - summary:
+      - `OpenSSL SupportsCustomCipherSuites = True`
+      - published custom-cipher setters still accept custom non-default overrides
+  - `mkdir -p tmp/test_backend_callback_capability_truth_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_backend_callback_capability_truth_contract -FEtmp/test_backend_callback_capability_truth_contract -otmp/test_backend_callback_capability_truth_contract/test_backend_callback_capability_truth_contract tests/test_backend_callback_capability_truth_contract.pas && ./tmp/test_backend_callback_capability_truth_contract/test_backend_callback_capability_truth_contract`
+    - result: PASS
+    - summary:
+      - `OpenSSL SupportsCallbacks = True`
+      - runtime gate still clears callback publication if helper surface becomes incomplete
+  - `mkdir -p tmp/test_optional_backends_pkcs12_capability_truth_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_optional_backends_pkcs12_capability_truth_contract -FEtmp/test_optional_backends_pkcs12_capability_truth_contract -otmp/test_optional_backends_pkcs12_capability_truth_contract/test_optional_backends_pkcs12_capability_truth_contract tests/test_optional_backends_pkcs12_capability_truth_contract.pas && ./tmp/test_optional_backends_pkcs12_capability_truth_contract/test_optional_backends_pkcs12_capability_truth_contract`
+    - result: PASS
+    - summary:
+      - `OpenSSL SupportsPKCS12 = True`
+      - `MbedTLS / WolfSSL SupportsPKCS12 = False`
+
 ### Shared Capability Matrix Runtime Truth Hardening
 
 - inspect current shared capability regression truth:

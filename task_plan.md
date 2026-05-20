@@ -10,6 +10,110 @@
 
 ## Current Status
 
+- [completed] `shared capability matrix session and publication hardening`
+  当前 focused 目标：
+  - 继续强化
+    `tests/test_capability_matrix_v12.pas`
+    这条 shared audit entrypoint，
+    把已经在 focused contracts
+    里成立的
+    session/publication truth
+    再抬到共享 runtime regression
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-shared-capability-matrix-session-and-publication-hardening.md`
+  - 新增 contract：
+    - `tests/scripts/test_capability_matrix_v12_session_and_publication_contract.sh`
+  - 更新：
+    - `tests/test_capability_matrix_v12.pas`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_capability_matrix_v12_session_and_publication_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_capability_matrix_v12_session_and_publication_contract.sh`
+    - PASS
+  - `tests/test_capability_matrix_v12.pas`
+    - PASS
+  - `tests/test_backend_custom_cipher_capability_truth_contract.pas`
+    - PASS
+  - `tests/test_backend_callback_capability_truth_contract.pas`
+    - PASS
+  - `tests/test_optional_backends_pkcs12_capability_truth_contract.pas`
+    - PASS
+  当前状态：
+  - shared capability regression
+    现在又多了一层直接报警能力：
+    - `OpenSSL`
+      - `SessionTicketsSupport=stable`
+      - `SupportsPKCS12=True`
+      - `SupportsCustomCipherSuites=True`
+      - `SupportsCallbacks=True`
+    - `FreePascal`
+      - `SessionCacheSupport=experimental`
+      - `ZeroRTTSupport=experimental`
+    - shared feature/capability parity：
+      - `sslFeatSessionCache`
+        必须与
+        `SessionCacheSupport`
+        一致
+      - `sslFeatSessionTickets`
+        必须与
+        `SessionTicketsSupport`
+        一致
+  当前批次最重要的 fresh RED：
+  - 初始尝试把
+    `OpenSSL SessionCacheSupport`
+    直接锁成
+    `stable`
+    时，
+    shared regression
+    在当前 Linux host
+    上立即打出：
+    - `SessionCacheSupport=0`
+  - 这证明问题不是测试误报，
+    而是
+    `OpenSSL`
+    的 session-cache
+    确实仍带 runtime helper gate
+  - 因此这批收口成：
+    用 shared parity contract
+    锁住
+    `IsFeatureSupported(sslFeatSessionCache)`
+    与
+    `SessionCacheSupport`
+    的一致性，
+    而不是把 host-sensitive truth
+    误写成 fixed stable
+  当前 Linux host
+  上 shared regression
+  继续执行：
+  - `OpenSSL`
+  - `FreePascal`
+  - summary:
+    - `Backends executed: 2`
+    - `Backends skipped: 3`
+    - `Contract checks: 48`
+    - `Contract failures: 0`
+  当前路线图进度判断：
+  - 默认主线
+    仍然是
+    backend implementation-completeness
+    +
+    interface/implementation truth alignment
+  - 这批不是偏离路线，
+    而是把 shared audit
+    对 session/publication drift
+    的报警能力继续前推了一步
+  下一刀：
+  - 继续在 shared/focused 交界处
+    找还没被共享入口覆盖的
+    capability truth，
+    优先考虑：
+    - 仍然只在 focused tests
+      里成立、
+      但 shared regression
+      还未覆盖的
+      backend publication truth
+
 - [completed] `shared capability matrix runtime truth hardening`
   当前 focused 目标：
   - 把

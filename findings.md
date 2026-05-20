@@ -3,6 +3,65 @@
 ## 2026-05-21
 
 - `tests/test_capability_matrix_v12.pas`
+  这次又打出了一条真正有价值的
+  fresh RED：
+  初始把
+  `OpenSSL SessionCacheSupport`
+  写成固定
+  `stable`
+  后，
+  shared regression
+  在当前 Linux host
+  立即暴露出：
+  - `SessionCacheSupport=sslSupportNone`
+
+- 这条红线说明：
+  `OpenSSL`
+  的 session-cache
+  不能再被我们想当然地当成
+  “和 session tickets 一样稳定发布”；
+  它当前仍然受
+  runtime helper surface
+  门控
+
+- 因此这批最终收口出的更准真相是：
+  - `OpenSSL`
+    - `SessionTicketsSupport=stable`
+    - `SupportsPKCS12=True`
+    - `SupportsCustomCipherSuites=True`
+    - `SupportsCallbacks=True`
+  - `OpenSSL SessionCacheSupport`
+    不在 shared regression
+    里被写死成固定级别，
+    而是被提升成
+    `IsFeatureSupported(sslFeatSessionCache)`
+    与
+    `SessionCacheSupport`
+    的 shared parity contract
+  - `FreePascal`
+    - `SessionCacheSupport=experimental`
+    - `ZeroRTTSupport=experimental`
+
+- 这批说明我们当前路线没有迷失：
+  shared audit entrypoint
+  继续往前推时，
+  已经能直接暴露出
+  “接口/能力发布真相
+  是否被误写成固定结论”
+  这一层问题，
+  而不是只在 focused contracts
+  里局部成立
+
+- `OpenSSL custom-cipher / callback / PKCS12`
+  这三条 published/runtime truth
+  现在又多了一层 shared coverage，
+  同时 focused proof
+  继续保持绿色：
+  - `SupportsCustomCipherSuites=True`
+  - `SupportsCallbacks=True`
+  - `SupportsPKCS12=True`
+
+- `tests/test_capability_matrix_v12.pas`
   现在又推进了一层：
   它已经不再只是
   capability snapshot printer，
