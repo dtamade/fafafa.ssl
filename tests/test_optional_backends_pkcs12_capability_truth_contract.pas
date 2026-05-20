@@ -6,6 +6,7 @@ uses
   SysUtils,
   fafafa.ssl.base,
   fafafa.ssl.factory,
+  fafafa.ssl.freepascal.lib,
   fafafa.ssl.openssl.backed
   {$IFDEF UNIX}
   , fafafa.ssl.mbedtls.lib

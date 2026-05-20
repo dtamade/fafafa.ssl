@@ -6,6 +6,79 @@
 
 ## 2026-05-21
 
+### Optional Backends PKCS12 Runtime FreePascal Coverage Completeness
+
+- inspect suspected focused-runtime coverage hole:
+  - `tests/test_optional_backends_pkcs12_capability_truth_contract.pas`
+  - `src/fafafa.ssl.factory.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `tests/test_backend_callback_capability_truth_contract.pas`
+  - `tests/test_backend_password_protected_key_capability_truth_contract.pas`
+  - change:
+    - confirmed the PKCS12 runtime contract already called
+      `CheckBackendCapability(sslFreePascal, False);`
+    - confirmed it did not
+      `uses fafafa.ssl.freepascal.lib`
+    - confirmed
+      `TSSLFactory.IsLibraryAvailable(...)`
+      depends on backend registration,
+      and
+      `FreePascal`
+      registration happens in
+      `fafafa.ssl.freepascal.lib`
+      initialization
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-optional-backends-pkcs12-runtime-freepascal-coverage-completeness.md`
+  - `tests/scripts/test_optional_backends_pkcs12_runtime_freepascal_coverage_contract.sh`
+  - change:
+    - documented the batch as a focused runtime coverage repair
+    - added a static guard so the test cannot silently lose
+      `FreePascal`
+      registration again
+
+- repair PKCS12 runtime contract coverage:
+  - `tests/test_optional_backends_pkcs12_capability_truth_contract.pas`
+  - change:
+    - added
+      `fafafa.ssl.freepascal.lib`
+      to the
+      `uses`
+      list
+    - kept the existing runtime assertions unchanged so the batch stays attributable to coverage, not truth rewriting
+
+- verify static/runtime contracts:
+  - `bash -n tests/scripts/test_optional_backends_pkcs12_runtime_freepascal_coverage_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_optional_backends_pkcs12_runtime_freepascal_coverage_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed the runtime contract keeps:
+        - `fafafa.ssl.freepascal.lib`
+        - `CheckBackendCapability(sslFreePascal, False);`
+  - `bash tests/scripts/test_optional_backends_pkcs12_capability_truth_contract.sh`
+    - result: PASS
+    - summary:
+      - current docs/source PKCS12 truth contract remains intact
+  - `mkdir -p tmp/test_optional_backends_pkcs12_capability_truth_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_optional_backends_pkcs12_capability_truth_contract -FEtmp/test_optional_backends_pkcs12_capability_truth_contract -otmp/test_optional_backends_pkcs12_capability_truth_contract/test_optional_backends_pkcs12_capability_truth_contract tests/test_optional_backends_pkcs12_capability_truth_contract.pas && ./tmp/test_optional_backends_pkcs12_capability_truth_contract/test_optional_backends_pkcs12_capability_truth_contract`
+    - result: PASS
+    - summary:
+      - current Linux host
+        no longer skips
+        `FreePascal`
+      - actual runtime output:
+        - `FreePascal Native SupportsPKCS12 = False`
+        - `OpenSSL SupportsPKCS12 = True`
+        - `MbedTLS SupportsPKCS12 = False`
+        - `WolfSSL SupportsPKCS12 = False`
+        - `WinSSL`
+          skipped by platform
+      - important conclusion:
+        - the previous hole was registration/coverage-only
+        - not a fresh
+          `FreePascal`
+          PKCS12 truth drift
+
 ### Shared Capability Matrix Session And Publication Hardening
 
 - inspect current shared-entrypoint candidate truth:

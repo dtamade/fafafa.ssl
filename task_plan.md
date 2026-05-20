@@ -10,6 +10,79 @@
 
 ## Current Status
 
+- [completed] `optional backends pkcs12 runtime freepascal coverage completeness`
+  当前 focused 目标：
+  - 修复
+    `tests/test_optional_backends_pkcs12_capability_truth_contract.pas`
+    的 runtime coverage hole，
+    让
+    `FreePascal`
+    不再只停在
+    `CheckBackendCapability(...)`
+    文本里，
+    而是真正进入 focused runtime proof
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-optional-backends-pkcs12-runtime-freepascal-coverage-completeness.md`
+  - 新增 contract：
+    - `tests/scripts/test_optional_backends_pkcs12_runtime_freepascal_coverage_contract.sh`
+  - 更新：
+    - `tests/test_optional_backends_pkcs12_capability_truth_contract.pas`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_optional_backends_pkcs12_runtime_freepascal_coverage_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_optional_backends_pkcs12_runtime_freepascal_coverage_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_optional_backends_pkcs12_capability_truth_contract.sh`
+    - PASS
+  - `tests/test_optional_backends_pkcs12_capability_truth_contract.pas`
+    - PASS
+  当前状态：
+  - PKCS12 这条 focused runtime proof
+    现在不再把
+    `FreePascal`
+    错误 skip 成
+    `backend not available`
+  - 当前 Linux host
+    上实际输出已经变成：
+    - `FreePascal Native SupportsPKCS12 = False`
+    - `OpenSSL SupportsPKCS12 = True`
+    - `MbedTLS SupportsPKCS12 = False`
+    - `WolfSSL SupportsPKCS12 = False`
+    - `WinSSL`
+      按平台正常 skip
+  当前实施判断：
+  - 这批再次证明：
+    当前主线下真正高价值的工作，
+    仍然是
+    审查入口/focused proof
+    自身的 completeness，
+    而不是盲目重开旧实现线
+  当前路线图进度判断：
+  - 默认主线
+    仍然是
+    interface/implementation truth alignment
+    +
+    backend implementation-completeness
+  - 当前又补齐了一条
+    `FreePascal`
+    focused runtime proof
+    覆盖，
+    说明我们在朝
+    “各 backend 都有真实证据”
+    继续前进
+  下一刀：
+  - 继续找
+    这种
+    “源码/文档真相已经对，
+    但 focused runtime proof
+    还存在 registration / coverage hole”
+    的点，
+    优先补那些
+    仍会让某个 backend
+    只停在 skip
+    而没真正执行的 contract
+
 - [completed] `shared capability matrix session and publication hardening`
   当前 focused 目标：
   - 继续强化

@@ -2,6 +2,53 @@
 
 ## 2026-05-21
 
+- `tests/test_optional_backends_pkcs12_capability_truth_contract.pas`
+  里又暴露出一个典型的
+  focused runtime coverage hole：
+  它明明调用了
+  `CheckBackendCapability(sslFreePascal, False);`
+  但自身没有
+  `uses fafafa.ssl.freepascal.lib`
+
+- 因为
+  `TSSLFactory.IsLibraryAvailable(...)`
+  先看 registration map，
+  而
+  `FreePascal`
+  backend 的注册发生在
+  `fafafa.ssl.freepascal.lib`
+  的 initialization 里，
+  所以这条测试之前实际上把
+  `FreePascal`
+  跑成了：
+  - `[SKIP] FreePascal Native backend not available on this platform`
+
+- 这不是
+  `FreePascal SupportsPKCS12`
+  真相不清楚，
+  而是 focused runtime proof
+  自己没有把主线 backend
+  真正注册进来
+
+- 修复后，
+  当前 Linux host
+  上的 runtime proof
+  已经直接变成：
+  - `FreePascal Native SupportsPKCS12 = False`
+  - `OpenSSL SupportsPKCS12 = True`
+  - `MbedTLS / WolfSSL SupportsPKCS12 = False`
+  - `WinSSL`
+    因平台原因继续 skip
+
+- 这批和前面的 shared capability / FreePascal coverage hardening
+  属于同一类高价值工作：
+  不是继续猜实现，
+  而是让
+  “各 backend 的 focused/shared proof
+  真的覆盖到该 backend”
+  这件事
+  更完整
+
 - `tests/test_capability_matrix_v12.pas`
   这次又打出了一条真正有价值的
   fresh RED：
