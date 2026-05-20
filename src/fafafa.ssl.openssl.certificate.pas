@@ -197,6 +197,18 @@ begin
   Result := Assigned(BIO_new) and Assigned(BIO_s_mem) and Assigned(BIO_free);
 end;
 
+function HasServerAuthUsage(const AUsage: TSSLStringArray): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 0 to High(AUsage) do
+  begin
+    if SameText(Trim(AUsage[I]), 'serverAuth') then
+      Exit(True);
+  end;
+end;
+
 constructor TOpenSSLCertificate.Create(AX509: PX509; AOwnsHandle: Boolean = True);
 begin
   inherited Create;
@@ -823,6 +835,8 @@ var
   CertDER: TBytes;
   ParsedCert: TX509Certificate;
   Chain: PSTACK_OF_X509;
+  LExtendedKeyUsage: TSSLStringArray;
+  LExtendedKeyUsageText: string;
 begin
   AResult.Success := False;
   AResult.ErrorCode := 0;
@@ -914,6 +928,24 @@ begin
       
       if Ret = 1 then
       begin
+        if sslCertVerifyStrictChain in AFlags then
+        begin
+          LExtendedKeyUsageText := Trim(GetExtension('2.5.29.37'));
+          LExtendedKeyUsage := GetExtendedKeyUsage;
+          if (LExtendedKeyUsageText = '') or
+            (not HasServerAuthUsage(LExtendedKeyUsage) and
+             (Pos('serverAuth', LExtendedKeyUsageText) = 0)) then
+          begin
+            AResult.Success := False;
+            AResult.ErrorCode := X509_V_ERR_INVALID_PURPOSE;
+            AResult.ErrorMessage := 'Strict chain verification requires serverAuth extended key usage';
+            AResult.ChainStatus := 2;
+            AResult.DetailedInfo :=
+              'sslCertVerifyStrictChain requested but the leaf certificate is missing serverAuth extended key usage';
+            Exit;
+          end;
+        end;
+
         // Optional OCSP revocation check (fails closed when requested)
         if sslCertVerifyCheckOCSP in AFlags then
         begin

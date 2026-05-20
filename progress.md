@@ -4,6 +4,75 @@
 
 ## 2026-05-20
 
+### OpenSSL Certificate VerifyEx Strict-Chain Parity
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-20-openssl-certificate-verifyex-strict-chain-parity.md`
+  - `tests/openssl/test_openssl_verify_ex_strict_chain_contract.pas`
+  - change:
+    - recorded a bounded OpenSSL certificate VerifyEx strict-chain batch
+    - added a contract that uses the existing
+      `signer_cert.pem`
+      fixture as a clean
+      no-`serverAuth`
+      leaf
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_openssl_verify_ex_strict_chain_contract_units -FEtmp/test_openssl_verify_ex_strict_chain_contract_units -otmp/test_openssl_verify_ex_strict_chain_contract_units/test_openssl_verify_ex_strict_chain_contract tests/openssl/test_openssl_verify_ex_strict_chain_contract.pas`
+  - result: FAIL
+  - summary:
+    - first attempt failed because the new
+      `tmp/test_openssl_verify_ex_strict_chain_contract_units`
+      output directory did not exist yet
+    - after creating the directory,
+      compile succeeded
+
+- `./tmp/test_openssl_verify_ex_strict_chain_contract_units/test_openssl_verify_ex_strict_chain_contract`
+  - result: FAIL
+  - summary:
+    - captured the intended RED:
+      `VerifyEx with strict-chain should fail when serverAuth EKU is absent`
+    - confirmed
+      `OpenSSL certificate.VerifyEx`
+      was still ignoring
+      `sslCertVerifyStrictChain`
+
+- update implementation:
+  - `src/fafafa.ssl.openssl.certificate.pas`
+  - change:
+    - added a local
+      `HasServerAuthUsage(...)`
+      helper
+    - `OpenSSL VerifyEx`
+      now performs a strict-chain leaf EKU gate after
+      `X509_verify_cert`
+      succeeds
+    - the gate requires:
+      - an explicit
+        `extendedKeyUsage`
+        extension
+      - and
+        `serverAuth`
+        membership
+    - failure path now reports:
+      `Strict chain verification requires serverAuth extended key usage`
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_openssl_verify_ex_strict_chain_contract_units -FEtmp/test_openssl_verify_ex_strict_chain_contract_units -otmp/test_openssl_verify_ex_strict_chain_contract_units/test_openssl_verify_ex_strict_chain_contract tests/openssl/test_openssl_verify_ex_strict_chain_contract.pas`
+- `./tmp/test_openssl_verify_ex_strict_chain_contract_units/test_openssl_verify_ex_strict_chain_contract`
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - OpenSSL strict-chain contract
+      现已全绿
+    - the same fixture is now proven to:
+      - pass without
+        `sslCertVerifyStrictChain`
+      - fail with
+        `sslCertVerifyStrictChain`
+        because the leaf has no explicit
+        `serverAuth`
+        EKU
+    - no whitespace or patch-format drift remains
+
 ### Optional Backends Certificate Verification Truth
 
 - add focused batch inputs:

@@ -2,6 +2,66 @@
 
 ## 2026-05-20
 
+- `OpenSSL certificate.VerifyEx`
+  这轮被打出来的真实问题
+  不是
+  `OCSP`
+  /
+  `CRL`
+  路径，
+  而是
+  `sslCertVerifyStrictChain`
+  在 certificate surface 上被静默忽略
+
+- 这和
+  `OpenSSLContext.SetCertVerifyFlags(...)`
+  里的
+  `X509_V_FLAG_X509_STRICT`
+  不是一回事：
+  - context 级别的 verify flags
+    主要约束
+    full connection/runtime path
+  - `ISSLCertificate.VerifyEx`
+    自己仍然需要兑现
+    published flag
+    语义
+
+- 新增的 OpenSSL focused RED
+  证明了：
+  - `tests/certificate/test_certs/signer_cert.pem`
+    用真实
+    `ca_cert.pem`
+    验证时
+    默认路径成功
+  - 但打开
+    `sslCertVerifyStrictChain`
+    后，
+    旧实现仍然成功
+
+- 这轮顺手还确认了一个
+  OpenSSL-specific nuance：
+  “缺少
+  `extendedKeyUsage`
+  扩展”
+  不能被简单等同成
+  “允许
+  `serverAuth`
+  ”
+
+- 所以最小正确修法
+  不是去重写 OpenSSL verify core，
+  而是：
+  - 保持
+    `X509_verify_cert`
+    作为基础链验证真相
+  - 在 success path
+    上额外要求：
+    - EKU 扩展必须显式存在
+    - 且必须包含
+      `serverAuth`
+  - 否则对
+    `sslCertVerifyStrictChain`
+    fail-closed
 - `WolfSSL`
   当前
   `Verify`

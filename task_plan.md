@@ -10,6 +10,77 @@
 
 ## Current Status
 
+- [completed] `openssl certificate verifyex strict-chain parity`
+  当前 focused 目标：
+  - 把
+    `OpenSSL`
+    证书对象的
+    `ISSLCertificate.VerifyEx`
+    在已发布 flag
+    `sslCertVerifyStrictChain`
+    上的 live 语义
+    收紧成与其它 backend 一致的 public truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-openssl-certificate-verifyex-strict-chain-parity.md`
+  - 修改实现：
+    - `src/fafafa.ssl.openssl.certificate.pas`
+  - 新增 focused tests：
+    - `tests/openssl/test_openssl_verify_ex_strict_chain_contract.pas`
+  当前实施判断：
+  - 真正的 residual gap
+    不是
+    `OpenSSL`
+    整体 verify pipeline 崩坏，
+    而是
+    `certificate.VerifyEx`
+    明显缺了一条
+    `sslCertVerifyStrictChain`
+    分支
+  - 现成 fixture
+    `tests/certificate/test_certs/signer_cert.pem`
+    本身就没有
+    `extendedKeyUsage`
+    扩展，
+    这让它成为非常干净的 strict-chain RED
+  - 修法上的关键点
+    不是简单信任
+    `GetExtendedKeyUsage()`，
+    因为在
+    `OpenSSL`
+    这层，
+    “没有 EKU 扩展”
+    不能被误当成
+    “允许 serverAuth”
+  当前 focused proof：
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_openssl_verify_ex_strict_chain_contract_units -FEtmp/test_openssl_verify_ex_strict_chain_contract_units -otmp/test_openssl_verify_ex_strict_chain_contract_units/test_openssl_verify_ex_strict_chain_contract tests/openssl/test_openssl_verify_ex_strict_chain_contract.pas`
+    - PASS
+  - `./tmp/test_openssl_verify_ex_strict_chain_contract_units/test_openssl_verify_ex_strict_chain_contract`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前批收口后的默认下一步：
+  - 继续沿
+    certificate VerifyEx
+    的已发布 flag parity
+    审 residual gaps
+  - 优先看：
+    - `OpenSSL`
+      的
+      `IgnoreExpiry`
+      /
+      `AllowSelfSigned`
+      是否存在
+      shared store flag
+      污染
+    - `FreePascal`
+      /
+      `WinSSL`
+      的
+      `certificate.VerifyEx`
+      是否仍有
+      已发布 flag
+      只做 round-trip
 - [completed] `optional backends certificate verify flags expiry/self-signed parity`
   当前 focused 目标：
   - 把
