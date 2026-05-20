@@ -278,7 +278,7 @@ begin
       'invalid' + LineEnding +
       '-----END CERTIFICATE-----');
     AssertTrue(not LCert.LoadFromMemory(@LPEMBuf[1], Length(LPEMBuf)),
-      'LoadFromMemory should reject PEM text when DER parser path is used');
+      'LoadFromMemory should reject malformed PEM text');
     AssertTrue(Length(LCert.SaveToDER) = 0,
       'LoadFromMemory PEM-text failure should keep state empty');
   finally

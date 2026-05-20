@@ -17863,6 +17863,85 @@
   - summary:
     - no whitespace or patch-format drift remains before commit
 
+### Optional Backends Certificate Stream/Memory Truth
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-20-optional-backends-certificate-stream-memory-truth.md`
+  - `tests/test_mbedtls_framework.pas`
+  - `tests/test_wolfssl_framework.pas`
+  - `tests/connection/test_wolfssl_metadata_accuracy.pas`
+  - change:
+    - recorded a bounded optional-backend certificate stream/memory batch
+    - added focused contracts for:
+      - valid PEM memory load
+      - `SaveToStream -> LoadFromStream` roundtrip
+      - malformed PEM fail-closed
+
+- update implementation:
+  - `src/fafafa.ssl.mbedtls.certificate.pas`
+  - `src/fafafa.ssl.wolfssl.certificate.pas`
+  - change:
+    - `MbedTLS`
+      stream/memory load path
+      now treats PEM as PEM content,
+      includes the required null terminator,
+      and resets loaded state on failure
+    - `WolfSSL`
+      `LoadFromMemory`
+      /
+      `LoadFromStream`
+      now dispatch by content
+      instead of forcing DER-only memory truth
+    - `WolfSSL`
+      `LoadFromDER`
+      now uses a direct DER-native load path
+      instead of recursing back through memory
+    - `WolfSSL`
+      malformed PEM path
+      now fails closed:
+      `LoadFromPEM`
+      and PEM file preparse
+      catch
+      `PEMToDER(...)`
+      exceptions and leave the certificate object empty
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_metadata_accuracy_units -FEtmp/test_wolfssl_metadata_accuracy_units -otmp/test_wolfssl_metadata_accuracy_units/test_wolfssl_metadata_accuracy tests/connection/test_wolfssl_metadata_accuracy.pas`
+- `./tmp/test_wolfssl_metadata_accuracy_units/test_wolfssl_metadata_accuracy`
+  - result: PASS
+  - summary:
+    - the previous RED is now closed:
+      malformed PEM memory no longer raises
+      `EBase64Error`
+    - `TestInvalidCertificateInputRejection`
+      now proves the correct boundary:
+      invalid PEM returns
+      `False`
+      and leaves no DER state behind
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas`
+- `./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+  - result: PASS
+  - summary:
+    - `WolfSSL`
+      framework batch is fully green:
+      `245 passed / 0 failed`
+    - the new stream/memory contract stays green alongside
+      verification / flag-parity / metadata lanes
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`
+- `./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+  - result: PASS
+  - summary:
+    - `MbedTLS`
+      framework batch is fully green:
+      `231 passed / 0 failed`
+    - PEM memory + stream roundtrip truth remains stable after the focused load-path fix
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains after the stream/memory batch
+
 ### Troubleshooting Store Public API Truth
 
 - add focused batch inputs:

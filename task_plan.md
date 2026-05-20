@@ -6954,6 +6954,53 @@
     - active tests 继续只允许 allowlist compatibility coverage
   - 新增 `tests/scripts/test_withsni_surface_truth_contract.sh`
     守住这条 `v1.x freeze` truth，不允许 `.WithSNI(...)` 重新漂回普通 fluent builder 示例
+- [completed] `optional backends certificate stream/memory truth` 已完成 focused 收口：
+  - 新 plan：
+    - `docs/plans/2026-05-20-optional-backends-certificate-stream-memory-truth.md`
+  - 这批收回的是一条真正还没被验证完的 certificate public surface：
+    - `LoadFromStream`
+    - `LoadFromMemory`
+    - `SaveToStream`
+  - 当前已确认并修复的真问题：
+    - `MbedTLS`
+      PEM memory
+      需要 content-aware parse
+      + null terminator
+    - `WolfSSL`
+      memory / stream
+      之前比 file surface 更窄，
+      只接受 DER
+    - `WolfSSL`
+      在 malformed PEM
+      边界上会把
+      `EBase64Error`
+      向外逃逸，
+      而不是
+      `False`
+      + 空状态
+  - 当前 focused proof：
+    - `tests/connection/test_wolfssl_metadata_accuracy.pas`
+      - PASS
+    - `tests/test_wolfssl_framework.pas`
+      - PASS
+      - `245 passed / 0 failed`
+    - `tests/test_mbedtls_framework.pas`
+      - PASS
+      - `231 passed / 0 failed`
+    - `git diff --check`
+      - PASS
+  - 当前结论：
+    - optional backends
+      的 certificate stream/memory surface
+      已对齐到当前仓库其它 backend 的 content-aware truth：
+      - valid PEM memory
+        通过
+      - `SaveToStream -> LoadFromStream`
+        roundtrip
+        通过
+      - malformed PEM
+        继续失败，
+        但现在是稳定 fail-closed
 
 ## Scope
 

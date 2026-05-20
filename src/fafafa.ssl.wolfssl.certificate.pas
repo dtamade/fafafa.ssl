@@ -34,6 +34,8 @@ type
     FPEMData: string;
     FDERData: TBytes;
     FIssuerCert: ISSLCertificate;
+    procedure ResetLoadedState;
+    function LoadNativeFromDER(const ADER: TBytes): Boolean;
     function TryLoadX509Parser(out AParser: TX509Certificate): Boolean;
     function TryGetParsedAlgorithmMetadata(out APublicKeyAlgorithm,
       ASignatureAlgorithm: string): Boolean;
@@ -469,6 +471,24 @@ begin
   inherited Destroy;
 end;
 
+procedure TWolfSSLCertificate.ResetLoadedState;
+begin
+  FPEMData := '';
+  SetLength(FDERData, 0);
+  FIssuerCert := nil;
+  Finalize(FInfo);
+  FillChar(FInfo, SizeOf(FInfo), 0);
+  FInfo.PathLenConstraint := -1;
+  FInfo.PathLength := -1;
+
+  if FX509 <> nil then
+  begin
+    if Assigned(wolfSSL_X509_free) then
+      wolfSSL_X509_free(FX509);
+    FX509 := nil;
+  end;
+end;
+
 function TWolfSSLCertificate.TryLoadX509Parser(
   out AParser: TX509Certificate): Boolean;
 var
@@ -527,6 +547,45 @@ begin
   end;
 end;
 
+function TWolfSSLCertificate.LoadNativeFromDER(const ADER: TBytes): Boolean;
+var
+  LX509: PWOLFSSL_X509;
+  LParser: TX509Certificate;
+begin
+  Result := False;
+  if Length(ADER) = 0 then
+    Exit;
+
+  LParser := TX509Certificate.Create;
+  try
+    try
+      LParser.LoadFromDER(ADER);
+    except
+      Exit;
+    end;
+  finally
+    LParser.Free;
+  end;
+
+  if not Assigned(wolfSSL_X509_d2i) then
+    Exit;
+
+  LX509 := wolfSSL_X509_d2i(nil, @ADER[0], Length(ADER));
+  if LX509 = nil then
+    Exit;
+
+  if FX509 <> nil then
+  begin
+    if Assigned(wolfSSL_X509_free) then
+      wolfSSL_X509_free(FX509);
+  end;
+
+  FX509 := LX509;
+  FDERData := Copy(ADER);
+  FPEMData := TSSLUtils.DERToPEM(FDERData);
+  Result := True;
+end;
+
 function TWolfSSLCertificate.LoadFromFile(const AFileName: string): Boolean;
 var
   LRawBytes: TBytes;
@@ -535,9 +594,7 @@ var
 begin
   Result := False;
   if not FileExists(AFileName) then Exit;
-
-  SetLength(FDERData, 0);
-  FPEMData := '';
+  ResetLoadedState;
 
   SetLength(LRawBytes, 0);
   LStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
@@ -556,8 +613,12 @@ begin
     SetString(LText, PAnsiChar(@LRawBytes[0]), Length(LRawBytes));
     if TSSLUtils.IsPEMFormat(LText) then
     begin
-      FPEMData := LText;
-      FDERData := TSSLUtils.PEMToDER(FPEMData);
+      try
+        FDERData := TSSLUtils.PEMToDER(LText);
+        FPEMData := LText;
+      except
+        Exit(False);
+      end;
     end
     else
     begin
@@ -587,62 +648,39 @@ end;
 function TWolfSSLCertificate.LoadFromStream(AStream: TStream): Boolean;
 var
   LData: TBytes;
+  LText: string;
 begin
   Result := False;
+  ResetLoadedState;
   if AStream = nil then Exit;
 
   SetLength(LData, AStream.Size - AStream.Position);
   if Length(LData) = 0 then Exit;
 
   AStream.ReadBuffer(LData[0], Length(LData));
-  Result := LoadFromMemory(@LData[0], Length(LData));
+  SetString(LText, PAnsiChar(@LData[0]), Length(LData));
+  if TSSLUtils.IsPEMFormat(LText) then
+    Result := LoadFromPEM(LText)
+  else
+    Result := LoadFromDER(LData);
 end;
 
 function TWolfSSLCertificate.LoadFromMemory(const AData: Pointer; ASize: Integer): Boolean;
 var
-  LX509: PWOLFSSL_X509;
-  LDER: TBytes;
-  LParser: TX509Certificate;
+  LRaw: TBytes;
+  LText: string;
 begin
   Result := False;
-  SetLength(FDERData, 0);
-  FPEMData := '';
-
+  ResetLoadedState;
   if (AData = nil) or (ASize <= 0) then Exit;
-  SetLength(LDER, ASize);
-  Move(AData^, LDER[0], ASize);
+  SetLength(LRaw, ASize);
+  Move(AData^, LRaw[0], ASize);
 
-  if not TSSLUtils.IsDERFormat(LDER) then
-    Exit;
-
-  // 先用统一 X509 解析器做安全性校验，避免把无效输入交给 wolfSSL parser
-  LParser := TX509Certificate.Create;
-  try
-    try
-      LParser.LoadFromDER(LDER);
-    except
-      Exit;
-    end;
-  finally
-    LParser.Free;
-  end;
-
-  if not Assigned(wolfSSL_X509_d2i) then Exit;
-
-  LX509 := wolfSSL_X509_d2i(nil, @LDER[0], Length(LDER));
-  if LX509 = nil then
-    Exit;
-
-  if FX509 <> nil then
-  begin
-    if Assigned(wolfSSL_X509_free) then
-      wolfSSL_X509_free(FX509);
-  end;
-
-  FX509 := LX509;
-  FDERData := Copy(LDER);
-  FPEMData := TSSLUtils.DERToPEM(FDERData);
-  Result := True;
+  SetString(LText, PAnsiChar(@LRaw[0]), Length(LRaw));
+  if TSSLUtils.IsPEMFormat(LText) then
+    Result := LoadFromPEM(LText)
+  else
+    Result := LoadFromDER(LRaw);
 end;
 
 function TWolfSSLCertificate.LoadFromPEM(const APEM: string): Boolean;
@@ -650,15 +688,17 @@ var
   LDER: TBytes;
 begin
   Result := False;
-  SetLength(FDERData, 0);
-  FPEMData := '';
-
+  ResetLoadedState;
   if APEM = '' then Exit;
 
   if not TSSLUtils.IsPEMFormat(APEM) then
     Exit;
 
-  LDER := TSSLUtils.PEMToDER(APEM);
+  try
+    LDER := TSSLUtils.PEMToDER(APEM);
+  except
+    Exit(False);
+  end;
   if Length(LDER) = 0 then
     Exit;
 
@@ -671,18 +711,10 @@ end;
 function TWolfSSLCertificate.LoadFromDER(const ADER: TBytes): Boolean;
 begin
   Result := False;
-  SetLength(FDERData, 0);
-  FPEMData := '';
-
+  ResetLoadedState;
   if Length(ADER) = 0 then Exit;
 
-  Result := LoadFromMemory(@ADER[0], Length(ADER));
-
-  if Result then
-  begin
-    FDERData := Copy(ADER);
-    FPEMData := TSSLUtils.DERToPEM(FDERData);
-  end;
+  Result := LoadNativeFromDER(ADER);
 end;
 
 function TWolfSSLCertificate.SaveToFile(const AFileName: string): Boolean;

@@ -10824,3 +10824,69 @@
   “活跃排障文档也不再误教
   concrete-only 能力
   是 public contract”
+
+- `optional backends certificate stream/memory truth`
+  这一批真正新增的实现缺口
+  不只是
+  `LoadFromMemory`
+  / `LoadFromStream`
+  对 valid PEM
+  过窄，
+  还包括
+  `WolfSSL`
+  在 malformed PEM
+  边界上没有 fail-closed
+
+- 具体 root cause 是：
+  `TWolfSSLCertificate.LoadFromMemory(...)`
+  走 content-aware dispatch 后，
+  带
+  PEM begin/end marker
+  但 base64 无效的输入
+  会进入
+  `LoadFromPEM(...)`
+  再调用
+  `TSSLUtils.PEMToDER(...)`
+  而这里会抛
+  `EBase64Error`
+  不是返回
+  `False`
+
+- 这条 public truth
+  的正确边界应是：
+  - valid PEM memory / stream
+    被接受
+  - malformed PEM
+    仍被拒绝
+  - 拒绝方式必须是
+    `False`
+    +
+    空状态，
+    不能把 parser 异常暴露给调用方
+
+- 当前最小正确修法是：
+  - `WolfSSL LoadFromPEM`
+    对
+    `PEMToDER(...)`
+    做
+    `try/except`
+  - `WolfSSL LoadFromFile`
+    在读入真实文件后先
+    `ResetLoadedState`
+    再做 PEM preparse，
+    并对同一条
+    `PEMToDER(...)`
+    路径做 fail-closed
+
+- 收口后，
+  optional backends
+  的 certificate stream/memory surface
+  已重新对齐到当前仓库其他 backend 的 content-aware truth：
+  - valid PEM memory
+    通过
+  - `SaveToStream -> LoadFromStream`
+    roundtrip
+    通过
+  - malformed PEM memory
+    被稳定拒绝，
+    且不再残留旧 cert state

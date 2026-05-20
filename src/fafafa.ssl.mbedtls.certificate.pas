@@ -38,6 +38,7 @@ type
     FOwnsHandle: Boolean;
 
     procedure AllocateCertificate;
+    procedure ResetLoadedState;
     procedure FreeCertificate;
     function TryLoadX509Parser(out AParser: TX509Certificate): Boolean;
     function TryGetParsedAlgorithmMetadata(out APublicKeyAlgorithm,
@@ -370,6 +371,27 @@ begin
   FOwnsHandle := True;
 end;
 
+procedure TMbedTLSCertificate.ResetLoadedState;
+begin
+  FPEMData := '';
+  SetLength(FDERData, 0);
+  FIssuerCert := nil;
+  Finalize(FInfo);
+  FillChar(FInfo, SizeOf(FInfo), 0);
+  FInfo.PathLenConstraint := -1;
+  FInfo.PathLength := -1;
+
+  if FX509Crt <> nil then
+  begin
+    if FOwnsHandle then
+      FreeCertificate
+    else
+      FX509Crt := nil;
+  end;
+
+  FOwnsHandle := True;
+end;
+
 procedure TMbedTLSCertificate.FreeCertificate;
 begin
   if FX509Crt <> nil then
@@ -460,10 +482,9 @@ var
   LData: TBytes;
 begin
   Result := False;
+  ResetLoadedState;
   if AStream = nil then Exit;
 
-  FPEMData := '';
-  SetLength(FDERData, 0);
   SetLength(LData, AStream.Size - AStream.Position);
   if Length(LData) = 0 then Exit;
 
@@ -472,18 +493,40 @@ begin
 end;
 
 function TMbedTLSCertificate.LoadFromMemory(const AData: Pointer; ASize: Integer): Boolean;
+var
+  LRaw: TBytes;
+  LText: string;
+  LPEMBuffer: TBytes;
 begin
   Result := False;
+  ResetLoadedState;
   if (AData = nil) or (ASize <= 0) then Exit;
   if not Assigned(mbedtls_x509_crt_parse) then Exit;
 
-  FPEMData := '';
-  SetLength(FDERData, 0);
+  SetLength(LRaw, ASize);
+  Move(AData^, LRaw[0], ASize);
   AllocateCertificate;
 
-  // MbedTLS 需要 null 终止的 PEM 或 DER 数据
-  if mbedtls_x509_crt_parse(FX509Crt, AData, ASize) = 0 then
-    Result := True
+  SetString(LText, PAnsiChar(@LRaw[0]), Length(LRaw));
+  if TSSLUtils.IsPEMFormat(LText) then
+  begin
+    SetLength(LPEMBuffer, Length(LRaw) + 1);
+    Move(LRaw[0], LPEMBuffer[0], Length(LRaw));
+    LPEMBuffer[High(LPEMBuffer)] := 0;
+
+    if mbedtls_x509_crt_parse(FX509Crt, @LPEMBuffer[0], Length(LPEMBuffer)) = 0 then
+    begin
+      FPEMData := LText;
+      Result := True;
+    end
+    else
+      FreeCertificate;
+  end
+  else if mbedtls_x509_crt_parse(FX509Crt, @LRaw[0], Length(LRaw)) = 0 then
+  begin
+    FDERData := Copy(LRaw);
+    Result := True;
+  end
   else
     FreeCertificate;
 end;
@@ -493,6 +536,7 @@ var
   LAnsi: AnsiString;
 begin
   Result := False;
+  ResetLoadedState;
   if APEM = '' then Exit;
 
   LAnsi := AnsiString(APEM);
@@ -505,6 +549,7 @@ end;
 function TMbedTLSCertificate.LoadFromDER(const ADER: TBytes): Boolean;
 begin
   Result := False;
+  ResetLoadedState;
   if Length(ADER) = 0 then Exit;
 
   Result := LoadFromMemory(@ADER[0], Length(ADER));

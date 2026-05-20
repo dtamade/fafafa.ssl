@@ -654,6 +654,73 @@ begin
   end;
 end;
 
+procedure TestWolfSSLCertificateStreamMemoryTruthContract;
+var
+  LLib: ISSLLibrary;
+  LCert: TWolfSSLCertificate;
+  LMemoryCert: TWolfSSLCertificate;
+  LStreamCert: TWolfSSLCertificate;
+  LPEMAnsi: AnsiString;
+  LExpectedFingerprint: string;
+  LStream: TMemoryStream;
+begin
+  WriteLn('');
+  WriteLn('=== WolfSSL Certificate Stream/Memory Truth Contract ===');
+
+  LLib := CreateWolfSSLLibrary;
+  if not LLib.Initialize then
+  begin
+    WriteLn('  (Skipped - WolfSSL library not available)');
+    Test('Certificate stream/memory truth contract skipped', True);
+    Exit;
+  end;
+
+  LCert := TWolfSSLCertificate.Create;
+  LMemoryCert := TWolfSSLCertificate.Create;
+  LStreamCert := TWolfSSLCertificate.Create;
+  LStream := TMemoryStream.Create;
+  try
+    if not LCert.LoadFromFile('tests/certs/server-cert.pem') then
+    begin
+      Test('Load certificate stream/memory fixture', False);
+      Exit;
+    end;
+    Test('Load certificate stream/memory fixture', True);
+
+    LExpectedFingerprint := LCert.GetFingerprintSHA256;
+    Test('Fixture exposes fingerprint for stream/memory truth',
+      LExpectedFingerprint <> '');
+
+    LPEMAnsi := AnsiString(LCert.SaveToPEM);
+    Test('Fixture exports PEM text for memory truth',
+      LPEMAnsi <> '');
+    if LPEMAnsi = '' then
+      Exit;
+
+    Test('LoadFromMemory accepts valid PEM text',
+      LMemoryCert.LoadFromMemory(@LPEMAnsi[1], Length(LPEMAnsi)));
+    Test('LoadFromMemory PEM roundtrip preserves fingerprint truth',
+      SameText(LMemoryCert.GetFingerprintSHA256, LExpectedFingerprint));
+
+    Test('SaveToStream writes PEM stream',
+      LCert.SaveToStream(LStream) and (LStream.Size > 0));
+    if LStream.Size = 0 then
+      Exit;
+
+    LStream.Position := 0;
+    Test('LoadFromStream accepts PEM stream roundtrip',
+      LStreamCert.LoadFromStream(LStream));
+    Test('LoadFromStream roundtrip preserves fingerprint truth',
+      SameText(LStreamCert.GetFingerprintSHA256, LExpectedFingerprint));
+  finally
+    LStream.Free;
+    LStreamCert.Free;
+    LMemoryCert.Free;
+    LCert.Free;
+    LLib.Finalize;
+  end;
+end;
+
 procedure TestWolfSSLVerifyExExpirySelfSignedFlagParityContract;
 var
   LLib: ISSLLibrary;
@@ -1600,6 +1667,7 @@ begin
   TestWolfSSLCertificateIdentityGetterContract;
   TestWolfSSLCertificateVersionTruthContract;
   TestWolfSSLCertificateTimeTruthContract;
+  TestWolfSSLCertificateStreamMemoryTruthContract;
   TestWolfSSLCertificateVerificationTruthContract;
   TestWolfSSLVerifyExExpirySelfSignedFlagParityContract;
   TestWolfSSLCertificateExtensionMetadataContract;

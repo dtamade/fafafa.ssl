@@ -583,6 +583,77 @@ begin
   end;
 end;
 
+procedure TestMbedTLSCertificateStreamMemoryTruthContract;
+var
+  LLib: ISSLLibrary;
+  LCert: TMbedTLSCertificate;
+  LMemoryCert: TMbedTLSCertificate;
+  LStreamCert: TMbedTLSCertificate;
+  LPEMAnsi: AnsiString;
+  LExpectedFingerprint: string;
+  LStream: TMemoryStream;
+begin
+  WriteLn('');
+  WriteLn('=== MbedTLS Certificate Stream/Memory Truth Contract ===');
+
+  LLib := CreateMbedTLSLibrary;
+  if not LLib.Initialize then
+  begin
+    WriteLn('  (Skipped - MbedTLS library not available)');
+    Test('Certificate stream/memory truth contract skipped', True);
+    Exit;
+  end;
+
+  LCert := TMbedTLSCertificate.Create;
+  LMemoryCert := TMbedTLSCertificate.Create;
+  LStreamCert := TMbedTLSCertificate.Create;
+  LStream := TMemoryStream.Create;
+  try
+    if not LCert.LoadFromFile('tests/certs/server-cert.pem') then
+    begin
+      Test('Load certificate stream/memory fixture', False);
+      Exit;
+    end;
+    Test('Load certificate stream/memory fixture', True);
+
+    LExpectedFingerprint := LCert.GetFingerprintSHA256;
+    Test('Fixture exposes fingerprint for stream/memory truth',
+      LExpectedFingerprint <> '');
+
+    LPEMAnsi := AnsiString(LCert.SaveToPEM);
+    Test('Fixture exports PEM text for memory truth',
+      LPEMAnsi <> '');
+    if LPEMAnsi = '' then
+      Exit;
+
+    Test('LoadFromMemory accepts valid PEM text',
+      LMemoryCert.LoadFromMemory(@LPEMAnsi[1], Length(LPEMAnsi)));
+    Test('LoadFromMemory PEM roundtrip preserves fingerprint truth',
+      SameText(LMemoryCert.GetFingerprintSHA256, LExpectedFingerprint));
+    Test('LoadFromMemory rejects nil/zero input',
+      not LMemoryCert.LoadFromMemory(nil, 0));
+    Test('LoadFromMemory nil/zero failure clears loaded DER state',
+      Length(LMemoryCert.SaveToDER) = 0);
+
+    Test('SaveToStream writes PEM stream',
+      LCert.SaveToStream(LStream) and (LStream.Size > 0));
+    if LStream.Size = 0 then
+      Exit;
+
+    LStream.Position := 0;
+    Test('LoadFromStream accepts PEM stream roundtrip',
+      LStreamCert.LoadFromStream(LStream));
+    Test('LoadFromStream roundtrip preserves fingerprint truth',
+      SameText(LStreamCert.GetFingerprintSHA256, LExpectedFingerprint));
+  finally
+    LStream.Free;
+    LStreamCert.Free;
+    LMemoryCert.Free;
+    LCert.Free;
+    LLib.Finalize;
+  end;
+end;
+
 procedure TestMbedTLSCertificateVerificationTruthContract;
 var
   LLib: ISSLLibrary;
@@ -1477,6 +1548,7 @@ begin
   TestMbedTLSCertificateIdentityGetterContract;
   TestMbedTLSCertificateVersionTruthContract;
   TestMbedTLSCertificateTimeTruthContract;
+  TestMbedTLSCertificateStreamMemoryTruthContract;
   TestMbedTLSCertificateVerificationTruthContract;
   TestMbedTLSVerifyExExpirySelfSignedFlagParityContract;
   TestMbedTLSCertificateExtensionMetadataContract;
