@@ -4,6 +4,75 @@
 
 ## 2026-05-20
 
+### Optional Backends Certificate Public Surface Completeness
+
+- `mcp__ace_tool__.search_context(...)`
+- `sed -n '520,1180p' src/fafafa.ssl.mbedtls.certificate.pas`
+- `sed -n '680,1165p' src/fafafa.ssl.wolfssl.certificate.pas`
+- `sed -n '760,980p' src/fafafa.ssl.freepascal.lib.pas`
+- `sed -n '1320,1415p' src/fafafa.ssl.openssl.certificate.pas`
+  - result: PASS
+  - summary:
+    - confirmed the next real gap after metadata closure is not docs drift:
+      - `TMbedTLSCertificate.GetPublicKey = ''`
+      - `TMbedTLSCertificate.GetExtension = ''`
+      - `TWolfSSLCertificate.GetPublicKey = ''`
+      - `TWolfSSLCertificate.GetExtension = ''`
+    - confirmed current repo contract for `GetPublicKey` is the minimal one already used by:
+      - `OpenSSL`
+      - `FreePascal`
+      - return `GetPublicKeyAlgorithm`
+    - confirmed `GetExtension` can be aligned without new native bindings by reusing:
+      - `TX509Certificate.Extensions`
+
+- `openssl x509 -in tests/certificate/test_certs/signer_ecdsa_cert.pem -text -noout | rg -n "Subject Key Identifier|Authority Key Identifier|Basic Constraints|Subject Alternative Name|Key Usage|Extended Key Usage"`
+  - result: PASS
+  - summary:
+    - confirmed `signer_ecdsa_cert.pem` is a stable fixture for the new contract:
+      - contains `Subject Key Identifier`
+      - still reuses the existing ECDSA algorithm truth path
+
+- update tests:
+  - `tests/test_mbedtls_framework.pas`
+  - `tests/test_wolfssl_framework.pas`
+  - change:
+    - added public-surface completeness contract covering:
+      - `GetPublicKey <> ''`
+      - `GetPublicKey = GetPublicKeyAlgorithm`
+      - `GetExtension('2.5.29.14') <> ''`
+
+- `mkdir -p tmp/test_mbedtls_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas && ./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+  - result: FAIL -> PASS
+  - summary:
+    - first RED surfaced exactly 3 failures:
+      - `GetPublicKey <> ''`
+      - `GetPublicKey = GetPublicKeyAlgorithm`
+      - `GetExtension('2.5.29.14') <> ''`
+    - after aligning `GetPublicKey` + parser-backed `GetExtension`:
+      - final result: `142 passed / 0 failed`
+
+- `mkdir -p tmp/test_wolfssl_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas && ./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+  - result: FAIL -> PASS
+  - summary:
+    - first RED surfaced the same 3 failures as MbedTLS
+    - after the same contract alignment:
+      - final result: `167 passed / 0 failed`
+
+- update implementation:
+  - `src/fafafa.ssl.mbedtls.certificate.pas`
+  - `src/fafafa.ssl.wolfssl.certificate.pas`
+  - change:
+    - aligned `GetPublicKey` to the current repo contract:
+      - return `GetPublicKeyAlgorithm`
+    - implemented `GetExtension` via `TX509Certificate.Extensions`
+      - return hex when raw extension value exists
+      - otherwise return extension name
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remain after the public-surface completeness batch
+
 ### Optional Backends Certificate Extension Metadata Completeness
 
 - `git status --short --branch`

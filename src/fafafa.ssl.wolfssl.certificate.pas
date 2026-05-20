@@ -717,7 +717,7 @@ end;
 
 function TWolfSSLCertificate.GetPublicKey: string;
 begin
-  Result := '';
+  Result := GetPublicKeyAlgorithm;
 end;
 
 function TWolfSSLCertificate.GetPublicKeyAlgorithm: string;
@@ -1002,9 +1002,34 @@ begin
 end;
 
 function TWolfSSLCertificate.GetExtension(const AOID: string): string;
+var
+  LParser: TX509Certificate;
+  LTargetOID: string;
+  I: Integer;
 begin
   Result := '';
-  // WolfSSL 扩展获取需要额外 API
+  LTargetOID := Trim(AOID);
+  if LTargetOID = '' then
+    Exit;
+
+  if not TryLoadX509Parser(LParser) then
+    Exit;
+
+  try
+    for I := 0 to High(LParser.Extensions) do
+    begin
+      if SameText(LParser.Extensions[I].OID, LTargetOID) then
+      begin
+        if Length(LParser.Extensions[I].Value) > 0 then
+          Result := HashToHex(LParser.Extensions[I].Value)
+        else
+          Result := LParser.Extensions[I].Name;
+        Exit;
+      end;
+    end;
+  finally
+    LParser.Free;
+  end;
 end;
 
 function TWolfSSLCertificate.GetSubjectAltNames: TSSLStringArray;

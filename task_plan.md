@@ -10,6 +10,103 @@
 
 ## Current Status
 
+- [completed] `optional backends certificate public surface completeness`
+  当前 focused 目标：
+  - 把
+    `MbedTLS` / `WolfSSL`
+    证书对象
+    剩余两个
+    已发布但仍为空壳的
+    certificate surface
+    收口：
+    - `GetPublicKey`
+    - `GetExtension`
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-optional-backends-certificate-public-surface-completeness.md`
+  - 修改实现：
+    - `src/fafafa.ssl.mbedtls.certificate.pas`
+    - `src/fafafa.ssl.wolfssl.certificate.pas`
+  - 修改 focused tests：
+    - `tests/test_mbedtls_framework.pas`
+    - `tests/test_wolfssl_framework.pas`
+  当前预判：
+  - 上一批已经收掉
+    算法元数据
+    与扩展类 metadata
+  - 但 optional backends
+    仍在更基础的
+    certificate public surface
+    上留下统一空壳：
+    - `GetPublicKey = ''`
+    - `GetExtension = ''`
+  当前验证策略：
+  - 延续既有最小 contract：
+    - `OpenSSL.GetPublicKey`
+      当前返回算法名
+    - `FreePascal.GetPublicKey`
+      也已返回算法名
+  - `GetExtension`
+    继续复用
+    `TX509Certificate.Extensions`
+    的 parser truth
+  - 夹具选用：
+    - `signer_ecdsa_cert.pem`
+      同时覆盖：
+      - `GetPublicKey <> ''`
+      - `GetPublicKey = GetPublicKeyAlgorithm`
+      - `GetExtension('2.5.29.14') <> ''`
+  当前 done 条件：
+  - `MbedTLS` / `WolfSSL`
+    的 `GetPublicKey`
+    不再返回空串
+  - `MbedTLS` / `WolfSSL`
+    对已知存在的 `Subject Key Identifier`
+    能返回非空 extension truth
+  - focused tests
+    通过
+  - `git diff --check`
+    通过
+  当前最终收口证据：
+  - `MbedTLS`
+    首轮 RED
+    精确打出 3 个失败：
+    - `GetPublicKey <> ''`
+    - `GetPublicKey = GetPublicKeyAlgorithm`
+    - `GetExtension('2.5.29.14') <> ''`
+    修复后最终：
+    - `tests/test_mbedtls_framework.pas`
+      `142 passed / 0 failed`
+  - `WolfSSL`
+    同类 contract
+    首轮 RED
+    同样是 3 个失败，
+    修复后最终：
+    - `tests/test_wolfssl_framework.pas`
+      `167 passed / 0 failed`
+  当前关键结论：
+  - `GetPublicKey`
+    在本仓库当前 contract
+    下
+    不是完整公钥导出 API，
+    而是：
+    - 与 `OpenSSL` / `FreePascal`
+      保持一致的
+      算法标识字符串
+  - `GetExtension`
+    对 optional backends
+    也已经不再是空壳，
+    而是复用
+    `TX509Certificate.Extensions`
+    发布 parser truth
+  当前下一条真实工作：
+  - 继续审 optional backends
+    remaining certificate truth
+    里更可疑的 placeholder/fallback：
+    - `GetSubject`
+    - `GetIssuer`
+    - `GetSerialNumber`
+    - `GetVersion`
 - [completed] `optional backends certificate extension metadata completeness`
   当前 focused 目标：
   - 把

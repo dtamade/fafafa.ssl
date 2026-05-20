@@ -387,6 +387,10 @@ begin
     LInfo := LCert.GetInfo;
     Test('ECDSA fixture public-key algorithm exposes parsed truth',
       SameText(LCert.GetPublicKeyAlgorithm, 'ecPublicKey'));
+    Test('ECDSA fixture GetPublicKey exposes non-empty public key info',
+      LCert.GetPublicKey <> '');
+    Test('ECDSA fixture GetPublicKey stays aligned with public-key algorithm contract',
+      SameText(LCert.GetPublicKey, LCert.GetPublicKeyAlgorithm));
     Test('ECDSA fixture signature algorithm exposes parsed truth',
       SameText(LCert.GetSignatureAlgorithm, 'ecdsa-with-SHA256'));
     Test('GetInfo public-key algorithm matches getter truth',
@@ -433,6 +437,8 @@ begin
       LCert.IsCA and LInfo.IsCA);
     Test('ECDSA CA fixture GetInfo IsCA matches getter truth',
       LInfo.IsCA = LCert.IsCA);
+    Test('ECDSA CA fixture exposes Subject Key Identifier extension',
+      LCert.GetExtension('2.5.29.14') <> '');
 
     if not LCert.LoadFromFile('tests/certs/san-test.pem') then
     begin

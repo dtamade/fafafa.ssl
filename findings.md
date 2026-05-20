@@ -2,6 +2,64 @@
 
 ## 2026-05-20
 
+- 在 optional backends
+  证书实现里，
+  算法 metadata
+  和扩展 metadata
+  收口之后，
+  还残留一层更基础的
+  public surface 空壳：
+  - `GetPublicKey = ''`
+  - `GetExtension = ''`
+
+- 这批确认了
+  `GetPublicKey`
+  在当前仓库里的真实 contract
+  不是“完整公钥导出”，
+  而是
+  与 `OpenSSL` /
+  `FreePascal`
+  一致的最小语义：
+  - 返回算法标识字符串
+
+- 所以 optional backends
+  的正确补法
+  不是额外补 native EVP / PEM API，
+  而是先把
+  已有 contract
+  补齐到一致
+
+- `GetExtension`
+  这层同样不需要
+  新 native binding
+  才能收口，
+  因为
+  `TX509Certificate.Extensions`
+  已经保留了：
+  - `OID`
+  - `Name`
+  - `Value`
+
+- optional backends
+  证书审查的稳定模式
+  进一步清晰了：
+  - 优先把
+    `TX509Certificate`
+    当作 parser truth owner
+  - 先收掉
+    public surface
+    上的空壳/默认壳
+  - 只有在 parser truth
+    本身不存在时
+    才考虑追加 native binding
+
+- 本批之后，
+  `MbedTLS` / `WolfSSL`
+  在 certificate public surface
+  上又少了两处
+  “接口存在但加载后仍为空”
+  的残缺
+
 - 上一批把
   算法元数据默认壳
   收掉之后，

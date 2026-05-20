@@ -153,7 +153,8 @@ implementation
 
 uses
   Contnrs, DateUtils,
-  fafafa.ssl.utils;
+  fafafa.ssl.utils,
+  fafafa.ssl.crypto.hash;
 
 const
   MBEDTLS_X509_CRT_SIZE = 1024;  // 估算大小
@@ -819,7 +820,7 @@ end;
 
 function TMbedTLSCertificate.GetPublicKey: string;
 begin
-  Result := '';
+  Result := GetPublicKeyAlgorithm;
 end;
 
 function TMbedTLSCertificate.GetPublicKeyAlgorithm: string;
@@ -1076,8 +1077,34 @@ begin
 end;
 
 function TMbedTLSCertificate.GetExtension(const AOID: string): string;
+var
+  LParser: TX509Certificate;
+  LTargetOID: string;
+  I: Integer;
 begin
   Result := '';
+  LTargetOID := Trim(AOID);
+  if LTargetOID = '' then
+    Exit;
+
+  if not TryLoadX509Parser(LParser) then
+    Exit;
+
+  try
+    for I := 0 to High(LParser.Extensions) do
+    begin
+      if SameText(LParser.Extensions[I].OID, LTargetOID) then
+      begin
+        if Length(LParser.Extensions[I].Value) > 0 then
+          Result := HashToHex(LParser.Extensions[I].Value)
+        else
+          Result := LParser.Extensions[I].Name;
+        Exit;
+      end;
+    end;
+  finally
+    LParser.Free;
+  end;
 end;
 
 function TMbedTLSCertificate.GetSubjectAltNames: TSSLStringArray;
