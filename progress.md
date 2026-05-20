@@ -6,6 +6,78 @@
 
 ## 2026-05-21
 
+### Capability Matrix FreePascal Coverage Completeness
+
+- re-enter backend implementation-completeness queue:
+  - `docs/ROADMAP.md`
+  - `docs/plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md`
+  - `docs/plans/2026-05-18-interface-design-and-backend-implementation-verification.md`
+  - `docs/test_reports/INTERFACE_AND_BACKEND_VERIFICATION_2026-05-18.md`
+  - change:
+    - confirmed the interface-debt archaeology lane was no longer the default next step
+    - narrowed the next useful batch to
+      backend implementation-completeness audit
+
+- inspect capability-matrix focused test coverage:
+  - `tests/test_capability_matrix_v12.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - change:
+    - confirmed the shared capability-matrix regression executed
+      `OpenSSL / WolfSSL / MbedTLS / WinSSL`
+      but omitted
+      `FreePascal`
+    - confirmed the omission was a coverage gap in the audit entrypoint,
+      not a known intentional skip
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-capability-matrix-freepascal-coverage-completeness.md`
+  - `tests/scripts/test_capability_matrix_v12_freepascal_coverage_contract.sh`
+  - change:
+    - documented the batch as a five-backend capability-matrix coverage repair
+    - added a source-level contract to guard the backend call set
+
+- update shared capability-matrix regression:
+  - `tests/test_capability_matrix_v12.pas`
+  - change:
+    - added
+      `TestBackendCapabilities('FreePascal', sslFreePascal);`
+    - kept the rest of the regression shape unchanged so any fresh RED would stay attributable to backend truth, not test churn
+
+- verify static contract:
+  - `bash -n tests/scripts/test_capability_matrix_v12_freepascal_coverage_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_capability_matrix_v12_freepascal_coverage_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed the expected five-backend call set:
+        - `OpenSSL`
+        - `FreePascal`
+        - `WolfSSL`
+        - `MbedTLS`
+        - `WinSSL`
+
+- verify runtime regression:
+  - `mkdir -p tmp/test_capability_matrix_v12 && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_capability_matrix_v12 -FEtmp/test_capability_matrix_v12 -otmp/test_capability_matrix_v12/test_capability_matrix_v12 tests/test_capability_matrix_v12.pas && ./tmp/test_capability_matrix_v12/test_capability_matrix_v12`
+    - result: PASS
+    - summary:
+      - executed backends:
+        - `OpenSSL`
+        - `FreePascal`
+      - skipped backends:
+        - `WolfSSL` backend not enabled
+        - `MbedTLS` backend not enabled
+        - `WinSSL` backend not registered on Linux
+      - final counters:
+        - `Backends executed: 2`
+        - `Backends skipped: 3`
+        - `Contract checks: 6`
+        - `Contract failures: 0`
+      - important conclusion:
+        - the batch exposed no fresh
+          `FreePascal`
+          capability drift
+        - the real issue was the missing shared-audit coverage
+
 ### WinSSL Runtime Gate Head Proof
 
 - inspect current remote/runtime proof surface:

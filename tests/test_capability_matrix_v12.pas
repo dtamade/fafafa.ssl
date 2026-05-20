@@ -182,6 +182,7 @@ begin
   WriteLn;
 
   TestBackendCapabilities('OpenSSL', sslOpenSSL);
+  TestBackendCapabilities('FreePascal', sslFreePascal);
   TestBackendCapabilities('WolfSSL', sslWolfSSL);
   TestBackendCapabilities('MbedTLS', sslMbedTLS);
   TestBackendCapabilities('WinSSL', sslWinSSL);

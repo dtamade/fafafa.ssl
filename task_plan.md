@@ -10,6 +10,67 @@
 
 ## Current Status
 
+- [completed] `capability matrix freepascal coverage completeness`
+  当前 focused 目标：
+  - 把
+    `tests/test_capability_matrix_v12.pas`
+    从
+    4 backend
+    审查
+    补成
+    5 backend
+    审查
+  - 避免当前产品主线 backend
+    `FreePascal`
+    继续缺席这条 shared capability regression
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-capability-matrix-freepascal-coverage-completeness.md`
+  - 新增 contract：
+    - `tests/scripts/test_capability_matrix_v12_freepascal_coverage_contract.sh`
+  - 更新：
+    - `tests/test_capability_matrix_v12.pas`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_capability_matrix_v12_freepascal_coverage_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_capability_matrix_v12_freepascal_coverage_contract.sh`
+    - PASS
+  - `tests/test_capability_matrix_v12.pas`
+    - PASS
+  当前状态：
+  - capability-matrix regression
+    现在明确执行：
+    - `OpenSSL`
+    - `FreePascal`
+    - `WolfSSL`
+    - `MbedTLS`
+    - `WinSSL`
+  - 当前 Linux host
+    实际执行了：
+    - `OpenSSL`
+    - `FreePascal`
+  - summary:
+    - `Backends executed: 2`
+    - `Backends skipped: 3`
+    - `Contract checks: 6`
+    - `Contract failures: 0`
+  当前实施判断：
+  - 这批暴露的不是
+    `FreePascal`
+    实现 drift，
+    而是
+    审查入口自身的 coverage hole
+  - focused repair
+    收口后，
+    `FreePascal`
+    capability truth
+    已重新进入默认 shared audit path
+  下一刀：
+  - 在 backend implementation-completeness
+    主线下，
+    继续寻找真正的 fresh RED，
+    而不是继续修 capability-matrix coverage 本身
+
 - [completed] `winssl runtime gate head proof`
   当前 focused 目标：
   - 为当前远端 head

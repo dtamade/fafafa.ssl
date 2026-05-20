@@ -2,6 +2,60 @@
 
 ## 2026-05-21
 
+- `tests/test_capability_matrix_v12.pas`
+  当前刚补上一个
+  明确的审查缺口：
+  这条 shared
+  capability-matrix regression
+  之前只跑
+  `OpenSSL / WolfSSL / MbedTLS / WinSSL`，
+  漏掉了当前产品主线 backend
+  `FreePascal`
+
+- 这批 focused 修复后，
+  结论很清楚：
+  问题是
+  verification coverage hole，
+  不是
+  `FreePascal`
+  fresh capability drift
+
+- static contract
+  `tests/scripts/test_capability_matrix_v12_freepascal_coverage_contract.sh`
+  现在把这条 truth
+  直接钉死成：
+  - `test_capability_matrix_v12`
+    必须覆盖：
+    - `OpenSSL`
+    - `FreePascal`
+    - `WolfSSL`
+    - `MbedTLS`
+    - `WinSSL`
+
+- 当前 Linux host
+  上的 focused runtime proof
+  也直接说明：
+  - `OpenSSL`
+    executed
+  - `FreePascal`
+    executed
+  - `WolfSSL / MbedTLS / WinSSL`
+    继续按 backend-not-available skip
+  - summary:
+    - `Backends executed: 2`
+    - `Contract checks: 6`
+    - `Contract failures: 0`
+
+- 这意味着：
+  后续如果
+  `FreePascal`
+  capability truth
+  再发生 drift，
+  这条 shared regression
+  已经更容易第一时间把它打出来；
+  我们不需要再靠单独记忆去提醒
+  “别忘了 pure Pascal backend”
+
 - `WinSSL`
   这条线现在又多了一层关键证据：
   当前远端 head
