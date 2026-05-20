@@ -141,3 +141,48 @@
     `hAdditionalStore`
   - 这样既保留建链来源，
     又消掉配置期临时指针的生命周期洞
+- 再下一轮 Windows runtime truth
+  又把问题继续收窄了一步：
+  - 去掉
+    `rghAdditionalStore`
+    生命周期洞后，
+    `EAccessViolation`
+    仍然原地出现
+  - 而且位置完全没变：
+    - baseline
+      `VerifyEx(..., [], ...)`
+      正常返回
+      `Certificate has expired`
+    - 一进入
+      `VerifyEx(..., [sslCertVerifyIgnoreExpiry], ...)`
+      就崩
+  - 这说明：
+    - 不是 custom trust engine
+      方向本身的问题
+    - 更像是
+      WinSSL cert-level
+      `CERT_CHAIN_POLICY_BASE`
+      + nonzero `dwFlags`
+      这条 native policy-flag path
+      本身不稳定
+- 当前 follow-up 修法：
+  - 不再把
+    `sslCertVerifyIgnoreExpiry`
+    /
+    `sslCertVerifyAllowSelfSigned`
+    直接映射到
+    `CERT_CHAIN_POLICY_PARA.dwFlags`
+  - 改成：
+    - 先跑 zero-flag native baseline
+    - 再按 public contract
+      对
+      `CERT_E_EXPIRED`
+      /
+      self-signed + `CERT_E_UNTRUSTEDROOT`
+      做窄范围 success override
+  - 这样：
+    - `StrictChain`
+      仍保持已有的 fail-closed EKU gate
+    - per-call exception flags
+      继续兑现，
+      但不再依赖会崩的 native policy-flag lane

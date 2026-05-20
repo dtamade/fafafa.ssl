@@ -118,6 +118,76 @@
     通过
     `hAdditionalStore`
     显式传入
+
+- 再下一轮 Windows run
+  `26152785337`
+  进一步证伪了上一个怀疑：
+  helper-local
+  `rghAdditionalStore`
+  的生命周期洞
+  确实值得修，
+  但不是当前最后一个 blocker
+
+- 证据是：
+  - 去掉这个洞之后，
+    最新 runtime 失败位置
+    完全没变
+  - 仍然是：
+    - baseline
+      `VerifyEx(..., [], ...)`
+      正确返回
+      `Certificate has expired`
+    - 一进入
+      `VerifyEx(..., [sslCertVerifyIgnoreExpiry], ...)`
+      就
+      `EAccessViolation`
+
+- 这说明当前真正不稳定的
+  很可能不是 custom trust 语义，
+  而是
+  WinSSL cert-level
+  `CERT_CHAIN_POLICY_BASE`
+  在
+  nonzero `CERT_CHAIN_POLICY_PARA.dwFlags`
+  下的 native policy-flag path
+  本身
+
+- 这条判断还和更早的另一条证据互相印证：
+  - 之前 generated self-signed lane
+    一进入
+    `sslCertVerifyAllowSelfSigned`
+    也曾打出
+    `EAccessViolation`
+  - 两次共同点
+    都是
+    “非零 cert-level policy exception flag”
+
+- 所以这条线更稳的最终修法
+  不是继续把 public exception flags
+  直接压给 Win32 policy，
+  而是：
+  - 保留 zero-flag native baseline
+  - 让 native chain/policy
+    先返回真实的
+    `CERT_E_EXPIRED`
+    /
+    `CERT_E_UNTRUSTEDROOT`
+  - 再在
+    `ISSLCertificate.VerifyEx`
+    的 public-contract 层
+    做窄范围 override
+
+- 这样做的意义是：
+  - custom trust engine
+    继续保留，
+    不撤回已证明正确的方向
+  - 同时把
+    `IgnoreExpiry`
+    /
+    `AllowSelfSigned`
+    的最终稳定性
+    从不可靠的 native flag lane
+    收回到我们自己可验证的 public surface
 - `OpenSSL certificate.VerifyEx`
   这轮被打出来的真实问题
   不是

@@ -17579,3 +17579,56 @@
   - result: PASS
   - summary:
     - no whitespace or patch-format drift remains after the chain-engine lifetime fix
+
+- post-push Windows CI follow-up:
+  - `gh run view 26152785337 --log-failed`
+  - `gh api repos/dtamade/fafafa.ssl/actions/runs/26152785337/jobs`
+  - result: FAIL (fourth push / second custom-trust-engine iteration)
+  - summary:
+    - the latest Windows run preserved all previous good news:
+      - compile phase: PASS
+      - quick WinSSL smoke: PASS
+      - Windows Wave B gate: PASS
+      - runtime suite: still only `WinSSL Certificate VerifyEx Flag Parity` failed
+    - but it also disproved the latest helper-lifetime hypothesis as the final blocker:
+      - after removing the helper-local `rghAdditionalStore` pointer,
+        the focused test still failed in exactly the same place
+      - the failure shape remained:
+        - first baseline `VerifyEx(..., [], ...)`
+          returned
+          `Certificate has expired`
+        - second `VerifyEx(..., [sslCertVerifyIgnoreExpiry], ...)`
+          raised
+          `EAccessViolation`
+    - this narrows the residual again:
+      - custom trust-root direction is still correct
+      - the unstable piece is more likely the WinSSL cert-level native policy-flag lane itself when `CERT_CHAIN_POLICY_PARA.dwFlags <> 0`
+    - earlier generated-self-signed evidence now lines up with this:
+      - `sslCertVerifyAllowSelfSigned`
+        had already hit the same
+        `EAccessViolation`
+        family once it exercised the nonzero policy-flag path
+    - follow-up fix:
+      - stop passing
+        `sslCertVerifyIgnoreExpiry`
+        /
+        `sslCertVerifyAllowSelfSigned`
+        through
+        `CERT_CHAIN_POLICY_PARA.dwFlags`
+      - keep a zero-flag native baseline
+      - apply narrow success overrides in public `VerifyEx` for:
+        - `CERT_E_EXPIRED`
+        - self-signed + `CERT_E_UNTRUSTEDROOT`
+
+- update implementation/docs:
+  - `src/fafafa.ssl.winssl.certificate.pas`
+  - `docs/plans/2026-05-20-winssl-cert-verifyex-custom-trust-engine.md`
+  - `task_plan.md`
+  - `findings.md`
+  - `progress.md`
+  - change:
+    - rewired WinSSL cert-level `VerifyEx` so the native policy call always runs with zero exception flags
+    - added public-contract overrides for:
+      - `sslCertVerifyIgnoreExpiry`
+      - `sslCertVerifyAllowSelfSigned`
+    - kept the existing strict-chain EKU gate on the success path

@@ -114,6 +114,49 @@
         `CertGetCertificateChain(...)`
         再显式传
         `hAdditionalStore`
+  最新远端反馈（再下一轮）：
+  - 新 run
+    `26152785337`
+    证明上一枪 still not enough：
+    - 去掉 helper-local
+      `rghAdditionalStore`
+      后，
+      `EAccessViolation`
+      仍然完全原位复现
+    - 仍是：
+      - baseline
+        `VerifyEx(..., [], ...)`
+        正常给出
+        `Certificate has expired`
+      - 一进入
+        `VerifyEx(..., [sslCertVerifyIgnoreExpiry], ...)`
+        就崩
+  - 所以当前 residual
+    再次收窄：
+    - 问题不在 custom trust engine
+      生命周期
+    - 更像
+      `CERT_CHAIN_POLICY_BASE`
+      cert-level
+      在
+      nonzero `dwFlags`
+      下的 native path
+      本身不稳定
+  - 当前 follow-up
+    应改成：
+    - 保留 zero-flag native baseline
+    - 不再直接依赖
+      `CERT_CHAIN_POLICY_PARA.dwFlags`
+      去兑现
+      `IgnoreExpiry`
+      /
+      `AllowSelfSigned`
+    - 改为：
+      - baseline policy
+        先产出 native error
+      - 然后在
+        public contract
+        层做窄范围 success override
 - [completed] `winssl certificate verifyex flag parity`
   当前 focused 目标：
   - 把

@@ -800,6 +800,8 @@ var
   LPolicyStatus: CERT_CHAIN_POLICY_STATUS;
   LChainFlags: DWORD;
   LExtendedKeyUsage: TSSLStringArray;
+  LNativePolicyError: DWORD;
+  LOverrideDetail: string;
 begin
   // 初始化返回值
   AResult.Success := False;
@@ -874,12 +876,7 @@ begin
     FillChar(LPolicyPara, SizeOf(LPolicyPara), 0);
     LPolicyPara.cbSize := SizeOf(LPolicyPara);
     LPolicyPara.dwFlags := 0;
-
-    if sslCertVerifyIgnoreExpiry in AFlags then
-      LPolicyPara.dwFlags := LPolicyPara.dwFlags or CERT_CHAIN_POLICY_IGNORE_NOT_TIME_VALID_FLAG;
-
-    if (sslCertVerifyAllowSelfSigned in AFlags) and IsSelfSigned then
-      LPolicyPara.dwFlags := LPolicyPara.dwFlags or CERT_CHAIN_POLICY_ALLOW_UNKNOWN_CA_FLAG;
+    LOverrideDetail := '';
 
     // 初始化策略状态
     FillChar(LPolicyStatus, SizeOf(LPolicyStatus), 0);
@@ -893,11 +890,32 @@ begin
       @LPolicyStatus               // 策略状态输出
     ) then
     begin
-      AResult.ErrorCode := LPolicyStatus.dwError;
-      AResult.ChainStatus := LPolicyStatus.dwError;
+      LNativePolicyError := LPolicyStatus.dwError;
+      AResult.ErrorCode := LNativePolicyError;
+      AResult.ChainStatus := LNativePolicyError;
       
       // 检查验证结果
-      if LPolicyStatus.dwError = 0 then
+      if (LNativePolicyError <> 0) and
+        (sslCertVerifyIgnoreExpiry in AFlags) and
+        (LNativePolicyError = DWORD(CERT_E_EXPIRED)) then
+      begin
+        LOverrideDetail :=
+          Format('WinSSL certificate verification accepted the chain after sslCertVerifyIgnoreExpiry overrode native policy error 0x%x',
+            [LNativePolicyError]);
+        LNativePolicyError := 0;
+      end
+      else if (LNativePolicyError <> 0) and
+        (sslCertVerifyAllowSelfSigned in AFlags) and
+        IsSelfSigned and
+        (LNativePolicyError = DWORD(CERT_E_UNTRUSTEDROOT)) then
+      begin
+        LOverrideDetail :=
+          Format('WinSSL certificate verification accepted a self-signed leaf after sslCertVerifyAllowSelfSigned overrode native policy error 0x%x',
+            [LNativePolicyError]);
+        LNativePolicyError := 0;
+      end;
+
+      if LNativePolicyError = 0 then
       begin
         if sslCertVerifyStrictChain in AFlags then
         begin
@@ -915,13 +933,17 @@ begin
         end;
 
         AResult.Success := True;
+        AResult.ErrorCode := 0;
+        AResult.ChainStatus := 0;
         AResult.ErrorMessage := 'Certificate verified successfully';
+        if LOverrideDetail <> '' then
+          AResult.DetailedInfo := LOverrideDetail;
         Result := True;
       end
       else
       begin
         // 生成友好的错误消息
-        case LPolicyStatus.dwError of
+        case LNativePolicyError of
           CERT_E_EXPIRED:
             AResult.ErrorMessage := 'Certificate has expired';
           CERT_E_UNTRUSTEDROOT:
@@ -946,7 +968,7 @@ begin
             AResult.ErrorMessage := 'Certificate name is invalid';
         else
           AResult.ErrorMessage := Format('Certificate verification failed (Error: 0x%x)', 
-            [LPolicyStatus.dwError]);
+            [LNativePolicyError]);
         end;
       end;
     end
