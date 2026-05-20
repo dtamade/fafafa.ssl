@@ -10628,3 +10628,76 @@
     补一条主门面 supporting-type 覆盖说明
   - 用 facade-only compile contract
     把这层 truth 锁住
+
+- 当前又确认了一条真实的
+  backend semantic residual：
+  `MbedTLS` /
+  `WolfSSL`
+  的 `VerifyHostname(...)`
+  会在 SAN 不匹配时错误回退到 CN，
+  同时还会把
+  `*.example.com`
+  这类 wildcard SAN
+  先当成“非法 hostname”
+  直接跳过
+
+- 这不是抽象推断，
+  而是新的 focused fixture proof
+  首轮就同时打出两条 RED：
+  - `SAN-vs-CN fixture prioritizes SAN over CN`
+  - `Wildcard SAN fixture matches single-label subdomain`
+
+- `WinSSL`
+  的 `VerifyHostname(...)`
+  也复用了相同的 SAN scan / CN fallback 模式，
+  所以虽然本地没有 Windows runtime，
+  这条实现风险同样应该同步收紧，
+  否则 push 后很可能只会在
+  `WinSSL Runtime Gate`
+  再现同样问题
+
+- 这批最小正确修法
+  不是重构整个 hostname verifier，
+  而是把 shared truth 收紧到
+  `FreePascal` 已经证明正确的语义：
+  - 只有当证书没有 relevant SAN
+    时才允许回退到 CN
+  - wildcard SAN
+    应被视为合法 hostname pattern
+    进入匹配
+
+- `OpenSSL`
+  这边没有暴露同类实现问题。
+  新增 focused contract 后，
+  它对：
+  - `san-test.pem`
+  - `san_cn_conflict_cert.pem`
+  - `san_wildcard_cert.pem`
+  三组夹具都保持绿色，
+  说明当前 native helper-based 行为
+  与期望 truth 一致
+
+- 还顺手抓到一个
+  与本批目标相邻、
+  但不应扩 scope 的旧问题：
+  `tests/certificate/test_certificate_unit.pas`
+  当前本身还是陈旧坏档，
+  仍按 `TStringList`
+  读取已经迁移成
+  `TSSLStringArray`
+  的返回值。
+  这次没有继续把范围拖进整份 legacy test，
+  而是改成新增一个新的
+  OpenSSL focused contract
+  来承接本批 proof
+
+- `tests/winssl/test_winssl_certificate_san.pas`
+  在接入前也有两个静态问题：
+  - 夹具路径依赖仓库根工作目录
+  - `.lpi`
+    仍硬编码
+    `TargetOS=linux`
+  这两处已经一起修正，
+  所以现在这份测试终于可以被
+  `tests/run_winssl_tests.ps1`
+  真正调度

@@ -10594,3 +10594,134 @@
          已说明存在，
          但还缺 focused compile/runtime contract
          的残口
+117. `certificate verifyhostname fixture parity` 这批用于把 `ISSLCertificate.VerifyHostname(...)` 的高风险 fixture proof 补齐到当前主要 backend：
+   - 新 plan：
+     - `docs/plans/2026-05-20-certificate-verifyhostname-fixture-parity.md`
+   - 当前新发现：
+     - `FreePascal`
+       已经有 focused fixture proof：
+       - `san_cn_conflict_cert.pem`
+       - `san_wildcard_cert.pem`
+     - 但
+       `MbedTLS` /
+       `WolfSSL` /
+       `OpenSSL` /
+       `WinSSL`
+       还缺同级证明，
+       通用 contract
+       只覆盖
+       `san-test.pem`
+       的基础 SAN/IP 命中
+     - `MbedTLS` /
+       `WolfSSL`
+       的 `VerifyHostname(...)`
+       真实存在两条实现缺陷：
+       - SAN 不匹配时仍错误回退到 CN
+       - wildcard SAN
+         会被
+         `IsValidHostname(...)`
+         预过滤掉
+     - `WinSSL`
+       的实现模式同样共享这两个风险，
+       而且现有
+       `test_winssl_certificate_san.pas`
+       还额外有：
+       - 夹具路径和 runtime script 工作目录不一致
+       - `.lpi`
+         仍硬编码
+         `TargetOS=linux`
+   - 当前最小修法：
+     - 在
+       `tests/test_mbedtls_framework.pas`
+       和
+       `tests/test_wolfssl_framework.pas`
+       加入：
+       - SAN-vs-CN precedence
+       - wildcard 单层匹配
+       focused fixture assertions
+     - 新增
+       `tests/openssl/test_openssl_certificate_hostname_contract.pas`
+       作为 OpenSSL 最小 focused contract
+     - 在
+       `src/fafafa.ssl.mbedtls.certificate.pas`
+       `src/fafafa.ssl.wolfssl.certificate.pas`
+       `src/fafafa.ssl.winssl.certificate.pas`
+       收紧同一组语义：
+       - 只有当证书没有 relevant SAN 时才允许 CN fallback
+       - wildcard SAN
+         允许进入 hostname pattern matching
+     - 把
+       `tests/winssl/test_winssl_certificate_san.pas`
+       接到真实 runtime lane：
+       - repo-relative fixture path resolution
+       - `.lpi`
+         去掉错误的
+         `TargetOS=linux`
+       - `tests/run_winssl_tests.ps1`
+         纳入执行列表
+   - 当前 focused proof：
+     - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`
+     - `./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+     - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas`
+     - `./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+     - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_openssl_hostname_units -FEtmp/test_openssl_hostname_bin -otmp/test_openssl_hostname_bin/test_openssl_certificate_hostname_contract tests/openssl/test_openssl_certificate_hostname_contract.pas`
+     - `./tmp/test_openssl_hostname_bin/test_openssl_certificate_hostname_contract`
+     - `git diff --check`
+   - 当前最终收口证据：
+     - `MbedTLS` 首轮 RED：
+       - `SAN-vs-CN fixture prioritizes SAN over CN`
+       - `Wildcard SAN fixture matches single-label subdomain`
+     - `WolfSSL` 首轮 RED：
+       - 同上两条
+     - 这证明缺口不是“还缺测试而已”，
+       而是共享实现逻辑确实偏离
+       `FreePascal/OpenSSL`
+       truth
+     - 最小修复后：
+       - `MbedTLS focused framework test`
+         `221 passed / 0 failed`
+       - `WolfSSL focused framework test`
+         `237 passed / 0 failed`
+       - `OpenSSL focused hostname contract`
+         PASS
+     - 上一笔提交
+       `a6c52d5`
+       的 GitHub Actions
+       `26170282078`
+       现已全部绿色：
+       - `Code Quality (Light)`
+       - `Minimal Gate (Linux)`
+       - `FreePascal TLS 1.3 Completeness`
+   - 当前结论：
+     - 这批把
+       `VerifyHostname`
+       从
+       “部分 backend 有基础 SAN proof”
+       推进到
+       “主要 backend 对高风险 fixture 具备 focused parity evidence”
+     - 同时也把
+       `WinSSL`
+       这份 SAN 测试从孤立文件
+       推进到了可由 Windows CI 接手的 runtime lane
+   - 当前总路线图进度：
+     - `接口设计`
+       继续朝
+       compile/runtime contract 闭合
+       推进，
+       不是只看 signature 是否存在
+     - `后端实现`
+       本批确实修到了
+       三个 backend 的 shared semantic residual
+     - `测试与文档`
+       新增：
+       - OpenSSL focused contract
+       - optional backend fixture parity proof
+       - WinSSL runtime-lane test wiring
+   - 当前批收口后的默认下一步：
+     - 提交并推送本批
+     - 观察 push 触发的：
+       - 主 CI
+       - `WinSSL Runtime Gate`
+     - 若 Windows gate 红灯，
+       优先只修这条新接入的
+       SAN/hostname parity lane

@@ -1138,6 +1138,7 @@ var
   i: Integer;
   CN, Entry: string;
   HostIsIP, EntryIsIP: Boolean;
+  HasRelevantSAN: Boolean;
 
   function MatchWildcard(const APattern, AHostname: string): Boolean;
   var
@@ -1186,6 +1187,16 @@ var
     end;
   end;
 
+  function IsHostnamePattern(const AValue: string): Boolean;
+  var
+    LValue: string;
+  begin
+    LValue := Trim(AValue);
+    Result := TSSLUtils.IsValidHostname(LValue) or
+      ((Length(LValue) > 2) and (Copy(LValue, 1, 2) = '*.') and
+       TSSLUtils.IsValidHostname(Copy(LValue, 3, MaxInt)));
+  end;
+
 begin
   Result := False;
 
@@ -1193,8 +1204,10 @@ begin
     Exit;
 
   HostIsIP := TSSLUtils.IsIPAddress(AHostname);
+  HasRelevantSAN := False;
 
-  // First check SAN entries
+  // First check SAN entries. CN fallback is only allowed when the certificate
+  // has no SAN entry of the relevant type for the requested host.
   SANs := GetSubjectAltNames;
   for i := 0 to High(SANs) do
   begin
@@ -1206,10 +1219,14 @@ begin
 
     if HostIsIP then
     begin
-      if EntryIsIP and SameText(Entry, AHostname) then
+      if EntryIsIP then
       begin
-        Result := True;
-        Exit;
+        HasRelevantSAN := True;
+        if SameText(Entry, AHostname) then
+        begin
+          Result := True;
+          Exit;
+        end;
       end;
       Continue;
     end;
@@ -1217,15 +1234,19 @@ begin
     // Only match hostnames (ignore IP/email/URI etc)
     if EntryIsIP then
       Continue;
-    if not TSSLUtils.IsValidHostname(Entry) then
+    if not IsHostnamePattern(Entry) then
       Continue;
 
+    HasRelevantSAN := True;
     if MatchWildcard(Entry, AHostname) then
     begin
       Result := True;
       Exit;
     end;
   end;
+
+  if HasRelevantSAN then
+    Exit(False);
 
   // Fallback to CN
   CN := Trim(GetSubjectCN);

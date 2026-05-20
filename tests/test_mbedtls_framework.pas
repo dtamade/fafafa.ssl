@@ -778,6 +778,36 @@ begin
       ArrayContains(LValues, 'example.test'));
     Test('SAN fixture getter contains 127.0.0.1',
       ArrayContains(LValues, '127.0.0.1'));
+    Test('SAN fixture VerifyHostname accepts DNS:san-test.local',
+      LCert.VerifyHostname('san-test.local'));
+    Test('SAN fixture VerifyHostname accepts DNS:example.test',
+      LCert.VerifyHostname('example.test'));
+    Test('SAN fixture VerifyHostname accepts IP:127.0.0.1',
+      LCert.VerifyHostname('127.0.0.1'));
+    Test('SAN fixture VerifyHostname rejects unrelated hostname',
+      not LCert.VerifyHostname('wrong.test'));
+
+    if not LCert.LoadFromFile('tests/certificate/test_certs/san_cn_conflict_cert.pem') then
+    begin
+      Test('Load SAN-vs-CN conflict fixture', False);
+      Exit;
+    end;
+    Test('Load SAN-vs-CN conflict fixture', True);
+    Test('SAN-vs-CN fixture prioritizes SAN over CN',
+      not LCert.VerifyHostname('cn-only.example.com'));
+    Test('SAN-vs-CN fixture still matches SAN DNS entry',
+      LCert.VerifyHostname('alt.example.com'));
+
+    if not LCert.LoadFromFile('tests/certificate/test_certs/san_wildcard_cert.pem') then
+    begin
+      Test('Load wildcard SAN fixture', False);
+      Exit;
+    end;
+    Test('Load wildcard SAN fixture', True);
+    Test('Wildcard SAN fixture matches single-label subdomain',
+      LCert.VerifyHostname('api.example.com'));
+    Test('Wildcard SAN fixture rejects multi-label subdomain',
+      not LCert.VerifyHostname('deep.api.example.com'));
 
     if not LCert.LoadFromFile('tests/certificate/test_certs/keyusage_cert.pem') then
     begin

@@ -46,6 +46,12 @@ $tests = @(
         Description = "系统 store + memory-store DN query / partial-full chain contract 测试"
     },
     @{
+        Name = "WinSSL Certificate SAN + Hostname Fixture Parity"
+        Lpi = "test_winssl_certificate_san.lpi"
+        Exe = "bin\test_winssl_certificate_san.exe"
+        Description = "SAN parsing + VerifyHostname SAN-vs-CN / wildcard fixture parity 测试"
+    },
+    @{
         Name = "WinSSL Certificate VerifyEx Flag Parity"
         Lpi = "test_winssl_cert_verify_ex.lpi"
         Exe = "bin\test_winssl_cert_verify_ex.exe"

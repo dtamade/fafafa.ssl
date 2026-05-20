@@ -17863,6 +17863,93 @@
   - summary:
     - no whitespace or patch-format drift remains before commit
 
+### Certificate VerifyHostname Fixture Parity
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-20-certificate-verifyhostname-fixture-parity.md`
+  - change:
+    - recorded the `VerifyHostname` parity batch around SAN-vs-CN precedence and wildcard single-label matching
+    - scoped the work to MbedTLS / WolfSSL / OpenSSL focused proof plus WinSSL runtime-lane wiring
+
+- update tests first:
+  - `tests/test_mbedtls_framework.pas`
+  - `tests/test_wolfssl_framework.pas`
+  - `tests/winssl/test_winssl_certificate_san.pas`
+  - `tests/winssl/test_winssl_certificate_san.lpi`
+  - `tests/run_winssl_tests.ps1`
+  - add:
+    - `tests/openssl/test_openssl_certificate_hostname_contract.pas`
+  - result: RED surfaced on Linux optional backends
+  - summary:
+    - new fixture assertions proved two real shared bugs in both `MbedTLS` and `WolfSSL`:
+      - SAN mismatch still fell back to CN
+      - wildcard SAN was skipped before matching
+    - while drafting the OpenSSL proof, the older
+      `tests/certificate/test_certificate_unit.pas`
+      was found to be a legacy broken test file that still expects `TStringList`
+      from APIs that now return `TSSLStringArray`
+    - instead of widening scope into that stale file, switched to a new minimal
+      `tests/openssl/test_openssl_certificate_hostname_contract.pas`
+
+- `mkdir -p tmp/test_mbedtls_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas && ./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+  - result: RED -> GREEN -> PASS
+  - summary:
+    - initial RED failed on:
+      - `SAN-vs-CN fixture prioritizes SAN over CN`
+      - `Wildcard SAN fixture matches single-label subdomain`
+    - after tightening `src/fafafa.ssl.mbedtls.certificate.pas`
+      to honor SAN precedence and accept wildcard hostname patterns,
+      the focused framework test passed with
+      `221 passed / 0 failed`
+
+- `mkdir -p tmp/test_wolfssl_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas && ./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+  - result: RED -> GREEN -> PASS
+  - summary:
+    - initial RED failed on the same two assertions as MbedTLS
+    - after the parallel semantic fix in
+      `src/fafafa.ssl.wolfssl.certificate.pas`,
+      the focused framework test passed with
+      `237 passed / 0 failed`
+
+- update implementation:
+  - `src/fafafa.ssl.mbedtls.certificate.pas`
+  - `src/fafafa.ssl.wolfssl.certificate.pas`
+  - `src/fafafa.ssl.winssl.certificate.pas`
+  - change:
+    - added `HasRelevantSAN` tracking so CN fallback now only happens when the certificate lacks a SAN entry of the relevant type
+    - added wildcard-aware hostname-pattern admission so `*.example.com` SAN entries are not filtered out before matching
+    - kept the fix minimal and aligned with the already-correct `FreePascal` truth
+
+- `mkdir -p tmp/test_openssl_hostname_units tmp/test_openssl_hostname_bin && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_openssl_hostname_units -FEtmp/test_openssl_hostname_bin -otmp/test_openssl_hostname_bin/test_openssl_certificate_hostname_contract tests/openssl/test_openssl_certificate_hostname_contract.pas && ./tmp/test_openssl_hostname_bin/test_openssl_certificate_hostname_contract`
+  - result: PASS
+  - summary:
+    - new OpenSSL focused contract passed for:
+      - `san-test.pem`
+      - `san_cn_conflict_cert.pem`
+      - `san_wildcard_cert.pem`
+    - confirms OpenSSL already matches the expected hostname-verification truth
+
+- `command -v pwsh >/dev/null && pwsh -NoProfile -Command "[System.Management.Automation.Language.Parser]::ParseFile('tests/run_winssl_tests.ps1',[ref]$null,[ref]$null) | Out-Null; Write-Output PASS" || echo SKIP`
+  - result: SKIP
+  - summary:
+    - `pwsh` is unavailable in the local Linux environment, so PowerShell parser validation could not be run here
+    - the WinSSL lane will therefore be closed by push-triggered Windows CI
+
+- `gh run view 26170282078 --json status,conclusion,jobs`
+  - result: PASS
+  - summary:
+    - previous pushed batch
+      `fix(facade): export certificate supporting types`
+      is now fully green in GitHub Actions:
+      - `Code Quality (Light)`
+      - `Minimal Gate (Linux)`
+      - `FreePascal TLS 1.3 Completeness`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains before commit
+
 ### Facade Certificate Supporting-Type Export Closure
 
 - `gh run view 26168439073 --json status,conclusion,jobs,url`

@@ -993,6 +993,7 @@ var
   i: Integer;
   CN, Entry: string;
   HostIsIP, EntryIsIP: Boolean;
+  HasRelevantSAN: Boolean;
 
   function MatchWildcard(const APattern, AHostname: string): Boolean;
   var
@@ -1041,6 +1042,16 @@ var
     end;
   end;
 
+  function IsHostnamePattern(const AValue: string): Boolean;
+  var
+    LValue: string;
+  begin
+    LValue := Trim(AValue);
+    Result := TSSLUtils.IsValidHostname(LValue) or
+      ((Length(LValue) > 2) and (Copy(LValue, 1, 2) = '*.') and
+       TSSLUtils.IsValidHostname(Copy(LValue, 3, MaxInt)));
+  end;
+
 begin
   Result := False;
 
@@ -1048,8 +1059,10 @@ begin
     Exit;
 
   HostIsIP := TSSLUtils.IsIPAddress(AHostname);
+  HasRelevantSAN := False;
 
-  // 首先检查 Subject Alternative Names (SAN)
+  // 先检查 SAN。只有当证书没有与目标类型对应的 SAN 条目时，
+  // 才允许回退到 Common Name。
   SANs := GetSubjectAltNames;
   for i := 0 to High(SANs) do
   begin
@@ -1061,10 +1074,14 @@ begin
 
     if HostIsIP then
     begin
-      if EntryIsIP and SameText(Entry, AHostname) then
+      if EntryIsIP then
       begin
-        Result := True;
-        Exit;
+        HasRelevantSAN := True;
+        if SameText(Entry, AHostname) then
+        begin
+          Result := True;
+          Exit;
+        end;
       end;
       Continue;
     end;
@@ -1072,15 +1089,19 @@ begin
     // 只针对域名进行通配符匹配，忽略 IP 及其他条目（email/URI 等）
     if EntryIsIP then
       Continue;
-    if not TSSLUtils.IsValidHostname(Entry) then
+    if not IsHostnamePattern(Entry) then
       Continue;
 
+    HasRelevantSAN := True;
     if MatchWildcard(Entry, AHostname) then
     begin
       Result := True;
       Exit;
     end;
   end;
+
+  if HasRelevantSAN then
+    Exit(False);
 
   // 如果没有 SAN 或未匹配，检查 Common Name (CN)
   CN := GetSubject;

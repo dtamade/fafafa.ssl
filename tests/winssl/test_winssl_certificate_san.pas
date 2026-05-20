@@ -31,6 +31,30 @@ var
   TestsPassed: Integer = 0;
   TestsFailed: Integer = 0;
 
+function ResolveRepoFixturePath(const ARepoRelativePath: string): string;
+const
+  CandidatePrefixes: array[0..3] of string = (
+    '',
+    '../',
+    '../../',
+    '../../../'
+  );
+var
+  I: Integer;
+  LCandidate: string;
+begin
+  Result := '';
+  for I := Low(CandidatePrefixes) to High(CandidatePrefixes) do
+  begin
+    LCandidate := ExpandFileName(CandidatePrefixes[I] + ARepoRelativePath);
+    if FileExists(LCandidate) then
+    begin
+      Result := LCandidate;
+      Exit;
+    end;
+  end;
+end;
+
 procedure AssertTrue(const TestName: string; Condition: Boolean);
 begin
   Write('  [TEST] ', TestName, '... ');
@@ -82,10 +106,10 @@ begin
     Exit;
   end;
 
-  CertPath := 'tests' + DirectorySeparator + 'certs' + DirectorySeparator + 'winssl-san-test.cer';
-  if not FileExists(CertPath) then
+  CertPath := ResolveRepoFixturePath('tests/certs/winssl-san-test.cer');
+  if CertPath = '' then
   begin
-    WriteLn('  Note: SAN test certificate not found at ', CertPath);
+    WriteLn('  Note: SAN test certificate path could not be resolved');
     AssertTrue('SAN test certificate file exists', False);
     Exit;
   end;
@@ -123,6 +147,50 @@ begin
     end;
   end;
   AssertTrue('Info.SubjectAltNames contains DNS:san-test.local', InInfo);
+  AssertTrue('VerifyHostname accepts DNS:san-test.local',
+    Cert.VerifyHostname('san-test.local'));
+  AssertTrue('VerifyHostname accepts DNS:example.test',
+    Cert.VerifyHostname('example.test'));
+  AssertTrue('VerifyHostname accepts IP:127.0.0.1',
+    Cert.VerifyHostname('127.0.0.1'));
+  AssertTrue('VerifyHostname rejects unrelated hostname',
+    not Cert.VerifyHostname('wrong.test'));
+
+  CertPath := ResolveRepoFixturePath('tests/certificate/test_certs/san_cn_conflict_cert.pem');
+  if CertPath = '' then
+  begin
+    WriteLn('  Note: SAN-vs-CN conflict fixture path could not be resolved');
+    AssertTrue('SAN-vs-CN conflict fixture file exists', False);
+    Exit;
+  end;
+  if not Cert.LoadFromFile(CertPath) then
+  begin
+    WriteLn('  Note: LoadFromFile failed for SAN-vs-CN conflict fixture');
+    AssertTrue('Load SAN-vs-CN conflict fixture succeeds', False);
+    Exit;
+  end;
+  AssertTrue('VerifyHostname prioritizes SAN over CN when SAN exists',
+    not Cert.VerifyHostname('cn-only.example.com'));
+  AssertTrue('VerifyHostname still matches SAN DNS entry in SAN-vs-CN fixture',
+    Cert.VerifyHostname('alt.example.com'));
+
+  CertPath := ResolveRepoFixturePath('tests/certificate/test_certs/san_wildcard_cert.pem');
+  if CertPath = '' then
+  begin
+    WriteLn('  Note: wildcard SAN fixture path could not be resolved');
+    AssertTrue('Wildcard SAN fixture file exists', False);
+    Exit;
+  end;
+  if not Cert.LoadFromFile(CertPath) then
+  begin
+    WriteLn('  Note: LoadFromFile failed for wildcard SAN fixture');
+    AssertTrue('Load wildcard SAN fixture succeeds', False);
+    Exit;
+  end;
+  AssertTrue('VerifyHostname matches single-label wildcard SAN',
+    Cert.VerifyHostname('api.example.com'));
+  AssertTrue('VerifyHostname rejects multi-label wildcard subdomain',
+    not Cert.VerifyHostname('deep.api.example.com'));
 end;
 
 procedure PrintSummary;
