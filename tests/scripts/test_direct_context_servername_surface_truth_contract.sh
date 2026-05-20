@@ -25,6 +25,19 @@ if ! rg -F -n --quiet '`ISSLContext.SetServerName(...)` / `GetServerName(...)` ä
   exit 1
 fi
 
+mapfile -t active_doc_hits < <(
+  rg -l 'ISSLContext\.(SetServerName|GetServerName)\(' \
+    docs/README.md docs/guides docs/reference docs/ARCHITECTURE.md docs/INTEGRATION_GUIDE.md docs/ZERO_DEPENDENCY_DEPLOYMENT.md || true
+)
+
+for file in "${active_doc_hits[@]}"; do
+  if [[ "$file" != "$api_ref" ]]; then
+    echo "[FAIL] active doc unexpectedly names direct ISSLContext ServerName APIs outside API reference: $file"
+    rg -n 'ISSLContext\.(SetServerName|GetServerName)\(' "$file" || true
+    exit 1
+  fi
+done
+
 if rg -n '\b(AContext|FContext|Ctx|LCtx|LContext|Context)[0-9]*\.(SetServerName|GetServerName)\(' src \
   | rg -v '^[0-9]+:\s*(procedure|function)\s+' >/dev/null; then
   echo "[FAIL] production source reintroduced a direct context ServerName caller"

@@ -16678,3 +16678,72 @@
       to
       `dead seam removed entirely`
     - recorded the next default route as remaining public compatibility surface slimming
+
+### Context ServerName Migration Guide Drift Closeout
+
+- `mcp__ace_tool__.search_context(...)`
+  - result: PASS
+  - summary:
+    - re-mapped the remaining public compatibility surface after dead-seam removal
+    - identified a likely doc-only residual around active-guide mentions of frozen ServerName surfaces
+
+- static source/doc review:
+  - `rg -n "TSSLConfig\\.ServerName|SetServerName\\(|GetServerName\\(|WithSNI\\(|deprecated context-level|compatibility-only" src tests docs/reference docs/guides docs/README.md docs/ARCHITECTURE.md docs/INTEGRATION_GUIDE.md docs/ZERO_DEPENDENCY_DEPLOYMENT.md`
+  - `sed -n '1,260p' docs/reference/API_REFERENCE.md`
+  - `sed -n '1,220p' tests/scripts/test_tsslconfig_servername_surface_truth_contract.sh`
+  - `sed -n '1,220p' tests/scripts/test_direct_context_servername_surface_truth_contract.sh`
+  - `sed -n '1,220p' tests/scripts/test_withsni_surface_truth_contract.sh`
+  - `sed -n '1,200p' docs/guides/MIGRATION_GUIDE.md`
+  - result: PASS
+  - summary:
+    - confirmed `MIGRATION_GUIDE` line 19 reintroduced literal names for frozen ServerName compatibility surfaces outside `API_REFERENCE`
+    - confirmed the drift was currently caught by the `TSSLConfig` / `WithSNI` contracts
+    - confirmed the direct-context contract still lacked a symmetric literal-name guard
+
+- `bash -n tests/scripts/test_tsslconfig_servername_surface_truth_contract.sh && bash tests/scripts/test_tsslconfig_servername_surface_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first failed on:
+      - `docs/guides/MIGRATION_GUIDE.md`
+    - after rewriting the guide line to generic wording, the contract returned green
+
+- `bash -n tests/scripts/test_withsni_surface_truth_contract.sh && bash tests/scripts/test_withsni_surface_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first failed on the same `MIGRATION_GUIDE` literal-name drift
+    - after the guide rewrite, the `WithSNI` surface-truth contract returned green
+
+- update implementation/docs:
+  - `docs/guides/MIGRATION_GUIDE.md`
+  - `tests/scripts/test_direct_context_servername_surface_truth_contract.sh`
+  - `docs/plans/2026-05-20-context-servername-migration-guide-drift-closeout.md`
+  - change:
+    - replaced the literal-name list in the migration guide with generic compatibility-surface wording
+    - tightened the direct-context shell contract so literal direct `ISSLContext.SetServerName/GetServerName` names are also restricted to `API_REFERENCE`
+    - recorded the bounded batch in a dedicated plan file
+
+- `bash -n tests/scripts/test_tsslconfig_servername_surface_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_tsslconfig_servername_surface_truth_contract.sh`
+  - result: PASS
+
+- `bash -n tests/scripts/test_withsni_surface_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_withsni_surface_truth_contract.sh`
+  - result: PASS
+
+- `bash -n tests/scripts/test_direct_context_servername_surface_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_direct_context_servername_surface_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - the strengthened direct-context contract stays green after the guide rewrite
+    - active docs now keep all three frozen ServerName surface names inside `API_REFERENCE`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remain after the migration-guide drift closeout

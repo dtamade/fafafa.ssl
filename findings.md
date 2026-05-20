@@ -8886,3 +8886,61 @@
   - `TSSLConfig.ServerName`
   - direct `ISSLContext.SetServerName/GetServerName`
   - `WithSNI(...)`
+
+- 继续沿着这组三个
+  public compatibility surface
+  往下看后，
+  当前又确认了一条
+  很典型的
+  active-doc drift：
+  - `docs/guides/MIGRATION_GUIDE.md`
+    虽然方向上是在劝用户
+    不要再用
+    context-level SNI
+  - 但它仍把
+    `TSSLConfig.ServerName`
+    / `ISSLContext.SetServerName(...)`
+    / `TSSLContextBuilder.WithSNI(...)`
+    的 literal 名称
+    写回了活跃指南层
+
+- 这会带来两个问题：
+  - 它和
+    `API_REFERENCE`
+    当前负责
+    frozen compatibility surface
+    唯一字面说明
+    的规则冲突
+  - 也会让后续调用方
+    在 migration guide
+    这种高频入口里
+    再次把这些旧 surface
+    当成“仍值得直接学习的名字”
+
+- 这次 focused RED
+  还顺手暴露了一个
+  contract coverage gap：
+  - `TSSLConfig.ServerName`
+    与
+    `WithSNI(...)`
+    的 shell contract
+    已经能抓
+    literal-name drift
+  - direct `ISSLContext.SetServerName/GetServerName`
+    的 contract
+    之前只拦
+    调用示例 / 指导语义
+    没有同向限制
+    literal 名称
+
+- 所以这批最小正确修法
+  不是扩大文档整改范围，
+  而是：
+  - 把
+    `MIGRATION_GUIDE`
+    改成 generic wording
+  - 同时把
+    direct context
+    的 surface-truth contract
+    补成和另外两条一样的
+    literal-name guard

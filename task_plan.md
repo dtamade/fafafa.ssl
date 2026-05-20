@@ -10,6 +10,71 @@
 
 ## Current Status
 
+- [completed] `context servername migration guide drift closeout`
+  当前 focused 目标：
+  - 收掉
+    `docs/guides/MIGRATION_GUIDE.md`
+    把 frozen
+    `context-level ServerName`
+    compatibility surface
+    literal 名称
+    重新写回活跃指南层
+    的文档漂移
+  - 顺手把
+    direct context
+    的 shell contract
+    从
+    “只拦调用示例”
+    收紧到
+    “literal API 名称也只能留在 API_REFERENCE”
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-context-servername-migration-guide-drift-closeout.md`
+  - 修改文档：
+    - `docs/guides/MIGRATION_GUIDE.md`
+  - 修改 focused contract：
+    - `tests/scripts/test_direct_context_servername_surface_truth_contract.sh`
+  当前实施判断：
+  - 当前 drift
+    不是 runtime regression，
+    而是 active guide
+    把已经冻结的 compatibility surface
+    literal 名称
+    又教回了指南层
+  - 现有
+    `test_tsslconfig_servername_surface_truth_contract.sh`
+    与
+    `test_withsni_surface_truth_contract.sh`
+    已经能抓到这条红灯；
+    direct context
+    自己的 contract
+    还缺一条同向的 literal-name guard
+  当前 focused proof：
+  - `bash -n tests/scripts/test_tsslconfig_servername_surface_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_tsslconfig_servername_surface_truth_contract.sh`
+    - PASS
+  - `bash -n tests/scripts/test_withsni_surface_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_withsni_surface_truth_contract.sh`
+    - PASS
+  - `bash -n tests/scripts/test_direct_context_servername_surface_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_direct_context_servername_surface_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前批收口后的默认下一步：
+  - 继续回到
+    `context-level ServerName`
+    剩余 public surface
+    的最终 slimming / freeze
+  - 若继续沿文档/contract 真相线推进，
+    下一个值得审的是：
+    - `API_REFERENCE` 顶部 compatibility note
+      与
+      `MIGRATION_GUIDE`
+      的职责边界
 - [completed] `context servername dead seam removal`
   当前 focused 目标：
   - 把

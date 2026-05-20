@@ -1,7 +1,7 @@
 # fafafa.ssl 迁移指南
 
 > **版本**: rolling
-> **最后更新**: 2026-05-19
+> **最后更新**: 2026-05-20
 > **当前路线图**: [当前路线图](../ROADMAP.md)
 > **说明**: 当前迁移真相以 `src/fafafa.ssl.base.pas`、`src/fafafa.ssl.pas`、`src/fafafa.ssl.tls.pas` 和 `docs/reference/API_REFERENCE.md` 为准。
 
@@ -16,7 +16,7 @@
 3. client SNI/hostname 是连接级配置，不再推荐写在共享 context 上。
 4. 可选能力要以后端 capability truth 为准，不要默认所有 backend 都完全同构。
 
-`TSSLConfig.ServerName` / `ISSLContext.SetServerName(...)` / `TSSLContextBuilder.WithSNI(...)` 当前都只应视为 compatibility-only 入口。
+旧的 context-level SNI 写入口当前都只应视为 compatibility-only 兼容面；具体仍保留哪些 literal API 名称，以 `docs/reference/API_REFERENCE.md` 为准。
 
 ## 从旧版 fafafa.ssl 迁移
 
