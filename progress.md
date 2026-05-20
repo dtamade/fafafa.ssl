@@ -406,6 +406,47 @@
       - all local store variables in
         `test_winssl_cert_verify_ex.pas`
         now hold the interface directly
+
+- update implementation:
+  - `tests/winssl/test_winssl_cert_verify_ex.pas`
+  - change:
+    - `CreateMemoryBackedStore`
+      now returns
+      `ISSLCertificateStore`
+    - focused WinSSL VerifyEx contracts
+      now keep memory-backed stores via interface ownership,
+      eliminating the temporary class-to-interface lifetime hole
+
+- `gh run view --job 76946946442 --log-failed`
+  - result: FAIL
+  - summary:
+    - confirmed the previous
+      `26159357178`
+      failure still never printed the second
+      `VerifyEx start`
+    - that strengthened the lifetime-root-cause diagnosis before the fix was pushed
+
+- `gh run view 26159931316 --json status,conclusion`
+- `gh run view 26159931322 --json status,conclusion,jobs,url`
+  - result: PASS
+  - summary:
+    - `CI`
+      `26159931316`
+      completed
+      `success`
+    - `WinSSL Runtime Gate`
+      `26159931322`
+      completed
+      `success`
+    - the Windows job passed every stage:
+      - `Run quick WinSSL smoke`
+      - `Run Windows Wave B gate`
+      - `Run broader WinSSL runtime suite`
+    - this is the durable proof that the remaining
+      `EAccessViolation`
+      came from the focused test's store-lifetime bug,
+      not from
+      `TWinSSLCertificate.VerifyEx`
       batch is now fully green on remote CI
     - `Code Quality (Light)` /
       `Minimal Gate (Linux)` /

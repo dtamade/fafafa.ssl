@@ -10,7 +10,7 @@
 
 ## Current Status
 
-- [in_progress] `winssl cert verifyex custom trust engine`
+- [completed] `winssl cert verifyex custom trust engine`
   当前 focused 目标：
   - 把
     `WinSSL`
@@ -309,6 +309,55 @@
         再重新验证
         WinSSL implementation
         自身是否还剩真实 AV
+  - 最新远端反馈（闭环证明）：
+    - 新 run
+      `26159931322`
+      `WinSSL Runtime Gate`
+      已全绿
+    - 同批
+      `26159931316`
+      `CI`
+      也全绿
+    - 这说明：
+      - 前一轮 lingering
+        `EAccessViolation`
+        并不是
+        WinSSL
+        `VerifyEx`
+        实现残余
+      - 真正根因就是
+        focused test
+        把
+        `TWinSSLCertificateStore`
+        当类引用持有导致的
+        `TInterfacedObject`
+        生命周期洞
+      - 一旦改成接口持有，
+        `quick smoke`
+        /
+        `Wave B gate`
+        /
+        `broader runtime suite`
+        全部恢复为
+        PASS
+  - 当前 batch
+    done criteria
+    已满足：
+    - custom store
+      trust-anchor
+      public truth
+      已被 Windows runtime 证明
+    - `Verify`
+      /
+      `VerifyEx`
+      focused WinSSL parity 契约已进入并通过真实
+      Windows suite
+    - 后续主线应切回
+      更高层的
+      public interface
+      / backend completeness
+      / docs completeness
+      收口
 - [completed] `winssl certificate verifyex flag parity`
   当前 focused 目标：
   - 把

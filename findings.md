@@ -385,6 +385,45 @@
     memory-backed store
   - 先把测试本身的生命周期洞修掉，
     再看 WinSSL 实现是否还有真实残余
+
+- 最新 Windows 证明
+  `26159931322`
+  已经把这条根因完全坐实：
+  - `WinSSL Runtime Gate`
+    全绿
+  - `quick smoke`
+    /
+    `Wave B gate`
+    /
+    `broader runtime suite`
+    全部通过
+  - 所以之前 lingering 的
+    `EAccessViolation`
+    不是 production
+    `WinSSL VerifyEx`
+    的剩余实现洞，
+    而是 focused test 的接口持有错误
+
+- 这条结论对总路线图的意义很大：
+  - WinSSL cert-level
+    custom-store trust
+    + published
+    `VerifyEx`
+    flag parity
+    现在已经有真实
+    Windows runtime proof
+  - `windows/WinSSL`
+    这条长期 blocker
+    从“实现未证实”
+    收口成了
+    “focused lane 已闭环”
+  - 后续优先级应回到：
+    - public interface design
+      剩余漂移
+    - 其余 backend
+      completeness gaps
+    - 测试/文档
+      coverage debt
 - `OpenSSL certificate.VerifyEx`
   这轮被打出来的真实问题
   不是
