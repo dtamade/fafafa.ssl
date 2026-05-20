@@ -851,6 +851,9 @@ end;
 需要在下一条连接上注入待恢复会话时，也优先通过 `ISSLSessionResumption.SetSession`。
 检查当前握手是否实际命中了恢复路径时，也优先通过 `ISSLSessionResumption.IsSessionReused`。
 
+> MbedTLS 当前边界：已发布 `GetSession / SetSession` 与 session serialize / deserialize path，但 local source/header truth 只有 `mbedtls_ssl_set_session` / `mbedtls_ssl_get_session` / `mbedtls_ssl_session_load/save`，没有像 `SSL_session_reused` / `wolfSSL_session_reused` 那样的 public reused getter。
+> 因此当前 MbedTLS source/contract truth 只稳定证明“configured session 不会被误报成 observed resumed handshake”；不要把 `SetSession(...)` 自动读成 runtime reuse proof。
+
 ### WinSSL Session 管理
 
 WinSSL 后端提供 `ISSLSession` 复用能力，但活跃公共接口以当前源码为准，不再使用旧的 `GetSessionID` / `GetSessionData` 风格。

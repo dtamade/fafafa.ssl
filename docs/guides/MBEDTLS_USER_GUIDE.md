@@ -66,6 +66,9 @@ MbedTLS 与其它 backend 共享统一核心接口，但具体 published capabil
 - 当前 `SupportsFIPSMode=False`：不要把上游 Mbed TLS 的认证/商业版本能力当成 fafafa.ssl 当前 backend truth。
 - 当前不发布 `ISSLEarlyDataContext / ISSLEarlyDataConnection` public surface；0-RTT 应视为 current capability none。
 - 当前 `SupportsPKCS12=False`：没有 shipped PKCS#12 bundle create / parse / import surface。
+- 当前会话恢复 public surface 已发布 `GetSession / SetSession`、session serialize / deserialize 与 cache/ticket candidate path。
+- 但当前 local source/header truth 只有 `mbedtls_ssl_set_session` / `mbedtls_ssl_get_session` / `mbedtls_ssl_session_load/save`；没有像 `SSL_session_reused` / `wolfSSL_session_reused` 那样的 public reused getter。
+- 因此 `SetSession(...)` 当前只表示“为下一次握手配置候选 session”；`IsSessionReused` / `GetConnectionInfo.IsResumed` 不应被写成已有通用 resumed-handshake runtime proof。
 
 ```pascal
 // 核心调用形状相近，但 capability 需要按 backend 重新核对

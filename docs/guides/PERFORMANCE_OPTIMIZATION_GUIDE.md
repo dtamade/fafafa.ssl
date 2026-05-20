@@ -54,6 +54,11 @@ end;
 对于 TLS 1.3、特定服务端策略或 Windows/公网端点，请用当前 backend 的实际 run
 结果验证，不要从一次旧实验推断成通用规律。
 
+当前 backend-specific caveat：
+
+- `WinSSL`: dedicated Windows runtime truth 仍以 `observed_reuse=false` / `session_configured=true` 为准；没有 target-specific validation 时，不要把 `SetSession(...)` 直接当成已稳定命中的 resumed-handshake 收益。
+- `MbedTLS`: 当前 public surface 可以保存并注入 session candidate，但由于没有与 `SSL_session_reused` / `wolfSSL_session_reused` 对称的 public reused getter，当前 contract truth 只证明“configured session 不会被误报成 observed reuse”；不要把一次 `SetSession(...)` 直接读成通用 runtime 收益。
+
 ## 诊断与性能指标优先走 owner path
 
 核心 `ISSLConnection.GetPerformanceMetrics` 在新代码里只作为 compatibility

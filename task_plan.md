@@ -10,6 +10,115 @@
 
 ## Current Status
 
+- [completed] `mbedtls session resumption doc truth`
+  当前 focused 目标：
+  - 把
+    `MbedTLS`
+    session resumption
+    的 active docs / reference truth
+    收紧到与当前源码一致，
+    避免高入口文档继续把
+    `SetSession(...)`
+    写成
+    `observed resumed handshake`
+    已有通用 runtime proof
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-mbedtls-session-resumption-doc-truth.md`
+  - 新增 focused docs contract：
+    - `tests/scripts/test_mbedtls_session_resumption_doc_truth_contract.sh`
+  - 修改 active docs：
+    - `docs/BACKEND_CAPABILITY_MATRIX.md`
+    - `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+    - `docs/guides/MBEDTLS_USER_GUIDE.md`
+    - `docs/reference/API_REFERENCE.md`
+    - `docs/reference/API_DOCUMENTATION.md`
+    - `docs/guides/PERFORMANCE_OPTIMIZATION_GUIDE.md`
+    - `docs/guides/PERFORMANCE_PROFILING_GUIDE.md`
+  当前实施判断：
+  - 上一批 owner-truth proof
+    已经把
+    `MbedTLS`
+    连接侧语义收得比较干净：
+    - deserialized native session
+      可以注入连接
+    - 但不会制造
+      false-positive reuse
+  - 真正还漂的地方
+    已经不是生产实现，
+    而是文档入口：
+    - dedicated matrix
+      仍写
+      `Session 复用 | ✅ 支持 | 完整支持`
+    - 通用 API / 性能文档
+      仍把
+      `SetSession(...)`
+      写得像
+      “已经复用成功”
+  当前 focused proof：
+  - `bash -n tests/scripts/test_mbedtls_session_resumption_doc_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_mbedtls_session_resumption_doc_truth_contract.sh`
+    - PASS
+  - `bash -n tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前状态：
+  - top-level
+    `BACKEND_CAPABILITY_MATRIX`
+    不再把
+    `MbedTLS`
+    session resumption
+    记成无条件
+    `✅`
+  - dedicated
+    `MBEDTLS_BACKEND_CAPABILITY_MATRIX`
+    已明确：
+    - public surface
+      已发布
+      `GetSession / SetSession`
+      与
+      serialize / deserialize / cache candidate path
+    - 但当前 local source/header truth
+      只有
+      `mbedtls_ssl_set_session`
+      /
+      `mbedtls_ssl_get_session`
+      /
+      `mbedtls_ssl_session_load/save`
+    - 没有像
+      `SSL_session_reused`
+      /
+      `wolfSSL_session_reused`
+      那样的 public reused getter
+  - 高入口文档
+    现已统一收紧到：
+    - `SetSession(...)`
+      = 配置候选 session
+    - 不等于
+      `observed resumed handshake`
+  - 新的 focused docs contract
+    已把这条 source/doc truth
+    冻结下来，
+    后续不需要再从头争论
+    `MbedTLS`
+    这条边界
+  下一刀：
+  - 如果继续围绕
+    session semantics
+    深挖，
+    更值钱的方向就不再是重审
+    `MbedTLS`
+    文案，
+    而是看还有没有别的 backend / high-entry docs
+    仍把 candidate path
+    写成 observed truth；
+    或者回到实现侧，
+    继续审仍未收紧的 runtime/capability gap
+
 - [completed] `clibrary session reuse owner truth`
   当前 focused 目标：
   - 在上一批

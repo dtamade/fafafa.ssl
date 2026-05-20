@@ -6,6 +6,102 @@
 
 ## 2026-05-21
 
+### MbedTLS Session Resumption Doc Truth
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-mbedtls-session-resumption-doc-truth.md`
+  - change:
+    - recorded a bounded docs-truth batch around
+      `MbedTLS`
+      session resumption semantics
+    - explicitly framed the problem as
+      `configured session candidate`
+      versus
+      `observed resumed handshake`
+
+- inspect current source/doc truth:
+  - `src/fafafa.ssl.mbedtls.connection.pas`
+  - `docs/BACKEND_CAPABILITY_MATRIX.md`
+  - `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+  - `docs/guides/MBEDTLS_USER_GUIDE.md`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/API_DOCUMENTATION.md`
+  - `docs/guides/PERFORMANCE_OPTIMIZATION_GUIDE.md`
+  - `docs/guides/PERFORMANCE_PROFILING_GUIDE.md`
+  - change:
+    - confirmed
+      `MbedTLS`
+      source currently keeps
+      `DoSetSession(...)`
+      and
+      `DoIsSessionReused`
+      on a conservative truth path
+    - identified the main drift as:
+      active docs still over-reading
+      `SetSession(...)`
+      into
+      `observed resumed handshake`
+
+- update active docs + add focused contract:
+  - `docs/BACKEND_CAPABILITY_MATRIX.md`
+  - `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+  - `docs/guides/MBEDTLS_USER_GUIDE.md`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/API_DOCUMENTATION.md`
+  - `docs/guides/PERFORMANCE_OPTIMIZATION_GUIDE.md`
+  - `docs/guides/PERFORMANCE_PROFILING_GUIDE.md`
+  - `tests/scripts/test_mbedtls_session_resumption_doc_truth_contract.sh`
+  - change:
+    - downgraded top-level
+      `MbedTLS`
+      session-resumption matrix entry from unconditional
+      `✅`
+      to bounded
+      `⚠️`
+    - taught dedicated
+      `MbedTLS`
+      docs to distinguish:
+      - published candidate session surface
+      - missing public observed-reuse getter
+    - removed high-entry wording that implied
+      `SetSession(...)`
+      alone equals
+      “会话复用成功”
+    - froze the new source/doc truth in a focused shell contract
+
+- focused docs verification:
+  - `bash -n tests/scripts/test_mbedtls_session_resumption_doc_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_mbedtls_session_resumption_doc_truth_contract.sh`
+    - result: PASS
+    - summary:
+      - MbedTLS session-resumption source/doc truth stayed aligned across top-level matrix, dedicated docs, API docs, and performance guides
+  - `bash -n tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+    - result: PASS
+    - summary:
+      - the pre-existing MbedTLS active-doc capability contract remained green after the new session-resumption wording tightenings
+  - `git diff --check`
+    - result: PASS
+    - summary:
+      - no whitespace or patch-format drift remains after the doc-truth batch
+
+- next queue impact:
+  - `MbedTLS`
+    session resumption
+    这条线现在不需要再从
+    “文档是不是把 candidate path 误教成 observed truth”
+    这个问题重新拉起
+  - 后续如果继续沿着
+    session semantics
+    深挖，
+    更值钱的是：
+    - 审别的 backend / high-entry docs
+      是否仍存在同类 overclaim
+    - 或回到实现侧，
+      审仍未闭合的 runtime/capability gap
+
 ### C-Library Session Native Metadata Truth
 
 - add focused batch inputs:

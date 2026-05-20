@@ -2,6 +2,78 @@
 
 ## 2026-05-21
 
+- 上一批
+  `MbedTLS`
+  /
+  `WolfSSL`
+  owner-truth proof
+  跑完后，
+  当前最明显的 residual
+  已经不是生产实现，
+  而是 active docs
+  仍把
+  generic session-resumption
+  流程写得过强
+
+- `MbedTLS`
+  当前源码 truth
+  比文档保守得多：
+  - `src/fafafa.ssl.mbedtls.connection.pas`
+    里
+    `DoSetSession(...)`
+    只会重置
+    `FSessionReused := False`
+    然后调用
+    `mbedtls_ssl_set_session(...)`
+  - `DoIsSessionReused`
+    直接返回
+    `FSessionReused`
+  - 但当前 source 里
+    没有和
+    `OpenSSL`
+    /
+    `WolfSSL`
+    那种 native reused getter
+    对应的翻真路径
+
+- 所以对
+  `MbedTLS`
+  而言，
+  当前最稳妥的 public truth
+  应该是：
+  - 已发布
+    `GetSession / SetSession`
+    与
+    serialize / deserialize / cache candidate path
+  - 但这条线只表示
+    configured session
+  - 不能被写成
+    observed resumed handshake
+    已有通用 runtime proof
+
+- 这批 focused docs contract
+  的价值很高：
+  - 它把
+    top-level matrix
+    /
+    dedicated MbedTLS matrix
+    /
+    MbedTLS guide
+    /
+    API reference
+    /
+    API documentation
+    /
+    performance guides
+    的关键措辞
+    全部冻到了同一条 source truth 上
+  - 以后即使某个高入口文档
+    又飘回
+    “会话复用成功”
+    这种写法，
+    也会被 focused shell contract
+    直接打回来
+
 - `SetSession(...)`
   /
   `IsSessionReused`

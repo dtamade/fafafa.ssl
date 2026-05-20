@@ -2,7 +2,7 @@
 
 本文档详细说明各 SSL/TLS 后端的功能支持情况。
 
-**更新时间**: 2026-05-19
+**更新时间**: 2026-05-21
 
 ---
 
@@ -13,7 +13,7 @@
 | **TLS 1.2**                  | ✅         | ✅      | ✅     | ✅      | ✅      |
 | **TLS 1.3**                  | ✅         | ✅      | ⚠️     | ⚠️      | ✅      |
 | **Early Data (0-RTT)**       | ⚠️         | ✅      | ❌     | ❌      | ⚠️      |
-| **Session Resumption**       | ⚠️         | ✅      | ⚠️     | ✅      | ✅      |
+| **Session Resumption**       | ⚠️         | ✅      | ⚠️     | ⚠️      | ✅      |
 | **OCSP Stapling**            | ⚠️         | ✅      | ❌     | ❌      | ⚠️      |
 | **Certificate Transparency** | ⚠️         | ❌      | ❌     | ❌      | ❌      |
 | **ALPN**                     | ⚠️         | ✅      | ✅     | ✅      | ✅      |
@@ -53,6 +53,7 @@
 
 - `FreePascal`: public surface 已闭合，但 `SessionTicketsSupport` / `SessionCacheSupport` 仍发布为 `experimental`
 - `WinSSL`: public surface 存在，但当前 dedicated Windows runtime truth 仍是 `observed_reuse=false` / `session_configured=true`
+- `MbedTLS`: public surface 已发布 `GetSession / SetSession / Serialize / Deserialize` 与 cache/ticket 候选路径，但当前 local source/header truth 只有 `mbedtls_ssl_set_session` / `mbedtls_ssl_get_session` / `mbedtls_ssl_session_load/save`，没有对称的 public reused getter；因此当前不把 `SetSession(...)` 自动解释成 observed resumed-handshake
 
 `Context Callbacks` 这一行按当前 published runtime truth 汇总：
 

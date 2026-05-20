@@ -723,7 +723,7 @@ type
 
 ### 概述
 
-会话缓存允许 TLS 会话复用,避免完整握手,显著提升性能。
+会话缓存允许调用方保存并重新注入 TLS 会话候选，但是否真的避免了完整握手，仍取决于 backend、目标站点、上下文复用和 native observed-reuse truth。
 
 ### 使用会话缓存
 
@@ -751,7 +751,7 @@ begin
     if (Session <> nil) and Supports(Connection, ISSLSessionResumption, SessionResumption) then
     begin
       SessionResumption.SetSession(Session);
-      WriteLn('会话复用成功');
+      WriteLn('已为下一次握手配置会话候选');
     end;
 
     // 获取统计信息
@@ -764,6 +764,9 @@ begin
   end;
 end;
 ```
+
+> 对 `MbedTLS` 而言，当前 public surface 已发布 session save/load 与 `SetSession(...)` candidate path，但 local source/header truth 只有 `mbedtls_ssl_set_session` / `mbedtls_ssl_get_session` / `mbedtls_ssl_session_load/save`；没有 public reused getter。
+> 因而这段示例在 MbedTLS 上表达的是“已配置候选 session”，不等于已经观测到 resumed handshake。
 
 ### 会话持久化
 
