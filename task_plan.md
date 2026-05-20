@@ -10,6 +10,132 @@
 
 ## Current Status
 
+- [completed] `clibrary session reuse owner truth`
+  当前 focused 目标：
+  - 在上一批
+    `session metadata truth`
+    之后，
+    继续收紧连接侧
+    `SetSession(...) -> IsSessionReused`
+    语义，
+    避免把
+    `deserialized session injected`
+    和
+    `observed resumed handshake`
+    混成一层
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-clibrary-session-reuse-owner-truth.md`
+  - 修改 focused runtime contracts：
+    - `tests/test_mbedtls_connection_session_reused_contract.pas`
+    - `tests/test_wolfssl_connection_session_reused_contract.pas`
+  当前实施判断：
+  - `2026-05-18`
+    那批只收了：
+    - 配置 session
+      不能提前误报
+      `IsSessionReused=True`
+  - 但它还没有证明：
+    - 真实
+      `Deserialize(...)`
+      出来的 session
+      再注入连接后，
+      owner path
+      仍然说真话
+  - 这批继续往下收掉两层 residual：
+    - `MbedTLS`
+      不再只吃 mock session，
+      要吃真实 deserialized native session
+    - `WolfSSL`
+      新增 owner-path proof，
+      直接锁住：
+      configured session
+      不等于
+      observed reuse
+  当前 focused proof：
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_connection_session_reused_contract -FEtmp/test_mbedtls_connection_session_reused_contract -otmp/test_mbedtls_connection_session_reused_contract/test_mbedtls_connection_session_reused_contract tests/test_mbedtls_connection_session_reused_contract.pas`
+    - PASS
+  - `./tmp/test_mbedtls_connection_session_reused_contract/test_mbedtls_connection_session_reused_contract`
+    - PASS
+    - `5 passed / 0 failed`
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_connection_session_reused_contract -FEtmp/test_wolfssl_connection_session_reused_contract -otmp/test_wolfssl_connection_session_reused_contract/test_wolfssl_connection_session_reused_contract tests/test_wolfssl_connection_session_reused_contract.pas`
+    - PASS
+  - `./tmp/test_wolfssl_connection_session_reused_contract/test_wolfssl_connection_session_reused_contract`
+    - PASS
+    - `12 passed / 0 failed`
+  - `bash -n tests/scripts/test_session_reused_semantic_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_session_reused_semantic_truth_contract.sh`
+    - PASS
+  - `bash -n tests/scripts/test_isslsessionresumption_runtime_residual_classification_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_isslsessionresumption_runtime_residual_classification_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前状态：
+  - `MbedTLS`
+    现已被 focused proof
+    锁住：
+    - 真实 deserialized native session
+      仍可注入连接
+    - 但当前 backend
+      不会把
+      `configured session`
+      误报成
+      `observed resumed handshake`
+  - `WolfSSL`
+    现已新增 owner-path proof：
+    - `TWolfSSLSession.Deserialize(...)`
+      产出的 native session handle
+      能经
+      `ISSLSessionResumption.SetSession(...)`
+      注入连接
+    - `ISSLSessionResumption.IsSessionReused`
+      继续读取 native
+      `wolfSSL_session_reused(...)`
+      真值
+    - `ISSLConnectionInfo.GetConnectionInfo.IsResumed`
+      继续镜像这条 owner truth
+  - runtime residual file set
+    仍保持冻结：
+    - 新增的
+      `WolfSSL`
+      focused proof
+      没有把 direct-core residual 面重新扩散
+  当前总路线图进度：
+  - `接口设计`
+    已经从
+    文档入口分类
+    推进到
+    `ISSLSessionResumption`
+    owner path
+    和 compatibility mirrors
+    的 runtime semantics
+  - `各 backend 实现`
+    在
+    `MbedTLS/WolfSSL`
+    上已连续收掉：
+    - deserialize false success
+    - clone/source lifetime
+    - metadata truth
+    - reuse owner truth
+  - `测试和文档`
+    继续通过 focused contract
+    累积 durable evidence，
+    并保持 residual proof 文件集合不扩散
+  下一刀：
+  - 优先继续审
+    `MbedTLS`
+    当前是否还存在可提取的
+    post-handshake reuse truth；
+    若 local header / current source
+    没有稳定 public helper，
+    就把这条 backend 边界补进 active docs / reference truth，
+    避免后续用户把 generic resumption 示例误读成
+    `MbedTLS`
+    已有 runtime proof
+
 - [completed] `clibrary session native metadata truth`
   当前 focused 目标：
   - 收掉

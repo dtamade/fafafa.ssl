@@ -7,33 +7,8 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.mbedtls.base,
   fafafa.ssl.mbedtls.api,
+  fafafa.ssl.mbedtls.session,
   fafafa.ssl.mbedtls.connection;
-
-type
-  TMockMbedTLSSession = class(TInterfacedObject, ISSLSession, ISSLNativeHandleAccess)
-  private
-    FID: string;
-    FHandle: Pointer;
-    FCreationTime: TDateTime;
-    FTimeout: Integer;
-  public
-    constructor Create(const AID: string; AHandle: Pointer);
-    function GetID: string;
-    function GetCreationTime: TDateTime;
-    function GetTimeout: Integer;
-    procedure SetTimeout(ATimeout: Integer);
-    function IsValid: Boolean;
-    function IsResumable: Boolean;
-    function GetProtocolVersion: TSSLProtocolVersion;
-    function GetCipherName: string;
-    function GetPeerCertificate: ISSLCertificate;
-    function Serialize: TBytes;
-    function Deserialize(const AData: TBytes): Boolean;
-    function Clone: ISSLSession;
-    function GetNativeHandle: Pointer;
-    function GetBackendType: TSSLLibraryType;
-    function IsNativeHandleValid: Boolean;
-  end;
 
 var
   TotalTests: Integer = 0;
@@ -67,88 +42,12 @@ begin
   Result := 0;
 end;
 
-constructor TMockMbedTLSSession.Create(const AID: string; AHandle: Pointer);
+function FakeMbedTLSSessionLoadOk(session: Pmbedtls_ssl_session;
+  const buf: PByte; len: NativeUInt): Integer; cdecl;
 begin
-  inherited Create;
-  FID := AID;
-  FHandle := AHandle;
-  FCreationTime := Now;
-  FTimeout := 3600;
-end;
-
-function TMockMbedTLSSession.GetID: string;
-begin
-  Result := FID;
-end;
-
-function TMockMbedTLSSession.GetCreationTime: TDateTime;
-begin
-  Result := FCreationTime;
-end;
-
-function TMockMbedTLSSession.GetTimeout: Integer;
-begin
-  Result := FTimeout;
-end;
-
-procedure TMockMbedTLSSession.SetTimeout(ATimeout: Integer);
-begin
-  FTimeout := ATimeout;
-end;
-
-function TMockMbedTLSSession.IsValid: Boolean;
-begin
-  Result := (FHandle <> nil) and (FID <> '');
-end;
-
-function TMockMbedTLSSession.IsResumable: Boolean;
-begin
-  Result := IsValid;
-end;
-
-function TMockMbedTLSSession.GetProtocolVersion: TSSLProtocolVersion;
-begin
-  Result := sslProtocolTLS12;
-end;
-
-function TMockMbedTLSSession.GetCipherName: string;
-begin
-  Result := 'MOCK-MBEDTLS-SESSION';
-end;
-
-function TMockMbedTLSSession.GetPeerCertificate: ISSLCertificate;
-begin
-  Result := nil;
-end;
-
-function TMockMbedTLSSession.Serialize: TBytes;
-begin
-  SetLength(Result, 0);
-end;
-
-function TMockMbedTLSSession.Deserialize(const AData: TBytes): Boolean;
-begin
-  Result := Length(AData) > 0;
-end;
-
-function TMockMbedTLSSession.Clone: ISSLSession;
-begin
-  Result := TMockMbedTLSSession.Create(FID, FHandle);
-end;
-
-function TMockMbedTLSSession.GetNativeHandle: Pointer;
-begin
-  Result := FHandle;
-end;
-
-function TMockMbedTLSSession.GetBackendType: TSSLLibraryType;
-begin
-  Result := sslMbedTLS;
-end;
-
-function TMockMbedTLSSession.IsNativeHandleValid: Boolean;
-begin
-  Result := FHandle <> nil;
+  if (session = nil) or (buf = nil) or (len = 0) then
+    Exit(-1);
+  Result := 0;
 end;
 
 procedure TestSetSessionMustNotPreclaimResumedHandshake;
@@ -156,11 +55,14 @@ var
   LConn: TMbedTLSConnection;
   LStream: TMemoryStream;
   LSession: ISSLSession;
+  LNativeAccess: ISSLNativeHandleAccess;
   LOriginalSSLInit: Tmbedtls_ssl_init;
   LOriginalSSLFree: Tmbedtls_ssl_free;
   LOriginalSSLSetup: Tmbedtls_ssl_setup;
   LOriginalSSLSetBio: Tmbedtls_ssl_set_bio;
   LOriginalSSLSetSession: Tmbedtls_ssl_set_session;
+  LOriginalSessionLoad: Tmbedtls_ssl_session_load;
+  LOriginalSessionFree: Tmbedtls_ssl_session_free;
 begin
   WriteLn;
   WriteLn('=== MbedTLS session reused semantic truth ===');
@@ -174,19 +76,29 @@ begin
   LOriginalSSLSetup := mbedtls_ssl_setup;
   LOriginalSSLSetBio := mbedtls_ssl_set_bio;
   LOriginalSSLSetSession := mbedtls_ssl_set_session;
+  LOriginalSessionLoad := mbedtls_ssl_session_load;
+  LOriginalSessionFree := mbedtls_ssl_session_free;
 
   mbedtls_ssl_init := nil;
   mbedtls_ssl_free := nil;
   mbedtls_ssl_setup := nil;
   mbedtls_ssl_set_bio := nil;
   mbedtls_ssl_set_session := @FakeMbedTLSSSLSetSession;
+  mbedtls_ssl_session_load := @FakeMbedTLSSessionLoadOk;
+  mbedtls_ssl_session_free := nil;
   GSetSessionCalls := 0;
 
   LStream := TMemoryStream.Create;
   LConn := nil;
   try
     LConn := TMbedTLSConnection.Create(nil, nil, LStream);
-    LSession := TMockMbedTLSSession.Create('mock-mbedtls-session', Pointer(PtrUInt($1234)));
+    LSession := TMbedTLSSession.Create;
+    AssertTrue('deserialized real MbedTLS session is available for injection proof',
+      LSession.Deserialize(TBytes.Create(1, 2, 3, 4)));
+    AssertTrue('deserialized real MbedTLS session keeps a native handle',
+      Supports(LSession, ISSLNativeHandleAccess, LNativeAccess) and
+      (LNativeAccess.GetNativeHandle <> nil),
+      'expected the deserialized TMbedTLSSession to retain a native session handle');
 
     AssertTrue('fresh connection starts with IsSessionReused=False',
       not LConn.IsSessionReused);
@@ -208,6 +120,8 @@ begin
     mbedtls_ssl_setup := LOriginalSSLSetup;
     mbedtls_ssl_set_bio := LOriginalSSLSetBio;
     mbedtls_ssl_set_session := LOriginalSSLSetSession;
+    mbedtls_ssl_session_load := LOriginalSessionLoad;
+    mbedtls_ssl_session_free := LOriginalSessionFree;
   end;
 end;
 

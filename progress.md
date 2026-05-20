@@ -89,6 +89,117 @@
     - `clong` ABI mismatch
     - raw-bytes serialize assertion drift
 
+### C-Library Session Reuse Owner Truth
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-clibrary-session-reuse-owner-truth.md`
+  - change:
+    - recorded a bounded connection-side session reuse truth batch
+    - explicitly framed the next gap as
+      `deserialized session injected` versus
+      `observed resumed handshake`
+
+- inspect current session-reuse truth surface:
+  - `src/fafafa.ssl.mbedtls.connection.pas`
+  - `src/fafafa.ssl.wolfssl.connection.pas`
+  - `src/fafafa.ssl.openssl.connection.pas`
+  - `tests/test_mbedtls_connection_session_reused_contract.pas`
+  - `tests/test_openssl_connection_session_reused_contract.pas`
+  - `tests/scripts/test_session_reused_semantic_truth_contract.sh`
+  - change:
+    - confirmed the earlier batch only fixed
+      `DoSetSession` false-positive semantics
+    - identified the next missing proof as:
+      real deserialized session objects re-entering connection owner paths
+
+- static local-header cross-check:
+  - `/usr/include/mbedtls/ssl.h`
+  - `/usr/include/wolfssl/ssl.h`
+  - change:
+    - confirmed `MbedTLS` exposes
+      `mbedtls_ssl_set_session/get_session/session_load/session_save`
+      but no direct public reused getter matching
+      `SSL_session_reused`
+      /
+      `wolfSSL_session_reused`
+    - confirmed `WolfSSL` exposes native
+      `wolfSSL_set_session`
+      and
+      `wolfSSL_session_reused`
+
+- update focused runtime contracts:
+  - `tests/test_mbedtls_connection_session_reused_contract.pas`
+  - `tests/test_wolfssl_connection_session_reused_contract.pas`
+  - change:
+    - upgraded the existing
+      `MbedTLS`
+      semantic proof to use a real
+      `TMbedTLSSession.Deserialize(...)`
+      session instead of a mock session shell
+    - added a new
+      `WolfSSL`
+      owner-path contract that proves:
+      - deserialized native session handle injection through
+        `ISSLSessionResumption.SetSession(...)`
+      - `ISSLSessionResumption.IsSessionReused`
+        keeps reading native
+        `wolfSSL_session_reused(...)`
+        truth
+      - `ISSLConnectionInfo.GetConnectionInfo.IsResumed`
+        stays aligned with that owner truth
+
+- focused compile/run:
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_connection_session_reused_contract -FEtmp/test_mbedtls_connection_session_reused_contract -otmp/test_mbedtls_connection_session_reused_contract/test_mbedtls_connection_session_reused_contract tests/test_mbedtls_connection_session_reused_contract.pas`
+    - result: PASS
+  - `./tmp/test_mbedtls_connection_session_reused_contract/test_mbedtls_connection_session_reused_contract`
+    - result: PASS
+    - summary:
+      - `5 passed / 0 failed`
+      - deserialized real MbedTLS session injection no longer depends on a mock-session surrogate
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_connection_session_reused_contract -FEtmp/test_wolfssl_connection_session_reused_contract -otmp/test_wolfssl_connection_session_reused_contract/test_wolfssl_connection_session_reused_contract tests/test_wolfssl_connection_session_reused_contract.pas`
+    - result: PASS
+  - first `./tmp/test_wolfssl_connection_session_reused_contract/test_wolfssl_connection_session_reused_contract`
+    - result: FAIL
+    - summary:
+      - the focused assertions were already green
+      - teardown crashed with `EAccessViolation`
+      - root cause was test-harness cleanup order:
+        temporary session-function stubs were still active during WolfSSL library finalization
+  - fix:
+    - restored original WolfSSL function pointers before `LLib.Finalize`
+    - kept connection/session/context release ahead of library finalization
+  - final `./tmp/test_wolfssl_connection_session_reused_contract/test_wolfssl_connection_session_reused_contract`
+    - result: PASS
+    - summary:
+      - `12 passed / 0 failed`
+      - owner-path injected session and observed reuse truth stay separated and aligned
+
+- focused source contracts:
+  - `bash -n tests/scripts/test_session_reused_semantic_truth_contract.sh`
+  - `bash tests/scripts/test_session_reused_semantic_truth_contract.sh`
+    - result: PASS
+    - summary:
+      - backend source semantics still distinguish configured session from observed resumed handshake
+  - `bash -n tests/scripts/test_isslsessionresumption_runtime_residual_classification_contract.sh`
+  - `bash tests/scripts/test_isslsessionresumption_runtime_residual_classification_contract.sh`
+    - result: PASS
+    - summary:
+      - the intentional direct-core residual file set stayed frozen;
+        the new WolfSSL proof did not expand it
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains after the owner-truth batch
+
+- next queue impact:
+  - backend implementation/testing now has explicit proof for:
+    - `MbedTLS` deserialized session injection without false-positive reuse
+    - `WolfSSL` owner-path injected session plus native observed reuse truth
+  - the next highest-value lane is to classify and document the current
+    `MbedTLS`
+    post-handshake reuse boundary if current source/local headers still lack a stable observed-reuse helper
+
 ### C-Library Session Deserialize Metadata Completeness
 
 - add focused batch inputs:

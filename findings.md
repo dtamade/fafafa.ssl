@@ -2,6 +2,98 @@
 
 ## 2026-05-21
 
+- `SetSession(...)`
+  /
+  `IsSessionReused`
+  这条线在
+  `MbedTLS/WolfSSL`
+  上继续往下挖之后，
+  暴露出的不是 session object
+  自己的 metadata 问题了，
+  而是连接 owner path
+  还缺少一层更具体的可复用 proof：
+  - 真实
+    `Deserialize(...)`
+    出来的 session
+    再注入连接时，
+    语义会不会继续说真话
+
+- `MbedTLS`
+  当前 local-header truth
+  已经很清楚：
+  - 有
+    `mbedtls_ssl_set_session(...)`
+  - 有
+    `mbedtls_ssl_get_session(...)`
+  - 有
+    `mbedtls_ssl_session_load/save(...)`
+  - 但当前 public helper surface
+    没有像
+    `SSL_session_reused(...)`
+    /
+    `wolfSSL_session_reused(...)`
+    那样的直接 reused getter
+
+- 这意味着
+  `MbedTLS`
+  连接侧当前最稳妥的 durable truth
+  不是“已经有 post-handshake observed reuse proof”，
+  而是：
+  - 真实 deserialized native session
+    可以被注入连接
+  - 但在当前 shipped source / local headers
+    范围里，
+    不能把这一步自动解释成
+    observed resumed handshake
+
+- `WolfSSL`
+  这边则正好相反：
+  - session class
+    已经能通过
+    `Deserialize(...)`
+    拿回真实 native handle
+  - 连接侧也已经有 native
+    `wolfSSL_session_reused(...)`
+    getter
+  - 所以当前最值得锁住的 truth
+    不是
+    “能不能 SetSession”
+    本身，
+    而是：
+    - owner
+      `ISSLSessionResumption.SetSession(...)`
+      注入的还是不是这个 deserialized native handle
+    - owner
+      `IsSessionReused`
+      继续读的是 native observed truth，
+      而不是
+      `session configured`
+
+- focused proof 跑完后，
+  这条线现在的 durable 结论是：
+  - `MbedTLS`
+    deserialized session injection
+    已被证明不会制造
+    false positive reuse
+  - `WolfSSL`
+    deserialized session injection
+    已被证明能走通 owner path，
+    且
+    `ISSLConnectionInfo.GetConnectionInfo.IsResumed`
+    继续镜像
+    `ISSLSessionResumption.IsSessionReused`
+    的 native truth
+
+- 这批还有一个对工作流很重要的结论：
+  - runtime residual proof 文件集合不应该轻易扩散
+  - 新增
+    `WolfSSL`
+    focused contract
+    可以完全走 owner path
+  - 所以不需要把 direct-core residual 白名单继续扩大
+  - 也避免我们以后又从“哪些 direct core 调用只是 intentional proof”
+    这个老治理问题反复拉起
+
 - `MbedTLS/WolfSSL`
   session metadata
   这条线继续往下挖之后，
