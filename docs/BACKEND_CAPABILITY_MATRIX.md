@@ -41,8 +41,8 @@
 
 `ALPN` / `SNI` 这两行对 `FreePascal` 按当前 published capability truth 汇总：
 
-- `SupportsALPN=True` / `SupportsSNI=True`
-- 但 `ALPNSupport` / `SNISupport` 当前仍发布为 `sslSupportExperimental`
+- `ALPNSupport` / `SNISupport` 当前仍发布为 `sslSupportExperimental`
+- paired legacy bool projections 会被归一化成 `True`，但顶层矩阵仍按 `experimental` 能力解读，而不是把 legacy bool 当成主真相
 
 `PSK` 这一行对 `WinSSL` 当前按 unsupported 汇总：
 
@@ -240,8 +240,8 @@ if not Supports(Ctx, ISSLEarlyDataContext) then
 **说明**:
 
 - Schannel 可能有系统级自动行为，但当前 `GetCapabilities` 仍发布：
-  - `SupportsOCSPStapling=False`
   - `OCSPStaplingSupport=sslSupportNone`
+  - legacy `SupportsOCSPStapling=False` 仅是 compatibility projection
 - 因此 connection / context 不对外暴露仓库定义的 OCSP stapling optional interface
 
 ### MbedTLS 后端
@@ -301,7 +301,8 @@ if not Supports(Ctx, ISSLEarlyDataContext) then
 **说明**:
 
 - 仓库里已有底层 OpenSSL CT binding
-- 但当前默认 capability 仍是 `SupportsCertificateTransparency=False`
+- 但当前默认 capability 仍是 `CertTransparencySupport=sslSupportNone`
+- legacy `SupportsCertificateTransparency=False` 只是 compatibility projection
 - 因此 connection 不再对外暴露 `ISSLCertificateTransparency` / `ISSLCertificateTransparencyValidation`
 
 ### WinSSL / MbedTLS / WolfSSL 后端

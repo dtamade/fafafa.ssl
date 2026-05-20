@@ -10483,3 +10483,60 @@
        - `ISSLConnection`
        - `TSSLConfig`
        - `ISSLServerConnection`
+
+- capability dual-truth
+  这条线当前真正剩下的
+  不是
+  backend producer
+  /
+  serializer
+  /
+  diff
+  实现层，
+  而是
+  public entry narration
+
+- 具体来说：
+  - `NormalizeLegacyCapabilityBooleans(...)`
+  - support-level-first serializer precedence
+  - support-level-first diff
+  - backend `GetCapabilities`
+    source normalization
+  这些主链已经基本把 runtime/source truth 收住
+
+- 当前更容易继续误导开发路线的，
+  是：
+  - `TSSLBackendCapabilities`
+    record
+    本身没把 paired feature truth model 直接写在声明处
+  - 活跃入口文档里还残留：
+    - `SupportsALPN=True` / `SupportsSNI=True`
+    - `SupportsOCSPStapling=False`
+    - `SupportsCertificateTransparency=False`
+    - `Caps.SupportsALPN`
+    这类 legacy-bool-first 读法
+
+- 这意味着下一批最小正确修法
+  不是再去动 backend 实现，
+  而是：
+  - 让
+    `TSSLBackendCapabilities`
+    record
+    自身就声明：
+    - paired feature
+      以
+      `*Support`
+      为 source/runtime truth
+    - legacy
+      `Supports*`
+      只是 compatibility projection
+    - `SupportsTLS13`
+      仍是当前唯一明确保留的主 bool truth
+  - 同时把活跃矩阵 / 迁移指南
+    的入口示例一起切回 support-level-first
+
+- 这样收口后，
+  capability
+  这条线就不会再依赖
+  “读过前几批计划/报告的人才知道该信哪套字段”
+  才能保持正确方向

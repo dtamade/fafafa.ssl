@@ -621,7 +621,9 @@ type
   // 数组类型
   TSSLCertificateArray = array of ISSLCertificate;
 
-  { TSSLBackendCapabilities - 后端能力矩阵 (v1.2 扩展) }
+  { TSSLBackendCapabilities - 后端能力矩阵 (v1.2 扩展)
+    paired capability truth follows the support-level fields; legacy Supports* booleans are compatibility projections normalized via NormalizeLegacyCapabilityBooleans(...)
+    SupportsTLS13 remains the primary bool truth until a TLS13Support field exists }
   TSSLBackendCapabilities = record
     // ===== v1.1.0 保留字段（向后兼容）=====
     SupportsTLS13: Boolean;           // TLS 1.3 支持

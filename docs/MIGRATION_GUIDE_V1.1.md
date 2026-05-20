@@ -417,12 +417,15 @@ var
   Lib: ISSLLibrary;
   Caps: TSSLBackendCapabilities;
 begin
-  Lib := TSSLFactory.GetLibrary(sslOpenSSL);
+  Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   Caps := Lib.GetCapabilities;
 
-  // v1.1.0 字段（继续可用）
-  WriteLn('Supports TLS 1.3: ', Caps.SupportsTLS13);
-  WriteLn('Supports ALPN: ', Caps.SupportsALPN);
+  // 当前仍保留的主 bool 真相
+  WriteLn('TLS 1.3: ', Caps.SupportsTLS13);
+
+  // paired feature 现在优先读取 support-level truth
+  WriteLn('ALPN Support Level: ', Ord(Caps.ALPNSupport));
+  WriteLn('SNI Support Level: ', Ord(Caps.SNISupport));
 
   // v1.2.0 新增字段
   WriteLn('Backend Version: ', Caps.BackendVersion);
@@ -433,6 +436,9 @@ begin
   WriteLn('Supports PKCS#11: ', Caps.SupportsPKCS11);
 end;
 ```
+
+对于 paired feature（如 ALPN / SNI / OCSP Stapling / CT / Session Tickets）请优先读取 `*Support` 字段；legacy `Supports*` 仅用于兼容旧调用代码。
+`SupportsTLS13` 目前仍是主 bool truth，因为当前没有 `TLS13Support`。
 
 #### 2. 算法支持查询
 

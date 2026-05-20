@@ -10299,3 +10299,91 @@
          （`crypto.hash` / `crypto.constant_time`）
        - `test_constant_time`
          的 timing-flaky gate
+114. `capability public truth freeze` 这批用于把公开 capability 入口还残留的 legacy-bool-first 叙事正式收口：
+   - 新 plan：
+     - `docs/plans/2026-05-20-capability-public-truth-freeze.md`
+   - 当前静态问题：
+     - `src/fafafa.ssl.base.pas`
+       里的
+       `TSSLBackendCapabilities`
+       record
+       虽然已有
+       `NormalizeLegacyCapabilityBooleans(...)`
+       helper 注释，
+       但 record 自身还没把 paired feature truth model 直接写出来
+     - `docs/BACKEND_CAPABILITY_MATRIX.md`
+       仍有几处活跃入口叙事
+       先用 legacy bool 解释当前 truth：
+       - `SupportsALPN=True` / `SupportsSNI=True`
+       - `SupportsOCSPStapling=False`
+       - `SupportsCertificateTransparency=False`
+     - `docs/MIGRATION_GUIDE_V1.1.md`
+       的迁移示例仍在用：
+       - `TSSLFactory.GetLibrary(...)`
+       - `Caps.SupportsALPN`
+   - 当前最小修法：
+     - 在
+       `TSSLBackendCapabilities`
+       record
+       顶部直接声明：
+       - paired feature
+         以
+         `*Support`
+         为主真相
+       - legacy
+         `Supports*`
+         只是由
+         `NormalizeLegacyCapabilityBooleans(...)`
+         回填的 compatibility projection
+       - `SupportsTLS13`
+         仍是当前唯一明确保留的主 bool truth
+     - 把
+       `BACKEND_CAPABILITY_MATRIX`
+       的
+       `FreePascal ALPN/SNI`
+       /
+       `WinSSL OCSP`
+       /
+       `OpenSSL CT`
+       说明改成 support-level-first
+     - 把
+       `MIGRATION_GUIDE_V1.1`
+       的能力示例改成：
+       - `GetLibraryInstance(...)`
+       - `ALPNSupport`
+       - `SNISupport`
+       - paired feature 读法说明
+     - 扩
+       `tests/scripts/test_capability_precedence_docs_truth_contract.sh`
+       去锁住上述入口
+   - 当前 focused proof：
+     - `bash -n tests/scripts/test_capability_precedence_docs_truth_contract.sh`
+     - `bash tests/scripts/test_capability_precedence_docs_truth_contract.sh`
+     - `git diff --check`
+   - 当前结论：
+     - 这批不需要重开 runtime / backend producer 实现，
+       因为真正剩余的 drift
+       已经收窄成
+       public source/doc narration
+     - capability dual-truth
+       在 runtime/source/serializer/diff
+       层面的主真相已经基本收口；
+       当前更值钱的是把入口话术一起锁死
+   - 当前批收口后的默认下一步：
+     - 若
+       `2582cac`
+       的远端
+       GitHub Actions
+       转绿，
+       则继续回到：
+       - `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+         里的
+         `ISSLConnection`
+         /
+         `TSSLConfig`
+         /
+         `ISSLServerConnection`
+         completeness 主线
+     - 若远端红灯，
+       只修红灯，
+       不再扩 capability 范围

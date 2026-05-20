@@ -17863,6 +17863,79 @@
   - summary:
     - no whitespace or patch-format drift remains before commit
 
+### Capability Public Truth Freeze
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-20-capability-public-truth-freeze.md`
+  - change:
+    - recorded a bounded public-truth freeze batch for the remaining capability dual-truth narration drift
+
+- update focused contract first:
+  - `tests/scripts/test_capability_precedence_docs_truth_contract.sh`
+  - change:
+    - extended the existing capability precedence contract to cover:
+      - `TSSLBackendCapabilities` record-level truth comment
+      - `BACKEND_CAPABILITY_MATRIX` FreePascal `ALPN/SNI`, WinSSL `OCSP`, and OpenSSL `CT` explanations
+      - `MIGRATION_GUIDE_V1.1` active capability migration example
+
+- `bash -n tests/scripts/test_capability_precedence_docs_truth_contract.sh`
+- `bash tests/scripts/test_capability_precedence_docs_truth_contract.sh`
+  - result: RED
+  - summary:
+    - the first failure proved the new public-truth batch is real, not speculative:
+      - `TSSLBackendCapabilities` still did not document the support-level-first paired-truth model directly on the record
+    - after the first doc/source patch,
+      the contract exposed one more stale check inside itself:
+      - `API_REFERENCE` had already grown the `SessionCacheSupport` clause,
+        so the older fixed-string matcher no longer represented current truth
+    - after tightening the matcher and refining the
+      `BACKEND_CAPABILITY_MATRIX`
+      absence checks so they reject old standalone legacy-bool bullets but still allow explicit compatibility-projection notes,
+      the contract was ready for the final GREEN pass
+
+- update source/docs:
+  - `src/fafafa.ssl.base.pas`
+  - `docs/BACKEND_CAPABILITY_MATRIX.md`
+  - `docs/MIGRATION_GUIDE_V1.1.md`
+  - change:
+    - added a direct record-level truth note on `TSSLBackendCapabilities`
+    - switched the active capability matrix explanations for:
+      - `FreePascal ALPN/SNI`
+      - `WinSSL OCSP`
+      - `OpenSSL CT`
+      from legacy-bool-first wording to support-level-first wording
+    - changed the active migration example to:
+      - `TSSLFactory.GetLibraryInstance(...)`
+      - `Caps.ALPNSupport`
+      - `Caps.SNISupport`
+      - an explicit paired-feature precedence note
+
+- `bash -n tests/scripts/test_capability_precedence_docs_truth_contract.sh`
+- `bash tests/scripts/test_capability_precedence_docs_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - the public capability entrypoints now all agree on the same truth model:
+      - paired feature truth lives in `*Support`
+      - legacy `Supports*` booleans are compatibility projections
+      - `SupportsTLS13` remains the explicit bool exception
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains after the public-truth freeze batch
+
+- `gh run view 26165848256 --json status,conclusion,name,url`
+- `gh run view 26165848419 --json status,conclusion,name,url`
+  - result: PASS
+  - summary:
+    - the previously pushed
+      `2582cac`
+      batch is now fully green in GitHub Actions:
+      - `TLS13 Signer Gate` = success
+      - `CI` = success
+    - this clears the way for the next completeness slice to continue from current truth,
+      not from an unresolved red gate
+
 - `gh run list --branch master --limit 8`
   - result: PASS
   - summary:
