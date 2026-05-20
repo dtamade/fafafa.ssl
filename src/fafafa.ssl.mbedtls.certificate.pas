@@ -158,6 +158,9 @@ uses
 
 const
   MBEDTLS_X509_CRT_SIZE = 1024;  // 估算大小
+  MBEDTLS_X509_BADCERT_EXPIRED = $0001;
+  MBEDTLS_X509_BADCERT_NOT_TRUSTED = $0008;
+  MBEDTLS_X509_BADCERT_FUTURE = $0200;
 
 function NormalizeMbedTLSCertText(const AValue: string): string;
 begin
@@ -182,6 +185,29 @@ begin
     if LChar in ['0'..'9', 'A'..'F'] then
       Result := Result + LChar;
   end;
+end;
+
+procedure ResetCertVerifyResult(out AResult: TSSLCertVerifyResult);
+begin
+  AResult.Success := False;
+  AResult.ErrorCode := 0;
+  AResult.ErrorMessage := '';
+  AResult.ChainStatus := 0;
+  AResult.RevocationStatus := 0;
+  AResult.DetailedInfo := '';
+end;
+
+function GetMbedTLSVerifyInfoString(const AFlags: Cardinal): string;
+var
+  LBuf: array[0..1023] of AnsiChar;
+begin
+  Result := '';
+  if (AFlags = 0) or not Assigned(mbedtls_x509_crt_verify_info) then
+    Exit;
+
+  FillChar(LBuf, SizeOf(LBuf), 0);
+  mbedtls_x509_crt_verify_info(@LBuf[0], SizeOf(LBuf), '', AFlags);
+  Result := Trim(string(LBuf));
 end;
 
 { Helper function to extract field from MbedTLS info output }
@@ -965,18 +991,16 @@ function TMbedTLSCertificate.VerifyEx(ACAStore: ISSLCertificateStore;
   AFlags: TSSLCertVerifyFlags; out AResult: TSSLCertVerifyResult): Boolean;
 var
   LFlags: Cardinal;
+  LEffectiveFlags: Cardinal;
+  LIgnoredFlags: Cardinal;
   LCACerts: Pmbedtls_x509_crt;
-  LBuf: array[0..1023] of AnsiChar;
+  LVerifyStatus: Integer;
   LExtendedKeyUsage: TSSLStringArray;
   I: Integer;
   LHasServerAuth: Boolean;
+  LErrorMessage: string;
 begin
-  AResult.Success := False;
-  AResult.ErrorCode := 0;
-  AResult.ErrorMessage := '';
-  AResult.ChainStatus := 0;
-  AResult.RevocationStatus := 0;
-  AResult.DetailedInfo := '';
+  ResetCertVerifyResult(AResult);
   Result := False;
 
   if FX509Crt = nil then
@@ -1013,8 +1037,30 @@ begin
   end;
 
   LFlags := 0;
+  LEffectiveFlags := 0;
+  LIgnoredFlags := 0;
+  LVerifyStatus := mbedtls_x509_crt_verify(FX509Crt, LCACerts, nil, nil, @LFlags, nil, nil);
+  LEffectiveFlags := LFlags;
 
-  if mbedtls_x509_crt_verify(FX509Crt, LCACerts, nil, nil, @LFlags, nil, nil) = 0 then
+  if LVerifyStatus <> 0 then
+  begin
+    if sslCertVerifyIgnoreExpiry in AFlags then
+    begin
+      LIgnoredFlags := LIgnoredFlags or
+        (LEffectiveFlags and (MBEDTLS_X509_BADCERT_EXPIRED or MBEDTLS_X509_BADCERT_FUTURE));
+      LEffectiveFlags := LEffectiveFlags and
+        not (MBEDTLS_X509_BADCERT_EXPIRED or MBEDTLS_X509_BADCERT_FUTURE);
+    end;
+
+    if (sslCertVerifyAllowSelfSigned in AFlags) and IsSelfSigned then
+    begin
+      LIgnoredFlags := LIgnoredFlags or
+        (LEffectiveFlags and MBEDTLS_X509_BADCERT_NOT_TRUSTED);
+      LEffectiveFlags := LEffectiveFlags and not MBEDTLS_X509_BADCERT_NOT_TRUSTED;
+    end;
+  end;
+
+  if (LVerifyStatus = 0) or ((LFlags <> 0) and (LEffectiveFlags = 0)) then
   begin
     if sslCertVerifyStrictChain in AFlags then
     begin
@@ -1053,24 +1099,36 @@ begin
     end;
 
     AResult.Success := True;
-    AResult.DetailedInfo := 'MbedTLS certificate verification passed';
+    if LIgnoredFlags <> 0 then
+      AResult.DetailedInfo := Format(
+        'MbedTLS certificate verification passed after applying VerifyEx flag exceptions (native flags=%u, ignored=%u)',
+        [LFlags, LIgnoredFlags])
+    else
+      AResult.DetailedInfo := 'MbedTLS certificate verification passed';
     Result := True;
   end
   else
   begin
     AResult.Success := False;
-    AResult.ErrorCode := Integer(LFlags);
+    AResult.ErrorCode := Integer(LEffectiveFlags);
+    if AResult.ErrorCode = 0 then
+      AResult.ErrorCode := LVerifyStatus;
     AResult.ChainStatus := 1;
-    // Get verification error info
-    if Assigned(mbedtls_x509_crt_verify_info) then
-    begin
-      FillChar(LBuf, SizeOf(LBuf), 0);
-      mbedtls_x509_crt_verify_info(@LBuf[0], SizeOf(LBuf), '', LFlags);
-      AResult.ErrorMessage := string(LBuf);
-    end;
-    if Trim(AResult.ErrorMessage) = '' then
-      AResult.ErrorMessage := 'Certificate verification failed';
-    AResult.DetailedInfo := Format('MbedTLS verification flags: %u', [LFlags]);
+    LErrorMessage := GetMbedTLSVerifyInfoString(LEffectiveFlags);
+    if LErrorMessage = '' then
+      LErrorMessage := GetMbedTLSVerifyInfoString(LFlags);
+    if LErrorMessage = '' then
+      LErrorMessage := 'Certificate verification failed';
+    if ((LEffectiveFlags and MBEDTLS_X509_BADCERT_NOT_TRUSTED) <> 0) and
+      (Pos('not trusted', LowerCase(LErrorMessage)) = 0) then
+      LErrorMessage := Trim(LErrorMessage + ' (not trusted)');
+    AResult.ErrorMessage := LErrorMessage;
+    if LIgnoredFlags <> 0 then
+      AResult.DetailedInfo := Format(
+        'MbedTLS verification flags: native=%u effective=%u ignored=%u',
+        [LFlags, LEffectiveFlags, LIgnoredFlags])
+    else
+      AResult.DetailedInfo := Format('MbedTLS verification flags: %u', [LEffectiveFlags]);
   end;
 end;
 

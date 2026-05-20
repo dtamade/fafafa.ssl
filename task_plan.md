@@ -10,6 +10,85 @@
 
 ## Current Status
 
+- [completed] `optional backends certificate verify flags expiry/self-signed parity`
+  当前 focused 目标：
+  - 把
+    `MbedTLS`
+    /
+    `WolfSSL`
+    证书对象的
+    `VerifyEx`
+    在两个已发布 exception flags 上的 live 语义收紧成一致的 public truth：
+    - `sslCertVerifyIgnoreExpiry`
+    - `sslCertVerifyAllowSelfSigned`
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-optional-backends-certificate-verify-flags-expiry-selfsigned-parity.md`
+  - 新增 fixture：
+    - `tests/certs/expired-signer.pem`
+  - 修改实现：
+    - `src/fafafa.ssl.mbedtls.certificate.pas`
+  - 修改 focused tests：
+    - `tests/test_wolfssl_framework.pas`
+    - `tests/test_mbedtls_framework.pas`
+  当前实施判断：
+  - `WolfSSL`
+    在这条 lane 上
+    已经是稳定 control group，
+    不是真 bug 根因
+  - 真正的 residual gap
+    是
+    `MbedTLS VerifyEx`
+    之前虽然接受
+    `IgnoreExpiry`
+    /
+    `AllowSelfSigned`
+    这两个 flags，
+    但并没有根据 native verify bits
+    真正改变结果
+  - 最小正确修法
+    不是绕开
+    `mbedtls_x509_crt_verify`
+    做大重构，
+    而是：
+    - 对
+      `MBEDTLS_X509_BADCERT_EXPIRED`
+      /
+      `MBEDTLS_X509_BADCERT_FUTURE`
+      仅在请求
+      `sslCertVerifyIgnoreExpiry`
+      时掩码放行
+    - 对 self-signed leaf 的
+      `MBEDTLS_X509_BADCERT_NOT_TRUSTED`
+      仅在请求
+      `sslCertVerifyAllowSelfSigned`
+      时掩码放行
+  当前 focused proof：
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`
+    - PASS
+  - `./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+    - PASS
+    - `211 passed / 0 failed`
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas`
+    - PASS
+  - `./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+    - PASS
+    - `227 passed / 0 failed`
+  - `git diff --check`
+    - PASS
+  当前批收口后的默认下一步：
+  - 继续沿
+    optional backend
+    certificate verification
+    审 residual parity
+  - 优先看
+    其余 backend
+    是否还存在
+    已发布
+    `VerifyEx`
+    flags
+    只做 API round-trip、
+    但没有真正改变 live result
 - [completed] `optional backends certificate verification truth`
   当前 focused 目标：
   - 把

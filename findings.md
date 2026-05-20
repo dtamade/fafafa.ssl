@@ -146,6 +146,62 @@
     - 对 strict-chain
       检查
       `serverAuth`
+
+- 上一批
+  `verification truth`
+  收口后，
+  `MbedTLS VerifyEx`
+  的真实 residual
+  不是整个 verify pipeline 失效，
+  而是两个已经发布的 exception flags
+  还停留在
+  “API 接受但 live 结果不变”：
+  - `sslCertVerifyIgnoreExpiry`
+  - `sslCertVerifyAllowSelfSigned`
+
+- 本机
+  `mbedtls_x509_crt_verify`
+  已经通过 verify bits
+  给出了足够细粒度的 native truth：
+  - `MBEDTLS_X509_BADCERT_EXPIRED`
+  - `MBEDTLS_X509_BADCERT_FUTURE`
+  - `MBEDTLS_X509_BADCERT_NOT_TRUSTED`
+
+- 所以这批最小正确修法
+  不是重写整个
+  `MbedTLS`
+  verify path，
+  而是：
+  - native verify
+    仍然先做
+    authoritative chain check
+  - 仅在调用方显式请求时，
+    对对应 failure bits
+    做有边界的掩码放行
+
+- 这样能保住两个关键边界：
+  - 不会为了支持
+    `IgnoreExpiry`
+    /
+    `AllowSelfSigned`
+    又把其它 trust / chain 错误一起放掉
+  - success path
+    仍然来自
+    native verify truth，
+    不是另起一套弱语义分支
+
+- 新增的
+  `tests/certs/expired-signer.pem`
+  把
+  expiry 例外路径
+  固定成了稳定 RED；
+  同时
+  `version1-cert.pem`
+  继续作为 self-signed control fixture，
+  让
+  `WolfSSL`
+  这组测试
+  成为可靠的对照组
 - `gh run view 26143487129`
   最终
   `conclusion=success`，

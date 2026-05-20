@@ -104,6 +104,84 @@
       `201 passed / 0 failed`
     - no whitespace or patch-format issues remain before commit
 
+### Optional Backends Certificate Verify Flags Expiry/Self-Signed Parity
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-20-optional-backends-certificate-verify-flags-expiry-selfsigned-parity.md`
+  - `tests/certs/expired-signer.pem`
+  - `tests/test_wolfssl_framework.pas`
+  - `tests/test_mbedtls_framework.pas`
+  - change:
+    - recorded a bounded optional-backend verify-flag parity batch
+    - added a deterministic expired-leaf fixture
+    - added parity contracts for
+      `sslCertVerifyIgnoreExpiry`
+      /
+      `sslCertVerifyAllowSelfSigned`
+      on
+      `WolfSSL`
+      /
+      `MbedTLS`
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`
+- `./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+  - result: FAIL
+  - summary:
+    - captured the intended RED on
+      `MbedTLS`
+      only:
+      - `Expired leaf with IgnoreExpiry succeeds`
+      - `Self-signed leaf without AllowSelfSigned exposes trust diagnostic`
+      - `Self-signed leaf with AllowSelfSigned succeeds`
+    - confirmed
+      `WolfSSL`
+      remained the correct control surface for this batch
+
+- update implementation:
+  - `src/fafafa.ssl.mbedtls.certificate.pas`
+  - change:
+    - added local
+      `MBEDTLS_X509_BADCERT_EXPIRED`
+      /
+      `MBEDTLS_X509_BADCERT_FUTURE`
+      /
+      `MBEDTLS_X509_BADCERT_NOT_TRUSTED`
+      constants for focused VerifyEx result interpretation
+    - added
+      `ResetCertVerifyResult`
+      /
+      `GetMbedTLSVerifyInfoString`
+      helpers
+    - `MbedTLS VerifyEx`
+      now preserves native verify as the source of truth,
+      then only masks:
+      - expiry / future bits for
+        `sslCertVerifyIgnoreExpiry`
+      - self-signed not-trusted bit for
+        `sslCertVerifyAllowSelfSigned`
+    - failure path now reports effective vs native flags more explicitly
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`
+- `./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas`
+- `./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - `MbedTLS`
+      verify-flag parity contract
+      现已全绿：
+      `211 passed / 0 failed`
+    - `WolfSSL`
+      control contract
+      继续全绿：
+      `227 passed / 0 failed`
+    - this batch now closes the published
+      `IgnoreExpiry`
+      /
+      `AllowSelfSigned`
+      parity gap without reopening broader verify-pipeline work
+
 ### Optional Backends Certificate Time Truth
 
 - `gh run view 26143487129 --json status,conclusion,jobs,url`

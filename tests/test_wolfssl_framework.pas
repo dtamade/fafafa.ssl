@@ -654,6 +654,75 @@ begin
   end;
 end;
 
+procedure TestWolfSSLVerifyExExpirySelfSignedFlagParityContract;
+var
+  LLib: ISSLLibrary;
+  LExpiredLeaf: ISSLCertificate;
+  LSelfSignedLeaf: ISSLCertificate;
+  LIssuerCert: ISSLCertificate;
+  LStore: ISSLCertificateStore;
+  LEmptyStore: ISSLCertificateStore;
+  LVerifyResult: TSSLCertVerifyResult;
+  LVerified: Boolean;
+begin
+  WriteLn('');
+  WriteLn('=== WolfSSL VerifyEx Expiry/Self-Signed Flag Parity ===');
+
+  LLib := CreateWolfSSLLibrary;
+  if not LLib.Initialize then
+  begin
+    WriteLn('  (Skipped - WolfSSL library not available)');
+    Test('VerifyEx expiry/self-signed flag parity skipped', True);
+    Exit;
+  end;
+
+  LExpiredLeaf := TWolfSSLCertificate.Create;
+  LSelfSignedLeaf := TWolfSSLCertificate.Create;
+  LIssuerCert := TWolfSSLCertificate.Create;
+  LStore := TWolfSSLCertificateStore.Create;
+  LEmptyStore := TWolfSSLCertificateStore.Create;
+  try
+    Test('Load expired verification fixture',
+      LExpiredLeaf.LoadFromFile('tests/certs/expired-signer.pem'));
+    Test('Load issuer fixture for expired verification',
+      LIssuerCert.LoadFromFile('tests/certificate/test_certs/ca_cert.pem'));
+    Test('Add issuer fixture to store for expired verification',
+      LStore.AddCertificate(LIssuerCert));
+
+    LVerified := LExpiredLeaf.VerifyEx(LStore, [], LVerifyResult);
+    Test('Expired leaf without IgnoreExpiry fails',
+      (not LVerified) and (not LVerifyResult.Success));
+    Test('Expired leaf without IgnoreExpiry exposes expiry diagnostic',
+      Pos('expired', LowerCase(LVerifyResult.ErrorMessage + ' ' +
+        LVerifyResult.DetailedInfo)) > 0);
+
+    LVerified := LExpiredLeaf.VerifyEx(LStore, [sslCertVerifyIgnoreExpiry], LVerifyResult);
+    Test('Expired leaf with IgnoreExpiry succeeds',
+      LVerified and LVerifyResult.Success);
+
+    Test('Load self-signed verification fixture',
+      LSelfSignedLeaf.LoadFromFile('tests/certs/version1-cert.pem'));
+
+    LVerified := LSelfSignedLeaf.VerifyEx(LEmptyStore, [], LVerifyResult);
+    Test('Self-signed leaf without AllowSelfSigned fails',
+      (not LVerified) and (not LVerifyResult.Success));
+    Test('Self-signed leaf without AllowSelfSigned exposes trust diagnostic',
+      Pos('trusted root', LowerCase(LVerifyResult.ErrorMessage + ' ' +
+        LVerifyResult.DetailedInfo)) > 0);
+
+    LVerified := LSelfSignedLeaf.VerifyEx(LEmptyStore, [sslCertVerifyAllowSelfSigned], LVerifyResult);
+    Test('Self-signed leaf with AllowSelfSigned succeeds',
+      LVerified and LVerifyResult.Success);
+  finally
+    LEmptyStore := nil;
+    LStore := nil;
+    LIssuerCert := nil;
+    LSelfSignedLeaf := nil;
+    LExpiredLeaf := nil;
+    LLib.Finalize;
+  end;
+end;
+
 procedure TestWolfSSLCertificateExtensionMetadataContract;
 var
   LLib: ISSLLibrary;
@@ -1502,6 +1571,7 @@ begin
   TestWolfSSLCertificateVersionTruthContract;
   TestWolfSSLCertificateTimeTruthContract;
   TestWolfSSLCertificateVerificationTruthContract;
+  TestWolfSSLVerifyExExpirySelfSignedFlagParityContract;
   TestWolfSSLCertificateExtensionMetadataContract;
   TestWolfSSLCertificateCloneMaterializationContract;
   TestWolfSSLCertificateStore;
