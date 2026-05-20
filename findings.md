@@ -2,6 +2,51 @@
 
 ## 2026-05-20
 
+- 这次
+  `WinSSL Runtime Gate`
+  的红灯
+  进一步证明了一个
+  很典型的项目停滞陷阱：
+  不是 backend 真缺功能，
+  而是
+  Windows-only 测试文件
+  还在调用旧 concrete API
+  却把变量类型写成了
+  shared interface
+
+- 也就是说，
+  `test_winssl_certstore.pas`
+  这次暴露的问题，
+  本质不是
+  `TWinSSLCertificateStore`
+  少了
+  `Open` / `Close` / `IsOpen`
+  等方法，
+  而是
+  test harness
+  把
+  `ISSLCertificateStore`
+  和
+  `TWinSSLCertificateStore`
+  的边界又混回去了
+
+- 这同样说明：
+  “当前接口设计是否有问题”
+  不只是看源码声明，
+  还要看各 backend 自己的 runtime test
+  有没有继续拿旧 concrete surface
+  冒充 shared contract
+
+- `TWinSSLCertificateStore.Create(const AStoreName: string)`
+  真实语义是：
+  - `AStoreName <> ''`
+    时立即打开对应系统 store
+  所以旧测试里
+  `Create('MY')`
+  后断言
+  `not IsOpen`
+  也是错误历史真相
+
 - `BuildCertificateChain`
   这条 public surface
   继续往下审，

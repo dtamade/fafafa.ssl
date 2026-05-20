@@ -4,6 +4,45 @@
 
 ## 2026-05-20
 
+### WinSSL CertStore Test API Drift Alignment
+
+- `gh run view 26137704210 --json status,conclusion,jobs,url`
+- `gh run view 26137704210 --job 76876360188 --log-failed`
+- `nl -ba src/fafafa.ssl.winssl.certstore.pas | sed -n '1,160p'`
+- `nl -ba src/fafafa.ssl.winssl.certstore.pas | sed -n '222,264p'`
+- `nl -ba src/fafafa.ssl.winssl.certstore.pas | sed -n '454,484p'`
+- `nl -ba tests/winssl/test_winssl_certstore.pas | sed -n '1,220p'`
+- `nl -ba tests/winssl/test_winssl_certstore.pas | sed -n '220,620p'`
+  - result: PASS
+  - summary:
+    - confirmed the fresh Windows failure is a compile-time test drift, not missing runtime logic
+    - confirmed root cause:
+      - test variables were typed as `ISSLCertificateStore`
+      - the file then called concrete-only methods:
+        - `Open`
+        - `Close`
+        - `IsOpen`
+        - `GetAllCertificates`
+        - `GetNativeHandle`
+    - confirmed a second stale assumption:
+      - `TWinSSLCertificateStore.Create('MY')`
+        already opens the store today
+      - the old test still asserted it should remain unopened
+
+- add focused plan/test alignment:
+  - `docs/plans/2026-05-20-winssl-certstore-test-api-drift-alignment.md`
+  - `tests/winssl/test_winssl_certstore.pas`
+  - change:
+    - switched WinSSL-specific store vars to `TWinSSLCertificateStore`
+    - added `OpenConcreteSystemStore(...)` helper
+    - changed unopened-state checks to use `Create('')`
+    - kept shared interface assertions only where the shared interface is the actual published surface
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remain after the WinSSL certstore test-alignment batch
+
 ### Optional Backends BuildCertificateChain Issuer-Link Parity
 
 - `mcp__ace_tool__.search_context(...)`

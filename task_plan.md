@@ -10,6 +10,86 @@
 
 ## Current Status
 
+- [completed] `winssl certstore test api drift alignment`
+  当前 focused 目标：
+  - 把
+    `tests/winssl/test_winssl_certstore.pas`
+    从旧 API 记忆
+    拉回到
+    当前
+    `TWinSSLCertificateStore`
+    真实公开面
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-winssl-certstore-test-api-drift-alignment.md`
+  - 修改 focused test：
+    - `tests/winssl/test_winssl_certstore.pas`
+  当前预判：
+  - 远端
+    `WinSSL Runtime Gate`
+    红灯
+    不是 runtime 逻辑本身，
+    而是这份 WinSSL certstore test
+    编译期 API 漂移
+  当前最终收口证据：
+  - 失败日志明确显示：
+    - `identifier idents no member "IsOpen"`
+    - `Open`
+    - `Close`
+    - `GetAllCertificates`
+    - `GetNativeHandle`
+  - 但当前源码里，
+    这些方法都在
+    `TWinSSLCertificateStore`
+    concrete class
+    上，
+    不在
+    `ISSLCertificateStore`
+    上
+  - 旧测试同时还写反了
+    constructor 语义：
+    - `Create('MY')`
+      真实会自动打开 store
+    - 旧断言却说
+      “新创建的存储未打开”
+  当前实现策略：
+  - WinSSL-specific runtime test
+    改用 concrete type
+  - 需要未打开初始态时
+    使用 `Create('')`
+  - 需要打开系统 store 时
+    使用本地 helper
+    `OpenConcreteSystemStore(...)`
+  当前本地验证：
+  - `git diff --check`
+    - PASS
+  当前结论：
+  - 这条红灯
+    首先是 test drift，
+    不是 backend 缺方法
+  - 下一步
+    需要看 push 后
+    Windows CI
+    是否继续暴露
+    真 runtime 问题
+  当前总路线图进度：
+  - `接口设计`
+    已经从 shared public contract
+    下沉到
+    WinSSL-specific test/runtime truth
+  - `测试完整性`
+    开始清理
+    旧 concrete API 记忆
+    对当前接口面的误绑
+  当前下一条真实工作：
+  - 等新 push
+    的
+    `WinSSL Runtime Gate`
+    回来
+  - 如果继续红，
+    再看是不是
+    compile 之后的
+    真实 runtime 失败
 - [completed] `optional backends buildcertificatechain issuer-link parity`
   当前 focused 目标：
   - 把

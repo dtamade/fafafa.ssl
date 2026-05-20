@@ -66,7 +66,7 @@ begin
   Result := '  ' + LowerCase(Result) + '  ';
 end;
 
-function CreateMemoryBackedStore: ISSLCertificateStore;
+function CreateMemoryBackedStore: TWinSSLCertificateStore;
 var
   LStoreHandle: HCERTSTORE;
 begin
@@ -82,15 +82,20 @@ begin
     Result := TWinSSLCertificateStore.Create(LStoreHandle, True);
 end;
 
+function OpenConcreteSystemStore(const AStoreName: string): TWinSSLCertificateStore;
+begin
+  Result := TWinSSLCertificateStore.Create(AStoreName);
+end;
+
 procedure TestStoreCreation;
 var
-  LStore: ISSLCertificateStore;
+  LStore: TWinSSLCertificateStore;
 begin
   WriteLn('【测试 1】证书存储创建');
   WriteLn('---');
 
   try
-    LStore := CreateWinSSLCertificateStore('MY');
+    LStore := TWinSSLCertificateStore.Create('');
     Assert(LStore <> nil, '证书存储创建成功');
     Assert(not LStore.IsOpen, '新创建的存储未打开');
 
@@ -104,13 +109,13 @@ end;
 
 procedure TestStoreOpen;
 var
-  LStore: ISSLCertificateStore;
+  LStore: TWinSSLCertificateStore;
 begin
   WriteLn('【测试 2】证书存储打开');
   WriteLn('---');
 
   try
-    LStore := CreateWinSSLCertificateStore('MY');
+    LStore := TWinSSLCertificateStore.Create('');
 
     // 打开存储（只读）
     Assert(LStore.Open('MY', False), '证书存储打开成功（只读）');
@@ -130,25 +135,25 @@ end;
 
 procedure TestSystemStoreAccess;
 var
-  LStore: ISSLCertificateStore;
+  LStore: TWinSSLCertificateStore;
 begin
   WriteLn('【测试 3】系统存储访问');
   WriteLn('---');
 
   try
     // 测试访问 ROOT 存储
-    LStore := OpenSystemStore(SSL_STORE_ROOT);
+    LStore := OpenConcreteSystemStore(SSL_STORE_ROOT);
     Assert(LStore <> nil, 'ROOT 系统存储访问成功');
     Assert(LStore.IsOpen, 'ROOT 存储已打开');
     LStore.Close;
 
     // 测试访问 MY 存储
-    LStore := OpenSystemStore(SSL_STORE_MY);
+    LStore := OpenConcreteSystemStore(SSL_STORE_MY);
     Assert(LStore <> nil, 'MY 系统存储访问成功');
     LStore.Close;
 
     // 测试访问 CA 存储
-    LStore := OpenSystemStore(SSL_STORE_CA);
+    LStore := OpenConcreteSystemStore(SSL_STORE_CA);
     Assert(LStore <> nil, 'CA 系统存储访问成功');
     LStore.Close;
 
@@ -162,14 +167,14 @@ end;
 
 procedure TestStoreCount;
 var
-  LStore: ISSLCertificateStore;
+  LStore: TWinSSLCertificateStore;
   LCount: Integer;
 begin
   WriteLn('【测试 4】证书计数');
   WriteLn('---');
 
   try
-    LStore := OpenSystemStore(SSL_STORE_ROOT);
+    LStore := OpenConcreteSystemStore(SSL_STORE_ROOT);
 
     // 获取证书数量
     LCount := LStore.GetCount;
@@ -188,14 +193,14 @@ end;
 
 procedure TestGetAllCertificates;
 var
-  LStore: ISSLCertificateStore;
+  LStore: TWinSSLCertificateStore;
   LCerts: TSSLCertificateArray;
 begin
   WriteLn('【测试 5】获取所有证书');
   WriteLn('---');
 
   try
-    LStore := OpenSystemStore(SSL_STORE_ROOT);
+    LStore := OpenConcreteSystemStore(SSL_STORE_ROOT);
 
     // 获取所有证书
     LCerts := LStore.GetAllCertificates;
@@ -214,7 +219,7 @@ end;
 
 procedure TestGetCertificateByIndex;
 var
-  LStore: ISSLCertificateStore;
+  LStore: TWinSSLCertificateStore;
   LCert: ISSLCertificate;
   LCount: Integer;
 begin
@@ -222,7 +227,7 @@ begin
   WriteLn('---');
 
   try
-    LStore := OpenSystemStore(SSL_STORE_ROOT);
+    LStore := OpenConcreteSystemStore(SSL_STORE_ROOT);
     LCount := LStore.GetCount;
 
     if LCount > 0 then
@@ -255,14 +260,14 @@ end;
 
 procedure TestFindBySubject;
 var
-  LStore: ISSLCertificateStore;
+  LStore: TWinSSLCertificateStore;
   LCert: ISSLCertificate;
 begin
   WriteLn('【测试 7】按主题查找证书');
   WriteLn('---');
 
   try
-    LStore := OpenSystemStore(SSL_STORE_ROOT);
+    LStore := OpenConcreteSystemStore(SSL_STORE_ROOT);
 
     // 查找不存在的证书
     LCert := LStore.FindBySubject('CN=NonExistentCert');
@@ -287,14 +292,14 @@ end;
 
 procedure TestFindByIssuer;
 var
-  LStore: ISSLCertificateStore;
+  LStore: TWinSSLCertificateStore;
   LCert: ISSLCertificate;
 begin
   WriteLn('【测试 8】按颁发者查找证书');
   WriteLn('---');
 
   try
-    LStore := OpenSystemStore(SSL_STORE_ROOT);
+    LStore := OpenConcreteSystemStore(SSL_STORE_ROOT);
 
     // 查找不存在的颁发者
     LCert := LStore.FindByIssuer('CN=NonExistentIssuer');
@@ -312,7 +317,7 @@ end;
 
 procedure TestDeterministicDNQueryContract;
 var
-  LStore: ISSLCertificateStore;
+  LStore: TWinSSLCertificateStore;
   LCert: ISSLCertificate;
   LSubjectVariant: string;
   LIssuerVariant: string;
@@ -353,14 +358,14 @@ end;
 
 procedure TestFindBySerialNumber;
 var
-  LStore: ISSLCertificateStore;
+  LStore: TWinSSLCertificateStore;
   LCert: ISSLCertificate;
 begin
   WriteLn('【测试 9】按序列号查找证书');
   WriteLn('---');
 
   try
-    LStore := OpenSystemStore(SSL_STORE_ROOT);
+    LStore := OpenConcreteSystemStore(SSL_STORE_ROOT);
 
     // 查找不存在的序列号
     LCert := LStore.FindBySerialNumber('00:00:00:00');
@@ -378,14 +383,14 @@ end;
 
 procedure TestFindByFingerprint;
 var
-  LStore: ISSLCertificateStore;
+  LStore: TWinSSLCertificateStore;
   LCert: ISSLCertificate;
 begin
   WriteLn('【测试 10】按指纹查找证书');
   WriteLn('---');
 
   try
-    LStore := OpenSystemStore(SSL_STORE_ROOT);
+    LStore := OpenConcreteSystemStore(SSL_STORE_ROOT);
 
     // 查找不存在的指纹
     LCert := LStore.FindByFingerprint('00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00');
@@ -403,7 +408,7 @@ end;
 
 procedure TestContainsCertificate;
 var
-  LStore: ISSLCertificateStore;
+  LStore: TWinSSLCertificateStore;
   LCert: ISSLCertificate;
   LCount: Integer;
 begin
@@ -411,7 +416,7 @@ begin
   WriteLn('---');
 
   try
-    LStore := OpenSystemStore(SSL_STORE_ROOT);
+    LStore := OpenConcreteSystemStore(SSL_STORE_ROOT);
     LCount := LStore.GetCount;
 
     if LCount > 0 then
@@ -437,16 +442,17 @@ end;
 
 procedure TestLoadSystemStore;
 var
-  LStore: ISSLCertificateStore;
+  LStore: TWinSSLCertificateStore;
 begin
   WriteLn('【测试 12】加载系统存储');
   WriteLn('---');
 
   try
-    LStore := CreateWinSSLCertificateStore('ROOT');
+    LStore := TWinSSLCertificateStore.Create('');
 
     // 加载系统存储
     Assert(LStore.LoadSystemStore, '加载系统存储成功');
+    Assert(LStore.IsOpen, '加载系统存储后状态为已打开');
     Assert(LStore.GetCount >= 0, '加载后证书数量 >= 0');
 
     LStore.Close;
@@ -461,14 +467,14 @@ end;
 
 procedure TestStoreNativeHandle;
 var
-  LStore: ISSLCertificateStore;
+  LStore: TWinSSLCertificateStore;
   LHandle: Pointer;
 begin
   WriteLn('【测试 13】获取原生句柄');
   WriteLn('---');
 
   try
-    LStore := OpenSystemStore(SSL_STORE_ROOT);
+    LStore := OpenConcreteSystemStore(SSL_STORE_ROOT);
 
     // 获取原生句柄
     LHandle := LStore.GetNativeHandle;
@@ -486,16 +492,16 @@ end;
 
 procedure TestMultipleStores;
 var
-  LStore1, LStore2, LStore3: ISSLCertificateStore;
+  LStore1, LStore2, LStore3: TWinSSLCertificateStore;
 begin
   WriteLn('【测试 14】多个存储同时打开');
   WriteLn('---');
 
   try
     // 同时打开多个存储
-    LStore1 := OpenSystemStore(SSL_STORE_ROOT);
-    LStore2 := OpenSystemStore(SSL_STORE_MY);
-    LStore3 := OpenSystemStore(SSL_STORE_CA);
+    LStore1 := OpenConcreteSystemStore(SSL_STORE_ROOT);
+    LStore2 := OpenConcreteSystemStore(SSL_STORE_MY);
+    LStore3 := OpenConcreteSystemStore(SSL_STORE_CA);
 
     Assert(LStore1.IsOpen, 'ROOT 存储已打开');
     Assert(LStore2.IsOpen, 'MY 存储已打开');
@@ -520,13 +526,13 @@ end;
 
 procedure TestStoreReopen;
 var
-  LStore: ISSLCertificateStore;
+  LStore: TWinSSLCertificateStore;
 begin
   WriteLn('【测试 15】存储重新打开');
   WriteLn('---');
 
   try
-    LStore := CreateWinSSLCertificateStore('ROOT');
+    LStore := TWinSSLCertificateStore.Create('');
 
     // 第一次打开
     Assert(LStore.Open('ROOT', False), '第一次打开成功');
