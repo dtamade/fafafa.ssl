@@ -234,6 +234,46 @@
   - 还是崩在
     函数返回后的
     结果字符串渲染
+
+- 下一轮远端证明又立刻补出一条非运行时事实：
+  - commit
+    `406179f`
+    对应的
+    `WinSSL Runtime Gate`
+    `26158271807`
+    并没有继续跑到
+    `VerifyEx`
+    focused runtime
+  - 它先在
+    `Run quick WinSSL smoke`
+    编译阶段失败
+
+- 失败根因已经明确：
+  - 不是
+    `Format(...)`
+    或 trace
+    自己
+  - 而是我把
+    WinSSL
+    布尔链
+    改成了
+    `and then`
+  - 当前仓库的
+    FPC / ObjFPC
+    编译器在这条语法上直接报错：
+    `Illegal expression`
+    /
+    `"THEN" expected but "(" found`
+
+- 所以这个回归的收口方式也很清楚：
+  - 保留本轮真正有价值的东西：
+    - override-path
+      去
+      `Format(...)`
+    - focused trace
+  - 只撤回
+    `and then`
+    这处不可编译改动
 - `OpenSSL certificate.VerifyEx`
   这轮被打出来的真实问题
   不是

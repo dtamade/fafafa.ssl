@@ -307,6 +307,33 @@
       the decisive proof remains the next
       GitHub Actions
       `WinSSL Runtime Gate`
+
+- `gh run view 26158271807 --json jobs,url,name,conclusion,status`
+- `gh run view --job 76943195538 --log-failed`
+  - result: FAIL
+  - summary:
+    - the first pushed follow-up
+      did change the failure boundary,
+      but not in the intended way:
+      the workflow stopped early in
+      `Run quick WinSSL smoke`
+      before the broader runtime suite
+    - root cause was a compile regression in
+      `src/fafafa.ssl.winssl.certificate.pas`
+      introduced by replacing boolean chains with
+      `and then`
+    - the Windows compiler error was:
+      - `Illegal expression`
+      - `Syntax error, "THEN" expected but "(" found`
+    - follow-up fix:
+      - keep the
+        trace
+        and
+        `Format(...)`
+        removal
+      - revert only the
+        `and then`
+        syntax
       batch is now fully green on remote CI
     - `Code Quality (Light)` /
       `Minimal Gate (Linux)` /

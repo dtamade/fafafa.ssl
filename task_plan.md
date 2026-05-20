@@ -186,6 +186,37 @@
         内部
       - 还是崩在
         返回后的结果渲染
+  - 最新远端反馈（本轮 follow-up 第一枪）：
+    - push
+      `406179f`
+      的
+      Windows run
+      `26158271807`
+      没有走到 runtime suite，
+      而是更早在
+      `Run quick WinSSL smoke`
+      失败
+    - 根因不是新的 runtime truth，
+      而是一个直接的编译回归：
+      - `src/fafafa.ssl.winssl.certificate.pas`
+        里把布尔链改成
+        `and then`
+      - 当前
+        FPC / ObjFPC
+        配置下这不是合法语法
+      - 具体报错：
+        `Illegal expression`
+        /
+        `Syntax error, "THEN" expected but "(" found`
+    - 当前立刻跟进的修复就是：
+      - 保留
+        trace
+        与
+        `Format(...)`
+        去除
+      - 只把
+        `and then`
+        改回当前仓库可编译的布尔写法
 - [completed] `winssl certificate verifyex flag parity`
   当前 focused 目标：
   - 把

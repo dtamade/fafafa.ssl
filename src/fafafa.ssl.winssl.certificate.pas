@@ -900,8 +900,8 @@ begin
       AResult.ChainStatus := LNativePolicyError;
       
       // 检查验证结果
-      if (LNativePolicyError <> 0) and then
-        (sslCertVerifyIgnoreExpiry in AFlags) and then
+      if (LNativePolicyError <> 0) and
+        (sslCertVerifyIgnoreExpiry in AFlags) and
         (LNativePolicyError = DWORD(CERT_E_EXPIRED)) then
       begin
         LOverrideDetail :=
@@ -910,9 +910,9 @@ begin
           FormatHexError(LNativePolicyError);
         LNativePolicyError := 0;
       end
-      else if (LNativePolicyError <> 0) and then
-        (sslCertVerifyAllowSelfSigned in AFlags) and then
-        IsSelfSigned and then
+      else if (LNativePolicyError <> 0) and
+        (sslCertVerifyAllowSelfSigned in AFlags) and
+        IsSelfSigned and
         (LNativePolicyError = DWORD(CERT_E_UNTRUSTEDROOT)) then
       begin
         LOverrideDetail :=
