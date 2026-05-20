@@ -311,7 +311,7 @@ begin
     Result.ContextType := AContextType;
     TSSLFactory.NormalizeConfig(Result);
   except
-    FillChar(Result, SizeOf(Result), 0);
+    Result := Default(TSSLConfig);
     Result.LibraryType := sslAutoDetect;
     Result.ContextType := AContextType;
     Result.ProtocolVersions := [sslProtocolTLS12, sslProtocolTLS13];

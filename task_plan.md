@@ -6667,6 +6667,51 @@
     - support-level-aware record 继续显式输出 `*Support` 并以其为真相
     - legacy-only record 保留旧 boolean truth，不再被 synthetic `*Support="none"` 反向抹掉
   - 当前 live backend `GetCapabilities` producer 已统一发布完整 support-level 视图，所以这批不会削弱真实 runtime/export surface；手工混合 record 的彻底无歧义语义仍需未来 presence bits
+- [completed] `managed result init safety`
+  当前 focused 目标：
+  - 收掉 public facade / shared connection base 中带 `string` / 动态数组结果 record 的不安全初始化写法
+  - 不改对外行为，只把 shared helper / owner-surface mirror 的初始化收回类型安全路径
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-managed-result-init-safety.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_managed_result_init_safety_contract.sh`
+  - 收口源码：
+    - `src/fafafa.ssl.pas`
+    - `src/fafafa.ssl.connection.base.pas`
+  当前最终收口证据：
+  - `CreateDefaultConfig(...)`
+    fallback 现在改用
+    `Default(TSSLConfig)`
+    不再对 managed `TSSLConfig`
+    做
+    `FillChar(...)`
+  - `TBaseSSLConnection`
+    当前已改用：
+    - `Default(TSSLConnectionInfo)`
+    - `Default(TSSLDiagnosticInfo)`
+    - `Result := nil`
+      作为空 `TBytes` 返回
+  - focused compile proof 已显示：
+    - 之前的
+      `connection.base`
+      4 条 managed-result warning
+      已消失
+    - 当前 grep 输出只剩仓库其它旧 warning
+      与测试文件自身 warning
+  focused verification 已通过：
+  - `bash -n tests/scripts/test_managed_result_init_safety_contract.sh`
+  - `bash tests/scripts/test_managed_result_init_safety_contract.sh`
+  - `fpc -B ... tests/config/test_default_config.pas`
+  - `./tmp/defaultcfg_bin/test_default_config`
+  - `fpc -B ... tests/test_connection_builder_hostname_precedence.pas`
+  - `./tmp/conninfo_bin/test_connection_builder_hostname_precedence`
+  - `git diff --check`
+  当前结论：
+  - 这批修的是 shared public helper / base-class 实现残口，
+    不是抽象层面的“接口看起来不优雅”
+  - 同类 managed-result warning 在仓库其它单元仍有存量，
+    但这条高可见 public surface 现已先收干净
 - [completed] `context-level ServerName` 迁移路线图与兼容锁点地图已固化：
   - 新增 `docs/plans/2026-05-18-context-servername-compatibility-migration-roadmap.md`
   - intentional compatibility tests 已统一纳入 `tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
@@ -9887,3 +9932,45 @@
        - `ISSLConnection` slimming
        - `TSSLConfig` scope splitting
        - facade/export historical path classification
+109. `managed result init safety` 这批用于把 public facade / shared connection base 里的 managed-result 初始化坑收成当前真实安全边界：
+   - 新 plan：
+     - `docs/plans/2026-05-20-managed-result-init-safety.md`
+   - 当前新发现：
+     - `src/fafafa.ssl.pas`
+       的
+       `CreateDefaultConfig(...)`
+       fallback
+       仍对 managed `TSSLConfig`
+       使用
+       `FillChar(Result, SizeOf(Result), 0);`
+     - `src/fafafa.ssl.connection.base.pas`
+       里的：
+       - `GetConnectionInfo`
+       - `GetDiagnosticInfo`
+       - `DoGetOCSPResponse`
+       - `DoGetSignedCertificateTimestampList`
+       仍会触发
+       `managed type result variable does not seem to be initialized`
+       warning
+   - 当前最小修法：
+     - `TSSLConfig` / `TSSLConnectionInfo` / `TSSLDiagnosticInfo`
+       改为
+       `Default(...)`
+     - 空 `TBytes`
+       返回改为
+       `Result := nil`
+   - 当前 focused proof：
+     - `bash tests/scripts/test_managed_result_init_safety_contract.sh`
+     - `fpc ... tests/config/test_default_config.pas`
+     - `./tmp/defaultcfg_bin/test_default_config`
+     - `fpc ... tests/test_connection_builder_hostname_precedence.pas`
+     - `./tmp/conninfo_bin/test_connection_builder_hostname_precedence`
+   - 当前结论：
+     - shared public surface 上这组 managed-result 初始化坑已经收口
+     - 上一批 push 的主线 CI
+       `26161586399`
+       也已 `success`
+   - 当前批收口后的默认下一步：
+     - 回到更高层的接口路线：
+       - `ISSLConnection` v1.x compatibility-core 剩余面是否还有未分类 generic 入口
+       - 或继续盘点高可见 public 单元里其它 managed-result warning 是否也落在 shared/helper 路径上

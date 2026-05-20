@@ -5333,6 +5333,54 @@
     也避免以后再在 serializer/deserializer
     上留下 managed-record 初始化隐患
 
+- 继续沿 high-visibility public surface 往下查后，又补出了一类同源实现残口：
+  - `src/fafafa.ssl.pas`
+    的
+    `CreateDefaultConfig(...)`
+    fallback
+    还在对
+    `TSSLConfig`
+    直接做
+    `FillChar(Result, SizeOf(Result), 0);`
+  - `src/fafafa.ssl.connection.base.pas`
+    的 shared getter 里，
+    `GetConnectionInfo`
+    /
+    `GetDiagnosticInfo`
+    以及空
+    `TBytes`
+    默认返回
+    仍会打出
+    `managed type result variable does not seem to be initialized`
+    warning
+
+- 这条线比普通 warning 更值得优先收，
+  因为它们都位于：
+  - public facade helper
+  - shared connection base owner/mirror surface
+  属于高复用、高可见的公共实现层
+
+- 当前最小正确修法也很明确：
+  - 对带 `string` / 动态数组成员的 result record
+    统一改用
+    `Default(...)`
+  - 对空 `TBytes`
+    返回统一改用
+    `Result := nil`
+  - 不改任何 public 行为，
+    只把初始化路径收回 Pascal managed-type 的安全语义
+
+- focused compile proof 也说明这不是“顺手换个写法”：
+  - `connection.base`
+    之前那 4 条 managed-result warning
+    现在已经消失
+  - `test_default_config`
+    /
+    `test_connection_builder_hostname_precedence`
+    运行结果继续全绿
+  - 所以这批收掉的是 shared public implementation 残口，
+    不是把旧 warning 藏起来
+
 - 这也把剩余边界说得更清楚了：
   - 现在已经解决的是“v1.2-aware record 导出不应自相矛盾”
   - 尚未、也不能在本批假装解决的是“纯 legacy-only record 在缺少 presence bit 时，是否应该把 `none` 当作显式不支持”

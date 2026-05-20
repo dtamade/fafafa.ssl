@@ -701,7 +701,7 @@ var
   LSession: ISSLSession;
   LPeerCertificate: ISSLCertificate;
 begin
-  FillChar(Result, SizeOf(Result), 0);
+  Result := Default(TSSLConnectionInfo);
   Result.ProtocolVersion := GetProtocolVersion;
   Result.CipherSuite := GetCipherName;
   Result.KeySize := 0; // 后端可覆盖
@@ -872,7 +872,7 @@ function TBaseSSLConnection.GetDiagnosticInfo: TSSLDiagnosticInfo;
 var
   I: Integer;
 begin
-  FillChar(Result, SizeOf(Result), 0);
+  Result := Default(TSSLDiagnosticInfo);
   Result.ConnectionInfo := GetConnectionInfo;
   Result.HealthStatus := GetHealthStatus;
   Result.PerformanceMetrics := GetPerformanceMetrics;
@@ -906,7 +906,7 @@ end;
 
 function TBaseSSLConnection.DoGetOCSPResponse: TBytes;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 end;
 
 function TBaseSSLConnection.DoIsOCSPResponseVerified: Boolean;
@@ -926,7 +926,7 @@ end;
 
 function TBaseSSLConnection.DoGetSignedCertificateTimestampList: TBytes;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 end;
 
 function TBaseSSLConnection.DoGetSignedCertificateTimestampCount: Integer;

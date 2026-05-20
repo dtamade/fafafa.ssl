@@ -17862,3 +17862,64 @@
   - result: PASS
   - summary:
     - no whitespace or patch-format drift remains before commit
+
+### Managed Result Init Safety
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-20-managed-result-init-safety.md`
+  - `tests/scripts/test_managed_result_init_safety_contract.sh`
+  - change:
+    - recorded a bounded static-safety batch around public facade / shared connection-base managed-result initialization
+    - added a focused contract that specifically freezes:
+      - `CreateDefaultConfig(...)` using `Default(TSSLConfig)`
+      - `GetConnectionInfo(...)` using `Default(TSSLConnectionInfo)`
+      - `GetDiagnosticInfo(...)` using `Default(TSSLDiagnosticInfo)`
+      - empty `TBytes` defaults using `Result := nil`
+
+- `bash -n tests/scripts/test_managed_result_init_safety_contract.sh`
+- `bash tests/scripts/test_managed_result_init_safety_contract.sh`
+  - result: RED -> GREEN
+  - summary:
+    - initial RED failed immediately on
+      `CreateDefaultConfig fallback uses Default(TSSLConfig)`
+    - after the patch, the full managed-result-init contract turned green
+
+- update implementation:
+  - `src/fafafa.ssl.pas`
+  - `src/fafafa.ssl.connection.base.pas`
+  - change:
+    - `CreateDefaultConfig(...)` fallback now initializes `TSSLConfig` with `Default(...)`
+    - `TBaseSSLConnection.GetConnectionInfo(...)` now initializes `TSSLConnectionInfo` with `Default(...)`
+    - `TBaseSSLConnection.GetDiagnosticInfo(...)` now initializes `TSSLDiagnosticInfo` with `Default(...)`
+    - `DoGetOCSPResponse(...)` / `DoGetSignedCertificateTimestampList(...)` now return empty `TBytes` via `Result := nil`
+
+- `mkdir -p tmp/defaultcfg_units tmp/defaultcfg_bin`
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/defaultcfg_units -FEtmp/defaultcfg_bin -otest_default_config tests/config/test_default_config.pas`
+- `./tmp/defaultcfg_bin/test_default_config`
+  - result: PASS
+  - summary:
+    - default-config behavior stayed green after removing the managed `TSSLConfig` `FillChar(...)` fallback
+
+- `mkdir -p tmp/conninfo_units tmp/conninfo_bin`
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/conninfo_units -FEtmp/conninfo_bin -otest_connection_builder_hostname_precedence tests/test_connection_builder_hostname_precedence.pas`
+- `./tmp/conninfo_bin/test_connection_builder_hostname_precedence`
+  - result: PASS
+  - summary:
+    - hostname precedence and `GetConnectionInfo(...)` behavior remained green
+    - focused warning grep confirmed the previous `connection.base` managed-result warnings are gone
+    - the remaining compile output still contains unrelated repo-wide managed-result warnings outside this batch
+
+- `gh run view 26161586399 --json status,conclusion,jobs,url`
+  - result: PASS
+  - summary:
+    - the previous pushed batch
+      `fix(capabilities): preserve legacy-only roundtrip truth`
+      is now fully green in GitHub Actions:
+      - `Minimal Gate (Linux)`
+      - `Code Quality (Light)`
+      - `FreePascal TLS 1.3 Completeness`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains before commit
