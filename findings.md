@@ -10701,3 +10701,69 @@
   所以现在这份测试终于可以被
   `tests/run_winssl_tests.ps1`
   真正调度
+
+- `WinSSL Runtime Gate`
+  `26172089572`
+  现在已经全绿，
+  这意味着上一批
+  `VerifyHostname`
+  parity
+  的 Windows runtime handoff
+  已经真正闭环，
+  不需要再把
+  `WinSSL`
+  当成“只有静态修复、没有运行时证据”的 lane
+
+- 当前又确认了一条
+  public API truth sync residual：
+  `ISSLCertificate`
+  这组证书扩展 getter
+  虽然源码早就统一成
+  `TSSLStringArray`，
+  但活跃面仍有：
+  - `docs/guides/TROUBLESHOOTING.md`
+  - `tests/certificate/test_certificate_unit.pas`
+  在继续按旧
+  `TStringList`
+  心智教学 / 编写
+
+- 这不是“旧文档里有点不优雅”，
+  因为代表性测试文件
+  `test_certificate_unit.pas`
+  当前就会直接编译失败，
+  报：
+  - `got "TSSLStringArray" expected "TStringList"`
+  这证明 residual
+  已经落到了活跃测试面，
+  不是 archive-only 噪音
+
+- 这批最小正确修法
+  不是重构全部证书辅助工具，
+  而是严格收在
+  public API 真相同步：
+  - guide
+    改回 array iteration
+  - representative test
+    改回
+    `TSSLStringArray`
+    + `ArrayContains(...)`
+  - 再加一个 focused script contract
+    禁止这条活跃 surface
+    回退到 `Count/Free/IndexOf`
+
+- 顺手又抓出同文件里的另一条旧测试假设：
+  空证书日期不该被强行要求
+  `NotAfter > NotBefore`
+  当前更符合仓库整体语义的 truth
+  是：
+  - 未知日期 `(0,0)` 允许存在
+  - 只有已知日期时才要求顺序正确
+
+- 这样收口后，
+  `ISSLCertificate`
+  这组扩展 getter
+  在：
+  - source truth
+  - active troubleshooting guide
+  - representative OpenSSL cert test
+  三层终于重新对齐

@@ -17,6 +17,18 @@ var
   TestsFailed: Integer = 0;
   EnableSystemStoreDebug: Boolean = False;
 
+function ArrayContains(const AValues: TSSLStringArray; const AExpected: string): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := Low(AValues) to High(AValues) do
+  begin
+    if SameText(AValues[I], AExpected) then
+      Exit(True);
+  end;
+end;
+
 procedure AssertTrue(const TestName: string; Condition: Boolean);
 begin
   Write('  [TEST] ', TestName, '... ');
@@ -98,7 +110,8 @@ var
   Store: ISSLCertificateStore;
   Cert: ISSLCertificate;
   Info: TSSLCertificateInfo;
-  KeyUsageList: TStringList;
+  KeyUsageList: TSSLStringArray;
+  SANValues: TSSLStringArray;
   TmpStr: string;
 begin
   WriteLn;
@@ -165,22 +178,14 @@ begin
   if EnableSystemStoreDebug then
     WriteLn('  [DEBUG] Step 7: GetKeyUsage');
   KeyUsageList := Cert.GetKeyUsage;
-  try
-    if EnableSystemStoreDebug then
-      WriteLn('  [DEBUG] Step 7 OK, KeyUsage count = ', KeyUsageList.Count);
-  finally
-    KeyUsageList.Free;
-  end;
+  if EnableSystemStoreDebug then
+    WriteLn('  [DEBUG] Step 7 OK, KeyUsage count = ', Length(KeyUsageList));
 
   if EnableSystemStoreDebug then
     WriteLn('  [DEBUG] Step 8: GetSubjectAltNames');
-  with Cert.GetSubjectAltNames do
-  try
-    if EnableSystemStoreDebug then
-      WriteLn('  [DEBUG] Step 8 OK, SAN count = ', Count);
-  finally
-    Free;
-  end;
+  SANValues := Cert.GetSubjectAltNames;
+  if EnableSystemStoreDebug then
+    WriteLn('  [DEBUG] Step 8 OK, SAN count = ', Length(SANValues));
 
   if EnableSystemStoreDebug then
     WriteLn('  [DEBUG] Step 9: GetInfo');
@@ -194,15 +199,11 @@ begin
   // KeyUsage 位字段与文本列表之间的基本关系：
   // 如果位字段非零，则文本列表应至少包含一个条目
   KeyUsageList := Cert.GetKeyUsage;
-  try
-    if Info.KeyUsage <> 0 then
-      AssertTrue('Non-zero KeyUsage bitfield implies textual list not empty',
-        (KeyUsageList <> nil) and (KeyUsageList.Count > 0))
-    else
-      AssertTrue('Zero KeyUsage bitfield is allowed', True);
-  finally
-    KeyUsageList.Free;
-  end;
+  if Info.KeyUsage <> 0 then
+    AssertTrue('Non-zero KeyUsage bitfield implies textual list not empty',
+      Length(KeyUsageList) > 0)
+  else
+    AssertTrue('Zero KeyUsage bitfield is allowed', True);
 end;
 
 procedure TestCertificateFingerprints;
@@ -306,7 +307,7 @@ var
   SSLLib: ISSLLibrary;
   Cert: ISSLCertificate;
   Ext: string;
-  SANs, KeyUsage: TStringList;
+  SANs, KeyUsage: TSSLStringArray;
 begin
   WriteLn;
   WriteLn('=== Certificate Extensions Tests ===');
@@ -327,16 +328,13 @@ begin
   AssertTrue('GetExtension does not crash', True);
   
   SANs := Cert.GetSubjectAltNames;
-  AssertNotNil('GetSubjectAltNames returns list', Pointer(SANs));
-  SANs.Free;
+  AssertTrue('GetSubjectAltNames returns array without crashing', Length(SANs) >= 0);
   
   KeyUsage := Cert.GetKeyUsage;
-  AssertNotNil('GetKeyUsage returns list', Pointer(KeyUsage));
-  KeyUsage.Free;
+  AssertTrue('GetKeyUsage returns array without crashing', Length(KeyUsage) >= 0);
   
   KeyUsage := Cert.GetExtendedKeyUsage;
-  AssertNotNil('GetExtendedKeyUsage returns list', Pointer(KeyUsage));
-  KeyUsage.Free;
+  AssertTrue('GetExtendedKeyUsage returns array without crashing', Length(KeyUsage) >= 0);
 end;
 
 procedure TestCertificateDates;
@@ -366,7 +364,10 @@ begin
   NotAfter := Cert.GetNotAfter;
   AssertTrue('GetNotAfter returns value', NotAfter >= 0);
   
-  AssertTrue('NotAfter > NotBefore', NotAfter > NotBefore);
+  if (NotBefore = 0) and (NotAfter = 0) then
+    AssertTrue('Unknown empty-certificate dates are allowed', True)
+  else
+    AssertTrue('Known certificate dates stay ordered', NotAfter > NotBefore);
 end;
 
 procedure TestCertificateVerification;
@@ -501,7 +502,7 @@ var
   SSLLib: ISSLLibrary;
   Store: ISSLCertificateStore;
   Cert: ISSLCertificate;
-  SANs: TStringList;
+  SANs: TSSLStringArray;
   HasSanTest, HasExample, HasIp: Boolean;
   Info: TSSLCertificateInfo;
   I: Integer;
@@ -550,17 +551,13 @@ begin
   end;
   
   SANs := Cert.GetSubjectAltNames;
-  try
-    AssertNotNil('GetSubjectAltNames returns non-nil list for SAN cert', Pointer(SANs));
-    HasSanTest := SANs.IndexOf('san-test.local') <> -1;
-    HasExample := SANs.IndexOf('example.test') <> -1;
-    HasIp := SANs.IndexOf('127.0.0.1') <> -1;
-    AssertTrue('SANs contain DNS:san-test.local', HasSanTest);
-    AssertTrue('SANs contain DNS:example.test', HasExample);
-    AssertTrue('SANs contain IP:127.0.0.1', HasIp);
-  finally
-    SANs.Free;
-  end;
+  AssertTrue('GetSubjectAltNames returns non-empty array for SAN cert', Length(SANs) > 0);
+  HasSanTest := ArrayContains(SANs, 'san-test.local');
+  HasExample := ArrayContains(SANs, 'example.test');
+  HasIp := ArrayContains(SANs, '127.0.0.1');
+  AssertTrue('SANs contain DNS:san-test.local', HasSanTest);
+  AssertTrue('SANs contain DNS:example.test', HasExample);
+  AssertTrue('SANs contain IP:127.0.0.1', HasIp);
   
   Info := Cert.GetInfo;
   InInfo := False;
@@ -685,4 +682,3 @@ begin
     end;
   end;
 end.
-

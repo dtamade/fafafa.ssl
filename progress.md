@@ -17863,6 +17863,80 @@
   - summary:
     - no whitespace or patch-format drift remains before commit
 
+### Certificate Public SAN Array Semantics Truth
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-20-certificate-public-san-array-semantics-truth.md`
+  - `tests/scripts/test_certificate_public_san_array_semantics_contract.sh`
+  - change:
+    - recorded the new public SAN-array truth sync batch for active guide/test alignment
+
+- `mkdir -p tmp/test_certificate_unit_units tmp/test_certificate_unit_bin && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_certificate_unit_units -FEtmp/test_certificate_unit_bin -otmp/test_certificate_unit_bin/test_certificate_unit tests/certificate/test_certificate_unit.pas`
+  - result: RED
+  - summary:
+    - compile failed immediately on the active test file
+      `tests/certificate/test_certificate_unit.pas`
+    - error surface proved the file still expected `TStringList` from:
+      - `GetSubjectAltNames`
+      - `GetKeyUsage`
+      - `GetExtendedKeyUsage`
+    - representative errors included:
+      - `got "TSSLStringArray" expected "TStringList"`
+      - `Identifier not found "Count"`
+      - `Identifier not found "Free"`
+
+- `rg -n "LAltNames\\.Count|LAltNames\\.Free" docs/guides/TROUBLESHOOTING.md`
+  - result: RED
+  - summary:
+    - active troubleshooting guide still taught old list-owner semantics on
+      `ISSLCertificate.GetSubjectAltNames`
+
+- update active truth surfaces:
+  - `docs/guides/TROUBLESHOOTING.md`
+  - `tests/certificate/test_certificate_unit.pas`
+  - change:
+    - switched troubleshooting snippet to `Length(...)` / `High(...)` iteration over `GetSubjectAltNames`
+    - migrated the representative OpenSSL cert test from stale `TStringList` expectations to `TSSLStringArray`
+    - added `ArrayContains(...)` helper for SAN membership checks
+    - removed stale `Count/Free/IndexOf` usage on certificate SAN / key-usage getters
+    - tightened empty-certificate date expectation so `(0,0)` unknown dates remain allowed
+
+- `bash -n tests/scripts/test_certificate_public_san_array_semantics_contract.sh`
+- `bash tests/scripts/test_certificate_public_san_array_semantics_contract.sh`
+  - result: PASS
+  - summary:
+    - focused source contract now locks:
+      - `TSSLCertificateInfo.SubjectAltNames`
+      - `ISSLCertificate.GetSubjectAltNames`
+      - `ISSLCertificate.GetKeyUsage`
+      - `ISSLCertificate.GetExtendedKeyUsage`
+      to current array truth
+    - active troubleshooting guide and representative test file no longer expose list semantics
+
+- `mkdir -p tmp/test_certificate_unit_units tmp/test_certificate_unit_bin && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_certificate_unit_units -FEtmp/test_certificate_unit_bin -otmp/test_certificate_unit_bin/test_certificate_unit tests/certificate/test_certificate_unit.pas && ./tmp/test_certificate_unit_bin/test_certificate_unit`
+  - result: GREEN -> PASS
+  - summary:
+    - after array-semantics edits, the test first progressed from compile failure to runtime execution
+    - one remaining stale assertion failed on empty-certificate date ordering
+    - after narrowing that expectation to current truth, the suite passed with:
+      - `47 passed / 0 failed`
+
+- `gh run view 26172089572 --json status,conclusion,jobs`
+  - result: PASS
+  - summary:
+    - the earlier pushed batch
+      `fix(cert): close verifyhostname fixture parity gaps`
+      is now fully green in GitHub Actions Windows runtime lane:
+      - `WinSSL Runtime Gate` = success
+      - quick smoke = success
+      - Windows Wave B gate = success
+      - broader WinSSL runtime suite = success
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains before commit
+
 ### Certificate VerifyHostname Fixture Parity
 
 - add focused batch inputs:

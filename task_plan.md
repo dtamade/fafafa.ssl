@@ -10718,10 +10718,130 @@
        - optional backend fixture parity proof
        - WinSSL runtime-lane test wiring
    - 当前批收口后的默认下一步：
-     - 提交并推送本批
-     - 观察 push 触发的：
-       - 主 CI
+     - 当前已追加最终外部证据：
        - `WinSSL Runtime Gate`
-     - 若 Windows gate 红灯，
-       优先只修这条新接入的
-       SAN/hostname parity lane
+         `26172089572`
+         已全部绿色
+     - 因而下一刀不再停留在
+       `VerifyHostname`
+       Windows runtime proof，
+       而应继续收紧
+       活跃文档 / 活跃测试
+       是否仍按旧 public API
+       心智教学
+118. `certificate public SAN array semantics truth` 这批用于把活跃 public guide 与代表性 OpenSSL 证书测试重新对齐到当前 `TSSLStringArray` source truth：
+   - 新 plan：
+     - `docs/plans/2026-05-20-certificate-public-san-array-semantics-truth.md`
+   - 当前新发现：
+     - 当前 source truth 已经明确：
+       - `TSSLCertificateInfo.SubjectAltNames`
+         是 `TSSLStringArray`
+       - `ISSLCertificate.GetSubjectAltNames`
+         / `GetKeyUsage`
+         / `GetExtendedKeyUsage`
+         都返回 `TSSLStringArray`
+     - 但活跃面仍有两处明显漂移：
+       - `docs/guides/TROUBLESHOOTING.md`
+         还在教学：
+         - `LAltNames.Count`
+         - `LAltNames.Free`
+       - `tests/certificate/test_certificate_unit.pas`
+         还把：
+         - `GetSubjectAltNames`
+         - `GetKeyUsage`
+         - `GetExtendedKeyUsage`
+         当成 `TStringList`
+         使用
+     - 这不是静态洁癖，
+       而是当前就能打出的真实 RED：
+       - `test_certificate_unit.pas`
+         编译直接报
+         `got "TSSLStringArray" expected "TStringList"`
+   - 当前最小修法：
+     - 在
+       `TROUBLESHOOTING`
+       把 `GetSubjectAltNames`
+       示例切回：
+       - `Length(LAltNames)`
+       - `High(LAltNames)`
+       array 语义
+     - 在
+       `tests/certificate/test_certificate_unit.pas`
+       用：
+       - `TSSLStringArray`
+       - `ArrayContains(...)`
+       - `Length(...)`
+       替换旧
+       `TStringList`
+       / `Count`
+       / `IndexOf`
+       / `Free`
+       心智
+     - 同时把同文件里
+       空证书日期旧断言
+       一起收紧到当前 truth：
+       - 未知日期 `(0,0)`
+         是允许的
+     - 新增 focused source contract：
+       - `tests/scripts/test_certificate_public_san_array_semantics_contract.sh`
+   - 当前 focused proof：
+     - `bash -n tests/scripts/test_certificate_public_san_array_semantics_contract.sh`
+     - `bash tests/scripts/test_certificate_public_san_array_semantics_contract.sh`
+     - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_certificate_unit_units -FEtmp/test_certificate_unit_bin -otmp/test_certificate_unit_bin/test_certificate_unit tests/certificate/test_certificate_unit.pas`
+     - `./tmp/test_certificate_unit_bin/test_certificate_unit`
+     - `git diff --check`
+   - 当前最终收口证据：
+     - 首轮 RED：
+       - `TROUBLESHOOTING.md`
+         仍命中：
+         - `LAltNames.Count`
+         - `LAltNames.Free`
+       - `test_certificate_unit.pas`
+         编译失败：
+         - `got "TSSLStringArray" expected "TStringList"`
+         - 共 9 处错误
+     - 最小修复后：
+       - focused shell contract
+         PASS
+       - `test_certificate_unit`
+         先从“编不过”
+         推进到“能编能跑但有 1 条旧断言失败”
+       - 收紧同文件
+         空证书日期断言后：
+         - `47 passed / 0 failed`
+     - 这说明这批不是只改注释，
+       而是把一份真实坏掉的 active test
+       修回当前 public API truth
+   - 当前结论：
+     - 这批把
+       `ISSLCertificate`
+       证书扩展 array semantics
+       从
+       “源码/API reference 正确，
+       但活跃 guide/test 仍在回退旧心智”
+       收紧成
+       source / guide / representative test
+       三者一致
+   - 当前总路线图进度：
+     - `接口设计`
+       继续从
+       “签名存在”
+       推进到
+       “调用方式与心智模型也一致”
+     - `后端实现`
+       本批不改生产实现，
+       说明这次 residual
+       的确落在 public API truth sync
+     - `测试与文档`
+       新增：
+       - focused source contract
+       - 重新可编译运行的代表性 OpenSSL 证书测试
+       - 活跃 troubleshooting guide truth sync
+   - 当前批收口后的默认下一步：
+     - 提交并推送本批
+     - 继续沿
+       `ISSLCertificate`
+       / `ISSLCertificateStore`
+       public-surface completeness
+       查下一条
+       活跃 doc/test/example residual

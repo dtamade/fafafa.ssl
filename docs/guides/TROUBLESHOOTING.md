@@ -437,9 +437,9 @@ begin
     // 显示证书中的主机名
     var LAltNames := LCert.GetSubjectAltNames;
     WriteLn('Certificate is valid for:');
-    for var i := 0 to LAltNames.Count - 1 do
-      WriteLn('  ', LAltNames[i]);
-    LAltNames.Free;
+    if Length(LAltNames) > 0 then
+      for var i := 0 to High(LAltNames) do
+        WriteLn('  ', LAltNames[i]);
   end;
 end;
 
