@@ -57,6 +57,10 @@ type
   // 从 fafafa.ssl.base 导出
   TSSLLibraryType = fafafa.ssl.base.TSSLLibraryType;
   TSSLLibraryTypes = fafafa.ssl.base.TSSLLibraryTypes;
+  TSSLBackendImplType = fafafa.ssl.base.TSSLBackendImplType;
+  TSSLFeatureSupportLevel = fafafa.ssl.base.TSSLFeatureSupportLevel;
+  TSSLFeature = fafafa.ssl.base.TSSLFeature;
+  TSSLFeatures = fafafa.ssl.base.TSSLFeatures;
   TSSLProtocolVersion = fafafa.ssl.base.TSSLProtocolVersion;
   TSSLProtocolVersions = fafafa.ssl.base.TSSLProtocolVersions;
   TSSLVerifyMode = fafafa.ssl.base.TSSLVerifyMode;
@@ -68,8 +72,11 @@ type
   TSSLErrorCode = fafafa.ssl.base.TSSLErrorCode;
   TSSLLogLevel = fafafa.ssl.base.TSSLLogLevel;
   TSSLKeyExchange = fafafa.ssl.base.TSSLKeyExchange;
+  TSSLKeyExchangeSupport = fafafa.ssl.base.TSSLKeyExchangeSupport;
   TSSLCipher = fafafa.ssl.base.TSSLCipher;
+  TSSLCipherSupport = fafafa.ssl.base.TSSLCipherSupport;
   TSSLHash = fafafa.ssl.base.TSSLHash;
+  TSSLHashSupport = fafafa.ssl.base.TSSLHashSupport;
   
   TSSLCertificateInfo = fafafa.ssl.base.TSSLCertificateInfo;
   PSSLCertificateInfo = fafafa.ssl.base.PSSLCertificateInfo;
@@ -83,6 +90,7 @@ type
   TSSLHealthStatus = fafafa.ssl.base.TSSLHealthStatus;
   TSSLPerformanceMetrics = fafafa.ssl.base.TSSLPerformanceMetrics;
   TSSLDiagnosticInfo = fafafa.ssl.base.TSSLDiagnosticInfo;
+  TSSLBackendCapabilities = fafafa.ssl.base.TSSLBackendCapabilities;
   
   // Result types (Rust-like error handling)
   TSSLOperationResult = fafafa.ssl.base.TSSLOperationResult;
@@ -109,6 +117,7 @@ type
   ISSLContext = fafafa.ssl.base.ISSLContext;
   ISSLConnection = fafafa.ssl.base.ISSLConnection;
   ISSLClientConnection = fafafa.ssl.base.ISSLClientConnection;
+  ISSLNativeHandleAccess = fafafa.ssl.base.ISSLNativeHandleAccess;
   ISSLConnectionInfo = fafafa.ssl.base.ISSLConnectionInfo;
   ISSLDiagnostics = fafafa.ssl.base.ISSLDiagnostics;
   ISSLSessionResumption = fafafa.ssl.base.ISSLSessionResumption;
@@ -153,6 +162,59 @@ const
   sslMbedTLS = fafafa.ssl.base.sslMbedTLS;
   sslWinSSL = fafafa.ssl.base.sslWinSSL;
   sslFreePascal = fafafa.ssl.base.sslFreePascal;
+
+  // 后端实现类型常量
+  sslImplNative = fafafa.ssl.base.sslImplNative;
+  sslImplCLibrary = fafafa.ssl.base.sslImplCLibrary;
+  sslImplOSNative = fafafa.ssl.base.sslImplOSNative;
+  sslImplHybrid = fafafa.ssl.base.sslImplHybrid;
+
+  // 功能支持级别常量
+  sslSupportNone = fafafa.ssl.base.sslSupportNone;
+  sslSupportExperimental = fafafa.ssl.base.sslSupportExperimental;
+  sslSupportStable = fafafa.ssl.base.sslSupportStable;
+  sslSupportDeprecated = fafafa.ssl.base.sslSupportDeprecated;
+
+  // 功能枚举常量
+  sslFeatSNI = fafafa.ssl.base.sslFeatSNI;
+  sslFeatALPN = fafafa.ssl.base.sslFeatALPN;
+  sslFeatSessionCache = fafafa.ssl.base.sslFeatSessionCache;
+  sslFeatSessionTickets = fafafa.ssl.base.sslFeatSessionTickets;
+  sslFeatRenegotiation = fafafa.ssl.base.sslFeatRenegotiation;
+  sslFeatOCSPStapling = fafafa.ssl.base.sslFeatOCSPStapling;
+  sslFeatCertificateTransparency = fafafa.ssl.base.sslFeatCertificateTransparency;
+
+  // 密钥交换算法常量
+  sslKexRSA = fafafa.ssl.base.sslKexRSA;
+  sslKexDHE_RSA = fafafa.ssl.base.sslKexDHE_RSA;
+  sslKexECDHE_RSA = fafafa.ssl.base.sslKexECDHE_RSA;
+  sslKexDHE_DSS = fafafa.ssl.base.sslKexDHE_DSS;
+  sslKexECDHE_ECDSA = fafafa.ssl.base.sslKexECDHE_ECDSA;
+  sslKexPSK = fafafa.ssl.base.sslKexPSK;
+  sslKexDHE_PSK = fafafa.ssl.base.sslKexDHE_PSK;
+  sslKexRSA_PSK = fafafa.ssl.base.sslKexRSA_PSK;
+
+  // 加密算法常量
+  sslCipherNone = fafafa.ssl.base.sslCipherNone;
+  sslCipherAES128 = fafafa.ssl.base.sslCipherAES128;
+  sslCipherAES256 = fafafa.ssl.base.sslCipherAES256;
+  sslCipherAES128GCM = fafafa.ssl.base.sslCipherAES128GCM;
+  sslCipherAES256GCM = fafafa.ssl.base.sslCipherAES256GCM;
+  sslCipherCHACHA20_POLY1305 = fafafa.ssl.base.sslCipherCHACHA20_POLY1305;
+  sslCipher3DES = fafafa.ssl.base.sslCipher3DES;
+  sslCipherDES = fafafa.ssl.base.sslCipherDES;
+  sslCipherRC4 = fafafa.ssl.base.sslCipherRC4;
+
+  // 哈希算法常量
+  sslHashMD5 = fafafa.ssl.base.sslHashMD5;
+  sslHashSHA1 = fafafa.ssl.base.sslHashSHA1;
+  sslHashSHA224 = fafafa.ssl.base.sslHashSHA224;
+  sslHashSHA256 = fafafa.ssl.base.sslHashSHA256;
+  sslHashSHA384 = fafafa.ssl.base.sslHashSHA384;
+  sslHashSHA512 = fafafa.ssl.base.sslHashSHA512;
+  sslHashSHA3_256 = fafafa.ssl.base.sslHashSHA3_256;
+  sslHashSHA3_512 = fafafa.ssl.base.sslHashSHA3_512;
+  sslHashBLAKE2b = fafafa.ssl.base.sslHashBLAKE2b;
   
   // 协议版本常量
   sslProtocolSSL2 = fafafa.ssl.base.sslProtocolSSL2;
@@ -240,6 +302,24 @@ function SSLErrorToString(AError: TSSLErrorCode): string;
 function ProtocolVersionToString(AVersion: TSSLProtocolVersion): string;
 function LibraryTypeToString(ALibType: TSSLLibraryType): string;
 
+// capability / native-handle public helper surface
+function IsCipherSupported(const ACaps: TSSLBackendCapabilities;
+                          ACipher: TSSLCipher): Boolean;
+function IsHashSupported(const ACaps: TSSLBackendCapabilities;
+                        AHash: TSSLHash): Boolean;
+function IsKeyExchangeSupported(const ACaps: TSSLBackendCapabilities;
+                                AKex: TSSLKeyExchange): Boolean;
+function IsFeatureStable(ASupport: TSSLFeatureSupportLevel): Boolean;
+function IsFeatureUsable(ASupport: TSSLFeatureSupportLevel): Boolean;
+function IsFeatureDeprecated(ASupport: TSSLFeatureSupportLevel): Boolean;
+procedure NormalizeLegacyCapabilityBooleans(var ACaps: TSSLBackendCapabilities);
+function IsNativeBackend(const ACaps: TSSLBackendCapabilities): Boolean;
+function IsCLibraryBackend(const ACaps: TSSLBackendCapabilities): Boolean;
+function RequiresExternalDependencies(const ACaps: TSSLBackendCapabilities): Boolean;
+function GetSecurityScore(const ACaps: TSSLBackendCapabilities): Integer;
+function GetPerformanceScore(const ACaps: TSSLBackendCapabilities): Integer;
+function GetCapabilitiesDescription(const ACaps: TSSLBackendCapabilities): string;
+
 // ============================================================================
 // 便捷API（仍然 shipped，但不替代 TSSLFactory / TSSLConnector 主入口）
 // ============================================================================
@@ -295,6 +375,74 @@ end;
 function LibraryTypeToString(ALibType: TSSLLibraryType): string;
 begin
   Result := fafafa.ssl.base.LibraryTypeToString(ALibType);
+end;
+
+function IsCipherSupported(const ACaps: TSSLBackendCapabilities;
+  ACipher: TSSLCipher): Boolean;
+begin
+  Result := fafafa.ssl.base.IsCipherSupported(ACaps, ACipher);
+end;
+
+function IsHashSupported(const ACaps: TSSLBackendCapabilities;
+  AHash: TSSLHash): Boolean;
+begin
+  Result := fafafa.ssl.base.IsHashSupported(ACaps, AHash);
+end;
+
+function IsKeyExchangeSupported(const ACaps: TSSLBackendCapabilities;
+  AKex: TSSLKeyExchange): Boolean;
+begin
+  Result := fafafa.ssl.base.IsKeyExchangeSupported(ACaps, AKex);
+end;
+
+function IsFeatureStable(ASupport: TSSLFeatureSupportLevel): Boolean;
+begin
+  Result := fafafa.ssl.base.IsFeatureStable(ASupport);
+end;
+
+function IsFeatureUsable(ASupport: TSSLFeatureSupportLevel): Boolean;
+begin
+  Result := fafafa.ssl.base.IsFeatureUsable(ASupport);
+end;
+
+function IsFeatureDeprecated(ASupport: TSSLFeatureSupportLevel): Boolean;
+begin
+  Result := fafafa.ssl.base.IsFeatureDeprecated(ASupport);
+end;
+
+procedure NormalizeLegacyCapabilityBooleans(var ACaps: TSSLBackendCapabilities);
+begin
+  fafafa.ssl.base.NormalizeLegacyCapabilityBooleans(ACaps);
+end;
+
+function IsNativeBackend(const ACaps: TSSLBackendCapabilities): Boolean;
+begin
+  Result := fafafa.ssl.base.IsNativeBackend(ACaps);
+end;
+
+function IsCLibraryBackend(const ACaps: TSSLBackendCapabilities): Boolean;
+begin
+  Result := fafafa.ssl.base.IsCLibraryBackend(ACaps);
+end;
+
+function RequiresExternalDependencies(const ACaps: TSSLBackendCapabilities): Boolean;
+begin
+  Result := fafafa.ssl.base.RequiresExternalDependencies(ACaps);
+end;
+
+function GetSecurityScore(const ACaps: TSSLBackendCapabilities): Integer;
+begin
+  Result := fafafa.ssl.base.GetSecurityScore(ACaps);
+end;
+
+function GetPerformanceScore(const ACaps: TSSLBackendCapabilities): Integer;
+begin
+  Result := fafafa.ssl.base.GetPerformanceScore(ACaps);
+end;
+
+function GetCapabilitiesDescription(const ACaps: TSSLBackendCapabilities): string;
+begin
+  Result := fafafa.ssl.base.GetCapabilitiesDescription(ACaps);
 end;
 
 // 便捷API实现

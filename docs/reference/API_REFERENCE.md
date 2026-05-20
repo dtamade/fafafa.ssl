@@ -1621,6 +1621,8 @@ class function TSSLFactory.GetLibraryInstance(ALibType: TSSLLibraryType = sslAut
 
 `TSSLFactory.GetLibraryInstance(...)` 是当前高入口 public library-entrypoint。
 `CreateOpenSSLLibrary` / `CreateWinSSLLibrary` 仍存在，但它们属于 backend-specific low-level creators，不应再作为普通 guide/reference 的默认入口。
+`fafafa.ssl` 主门面当前也 re-export `ISSLNativeHandleAccess` 与 capability helper surface（如 `TSSLBackendCapabilities` / `IsFeatureStable(...)` / `GetCapabilitiesDescription(...)`）。
+普通 capability / native-handle 查询不必再拆分回 `uses fafafa.ssl.base`。
 
 ### 门面便捷 helper（非 TLS bootstrap 主入口）
 

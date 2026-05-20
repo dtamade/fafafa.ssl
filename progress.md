@@ -17958,6 +17958,119 @@
         `CI`
         `success`
 
+### Facade Capability And Native-Handle Export Closure
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-20-facade-capability-native-handle-export-closure.md`
+  - `tests/contract/test_facade_capability_native_handle_entry.pas`
+  - `tests/scripts/test_facade_capability_native_handle_export_contract.sh`
+  - change:
+    - recorded a bounded facade export-closure batch for capability/native-handle public surface
+
+- `mkdir -p tmp/facade_capability_probe/units tmp/facade_capability_probe/bin`
+- `fpc -B -Fu./src -FUtmp/facade_capability_probe/units -FEtmp/facade_capability_probe/bin -otmp/facade_capability_probe/bin/test_facade_capability_probe tmp/facade_capability_probe/test_facade_capability_probe.pas`
+  - result: RED
+  - summary:
+    - a one-off compile probe using only
+      `uses fafafa.ssl`
+      failed before any new contract existed
+    - the failure was a real public facade gap, not a test harness issue:
+      - missing `TSSLBackendCapabilities`
+      - missing `TSSLFeatureSupportLevel`
+      - missing `TSSLBackendImplType`
+      - missing `ISSLNativeHandleAccess`
+      - missing capability helper functions / enum values
+
+- add focused contract first:
+  - `tests/scripts/test_facade_capability_native_handle_export_contract.sh`
+  - `tests/contract/test_facade_capability_native_handle_entry.pas`
+  - change:
+    - added a compile-based facade contract that requires:
+      - source re-export lines
+      - API reference coverage note
+      - a `uses fafafa.ssl` capability/native-handle probe that compiles and runs
+
+- `bash -n tests/scripts/test_facade_capability_native_handle_export_contract.sh`
+- `bash tests/scripts/test_facade_capability_native_handle_export_contract.sh`
+  - result: RED
+  - summary:
+    - first RED failed on the earliest missing facade re-export:
+      - `TSSLBackendImplType`
+    - after the first source patch,
+      the next compile attempt exposed one Pascal-specific follow-up:
+      - array constant aliasing for
+        `SSL_LIBRARY_NAMES`
+        is not legal in this facade shape
+      - switched the probe away from that alias and kept the facade on the cleaner
+        `LibraryTypeToString(...)`
+        path
+    - the next compile attempt then narrowed the real residual further:
+      - cipher/hash/kex enum values were still absent from the facade even though the helper functions were present
+    - this confirmed the real closure target:
+      - re-export not just capability types/helpers,
+        but also the enum values needed to actually call those helpers
+
+- update source/docs:
+  - `src/fafafa.ssl.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - re-exported the capability-facing public types:
+      - `TSSLBackendImplType`
+      - `TSSLFeatureSupportLevel`
+      - `TSSLFeature`
+      - `TSSLFeatures`
+      - `TSSLCipherSupport`
+      - `TSSLHashSupport`
+      - `TSSLKeyExchangeSupport`
+      - `TSSLBackendCapabilities`
+    - re-exported `ISSLNativeHandleAccess`
+    - re-exported the related enum values:
+      - backend impl
+      - feature support
+      - feature ids
+      - cipher/hash/key-exchange ids
+    - added facade forwarding for:
+      - `IsCipherSupported`
+      - `IsHashSupported`
+      - `IsKeyExchangeSupported`
+      - `IsFeatureStable`
+      - `IsFeatureUsable`
+      - `IsFeatureDeprecated`
+      - `NormalizeLegacyCapabilityBooleans`
+      - `IsNativeBackend`
+      - `IsCLibraryBackend`
+      - `RequiresExternalDependencies`
+      - `GetSecurityScore`
+      - `GetPerformanceScore`
+      - `GetCapabilitiesDescription`
+    - added an API reference note that the main facade now re-exports this capability/native-handle surface
+
+- `bash -n tests/scripts/test_facade_capability_native_handle_export_contract.sh`
+- `bash tests/scripts/test_facade_capability_native_handle_export_contract.sh`
+- `bash tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+- `bash tests/scripts/test_facade_main_entry_truth_contract.sh`
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - the new facade capability/native-handle export contract is green
+    - the existing adjacent facade contracts stayed green,
+      so the export-closure patch did not regress:
+      - optional owner-surface re-exports
+      - main-entry truth
+    - no whitespace or patch-format drift remains
+
+- `gh run list --limit 6 --json databaseId,workflowName,headSha,status,conclusion,url`
+  - result: PASS
+  - summary:
+    - the two previously pushed doc-only batches are now both green:
+      - `26167070948`
+        `CI`
+        `success`
+      - `26167259858`
+        `CI`
+        `success`
+    - interface-completeness work can continue from a clean remote gate state
+
 - `gh run list --branch master --limit 8`
   - result: PASS
   - summary:

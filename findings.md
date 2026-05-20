@@ -10540,3 +10540,55 @@
   这条线就不会再依赖
   “读过前几批计划/报告的人才知道该信哪套字段”
   才能保持正确方向
+
+- 当前又确认了一条
+  不属于 docs-only 的真实 public surface gap：
+  主门面
+  `src/fafafa.ssl.pas`
+  虽然写着
+  “导出所有公共接口和类型”，
+  但 capability / native-handle 这组 public surface
+  实际并没有完整闭合到
+  `uses fafafa.ssl`
+
+- 最直接的证据就是：
+  一个只
+  `uses fafafa.ssl`
+  的最小 compile probe
+  在修复前会直接报：
+  - `TSSLBackendCapabilities`
+  - `TSSLBackendImplType`
+  - `TSSLFeatureSupportLevel`
+  - `ISSLNativeHandleAccess`
+  - `GetCapabilitiesDescription`
+  - `IsFeatureStable`
+  - `sslCipherAES256GCM`
+  - `sslHashSHA256`
+  - `sslKexECDHE_RSA`
+  这类 identifier not found
+
+- 这说明当前缺口不是
+  capability helper
+  本身没实现，
+  而是：
+  - 主门面没有把 capability 相关类型、
+    enum values、
+    helper functions
+    一起穿透出来
+  - 所以 capability helper surface
+    在主门面上仍是半开状态
+
+- 因而这批最小正确修法
+  不是新增 backend 行为，
+  而是补齐 façade export closure：
+  - type / interface re-export
+  - enum value const re-export
+  - helper forwarding
+  - compile-based contract
+
+- 这类修复的价值很高，
+  因为它直接把
+  “主门面自称完整”
+  变成了可编译验证的事实，
+  而不是继续让调用方在 capability/native-handle 这组基础 public surface 上被迫 split
+  `fafafa.ssl.base`

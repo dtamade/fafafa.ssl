@@ -10401,3 +10401,85 @@
      - 若远端红灯，
        只修红灯，
        不再扩 capability 范围
+115. `facade capability/native-handle export closure` 这批用于修复主门面 `fafafa.ssl` 的一个真实 public compile gap：
+   - 新 plan：
+     - `docs/plans/2026-05-20-facade-capability-native-handle-export-closure.md`
+   - 当前新发现：
+     - `src/fafafa.ssl.pas`
+       顶部注释仍写着
+       “导出所有公共接口和类型”
+     - 但只
+       `uses fafafa.ssl`
+       再写 capability / native-handle 基础调用时，
+       当前会直接编译失败：
+       - `TSSLBackendCapabilities`
+       - `TSSLBackendImplType`
+       - `TSSLFeatureSupportLevel`
+       - `ISSLNativeHandleAccess`
+       - `IsFeatureStable(...)`
+       - `GetCapabilitiesDescription(...)`
+       - 以及 capability helper 依赖的 enum values
+         如：
+         `sslCipherAES256GCM`
+         /
+         `sslHashSHA256`
+         /
+         `sslKexECDHE_RSA`
+     - 这说明主门面对这组已发布 public surface
+       仍存在真实出口缺口，
+       不只是文档叙事问题
+   - 当前最小修法：
+     - 在
+       `src/fafafa.ssl.pas`
+       补齐 capability / native-handle 相关：
+       - type re-export
+       - interface re-export
+       - enum value const re-export
+       - helper function forwarding
+     - 覆盖至少这几类：
+       - `TSSLBackendCapabilities`
+       - `TSSLBackendImplType`
+       - `TSSLFeatureSupportLevel`
+       - `TSSLFeature`
+       - `TSSLFeatures`
+       - `TSSLCipherSupport`
+       - `TSSLHashSupport`
+       - `TSSLKeyExchangeSupport`
+       - `ISSLNativeHandleAccess`
+       - capability helper functions
+     - 在
+       `API_REFERENCE`
+       补一句：
+       - 主门面
+         `fafafa.ssl`
+         也 re-export
+         capability / native-handle public surface
+     - 用 compile-based focused contract 锁住：
+       - source re-export truth
+       - `uses fafafa.ssl`
+         的最小 capability/native-handle probe
+         可编译并运行
+   - 当前 focused proof：
+     - `bash -n tests/scripts/test_facade_capability_native_handle_export_contract.sh`
+     - `bash tests/scripts/test_facade_capability_native_handle_export_contract.sh`
+     - `bash tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+     - `bash tests/scripts/test_facade_main_entry_truth_contract.sh`
+     - `git diff --check`
+   - 当前结论：
+     - 这条缺口已经从“门面自称导出全部 public surface”
+       收口到真实 compile proof
+     - 最新两轮远端 CI：
+       - `26167070948`
+       - `26167259858`
+       也都已转绿，
+       当前可以继续从接口完整性主线前进，
+       不需要再被上一批 gate 卡住
+   - 当前批收口后的默认下一步：
+     - 继续回到
+       `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+       的 completeness 主线
+     - 优先再找
+       “已有 public surface 仍未真正从主门面闭合”
+       或
+       “源码/文档已说明但缺 compile/runtime contract”
+       的残口
