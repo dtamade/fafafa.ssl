@@ -258,6 +258,107 @@
   - 功能断言
     包括
     `TConstantTime.Select`
+
+## 2026-05-21
+
+- `OpenSSL/WinSSL`
+  这条
+  `FindBySerialNumber`
+  parity
+  线，
+  首轮看上去像是
+  store query
+  没做 normalized compare，
+  但真正的 OpenSSL RED
+  证明问题更深：
+  `LCert.GetSerialNumber`
+  自己就可能先返回空串
+
+- 进一步缩边界后，
+  当前最可信的根因是：
+  `TOpenSSLCertificate.GetSerialNumber`
+  把 native serial helper
+  当成“已经 ready”
+  的前提
+  - 一旦
+    `X509_get_serialNumber`
+    /
+    `ASN1_INTEGER_to_BN`
+    /
+    `BN_bn2hex`
+    里有任一项
+    尚未加载，
+    它会直接退出
+  - 这样后面的
+    pure-Pascal
+    `TX509Certificate`
+    fallback
+    虽然写在源码里，
+    但实际上永远走不到
+
+- 同时，
+  `SaveToDER`
+  也还依赖
+  export helper
+  事先已经 ready
+  - 这意味着：
+    即便想回退到
+    DER parser
+    取 serial，
+    也会先被导出层卡死
+
+- 所以这批最小正确修法
+  不是只改
+  `FindBySerialNumber`
+  的比较逻辑，
+  而是两层一起收：
+  - `OpenSSL`
+    /
+    `WinSSL`
+    store
+    统一对 serial query
+    做 normalized hex compare
+  - `OpenSSL certificate`
+    自己补上：
+    - native helper lazy-load
+    - `SaveToDER`
+      lazy-load
+    - native path
+      失败时
+      回退到
+      DER / PEM
+      + `TX509Certificate`
+      parser
+
+- 当前本地证据已经说明
+  这条修法方向成立：
+  - `OpenSSL`
+    focused contract
+    重新转绿：
+    `9 passed / 0 failed`
+  - 这说明：
+    - fixture serial
+      已不再空掉
+    - normalized serial query
+      现在可以命中
+      同一张证书
+
+- 因而这批结论可以记录为：
+  `ISSLCertificateStore.FindBySerialNumber`
+  在主 backend 上
+  的 residual
+  确实是实现层问题，
+  不只是测试空白或文档漂移
+
+- 当前剩余唯一未完成 proof
+  不是 Linux/OpenSSL，
+  而是
+  `WinSSL`
+  runtime
+  需要 push 后
+  由
+  GitHub Windows CI
+  最终确认
     都是绿色
   - 失败的是
     `Timing variance is acceptable`

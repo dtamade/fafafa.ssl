@@ -11181,3 +11181,97 @@
        `ISSLCertificateStore`
        public-surface completeness
        查下一条真正的 backend implementation residual
+122. `OpenSSL/WinSSL certificate store serial query parity` 这批用于把 `FindBySerialNumber` 在两个主 backend 上收紧到 shared normalized hex truth，并补掉 OpenSSL serial getter 的隐藏 readiness residual：
+   - 新 plan：
+     - `docs/plans/2026-05-21-openssl-winssl-certificate-store-serial-query-parity.md`
+   - 当前新发现：
+     - `TOpenSSLCertificateStore`
+       仍把 serial
+       按
+       `UpperCase(...)`
+       建索引和查询
+     - `TWinSSLCertificateStore`
+       仍对
+       `Cert.GetSerialNumber`
+       和输入做 raw compare
+     - 首轮
+       `OpenSSL`
+       focused RED
+       还补出了更深一层的真问题：
+       `TOpenSSLCertificate.GetSerialNumber`
+       在 native serial helper
+       尚未 ready
+       时会直接退出，
+       导致 fallback
+       实际上走不到
+   - 当前源码真相：
+     - `OpenSSL`
+       store 的 serial index/query
+       建在
+       `Cert.GetSerialNumber`
+       之上
+     - 所以如果 getter
+       自己先空掉，
+       store normalize
+       也无法成立
+   - 当前最小修法：
+     - 给
+       `OpenSSL`
+       /
+       `WinSSL`
+       store
+       补 shared 风格的
+       serial normalize helper
+     - 给
+       `TOpenSSLCertificate.SaveToDER`
+       补 lazy-load
+     - 给
+       `TOpenSSLCertificate.GetSerialNumber`
+       改成：
+       - 先 lazy-load native helper
+       - native path
+         失败时
+         回退到
+         DER / PEM 导出
+         + `TX509Certificate`
+         parser
+   - 当前 focused proof：
+     - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_openssl_certstore_serial_query_contract_units -FEtmp/test_openssl_certstore_serial_query_contract_units -otmp/test_openssl_certstore_serial_query_contract_units/test_openssl_certstore_serial_query_contract tests/openssl/test_openssl_certstore_serial_query_contract.pas`
+     - `./tmp/test_openssl_certstore_serial_query_contract_units/test_openssl_certstore_serial_query_contract`
+     - `git diff --check`
+     - `WinSSL`
+       runtime proof
+       继续看
+       GitHub Windows CI
+   - 当前最终收口证据：
+     - 首轮 RED：
+       - `Fixture exposes serial number`
+       - `FindBySerialNumber supports normalized serial query variant`
+     - 修复后：
+       - `OpenSSL` focused contract
+         `9 passed / 0 failed`
+       - `git diff --check`
+         通过
+   - 当前结论：
+     - 这批再次证明，
+       backend implementation residual
+       真实存在于：
+       - query normalize
+       - getter readiness
+       两层
+     - 当前本地
+       `OpenSSL`
+       已闭环；
+       `WinSSL`
+       runtime truth
+       等 push 后
+       Windows CI
+       最终确认
+   - 当前批收口后的默认下一步：
+     - 提交并推送本批
+     - 看
+       `Windows`
+       runtime suite
+       是否接受新的
+       `FindBySerialNumber`
+       memory-store contract

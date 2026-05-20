@@ -555,16 +555,61 @@ procedure TestFindBySerialNumber;
 var
   LStore: TWinSSLCertificateStore;
   LCert: ISSLCertificate;
+  LFixturePath: string;
+  LSerialCompact: string;
+  LSerialVariant: string;
+  LCharIndex: Integer;
 begin
   WriteLn('【测试 9】按序列号查找证书');
   WriteLn('---');
 
   try
-    LStore := OpenConcreteSystemStore(SSL_STORE_ROOT);
+    LStore := CreateMemoryBackedStore;
+    Assert(LStore <> nil, '创建 memory-backed store 成功');
+    if LStore = nil then
+    begin
+      WriteLn;
+      Exit;
+    end;
 
-    // 查找不存在的序列号
-    LCert := LStore.FindBySerialNumber('00:00:00:00');
-    Assert(LCert = nil, '查找不存在的序列号返回 nil');
+    LFixturePath := ResolveRepoFixturePath('tests/certificate/test_certs/signer_cert.pem');
+    Assert(LFixturePath <> '', '定位 serial 查询夹具路径成功');
+    if LFixturePath = '' then
+    begin
+      LStore.Close;
+      WriteLn;
+      Exit;
+    end;
+
+    LCert := TWinSSLCertificate.Create(nil, False);
+    Assert(LCert <> nil, '创建 serial 查询夹具证书成功');
+    if LCert = nil then
+    begin
+      LStore.Close;
+      WriteLn;
+      Exit;
+    end;
+
+    Assert(LCert.LoadFromFile(LFixturePath), '加载 serial 查询夹具成功');
+    Assert(LStore.AddCertificate(LCert), 'serial 查询夹具加入内存存储成功');
+
+    LSerialCompact := NormalizeHexish(LCert.GetSerialNumber);
+    Assert(LSerialCompact <> '', 'serial 查询夹具暴露非空序列号');
+    LSerialVariant := '';
+    for LCharIndex := 1 to Length(LSerialCompact) do
+    begin
+      if (LCharIndex > 1) and (((LCharIndex - 1) mod 2) = 0) then
+        LSerialVariant := LSerialVariant + ':';
+      LSerialVariant := LSerialVariant + LowerCase(LSerialCompact[LCharIndex]);
+    end;
+    LSerialVariant := '  ' + LSerialVariant + '  ';
+
+    Assert(LStore.FindBySerialNumber(LSerialVariant) <> nil,
+      '按归一化序列号查找成功');
+    Assert(LStore.FindBySerialNumber('00:00:00:00') = nil,
+      '查找不存在的序列号返回 nil');
+    Assert(LStore.FindBySerialNumber('') = nil,
+      '空序列号查询返回 nil');
 
     LStore.Close;
 

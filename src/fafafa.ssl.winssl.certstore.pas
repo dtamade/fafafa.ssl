@@ -215,6 +215,20 @@ begin
   Result := StringReplace(Result, ' =', '=', [rfReplaceAll]);
 end;
 
+function NormalizeCertificateStoreHex(const AValue: string): string;
+var
+  I: Integer;
+  LChar: Char;
+begin
+  Result := '';
+  for I := 1 to Length(AValue) do
+  begin
+    LChar := UpCase(AValue[I]);
+    if LChar in ['0'..'9', 'A'..'F'] then
+      Result := Result + LChar;
+  end;
+end;
+
 function CertNameBlobToX500String(AName: PCERT_NAME_BLOB): string;
 var
   LSize: DWORD;
@@ -676,13 +690,17 @@ function TWinSSLCertificateStore.FindBySerialNumber(const ASerialNumber: string)
 var
   I: Integer;
   Cert: ISSLCertificate;
+  LTarget: string;
 begin
   Result := nil;
+  LTarget := NormalizeCertificateStoreHex(ASerialNumber);
+  if LTarget = '' then
+    Exit;
+
   for I := 0 to FCertificates.Count - 1 do
   begin
     Cert := ISSLCertificate(FCertificates[I]);
-    // Use constant-time comparison for serial numbers
-    if SameText(Cert.GetSerialNumber, ASerialNumber) then
+    if NormalizeCertificateStoreHex(Cert.GetSerialNumber) = LTarget then
     begin
       Result := Cert;
       Exit;

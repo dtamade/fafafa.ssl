@@ -140,6 +140,20 @@ begin
   Result := StringReplace(Result, ' =', '=', [rfReplaceAll]);
 end;
 
+function NormalizeCertificateStoreHex(const AValue: string): string;
+var
+  I: Integer;
+  LChar: Char;
+begin
+  Result := '';
+  for I := 1 to Length(AValue) do
+  begin
+    LChar := UpCase(AValue[I]);
+    if LChar in ['0'..'9', 'A'..'F'] then
+      Result := Result + LChar;
+  end;
+end;
+
 constructor TOpenSSLCertificateStore.Create;
 begin
   inherited Create;
@@ -237,7 +251,11 @@ begin
     // 提取并索引序列号
     Serial := Cert.GetSerialNumber;
     if Serial <> '' then
-      FIndexBySerialNumber.AddObject(UpperCase(Serial), TObject(PtrInt(AIndex)));
+    begin
+      Serial := NormalizeCertificateStoreHex(Serial);
+      if Serial <> '' then
+        FIndexBySerialNumber.AddObject(Serial, TObject(PtrInt(AIndex)));
+    end;
 
     // 缓存 Subject 和 Issuer 用于部分匹配
     Subject := Cert.GetSubject;
@@ -677,12 +695,17 @@ function TOpenSSLCertificateStore.FindBySerialNumber(const ASerialNumber: string
 var
   Idx: Integer;
   CertIndex: PtrInt;
+  LTarget: string;
 begin
   Result := nil;
   if FIndexBySerialNumber.Count = 0 then Exit;
 
+  LTarget := NormalizeCertificateStoreHex(ASerialNumber);
+  if LTarget = '' then
+    Exit;
+
   // Phase 2.5: O(log n) 索引查找替代 O(n) 线性搜索
-  Idx := FIndexBySerialNumber.IndexOf(UpperCase(ASerialNumber));
+  Idx := FIndexBySerialNumber.IndexOf(LTarget);
   if Idx >= 0 then
   begin
     CertIndex := PtrInt(FIndexBySerialNumber.Objects[Idx]);

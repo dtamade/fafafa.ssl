@@ -17863,6 +17863,92 @@
   - summary:
     - no whitespace or patch-format drift remains before commit
 
+### OpenSSL And WinSSL Certificate Store Serial Query Parity
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-openssl-winssl-certificate-store-serial-query-parity.md`
+  - `tests/openssl/test_openssl_certstore_serial_query_contract.pas`
+  - `tests/winssl/test_winssl_certstore.pas`
+  - change:
+    - recorded a bounded serial-query parity batch for
+      `OpenSSL`
+      /
+      `WinSSL`
+    - added a focused
+      `OpenSSL`
+      contract for:
+      - non-empty fixture serial truth
+      - normalized serial query hit
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_openssl_certstore_serial_query_contract_units -FEtmp/test_openssl_certstore_serial_query_contract_units -otmp/test_openssl_certstore_serial_query_contract_units/test_openssl_certstore_serial_query_contract tests/openssl/test_openssl_certstore_serial_query_contract.pas`
+- `./tmp/test_openssl_certstore_serial_query_contract_units/test_openssl_certstore_serial_query_contract`
+  - result: FAIL
+  - summary:
+    - captured the intended RED:
+      - `Fixture exposes serial number`
+      - `FindBySerialNumber supports normalized serial query variant`
+    - this proved the problem was deeper than store normalization alone:
+      `TOpenSSLCertificate.GetSerialNumber`
+      itself could still collapse to empty
+
+- update implementation:
+  - `src/fafafa.ssl.openssl.certificate.pas`
+  - `src/fafafa.ssl.openssl.certstore.pas`
+  - `src/fafafa.ssl.winssl.certstore.pas`
+  - change:
+    - `TOpenSSLCertificate.SaveToDER`
+      now lazy-loads the export helper before failing closed
+    - `TOpenSSLCertificate.GetSerialNumber`
+      now:
+      - lazy-loads native serial helpers
+      - keeps the native hex path when available
+      - falls back to
+        `DER / PEM`
+        export
+        +
+        `TX509Certificate`
+        parser
+    - `TOpenSSLCertificateStore`
+      now normalizes serial index/query values to compact uppercase hex
+    - `TWinSSLCertificateStore`
+      now normalizes serial query comparison the same way
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/inspect_openssl_serial_debug_units -FEtmp/inspect_openssl_serial_debug_units -otmp/inspect_openssl_serial_debug_units/inspect_openssl_serial_debug tmp/inspect_openssl_serial_debug.pas`
+- `./tmp/inspect_openssl_serial_debug_units/inspect_openssl_serial_debug`
+  - result: PASS
+  - summary:
+    - used a temporary local probe to separate getter/export/parser boundaries
+    - confirmed the patched
+      `OpenSSL`
+      path now surfaces:
+      - `serial=6CA4D20D04587BAA55ACC76F962E5E74C0A7F7AB`
+      - `der_len=899`
+      - `pem_len=1273`
+      - matching parser serial from both
+        `DER`
+        /
+        `PEM`
+
+- `./tmp/test_openssl_certstore_serial_query_contract_units/test_openssl_certstore_serial_query_contract`
+  - result: PASS
+  - summary:
+    - final focused
+      `OpenSSL`
+      serial-query contract is now green:
+      `9 passed / 0 failed`
+    - proves both:
+      - non-empty serial getter truth
+      - normalized serial query hit
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains before commit
+    - remaining runtime proof for
+      `WinSSL`
+      is intentionally deferred to
+      GitHub Windows CI
+
 ## 2026-05-21
 
 ### Optional Backends Certificate Store Fingerprint Query Parity

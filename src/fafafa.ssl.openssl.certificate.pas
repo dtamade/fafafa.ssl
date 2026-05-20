@@ -465,8 +465,22 @@ var
   Buf: PAnsiChar;
 begin
   SetLength(Result, 0);
-  if (FX509 = nil) or
-    not HasCertificateMemorySaveBIOHelpers or
+  if FX509 = nil then
+    Exit;
+
+  if not HasCertificateMemorySaveBIOHelpers then
+  begin
+    try
+      LoadOpenSSLCore;
+    except
+      Exit;
+    end;
+  end;
+
+  if not Assigned(i2d_X509_bio) then
+    LoadOpenSSLX509;
+
+  if not HasCertificateMemorySaveBIOHelpers or
     not Assigned(i2d_X509_bio) then
     Exit;
   
@@ -606,42 +620,75 @@ var
   SerialNum: PASN1_INTEGER;
   BN: PBIGNUM;
   HexStr: PAnsiChar;
+  CertDER: TBytes;
+  CertPEM: string;
+  ParsedCert: TX509Certificate;
 begin
   Result := '';
   
   if FX509 = nil then
     Exit;
-  
-  // 检查必要的API是否已加载
-  if not Assigned(X509_get_serialNumber) or 
-    not Assigned(ASN1_INTEGER_to_BN) or 
-    not Assigned(BN_bn2hex) then
-    Exit;
-  
-  // 获取序列号
-  SerialNum := X509_get_serialNumber(FX509);
-  if SerialNum = nil then
-    Exit;
-  
-  // 转换为BIGNUM
-  BN := ASN1_INTEGER_to_BN(SerialNum, nil);
-  if BN = nil then
-    Exit;
-  
-  try
-    // 转换为16进制字符串
-    HexStr := BN_bn2hex(BN);
-    if HexStr <> nil then
+
+  if not Assigned(X509_get_serialNumber) then
+    LoadOpenSSLX509;
+  if not Assigned(ASN1_INTEGER_to_BN) then
+    LoadOpenSSLASN1(GetCryptoLibHandle);
+  if not Assigned(BN_bn2hex) then
+    LoadOpenSSLBN;
+
+  if Assigned(X509_get_serialNumber) and
+    Assigned(ASN1_INTEGER_to_BN) and
+    Assigned(BN_bn2hex) then
+  begin
+    // 获取序列号
+    SerialNum := X509_get_serialNumber(FX509);
+    if SerialNum <> nil then
     begin
-      Result := string(HexStr);
-      // 释放OpenSSL分配的字符串
-      if Assigned(OPENSSL_free) then
-        OPENSSL_free(HexStr);
+      // 转换为BIGNUM
+      BN := ASN1_INTEGER_to_BN(SerialNum, nil);
+      if BN <> nil then
+      try
+        // 转换为16进制字符串
+        HexStr := BN_bn2hex(BN);
+        if HexStr <> nil then
+        begin
+          Result := string(HexStr);
+          // 释放OpenSSL分配的字符串
+          if Assigned(OPENSSL_free) then
+            OPENSSL_free(HexStr);
+        end;
+      finally
+        // 释放BIGNUM
+        if Assigned(BN_free) then
+          BN_free(BN);
+      end;
     end;
-  finally
-    // 释放BIGNUM
-    if Assigned(BN_free) then
-      BN_free(BN);
+  end;
+
+  if Result <> '' then
+    Exit;
+
+  // 某些 OpenSSL 构建下 native serial helpers 可能缺失或返回空值；
+  // 回退到当前仓库已有的纯 Pascal X.509 parser，保证 public truth 仍可用。
+  try
+    CertDER := SaveToDER;
+    ParsedCert := TX509Certificate.Create;
+    try
+      if Length(CertDER) > 0 then
+        ParsedCert.LoadFromDER(CertDER)
+      else
+      begin
+        CertPEM := SaveToPEM;
+        if CertPEM = '' then
+          Exit;
+        ParsedCert.LoadFromPEM(CertPEM);
+      end;
+      Result := ParsedCert.SerialNumberAsHex;
+    finally
+      ParsedCert.Free;
+    end;
+  except
+    Result := '';
   end;
 end;
 
