@@ -10,6 +10,95 @@
 
 ## Current Status
 
+- [completed] `winssl runtime gate head proof`
+  当前 focused 目标：
+  - 为当前远端 head
+    `80b3500`
+    补一份 fresh
+    Windows runtime proof
+  - 不再让
+    `WinSSL`
+    停在：
+    - 历史 run 绿过
+    - 但不覆盖今天代码
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-winssl-runtime-gate-head-proof.md`
+  - 新增 runtime report：
+    - `docs/test_reports/WINSSL_RUNTIME_GATE_HEAD_PROOF_2026-05-21.md`
+  - 更新 workflow truth surface：
+    - `.github/README.md`
+  当前实施判断：
+  - 当前最值钱的动作
+    不是继续在 Linux
+    静态审查
+    `WinSSL`
+  - 而是利用现有
+    `winssl-tests.yml`
+    自动 Windows lane，
+    直接给当前 head
+    补 fresh runtime evidence
+  当前 focused proof：
+  - `git push origin master`
+    - PASS
+  - `gh api repos/dtamade/fafafa.ssl/actions/workflows/winssl-tests.yml/dispatches -X POST -f ref=master`
+    - PASS
+  - `gh run watch 26193849105 --exit-status --interval 20`
+    - PASS
+  - `gh run view 26193849105 --json status,conclusion,displayTitle,event,headSha,jobs,workflowName,createdAt,updatedAt,url`
+    - PASS
+  - `gh api repos/dtamade/fafafa.ssl/actions/runs/26193849105/artifacts -q '.artifacts[] | [.name, .expired, .size_in_bytes] | @tsv'`
+    - PASS
+  - `gh run download 26193849105 -D tmp/gh-run-26193849105`
+    - PASS
+  当前状态：
+  - `WinSSL Runtime Gate`
+    run `26193849105`
+    已在 head
+    `80b3500`
+    上 `SUCCESS`
+  - Windows runner
+    已跑通：
+    - install dependencies
+    - quick WinSSL smoke
+    - Windows Wave B gate
+    - broader WinSSL runtime suite
+    - evidence upload
+  - downloaded artifact
+    `winssl-windows-evidence-gh_26193849105_1`
+    已包含：
+    - quick smoke log
+    - Wave B summary
+    - WinSSL/OpenSSL/modules logs
+    - broader runtime suite log
+  - broader runtime suite
+    继续确认：
+    - `[WINSSL-RUNTIME] suite_end status=PASS`
+    - session runtime truth
+      仍然是：
+      - `observed_reuse=false`
+      - `session_configured=true`
+      - `native_probe_enabled=false`
+  当前总路线图进度：
+  - `WinSSL`
+    这条线，
+    现在不再只是
+    “有历史 Windows 证据”
+  - 当前 head
+    已重新获得 fresh Windows runtime proof
+  - 这让我们可以把默认注意力
+    更安心地切回：
+    - pure Pascal backend completeness
+    - 或更深的 WinSSL behavior gap
+  下一刀：
+  - 更适合继续查：
+    - pure Pascal backend completeness
+      还有哪些 fresh RED
+    - 或 `WinSSL`
+      仍未闭合的更深行为语义，
+      而不是重复派发
+      `winssl-tests.yml`
+
 - [completed] `clibrary direct-library runtime parity`
   当前 focused 目标：
   - 把

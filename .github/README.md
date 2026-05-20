@@ -51,6 +51,15 @@ WinSSL 自动 Windows runtime gate（push / PR 按路径触发 + `workflow_dispa
   - `test-reports/winssl_quick_smoke_*`
   - `test-reports/wave_b_windows_gate_summary_*`
   - `test-reports/winssl_runtime_suite_*`
+- 最新已确认真相：
+  - manual run `26193849105` 在 head `80b3500` 上 `SUCCESS`
+  - uploaded artifact `winssl-windows-evidence-gh_26193849105_1` 已包含：
+    - `wave_b_windows_gate_summary_gh_26193849105_1.md`
+    - `winssl_runtime_suite_gh_26193849105_1.log`
+  - downloaded runtime suite 继续确认当前 WinSSL session truth：
+    - `observed_reuse=false`
+    - `session_configured=true`
+    - `native_probe_enabled=false`
 - 使用边界：
   - 这是当前 WinSSL 的自动 Windows lane
   - 但 host override / risky native probe / cross-platform handoff 仍应转去 `wave-b-b2-manual.yml`

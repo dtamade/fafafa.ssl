@@ -6,6 +6,129 @@
 
 ## 2026-05-21
 
+### WinSSL Runtime Gate Head Proof
+
+- inspect current remote/runtime proof surface:
+  - `.github/README.md`
+  - `.github/workflows/winssl-tests.yml`
+  - `.github/workflows/wave-b-b2-manual.yml`
+  - `tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh`
+  - change:
+    - confirmed the repo already had a live narrow Windows lane:
+      `winssl-tests.yml`
+    - confirmed the heavier
+      `wave-b-b2-manual.yml`
+      was not the best first move for this batch
+    - identified the real gap as:
+      latest fresh Windows proof did not yet cover the current local head
+
+- inspect current remote branch state:
+  - `git status -sb`
+  - `git remote -v`
+  - `git log --oneline --decorate -n 6`
+  - change:
+    - confirmed local `master` was ahead of `origin/master` by 13 commits
+    - narrowed the remote-proof batch to:
+      push current head first,
+      then dispatch the narrow WinSSL workflow
+
+- push current head:
+  - `git push origin master`
+    - result: PASS
+    - summary:
+      - pushed `master` from `8a4e9a0` to `80b3500`
+
+- dispatch fresh WinSSL runtime proof on current head:
+  - `gh api repos/dtamade/fafafa.ssl/actions/workflows/winssl-tests.yml/dispatches -X POST -f ref=master`
+    - result: PASS
+  - `gh api repos/dtamade/fafafa.ssl/actions/workflows/winssl-tests.yml/runs -q '.workflow_runs[] | select(.head_sha=="80b3500bc00eb3778dff2c97168e61c236e6506b") | [.id, .head_sha, .status, (.conclusion // ""), .event, .display_title, .created_at] | @tsv'`
+    - result: PASS
+    - summary:
+      - identified new run:
+        `26193849105`
+        on head
+        `80b3500bc00eb3778dff2c97168e61c236e6506b`
+  - `gh run watch 26193849105 --exit-status --interval 20`
+    - result: PASS
+    - summary:
+      - all steps completed successfully:
+        - install dependencies
+        - quick WinSSL smoke
+        - Windows Wave B gate
+        - broader WinSSL runtime suite
+        - summary generation
+        - evidence upload
+
+- collect structured remote evidence:
+  - `gh run view 26193849105 --json status,conclusion,displayTitle,event,headSha,jobs,workflowName,createdAt,updatedAt,url`
+    - result: PASS
+    - summary:
+      - workflow:
+        `WinSSL Runtime Gate`
+      - conclusion:
+        `success`
+      - job:
+        `77068605599`
+      - run url:
+        `https://github.com/dtamade/fafafa.ssl/actions/runs/26193849105`
+  - `gh api repos/dtamade/fafafa.ssl/actions/runs/26193849105/artifacts -q '.artifacts[] | [.name, .expired, .size_in_bytes] | @tsv'`
+    - result: PASS
+    - summary:
+      - downloaded artifact name:
+        `winssl-windows-evidence-gh_26193849105_1`
+      - `expired=false`
+  - `gh run download 26193849105 -D tmp/gh-run-26193849105`
+    - result: PASS
+    - summary:
+      - downloaded:
+        - `wave_b_windows_gate_summary_gh_26193849105_1.md`
+        - `winssl_runtime_suite_gh_26193849105_1.log`
+        - companion logs / reports
+
+- inspect downloaded runtime evidence:
+  - `sed -n '1,220p' tmp/gh-run-26193849105/winssl-windows-evidence-gh_26193849105_1/wave_b_windows_gate_summary_gh_26193849105_1.md`
+    - result: PASS
+    - summary:
+      - `overall: PASS`
+      - `winssl: PASS`
+      - `openssl: PASS`
+      - `modules: PASS`
+  - `sed -n '1,220p' tmp/gh-run-26193849105/winssl-windows-evidence-gh_26193849105_1/winssl_runtime_suite_gh_26193849105_1.log`
+    - result: PASS
+    - summary:
+      - broader runtime suite recorded:
+        - `[WINSSL-RUNTIME] suite_start total=11`
+        - `[WINSSL-RUNTIME] suite_summary passed=11 failed=0 total=11 success_rate=100`
+        - `[WINSSL-RUNTIME] suite_end status=PASS`
+      - callback surface summary stayed:
+        - `verify=pass`
+        - `password=unsupported`
+        - `info=pass`
+      - session resumption truth stayed conservative:
+        - `observed_reuse=false`
+        - `session_configured=true`
+        - `native_probe_enabled=false`
+
+- documentation / ledger sync:
+  - `docs/plans/2026-05-21-winssl-runtime-gate-head-proof.md`
+  - `docs/test_reports/WINSSL_RUNTIME_GATE_HEAD_PROOF_2026-05-21.md`
+  - `.github/README.md`
+  - change:
+    - recorded the current-head WinSSL proof batch
+    - added a durable runtime report with run id, artifact names, and session truth summary
+    - refreshed the workflow truth surface so later sessions do not have to rediscover this same run
+
+- next queue impact:
+  - `WinSSL`
+    当前已不再缺
+    “这批代码有没有 fresh Windows runtime proof”
+    这条证据
+  - 后续更值钱的方向
+    已经回到：
+    - pure Pascal backend completeness
+    - or deeper WinSSL semantics
+    - not another reflexive `winssl-tests.yml` dispatch
+
 ### C-Library Direct-Library Runtime Parity
 
 - add focused batch inputs:

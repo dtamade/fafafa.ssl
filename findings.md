@@ -2,6 +2,69 @@
 
 ## 2026-05-21
 
+- `WinSSL`
+  这条线现在又多了一层关键证据：
+  当前远端 head
+  `80b3500`
+  已有 fresh
+  Windows runtime proof，
+  不再只是引用
+  2026-05-19
+  那批更早的 run
+
+- auto lane
+  `winssl-tests.yml`
+  在 run
+  `26193849105`
+  上直接证明了：
+  - quick smoke = PASS
+  - Wave B Windows gate = PASS
+  - broader WinSSL runtime suite = PASS
+  - evidence artifact 可下载且内容不是空壳
+
+- 这批最重要的语义结论
+  不是“WinSSL 一切都已 production-complete”，
+  而是：
+  当前 published/runtime truth
+  在 Windows runner 上
+  又被重新证实了一次，
+  尤其是 broader suite
+  里的 session lane
+  继续保持保守口径：
+  - `observed_reuse=false`
+  - `session_configured=true`
+  - `native_probe_enabled=false`
+  所以现在可以更有把握地说：
+  - 当前文档里对 WinSSL session 的保守表述
+    是真实 Windows evidence 支撑的
+  - 但这条 fresh proof
+    仍然不能把 wording 升级成
+    “observed resumed-handshake success”
+
+- 这也把
+  `WinSSL`
+  从
+  “当前 Linux 下只能静态审查”
+  明显推进了一步：
+  - 本地改动 → push
+  - 手动派发最窄 Windows lane
+  - 下载 artifact
+  - 读取 runtime markers
+  现在已经是一条可重复的闭环
+
+- 新的 workflow-surface 风险也暴露出来了：
+  当前 run annotation
+  提示
+  `windows-latest`
+  将在
+  2026-06-15
+  前后被重定向到
+  `windows-2025-vs2026`
+  这不是当前失败，
+  但应当作为后续
+  GitHub Actions truth audit
+  的候选项记录下来
+
 - `OpenSSL/MbedTLS/WolfSSL`
   这三条 C-library backend
   在
