@@ -10,6 +10,84 @@
 
 ## Current Status
 
+- [completed] `optional backends certificate time truth`
+  当前 focused 目标：
+  - 把
+    `MbedTLS`
+    /
+    `WolfSSL`
+    证书对象的
+    time surface
+    从
+    默认值壳 / 弱解析路径
+    收紧成
+    更接近真实
+    X.509 validity
+    的 public truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-optional-backends-certificate-time-truth.md`
+  - 修改实现：
+    - `src/fafafa.ssl.mbedtls.certificate.pas`
+  - 修改 focused tests：
+    - `tests/test_mbedtls_framework.pas`
+    - `tests/test_wolfssl_framework.pas`
+  当前实施判断：
+  - 这批最初怀疑的
+    `WolfSSL DER/native`
+    时间丢失
+    在 focused RED
+    里并没有出现；
+    它更适合作为
+    cross-backend control proof
+  - 真正红灯的是
+    `MbedTLS`
+    空证书仍会把
+    `GetNotBefore`
+    /
+    `GetNotAfter`
+    伪造成
+    `Now +/- 365`
+  - 更稳的最小修复
+    不是再补 native text parser，
+    而是：
+    - `GetNotBefore/GetNotAfter`
+      优先复用
+      `TryLoadX509Parser(...)`
+    - unknown time
+      回到
+      `0`
+    - `IsExpired`
+      /
+      `GetDaysUntilExpiry`
+      改成 fail-closed
+  当前 focused proof：
+  - `gh run view 26143487129 --json status,conclusion,jobs,url`
+    - PASS
+    - `CI`
+      当前已
+      `success`
+  - `fpc ... tests/test_mbedtls_framework.pas`
+    - PASS
+  - `./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+    - FAIL -> PASS
+  - `fpc ... tests/test_wolfssl_framework.pas`
+    - PASS
+  - `./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前批收口后的默认下一步：
+  - 继续沿
+    optional backend
+    certificate surface
+    审 residual completeness
+  - 优先找
+    仍会
+    “伪造默认真相”
+    或
+    “已发布但未被 focused contract 钉住”
+    的下一条非文档 lane
 - [completed] `optional backends certificate version truth`
   当前 focused 目标：
   - 把

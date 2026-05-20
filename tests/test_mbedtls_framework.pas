@@ -496,6 +496,93 @@ begin
   end;
 end;
 
+procedure TestMbedTLSCertificateTimeTruthContract;
+var
+  LLib: ISSLLibrary;
+  LCert: TMbedTLSCertificate;
+  LDERCert: TMbedTLSCertificate;
+  LDER: TBytes;
+  LInfo: TSSLCertificateInfo;
+  LNotBefore: TDateTime;
+  LNotAfter: TDateTime;
+  LDERNotBefore: TDateTime;
+  LDERNotAfter: TDateTime;
+begin
+  WriteLn('');
+  WriteLn('=== MbedTLS Certificate Time Truth Contract ===');
+
+  LCert := TMbedTLSCertificate.Create;
+  try
+    Test('Empty cert NotBefore is unknown',
+      LCert.GetNotBefore = 0);
+    Test('Empty cert NotAfter is unknown',
+      LCert.GetNotAfter = 0);
+    Test('Empty cert IsExpired stays false',
+      not LCert.IsExpired);
+    Test('Empty cert DaysUntilExpiry is 0',
+      LCert.GetDaysUntilExpiry = 0);
+  finally
+    LCert.Free;
+  end;
+
+  LLib := CreateMbedTLSLibrary;
+  if not LLib.Initialize then
+  begin
+    WriteLn('  (Skipped - MbedTLS library not available)');
+    Test('Loaded certificate time truth contract skipped', True);
+    Exit;
+  end;
+
+  LCert := TMbedTLSCertificate.Create;
+  LDERCert := TMbedTLSCertificate.Create;
+  try
+    if not LCert.LoadFromFile('tests/certs/server-cert.pem') then
+    begin
+      Test('Load server certificate time fixture', False);
+      Exit;
+    end;
+    Test('Load server certificate time fixture', True);
+
+    LNotBefore := LCert.GetNotBefore;
+    LNotAfter := LCert.GetNotAfter;
+    Test('Loaded fixture NotBefore exposes time truth',
+      LNotBefore > 0);
+    Test('Loaded fixture NotAfter exposes time truth',
+      LNotAfter > 0);
+    Test('Loaded fixture validity window stays ordered',
+      LNotAfter >= LNotBefore);
+
+    LDER := LCert.SaveToDER;
+    Test('Loaded fixture exports DER for time roundtrip',
+      Length(LDER) > 0);
+    if Length(LDER) = 0 then
+      Exit;
+
+    if not LDERCert.LoadFromDER(LDER) then
+    begin
+      Test('Load DER time roundtrip fixture', False);
+      Exit;
+    end;
+    Test('Load DER time roundtrip fixture', True);
+
+    LDERNotBefore := LDERCert.GetNotBefore;
+    LDERNotAfter := LDERCert.GetNotAfter;
+    LInfo := LDERCert.GetInfo;
+    Test('DER-loaded fixture NotBefore preserves time truth',
+      (LDERNotBefore > 0) and (Abs(LDERNotBefore - LNotBefore) < (1 / 86400)));
+    Test('DER-loaded fixture NotAfter preserves time truth',
+      (LDERNotAfter > 0) and (Abs(LDERNotAfter - LNotAfter) < (1 / 86400)));
+    Test('DER-loaded fixture GetInfo.NotBefore matches getter truth',
+      Abs(LInfo.NotBefore - LDERNotBefore) < (1 / 86400));
+    Test('DER-loaded fixture GetInfo.NotAfter matches getter truth',
+      Abs(LInfo.NotAfter - LDERNotAfter) < (1 / 86400));
+  finally
+    LDERCert.Free;
+    LCert.Free;
+    LLib.Finalize;
+  end;
+end;
+
 procedure TestMbedTLSCertificateExtensionMetadataContract;
 var
   LLib: ISSLLibrary;
@@ -1227,6 +1314,7 @@ begin
   TestMbedTLSCertificateAlgorithmMetadataContract;
   TestMbedTLSCertificateIdentityGetterContract;
   TestMbedTLSCertificateVersionTruthContract;
+  TestMbedTLSCertificateTimeTruthContract;
   TestMbedTLSCertificateExtensionMetadataContract;
   TestMbedTLSCertificateStore;
   TestMbedTLSNativeHandleContract;

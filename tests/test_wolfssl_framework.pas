@@ -495,6 +495,79 @@ begin
   end;
 end;
 
+procedure TestWolfSSLCertificateTimeTruthContract;
+var
+  LLib: ISSLLibrary;
+  LCert: TWolfSSLCertificate;
+  LDERCert: TWolfSSLCertificate;
+  LDER: TBytes;
+  LInfo: TSSLCertificateInfo;
+  LNotBefore: TDateTime;
+  LNotAfter: TDateTime;
+  LDERNotBefore: TDateTime;
+  LDERNotAfter: TDateTime;
+begin
+  WriteLn('');
+  WriteLn('=== WolfSSL Certificate Time Truth Contract ===');
+
+  LLib := CreateWolfSSLLibrary;
+  if not LLib.Initialize then
+  begin
+    WriteLn('  (Skipped - WolfSSL library not available)');
+    Test('Certificate time truth contract skipped', True);
+    Exit;
+  end;
+
+  LCert := TWolfSSLCertificate.Create;
+  LDERCert := TWolfSSLCertificate.Create;
+  try
+    if not LCert.LoadFromFile('tests/certs/server-cert.pem') then
+    begin
+      Test('Load server certificate time fixture', False);
+      Exit;
+    end;
+    Test('Load server certificate time fixture', True);
+
+    LNotBefore := LCert.GetNotBefore;
+    LNotAfter := LCert.GetNotAfter;
+    Test('Loaded fixture NotBefore exposes time truth',
+      LNotBefore > 0);
+    Test('Loaded fixture NotAfter exposes time truth',
+      LNotAfter > 0);
+    Test('Loaded fixture validity window stays ordered',
+      LNotAfter >= LNotBefore);
+
+    LDER := LCert.SaveToDER;
+    Test('Loaded fixture exports DER for time roundtrip',
+      Length(LDER) > 0);
+    if Length(LDER) = 0 then
+      Exit;
+
+    if not LDERCert.LoadFromDER(LDER) then
+    begin
+      Test('Load DER time roundtrip fixture', False);
+      Exit;
+    end;
+    Test('Load DER time roundtrip fixture', True);
+
+    LDERNotBefore := LDERCert.GetNotBefore;
+    LDERNotAfter := LDERCert.GetNotAfter;
+    LInfo := LDERCert.GetInfo;
+    Test('DER-loaded fixture NotBefore preserves time truth',
+      (LDERNotBefore > 0) and (Abs(LDERNotBefore - LNotBefore) < (1 / 86400)));
+    Test('DER-loaded fixture NotAfter preserves time truth',
+      (LDERNotAfter > 0) and (Abs(LDERNotAfter - LNotAfter) < (1 / 86400)));
+    Test('DER-loaded fixture GetInfo.NotBefore matches getter truth',
+      Abs(LInfo.NotBefore - LDERNotBefore) < (1 / 86400));
+    Test('DER-loaded fixture GetInfo.NotAfter matches getter truth',
+      Abs(LInfo.NotAfter - LDERNotAfter) < (1 / 86400));
+  finally
+    LDERCert.Free;
+    LCert.Free;
+    LLib.Finalize;
+  end;
+end;
+
 procedure TestWolfSSLCertificateExtensionMetadataContract;
 var
   LLib: ISSLLibrary;
@@ -1341,6 +1414,7 @@ begin
   TestWolfSSLCertificateAlgorithmMetadataContract;
   TestWolfSSLCertificateIdentityGetterContract;
   TestWolfSSLCertificateVersionTruthContract;
+  TestWolfSSLCertificateTimeTruthContract;
   TestWolfSSLCertificateExtensionMetadataContract;
   TestWolfSSLCertificateCloneMaterializationContract;
   TestWolfSSLCertificateStore;

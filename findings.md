@@ -2,6 +2,74 @@
 
 ## 2026-05-20
 
+- `gh run view 26143487129`
+  最终
+  `conclusion=success`，
+  说明上一批
+  certificate version truth
+  的 push
+  没有引入
+  Linux CI 回归；
+  这轮可以直接继续往下切
+  下一条 residual surface
+
+- 这次时间面审查里，
+  最初怀疑的
+  `WolfSSL`
+  DER/native
+  路径丢失 validity
+  并没有在 focused RED
+  里复现；
+  它反而成了更好的
+  control group
+
+- 真正红灯的是
+  `MbedTLS`
+  空证书状态：
+  - `GetNotBefore`
+    伪造
+    `Now - 365`
+  - `GetNotAfter`
+    伪造
+    `Now + 365`
+  - `GetDaysUntilExpiry`
+    也因此继续产出
+    非零假数据
+
+- 这类问题
+  不是普通 fallback
+  “不够优雅”；
+  它会把
+  unknown certificate state
+  错报成
+  有明确 validity window，
+  属于 public truth
+  被默认值壳污染
+
+- `TMbedTLSCertificate`
+  当前其实已经具备
+  更稳的数据源：
+  - `TryLoadX509Parser(...)`
+  - `SaveToDER`
+  - `TX509Certificate.Validity`
+
+- 所以这批最小正确修法
+  不是继续强依赖
+  `mbedtls_x509_crt_info(...)`
+  的文本切片，
+  而是：
+  - 时间 getter
+    优先复用 parser truth
+  - parser / fallback
+    都拿不到数据时
+    返回
+    `0`
+  - `IsExpired`
+    /
+    `GetDaysUntilExpiry`
+    对 unknown time
+    fail-closed
+
 - `MbedTLS`
   当前
   `GetVersion`

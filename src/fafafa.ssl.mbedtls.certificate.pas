@@ -800,13 +800,26 @@ end;
 
 function TMbedTLSCertificate.GetNotBefore: TDateTime;
 var
+  LParser: TX509Certificate;
   LBuf: array[0..4095] of AnsiChar;
   LLen: Integer;
   LInfo, LDateStr: string;
   LPos, LEndPos: Integer;
 begin
-  Result := Now - 365;  // 默认值
+  Result := 0;
   if FX509Crt = nil then Exit;
+
+  if TryLoadX509Parser(LParser) then
+  begin
+    try
+      Result := LParser.Validity.NotBefore;
+      if Result > 0 then
+        Exit;
+    finally
+      LParser.Free;
+    end;
+  end;
+
   if not Assigned(mbedtls_x509_crt_info) then Exit;
 
   FillChar(LBuf, SizeOf(LBuf), 0);
@@ -832,23 +845,32 @@ begin
     LDateStr := Trim(Copy(LInfo, LPos, LEndPos - LPos));
 
     if LDateStr <> '' then
-    begin
       Result := ParseMbedTLSDate(LDateStr);
-      if Result = 0 then
-        Result := Now - 365;
-    end;
   end;
 end;
 
 function TMbedTLSCertificate.GetNotAfter: TDateTime;
 var
+  LParser: TX509Certificate;
   LBuf: array[0..4095] of AnsiChar;
   LLen: Integer;
   LInfo, LDateStr: string;
   LPos, LEndPos: Integer;
 begin
-  Result := Now + 365;  // 默认值
+  Result := 0;
   if FX509Crt = nil then Exit;
+
+  if TryLoadX509Parser(LParser) then
+  begin
+    try
+      Result := LParser.Validity.NotAfter;
+      if Result > 0 then
+        Exit;
+    finally
+      LParser.Free;
+    end;
+  end;
+
   if not Assigned(mbedtls_x509_crt_info) then Exit;
 
   FillChar(LBuf, SizeOf(LBuf), 0);
@@ -874,11 +896,7 @@ begin
     LDateStr := Trim(Copy(LInfo, LPos, LEndPos - LPos));
 
     if LDateStr <> '' then
-    begin
       Result := ParseMbedTLSDate(LDateStr);
-      if Result = 0 then
-        Result := Now + 365;
-    end;
   end;
 end;
 
@@ -1106,8 +1124,17 @@ begin
 end;
 
 function TMbedTLSCertificate.IsExpired: Boolean;
+var
+  LNotAfter: TDateTime;
 begin
-  Result := Now > GetNotAfter;
+  LNotAfter := GetNotAfter;
+  if LNotAfter <= 0 then
+  begin
+    Result := False;
+    Exit;
+  end;
+
+  Result := Now > LNotAfter;
 end;
 
 function TMbedTLSCertificate.IsSelfSigned: Boolean;
@@ -1131,8 +1158,17 @@ begin
 end;
 
 function TMbedTLSCertificate.GetDaysUntilExpiry: Integer;
+var
+  LNotAfter: TDateTime;
 begin
-  Result := DaysBetween(Now, GetNotAfter);
+  LNotAfter := GetNotAfter;
+  if LNotAfter <= 0 then
+  begin
+    Result := 0;
+    Exit;
+  end;
+
+  Result := DaysBetween(Now, LNotAfter);
   if IsExpired then
     Result := -Result;
 end;

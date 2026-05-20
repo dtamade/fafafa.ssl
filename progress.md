@@ -4,6 +4,75 @@
 
 ## 2026-05-20
 
+### Optional Backends Certificate Time Truth
+
+- `gh run view 26143487129 --json status,conclusion,jobs,url`
+  - result: PASS
+  - summary:
+    - confirmed the previously pushed
+      `certificate version truth`
+      batch is now fully green on remote CI
+    - `Code Quality (Light)` /
+      `Minimal Gate (Linux)` /
+      `FreePascal TLS 1.3 Completeness`
+      all completed with
+      `success`
+    - this cleared the batch to continue with the next certificate-surface residual locally
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-20-optional-backends-certificate-time-truth.md`
+  - `tests/test_mbedtls_framework.pas`
+  - `tests/test_wolfssl_framework.pas`
+  - change:
+    - recorded a bounded optional-backend certificate-time batch
+    - added empty-cert and DER-roundtrip time-truth contracts
+    - kept `WolfSSL` as a control path while probing `MbedTLS`
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`
+- `./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas`
+- `./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+  - result: FAIL -> PASS (control)
+  - summary:
+    - `MbedTLS`
+      first RED narrowed cleanly to 3 failures:
+      - `Empty cert NotBefore is unknown`
+      - `Empty cert NotAfter is unknown`
+      - `Empty cert DaysUntilExpiry is 0`
+    - the new DER-roundtrip assertions already stayed green on both backends
+    - `WolfSSL`
+      full time-truth control contract was green end-to-end,
+      so this batch should stay scoped to
+      `MbedTLS`
+
+- update implementation:
+  - `src/fafafa.ssl.mbedtls.certificate.pas`
+  - change:
+    - `GetNotBefore/GetNotAfter`
+      now prefer parser-backed validity truth via
+      `TryLoadX509Parser(...)`
+    - unknown time no longer falls back to
+      `Now +/- 365`
+    - `IsExpired`
+      /
+      `GetDaysUntilExpiry`
+      now fail closed when validity is unknown
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`
+- `./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas`
+- `./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - `MbedTLS`
+      time-truth contract is now green:
+      `189 passed / 0 failed`
+    - `WolfSSL`
+      control contract remains green:
+      `199 passed / 0 failed`
+    - no whitespace or patch-format issues remain before commit
+
 ### Optional Backends Certificate Version Truth
 
 - `openssl req -help | sed -n '1,160p'`
