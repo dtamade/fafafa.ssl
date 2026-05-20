@@ -6,6 +6,66 @@
 
 ## 2026-05-21
 
+### C-Library Session Deserialize Metadata Completeness
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-clibrary-session-deserialize-metadata-completeness.md`
+  - change:
+    - recorded a bounded backend-implementation batch around
+      `MbedTLS/WolfSSL`
+      session roundtrip metadata truth
+    - explicitly framed the problem as
+      `deserialize succeeds but protocol/cipher metadata falls back to placeholder defaults`
+
+- update focused framework tests first:
+  - `tests/test_mbedtls_framework.pas`
+  - `tests/test_wolfssl_framework.pas`
+  - change:
+    - added metadata-complete roundtrip assertions for:
+      - `Serialize -> Deserialize`
+      - `Deserialize -> Clone`
+    - kept existing raw-payload session-class coverage intact,
+      so old helper-driven deserialize semantics remain covered in parallel
+
+- update implementation:
+  - `src/fafafa.ssl.mbedtls.session.pas`
+  - `src/fafafa.ssl.wolfssl.session.pas`
+  - change:
+    - added metadata envelope helpers around native serialized session bytes
+    - `Serialize(...)` now wraps native bytes only when the session already carries real
+      `protocol/cipher` truth
+    - `Deserialize(...)` now:
+      - prefers the new envelope when present
+      - restores `session id / creation time / timeout / protocol / cipher`
+      - falls back to old raw native payload behavior when no envelope is present
+
+- `mkdir -p tmp/test_mbedtls_framework_units`
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`
+- `./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+  - result: PASS
+  - summary:
+    - the new
+      `MbedTLS Session Metadata Completeness Contract`
+      stayed green
+    - focused suite finished with
+      `239 passed / 0 failed`
+
+- `mkdir -p tmp/test_wolfssl_framework_units`
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas`
+- `./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+  - result: PASS
+  - summary:
+    - the new
+      `WolfSSL Session Metadata Completeness Contract`
+      stayed green
+    - focused suite finished with
+      `253 passed / 0 failed`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains after the session roundtrip metadata fix
+
 ### API Documentation Quickstart Main-Entry Classification
 
 - add focused batch inputs:

@@ -1492,8 +1492,11 @@ var
   LFixtureCert: TWolfSSLCertificate;
   LSession: ISSLSession;
   LClone: ISSLSession;
+  LRoundTripSession: TWolfSSLSession;
+  LRoundTripClone: ISSLSession;
   LPeerCert: ISSLCertificate;
   LClonePeerCert: ISSLCertificate;
+  LSerializedData: TBytes;
   LExpectedFingerprint: string;
   LOriginalGetSession: TwolfSSL_get_session;
   LOriginalSessionDup: TwolfSSL_SESSION_dup;
@@ -1582,6 +1585,32 @@ begin
       Test('Session clone preserves peer certificate truth',
         (LClone <> nil) and (LClonePeerCert <> nil) and
         SameText(LClonePeerCert.GetFingerprintSHA256, LExpectedFingerprint));
+
+      LSerializedData := nil;
+      if LSession <> nil then
+        LSerializedData := LSession.Serialize;
+      Test('Metadata-complete session serializes to non-empty snapshot',
+        Length(LSerializedData) > 0);
+
+      LRoundTripSession := TWolfSSLSession.Create;
+      try
+        Test('Metadata-complete session deserialize succeeds from serialized snapshot',
+          LRoundTripSession.Deserialize(LSerializedData));
+        Test('Round-tripped session preserves protocol version truth',
+          LRoundTripSession.GetProtocolVersion = sslProtocolTLS13);
+        Test('Round-tripped session preserves cipher truth',
+          LRoundTripSession.GetCipherName = string(GStubWolfSSLCipherTLS13));
+
+        LRoundTripClone := LRoundTripSession.Clone;
+        Test('Clone after deserialize preserves protocol version truth',
+          (LRoundTripClone <> nil) and
+          (LRoundTripClone.GetProtocolVersion = sslProtocolTLS13));
+        Test('Clone after deserialize preserves cipher truth',
+          (LRoundTripClone <> nil) and
+          (LRoundTripClone.GetCipherName = string(GStubWolfSSLCipherTLS13)));
+      finally
+        LRoundTripSession.Free;
+      end;
     finally
       wolfSSL_get_session := LOriginalGetSession;
       wolfSSL_SESSION_dup := LOriginalSessionDup;

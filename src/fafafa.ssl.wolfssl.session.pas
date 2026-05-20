@@ -37,6 +37,12 @@ type
     FPeerCertificate: ISSLCertificate;
     FSerializedData: TBytes;
 
+    function BuildSerializedSessionData(const ANativeData: TBytes): TBytes;
+    function TryLoadSerializedSessionData(const AData: TBytes;
+      out ANativeData: TBytes; out ASessionID: string;
+      out ACreationTime: TDateTime; out ATimeout: Integer;
+      out AProtocolVersion: TSSLProtocolVersion; out ACipherName: string;
+      out AHasEnvelope: Boolean): Boolean;
     procedure ExtractSessionInfo;
     function GenerateSessionID: string;
 
@@ -78,6 +84,10 @@ implementation
 uses
   fafafa.ssl.wolfssl.certificate;
 
+const
+  WOLFSSL_SESSION_SERIALIZATION_MAGIC = 'fafafa-wolfssl-session-v1';
+  HEX_DIGITS: array[0..15] of Char = '0123456789ABCDEF';
+
 function ParseWolfSSLVersionString(const AVersion: string): TSSLProtocolVersion;
 begin
   if Pos('TLSv1.3', AVersion) > 0 then
@@ -89,6 +99,71 @@ begin
   if Pos('TLSv1', AVersion) > 0 then
     Exit(sslProtocolTLS10);
   Result := sslProtocolUnknown;
+end;
+
+function HexNibbleValue(ACh: Char; out AValue: Byte): Boolean;
+begin
+  case ACh of
+    '0'..'9':
+      begin
+        AValue := Byte(Ord(ACh) - Ord('0'));
+        Result := True;
+      end;
+    'A'..'F':
+      begin
+        AValue := Byte(Ord(ACh) - Ord('A') + 10);
+        Result := True;
+      end;
+    'a'..'f':
+      begin
+        AValue := Byte(Ord(ACh) - Ord('a') + 10);
+        Result := True;
+      end;
+  else
+    AValue := 0;
+    Result := False;
+  end;
+end;
+
+function BytesToHexString(const ABytes: TBytes): string;
+var
+  I: Integer;
+begin
+  if Length(ABytes) = 0 then
+    Exit('');
+
+  SetLength(Result, Length(ABytes) * 2);
+  for I := 0 to High(ABytes) do
+  begin
+    Result[I * 2 + 1] := HEX_DIGITS[(ABytes[I] shr 4) and $0F];
+    Result[I * 2 + 2] := HEX_DIGITS[ABytes[I] and $0F];
+  end;
+end;
+
+function TryHexStringToBytes(const AHex: string; out ABytes: TBytes): Boolean;
+var
+  I: Integer;
+  LHighNibble: Byte;
+  LLowNibble: Byte;
+begin
+  Result := False;
+  SetLength(ABytes, 0);
+  if (AHex = '') or ((Length(AHex) mod 2) <> 0) then
+    Exit;
+
+  SetLength(ABytes, Length(AHex) div 2);
+  for I := 0 to High(ABytes) do
+  begin
+    if (not HexNibbleValue(AHex[I * 2 + 1], LHighNibble)) or
+       (not HexNibbleValue(AHex[I * 2 + 2], LLowNibble)) then
+    begin
+      SetLength(ABytes, 0);
+      Exit;
+    end;
+    ABytes[I] := (LHighNibble shl 4) or LLowNibble;
+  end;
+
+  Result := True;
 end;
 
 function DuplicateWolfSSLSessionHandle(ASession: PWOLFSSL_SESSION): PWOLFSSL_SESSION;
@@ -189,6 +264,105 @@ begin
   inherited Destroy;
 end;
 
+function TWolfSSLSession.BuildSerializedSessionData(
+  const ANativeData: TBytes): TBytes;
+var
+  LData: TStringList;
+  LCreatedUnix: Int64;
+begin
+  SetLength(Result, 0);
+  if Length(ANativeData) = 0 then
+    Exit;
+
+  LData := TStringList.Create;
+  try
+    if FCreationTime > 0 then
+      LCreatedUnix := DateTimeToUnix(FCreationTime)
+    else
+      LCreatedUnix := 0;
+
+    LData.Values['magic'] := WOLFSSL_SESSION_SERIALIZATION_MAGIC;
+    LData.Values['id'] := FSessionID;
+    LData.Values['created_unix'] := IntToStr(LCreatedUnix);
+    LData.Values['timeout'] := IntToStr(FTimeout);
+    LData.Values['protocol'] := IntToStr(Ord(FProtocolVersion));
+    LData.Values['cipher'] := FCipherName;
+    LData.Values['native_hex'] := BytesToHexString(ANativeData);
+    Result := BytesOf(UTF8String(LData.Text));
+  finally
+    LData.Free;
+  end;
+end;
+
+function TWolfSSLSession.TryLoadSerializedSessionData(const AData: TBytes;
+  out ANativeData: TBytes; out ASessionID: string;
+  out ACreationTime: TDateTime; out ATimeout: Integer;
+  out AProtocolVersion: TSSLProtocolVersion; out ACipherName: string;
+  out AHasEnvelope: Boolean): Boolean;
+var
+  LData: TStringList;
+  LText: RawByteString;
+  LCreatedUnix: Int64;
+  LProtocolOrdinal: Integer;
+  LNativeHex: string;
+  LPrefix: RawByteString;
+begin
+  Result := False;
+  AHasEnvelope := False;
+  SetLength(ANativeData, 0);
+  ASessionID := '';
+  ACreationTime := 0;
+  ATimeout := 0;
+  AProtocolVersion := sslProtocolUnknown;
+  ACipherName := '';
+  if Length(AData) = 0 then
+    Exit;
+
+  LPrefix := RawByteString('magic=' + WOLFSSL_SESSION_SERIALIZATION_MAGIC);
+  if Length(AData) < Length(LPrefix) then
+    Exit;
+  if not CompareMem(@AData[0], @LPrefix[1], Length(LPrefix)) then
+    Exit;
+
+  AHasEnvelope := True;
+  SetString(LText, PAnsiChar(@AData[0]), Length(AData));
+  LData := TStringList.Create;
+  try
+    LData.Text := string(UTF8String(LText));
+    if LData.Values['magic'] <> WOLFSSL_SESSION_SERIALIZATION_MAGIC then
+      Exit;
+
+    ASessionID := LData.Values['id'];
+    if ASessionID = '' then
+      Exit;
+    if not TryStrToInt64(LData.Values['created_unix'], LCreatedUnix) then
+      Exit;
+    if not TryStrToInt(LData.Values['timeout'], ATimeout) then
+      Exit;
+    if not TryStrToInt(LData.Values['protocol'], LProtocolOrdinal) then
+      Exit;
+    if (LProtocolOrdinal < Ord(Low(TSSLProtocolVersion))) or
+       (LProtocolOrdinal > Ord(High(TSSLProtocolVersion))) then
+      Exit;
+
+    LNativeHex := LData.Values['native_hex'];
+    if not TryHexStringToBytes(LNativeHex, ANativeData) then
+      Exit;
+    if Length(ANativeData) = 0 then
+      Exit;
+
+    if LCreatedUnix > 0 then
+      ACreationTime := UnixToDateTime(LCreatedUnix)
+    else
+      ACreationTime := 0;
+    AProtocolVersion := TSSLProtocolVersion(LProtocolOrdinal);
+    ACipherName := LData.Values['cipher'];
+    Result := True;
+  finally
+    LData.Free;
+  end;
+end;
+
 procedure TWolfSSLSession.ExtractSessionInfo;
 begin
   if FSession = nil then Exit;
@@ -272,6 +446,7 @@ function TWolfSSLSession.Serialize: TBytes;
 var
   LLen: Integer;
   LBufPtr: PByte;
+  LNativeData: TBytes;
 begin
   if (Length(FSerializedData) > 0) and
      ((FSession = nil) or (not Assigned(wolfSSL_i2d_SSL_SESSION))) then
@@ -293,7 +468,12 @@ begin
       SetLength(Result, 0)
     else
     begin
-      SetLength(Result, LLen);
+      SetLength(LNativeData, LLen);
+      Move(Result[0], LNativeData[0], LLen);
+      if FCipherName <> 'unknown' then
+        Result := BuildSerializedSessionData(LNativeData)
+      else
+        Result := LNativeData;
       FSerializedData := Copy(Result);
     end;
   end;
@@ -303,15 +483,30 @@ function TWolfSSLSession.Deserialize(const AData: TBytes): Boolean;
 var
   LDataPtr: PByte;
   LSession: PWOLFSSL_SESSION;
+  LNativeData: TBytes;
+  LSessionID: string;
+  LCreationTime: TDateTime;
+  LTimeout: Integer;
+  LProtocolVersion: TSSLProtocolVersion;
+  LCipherName: string;
+  LHasEnvelope: Boolean;
 begin
   Result := False;
   if Length(AData) = 0 then Exit;
 
+  if not TryLoadSerializedSessionData(AData, LNativeData, LSessionID,
+    LCreationTime, LTimeout, LProtocolVersion, LCipherName, LHasEnvelope) then
+  begin
+    if LHasEnvelope then
+      Exit;
+    LNativeData := Copy(AData);
+  end;
+
   // 使用 WolfSSL 的 d2i 函数反序列化会话
   if Assigned(wolfSSL_d2i_SSL_SESSION) then
   begin
-    LDataPtr := @AData[0];
-    LSession := wolfSSL_d2i_SSL_SESSION(nil, @LDataPtr, Length(AData));
+    LDataPtr := @LNativeData[0];
+    LSession := wolfSSL_d2i_SSL_SESSION(nil, @LDataPtr, Length(LNativeData));
     if LSession <> nil then
     begin
       // 仅在新会话成功后替换旧会话，避免失败时破坏已有状态
@@ -323,8 +518,20 @@ begin
 
       FSession := LSession;
       FOwnsSession := True;
-      FSerializedData := Copy(AData);
-      ExtractSessionInfo;
+      if LHasEnvelope then
+      begin
+        FSessionID := LSessionID;
+        FCreationTime := LCreationTime;
+        FTimeout := LTimeout;
+        FProtocolVersion := LProtocolVersion;
+        FCipherName := LCipherName;
+        FSerializedData := Copy(AData);
+      end
+      else
+      begin
+        FSerializedData := Copy(LNativeData);
+        ExtractSessionInfo;
+      end;
       FPeerCertificate := nil;
       Result := True;
     end;

@@ -10,6 +10,86 @@
 
 ## Current Status
 
+- [completed] `clibrary session deserialize metadata completeness`
+  当前 focused 目标：
+  - 收掉
+    `MbedTLS`
+    /
+    `WolfSSL`
+    在
+    `Serialize -> Deserialize -> Clone`
+    路径上的
+    `protocol/cipher`
+    metadata 真值漂移：
+    - `TMbedTLSSession.Deserialize(...)`
+      成功后仍会落回
+      `TLS1.2 + empty cipher`
+    - `TWolfSSLSession.Deserialize(...)`
+      成功后仍会落回
+      `unknown + unknown`
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-clibrary-session-deserialize-metadata-completeness.md`
+  - 修改实现：
+    - `src/fafafa.ssl.mbedtls.session.pas`
+    - `src/fafafa.ssl.wolfssl.session.pas`
+  - 修改 focused framework tests：
+    - `tests/test_mbedtls_framework.pas`
+    - `tests/test_wolfssl_framework.pas`
+  当前实施判断：
+  - 这批不是 helper 缺失或 clone 丢 handle 的旧问题，
+    而是：
+    - live connection extraction
+      已经知道真实
+      `protocol/cipher`
+    - 但 roundtrip session object
+      仍会把这条 truth 丢掉
+  - 最小正确修法不是假设 native session handle
+    自带可读 metadata，
+    而是：
+    - 对 metadata-complete session
+      输出
+      `native payload + metadata envelope`
+    - `Deserialize(...)`
+      同时兼容：
+      - 新 envelope payload
+      - 旧 raw native payload
+  当前 focused proof：
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`
+    - PASS
+  - `./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+    - PASS
+    - `239 passed / 0 failed`
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas`
+    - PASS
+  - `./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+    - PASS
+    - `253 passed / 0 failed`
+  - `git diff --check`
+    - PASS
+  当前状态：
+  - `TMbedTLSSession.Serialize(...)`
+    现在只在 metadata-complete session 上输出
+    envelope；
+    旧 raw payload 语义仍保留兼容
+  - `TWolfSSLSession.Serialize(...)`
+    也同样只在已有真实 cipher/protocol metadata 时
+    包装 native bytes
+  - 两边 `Deserialize(...)`
+    现已优先解析 envelope，
+    并在成功后恢复：
+    - `session id`
+    - `creation time`
+    - `timeout`
+    - `protocol version`
+    - `cipher name`
+  - 新增 focused tests
+    已锁住：
+    - metadata-complete session roundtrip 后
+      `protocol/cipher` 仍保持 truth
+    - 反序列化后的 session 再 `Clone()`
+      也不再丢这条 truth
+
 - [completed] `api documentation quickstart main-entry classification`
   当前 focused 目标：
   - 收掉

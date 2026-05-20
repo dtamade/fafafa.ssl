@@ -2,6 +2,111 @@
 
 ## 2026-05-21
 
+- `MbedTLS`
+  /
+  `WolfSSL`
+  的 session roundtrip
+  到这一步暴露出的
+  已经不是
+  “能不能 deserialize 成功”，
+  而是
+  “deserialize 成功之后 public metadata
+  还剩不剩真值”
+
+- 两边之前都已经在 live extraction 路径上
+  拿到了真实
+  `protocol/cipher`
+  - `TMbedTLSSession.FromContext(...)`
+    会从
+    `mbedtls_ssl_get_version`
+    /
+    `mbedtls_ssl_get_ciphersuite`
+    回填 metadata
+  - `TWolfSSLSession.FromConnection(...)`
+    会从
+    `wolfSSL_get_version`
+    /
+    `wolfSSL_CIPHER_get_name`
+    回填 metadata
+
+- 但旧实现一旦进入
+  `Serialize -> Deserialize`
+  路径，
+  这条 truth
+  会立即退化：
+  - `MbedTLS`
+    退回
+    `TLS1.2 + empty cipher`
+  - `WolfSSL`
+    退回
+    `unknown + unknown`
+
+- 这说明
+  `ISSLSession`
+  在当前仓库里的真实 contract
+  不能只看：
+  - native handle 有没有回来
+  还要看：
+  - public metadata
+    有没有继续可用
+
+- 这批的最小正确收法
+  不是去发明新的
+  native getter，
+  而是承认当前 backend truth：
+  - raw native serialized bytes
+    并不稳定携带当前 public metadata
+  - 但库内部完全可以在
+    public `Serialize(...)`
+    surface
+    上给 metadata-complete session
+    增加 envelope
+
+- 更重要的是，
+  这条 envelope 不能破坏旧 payload 兼容：
+  - 已有 raw native bytes
+    仍要能被
+    `Deserialize(...)`
+    接受
+  - 只有 metadata-complete session
+    才值得输出 envelope；
+    否则会把旧 focused contract
+    也一并打断
+
+- 因而本批 durable truth 是：
+  - `TMbedTLSSession.Serialize(...)`
+    仅在
+    `FCipherName <> ''`
+    时输出 envelope
+  - `TWolfSSLSession.Serialize(...)`
+    仅在
+    `FCipherName <> 'unknown'`
+    时输出 envelope
+  - `Deserialize(...)`
+    若识别到 envelope，
+    就恢复：
+    - `session id`
+    - `creation time`
+    - `timeout`
+    - `protocol`
+    - `cipher`
+  - 若不是 envelope，
+    则继续按旧 raw payload
+    语义回退
+
+- 这也把
+  `Clone()`
+  的真实保证进一步收紧了：
+  - 之前我们只收了
+    native handle
+    不能丢
+  - 现在连
+    反序列化后的
+    `protocol/cipher`
+    truth
+    也已被 focused tests
+    锁住
+
 - `API_DOCUMENTATION`
   顶部 quickstart
   之前还有一层很容易被忽视的 live drift：
