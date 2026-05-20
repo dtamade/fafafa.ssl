@@ -228,6 +228,63 @@ begin
   end;
 end;
 
+function X509KeyUsageToBitfield(const AUsage: TX509KeyUsage): Word;
+begin
+  Result := 0;
+  if kuDigitalSignature in AUsage then
+    Result := Result or $0080;
+  if kuNonRepudiation in AUsage then
+    Result := Result or $0040;
+  if kuKeyEncipherment in AUsage then
+    Result := Result or $0020;
+  if kuDataEncipherment in AUsage then
+    Result := Result or $0010;
+  if kuKeyAgreement in AUsage then
+    Result := Result or $0008;
+  if kuKeyCertSign in AUsage then
+    Result := Result or $0004;
+  if kuCRLSign in AUsage then
+    Result := Result or $0002;
+  if kuEncipherOnly in AUsage then
+    Result := Result or $0001;
+  if kuDecipherOnly in AUsage then
+    Result := Result or $8000;
+end;
+
+function X509ExtKeyUsageToStrings(const AUsage: TX509ExtKeyUsage): TSSLStringArray;
+
+  procedure AddToResult(const AValue: string);
+  begin
+    SetLength(Result, Length(Result) + 1);
+    Result[High(Result)] := AValue;
+  end;
+
+begin
+  SetLength(Result, 0);
+  if ekuServerAuth in AUsage then
+    AddToResult('serverAuth');
+  if ekuClientAuth in AUsage then
+    AddToResult('clientAuth');
+  if ekuCodeSigning in AUsage then
+    AddToResult('codeSigning');
+  if ekuEmailProtection in AUsage then
+    AddToResult('emailProtection');
+  if ekuTimeStamping in AUsage then
+    AddToResult('timeStamping');
+  if ekuOCSPSigning in AUsage then
+    AddToResult('OCSPSigning');
+end;
+
+function X509SubjectAltNamesToStrings(
+  const ASANs: TX509SubjectAltNames): TSSLStringArray;
+var
+  I: Integer;
+begin
+  SetLength(Result, Length(ASANs));
+  for I := 0 to High(ASANs) do
+    Result[I] := ASANs[I].Value;
+end;
+
 function FormatHexError(const AValue: DWORD): string;
 begin
   Result := '0x' + IntToHex(AValue, 8);
@@ -542,6 +599,8 @@ end;
 // ============================================================================
 
 function TWinSSLCertificate.GetInfo: TSSLCertificateInfo;
+var
+  LParser: TX509Certificate;
 begin
   FillChar(Result, SizeOf(Result), 0);
   
@@ -555,13 +614,39 @@ begin
   Result.NotAfter := GetNotAfter;
   Result.FingerprintSHA1 := GetFingerprintSHA1;
   Result.FingerprintSHA256 := GetFingerprintSHA256;
-  Result.PublicKeyAlgorithm := GetPublicKeyAlgorithm;
-  Result.SignatureAlgorithm := GetSignatureAlgorithm;
   Result.Version := GetVersion;
-  Result.IsCA := IsCA;
+  Result.PathLength := -1;
+  Result.PathLenConstraint := -1;
+  Result.KeyUsage := 0;
 
-  // GetSubjectAltNames already returns TSSLStringArray
-  Result.SubjectAltNames := GetSubjectAltNames;
+  if TryLoadParsedWinSSLCertificate(Self, LParser) then
+  begin
+    try
+      Result.PublicKeyAlgorithm := LParser.PublicKeyInfo.Algorithm.Name;
+      if Result.PublicKeyAlgorithm = '' then
+        Result.PublicKeyAlgorithm := LParser.PublicKeyInfo.Algorithm.OID;
+
+      Result.SignatureAlgorithm := LParser.SignatureAlgorithm.Name;
+      if Result.SignatureAlgorithm = '' then
+        Result.SignatureAlgorithm := LParser.SignatureAlgorithm.OID;
+
+      Result.PublicKeySize := LParser.PublicKeyInfo.KeySize;
+      Result.IsCA := LParser.IsCA;
+      Result.PathLenConstraint := LParser.BasicConstraints.PathLenConstraint;
+      Result.PathLength := LParser.BasicConstraints.PathLenConstraint;
+      Result.KeyUsage := X509KeyUsageToBitfield(LParser.KeyUsage);
+      Result.SubjectAltNames := X509SubjectAltNamesToStrings(LParser.SubjectAltNames);
+    finally
+      LParser.Free;
+    end;
+  end
+  else
+  begin
+    Result.PublicKeyAlgorithm := GetPublicKeyAlgorithm;
+    Result.SignatureAlgorithm := GetSignatureAlgorithm;
+    Result.IsCA := IsCA;
+    Result.SubjectAltNames := GetSubjectAltNames;
+  end;
 end;
 
 function TWinSSLCertificate.GetSubject: string;
@@ -1272,6 +1357,7 @@ end;
 
 function TWinSSLCertificate.GetSubjectAltNames: TSSLStringArray;
 var
+  LParser: TX509Certificate;
   ExtInfo: PCERT_EXTENSION;
   AltNameInfo: PCERT_ALT_NAME_INFO;
   AltNameInfoSize: DWORD;
@@ -1293,6 +1379,16 @@ begin
 
   if FCertContext = nil then
     Exit;
+
+  if TryLoadParsedWinSSLCertificate(Self, LParser) then
+  begin
+    try
+      Result := X509SubjectAltNamesToStrings(LParser.SubjectAltNames);
+      Exit;
+    finally
+      LParser.Free;
+    end;
+  end;
 
   // 查找 Subject Alternative Name 扩展
   ExtInfo := CertFindExtension(
@@ -1337,6 +1433,14 @@ begin
         begin
           AddToResult(WideCharToString(AltName^.pwszDNSName));
         end
+        else if AltName^.dwAltNameChoice = CERT_ALT_NAME_RFC822_NAME then
+        begin
+          AddToResult(WideCharToString(AltName^.pwszRfc822Name));
+        end
+        else if AltName^.dwAltNameChoice = CERT_ALT_NAME_URL then
+        begin
+          AddToResult(WideCharToString(AltName^.pwszURL));
+        end
         else if AltName^.dwAltNameChoice = CERT_ALT_NAME_IP_ADDRESS then
         begin
           if AltName^.IPAddress.cbData = 4 then
@@ -1372,6 +1476,7 @@ end;
 
 function TWinSSLCertificate.GetKeyUsage: TSSLStringArray;
 var
+  LParser: TX509Certificate;
   ExtInfo: PCERT_EXTENSION;
   KeyUsageInfo: PCRYPT_BIT_BLOB;
   KeyUsageSize: DWORD;
@@ -1388,6 +1493,16 @@ begin
 
   if FCertContext = nil then
     Exit;
+
+  if TryLoadParsedWinSSLCertificate(Self, LParser) then
+  begin
+    try
+      Result := X509KeyUsageToStrings(LParser.KeyUsage);
+      Exit;
+    finally
+      LParser.Free;
+    end;
+  end;
 
   // 查找 Key Usage 扩展
   ExtInfo := CertFindExtension(
@@ -1453,6 +1568,7 @@ end;
 
 function TWinSSLCertificate.GetExtendedKeyUsage: TSSLStringArray;
 var
+  LParser: TX509Certificate;
   ExtInfo: PCERT_EXTENSION;
   EnhKeyUsage: PCERT_ENHKEY_USAGE;
   EnhKeyUsageSize: DWORD;
@@ -1470,6 +1586,16 @@ begin
 
   if FCertContext = nil then
     Exit;
+
+  if TryLoadParsedWinSSLCertificate(Self, LParser) then
+  begin
+    try
+      Result := X509ExtKeyUsageToStrings(LParser.ExtKeyUsage);
+      Exit;
+    finally
+      LParser.Free;
+    end;
+  end;
 
   // 查找 Extended Key Usage 扩展
   ExtInfo := CertFindExtension(
@@ -1510,17 +1636,18 @@ begin
       for i := 0 to EnhKeyUsage^.cUsageIdentifier - 1 do
       begin
         OIDStr := string(EnhKeyUsage^.rgpszUsageIdentifier[i]);
-        AddToResult(OIDStr);
-
-        // 添加常见 OID 的友好名称
         if OIDStr = szOID_PKIX_KP_SERVER_AUTH then
-          AddToResult('TLS Web Server Authentication')
+          AddToResult('serverAuth')
         else if OIDStr = szOID_PKIX_KP_CLIENT_AUTH then
-          AddToResult('TLS Web Client Authentication')
+          AddToResult('clientAuth')
         else if OIDStr = szOID_PKIX_KP_CODE_SIGNING then
-          AddToResult('Code Signing')
+          AddToResult('codeSigning')
         else if OIDStr = szOID_PKIX_KP_EMAIL_PROTECTION then
-          AddToResult('Email Protection');
+          AddToResult('emailProtection')
+        else if OIDStr = '1.3.6.1.5.5.7.3.8' then
+          AddToResult('timeStamping')
+        else if OIDStr = '1.3.6.1.5.5.7.3.9' then
+          AddToResult('OCSPSigning');
       end;
     end;
   finally

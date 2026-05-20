@@ -85,6 +85,43 @@ begin
   end;
 end;
 
+function ArrayContains(const AValues: TSSLStringArray; const AExpected: string): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 0 to High(AValues) do
+    if SameText(AValues[I], AExpected) then
+      Exit(True);
+end;
+
+function FormatStringArray(const AValues: TSSLStringArray): string;
+var
+  I: Integer;
+begin
+  Result := '[';
+  for I := 0 to High(AValues) do
+  begin
+    if I > 0 then
+      Result := Result + ', ';
+    Result := Result + AValues[I];
+  end;
+  Result := Result + ']';
+end;
+
+function SameStringArrays(const ALeft, ARight: TSSLStringArray): Boolean;
+var
+  I: Integer;
+begin
+  Result := Length(ALeft) = Length(ARight);
+  if not Result then
+    Exit;
+
+  for I := 0 to High(ALeft) do
+    if ALeft[I] <> ARight[I] then
+      Exit(False);
+end;
+
 function TCallbackProbe.VerifyCallback(const ACertificate: TSSLCertificateInfo;
   const AErrorCode: Integer; const AErrorMessage: string): Boolean;
 begin
@@ -580,6 +617,147 @@ begin
   end;
 end;
 
+procedure TestCertificateMetadataTruth;
+const
+  ECDSA_CA_FIXTURE = 'tests/certificate/test_certs/signer_ecdsa_cert.pem';
+  SAN_RICH_FIXTURE = 'tests/certs/san-rich.pem';
+  KEYUSAGE_FIXTURE = 'tests/certificate/test_certs/keyusage_cert.pem';
+var
+  LTruthLib: ISSLLibrary;
+  LTruthCert: ISSLCertificate;
+  LCert: ISSLCertificate;
+  LFixturePath: string;
+  LExpectedInfo: TSSLCertificateInfo;
+  LActualInfo: TSSLCertificateInfo;
+  LExpectedValues: TSSLStringArray;
+  LActualValues: TSSLStringArray;
+begin
+  BeginSection('Certificate Metadata Truth');
+
+  LTruthLib := CreateFreePascalSSLLibrary;
+  Test('CreateFreePascalSSLLibrary returns metadata truth owner', LTruthLib <> nil,
+    'CreateFreePascalSSLLibrary returned nil');
+  if LTruthLib = nil then
+    Exit;
+
+  Test('Initialize FreePascal library for metadata truth owner',
+    LTruthLib.Initialize, LTruthLib.GetLastErrorString);
+  if not LTruthLib.IsInitialized then
+    Exit;
+
+  LTruthCert := LTruthLib.CreateCertificate;
+  Test('Create FreePascal metadata truth owner certificate', LTruthCert <> nil,
+    'CreateCertificate returned nil');
+  if LTruthCert = nil then
+    Exit;
+
+  LCert := TWinSSLCertificate.Create(nil, False);
+  Test('Create WinSSL certificate object for metadata truth', LCert <> nil,
+    'TWinSSLCertificate.Create returned nil');
+  if LCert = nil then
+    Exit;
+
+  try
+    LFixturePath := ResolveRepoFixturePath(ECDSA_CA_FIXTURE);
+    Test('Resolve ECDSA CA fixture path for metadata truth', LFixturePath <> '', ECDSA_CA_FIXTURE);
+    if LFixturePath = '' then
+      Exit;
+
+    Test('Load ECDSA CA fixture into FreePascal metadata truth owner',
+      LTruthCert.LoadFromFile(LFixturePath), LFixturePath);
+    if not LTruthCert.LoadFromFile(LFixturePath) then
+      Exit;
+    Test('Load ECDSA CA fixture into WinSSL metadata truth owner',
+      LCert.LoadFromFile(LFixturePath), LFixturePath);
+    if not LCert.LoadFromFile(LFixturePath) then
+      Exit;
+
+    LExpectedInfo := LTruthCert.GetInfo;
+    LActualInfo := LCert.GetInfo;
+    Test('ECDSA CA fixture GetInfo exposes public-key size truth',
+      LActualInfo.PublicKeySize = LExpectedInfo.PublicKeySize,
+      'Actual=' + IntToStr(LActualInfo.PublicKeySize) + ' Expected=' + IntToStr(LExpectedInfo.PublicKeySize));
+    Test('ECDSA CA fixture GetInfo exposes IsCA truth',
+      LActualInfo.IsCA = LExpectedInfo.IsCA,
+      'Actual=' + BoolToStr(LActualInfo.IsCA, True) + ' Expected=' + BoolToStr(LExpectedInfo.IsCA, True));
+    Test('ECDSA CA fixture GetInfo path length matches parser truth',
+      LActualInfo.PathLength = LExpectedInfo.PathLength,
+      'Actual=' + IntToStr(LActualInfo.PathLength) + ' Expected=' + IntToStr(LExpectedInfo.PathLength));
+    Test('ECDSA CA fixture GetInfo pathLenConstraint matches parser truth',
+      LActualInfo.PathLenConstraint = LExpectedInfo.PathLenConstraint,
+      'Actual=' + IntToStr(LActualInfo.PathLenConstraint) + ' Expected=' + IntToStr(LExpectedInfo.PathLenConstraint));
+
+    LFixturePath := ResolveRepoFixturePath(SAN_RICH_FIXTURE);
+    Test('Resolve SAN-rich fixture path for metadata truth', LFixturePath <> '', SAN_RICH_FIXTURE);
+    if LFixturePath = '' then
+      Exit;
+
+    Test('Load SAN-rich fixture into FreePascal metadata truth owner',
+      LTruthCert.LoadFromFile(LFixturePath), LFixturePath);
+    if not LTruthCert.LoadFromFile(LFixturePath) then
+      Exit;
+    Test('Load SAN-rich fixture into WinSSL metadata truth owner',
+      LCert.LoadFromFile(LFixturePath), LFixturePath);
+    if not LCert.LoadFromFile(LFixturePath) then
+      Exit;
+
+    LExpectedValues := LTruthCert.GetSubjectAltNames;
+    LActualValues := LCert.GetSubjectAltNames;
+    Test('SAN-rich fixture getter keeps parser SAN truth',
+      SameStringArrays(LActualValues, LExpectedValues),
+      'Actual=' + FormatStringArray(LActualValues) + ' Expected=' + FormatStringArray(LExpectedValues));
+    Test('SAN-rich fixture getter contains admin@example-rich.test',
+      ArrayContains(LActualValues, 'admin@example-rich.test'),
+      FormatStringArray(LActualValues));
+    Test('SAN-rich fixture getter contains spiffe://mesh/service',
+      ArrayContains(LActualValues, 'spiffe://mesh/service'),
+      FormatStringArray(LActualValues));
+
+    LExpectedInfo := LTruthCert.GetInfo;
+    LActualInfo := LCert.GetInfo;
+    Test('SAN-rich fixture GetInfo keeps parser SAN truth',
+      SameStringArrays(LActualInfo.SubjectAltNames, LExpectedInfo.SubjectAltNames),
+      'Actual=' + FormatStringArray(LActualInfo.SubjectAltNames) +
+      ' Expected=' + FormatStringArray(LExpectedInfo.SubjectAltNames));
+
+    LFixturePath := ResolveRepoFixturePath(KEYUSAGE_FIXTURE);
+    Test('Resolve KeyUsage fixture path for metadata truth', LFixturePath <> '', KEYUSAGE_FIXTURE);
+    if LFixturePath = '' then
+      Exit;
+
+    Test('Load KeyUsage fixture into FreePascal metadata truth owner',
+      LTruthCert.LoadFromFile(LFixturePath), LFixturePath);
+    if not LTruthCert.LoadFromFile(LFixturePath) then
+      Exit;
+    Test('Load KeyUsage fixture into WinSSL metadata truth owner',
+      LCert.LoadFromFile(LFixturePath), LFixturePath);
+    if not LCert.LoadFromFile(LFixturePath) then
+      Exit;
+
+    LExpectedValues := LTruthCert.GetKeyUsage;
+    LActualValues := LCert.GetKeyUsage;
+    Test('KeyUsage fixture getter keeps parser key-usage truth',
+      SameStringArrays(LActualValues, LExpectedValues),
+      'Actual=' + FormatStringArray(LActualValues) + ' Expected=' + FormatStringArray(LExpectedValues));
+
+    LExpectedValues := LTruthCert.GetExtendedKeyUsage;
+    LActualValues := LCert.GetExtendedKeyUsage;
+    Test('KeyUsage fixture getter keeps parser extended-key-usage truth',
+      SameStringArrays(LActualValues, LExpectedValues),
+      'Actual=' + FormatStringArray(LActualValues) + ' Expected=' + FormatStringArray(LExpectedValues));
+
+    LExpectedInfo := LTruthCert.GetInfo;
+    LActualInfo := LCert.GetInfo;
+    Test('KeyUsage fixture GetInfo key-usage bitfield matches parser truth',
+      LActualInfo.KeyUsage = LExpectedInfo.KeyUsage,
+      'Actual=' + IntToHex(LActualInfo.KeyUsage, 4) + ' Expected=' + IntToHex(LExpectedInfo.KeyUsage, 4));
+  except
+    on E: Exception do
+      Test('WinSSL certificate metadata truth probe should not raise', False,
+        E.ClassName + ': ' + E.Message);
+  end;
+end;
+
 // ============================================================================
 // Callback Configuration Tests
 // ============================================================================
@@ -842,6 +1020,7 @@ begin
     TestCertificateManagement;
     TestGeneratedEd25519CertificateAlgorithmTruth;
     TestCertificateExtensionContract;
+    TestCertificateMetadataTruth;
     TestCallbackConfiguration;
     TestErrorHandling;
     TestUtilsModule;

@@ -211,6 +211,29 @@ begin
     AddToResult('decipherOnly');
 end;
 
+function X509KeyUsageToBitfield(const AUsage: TX509KeyUsage): Word;
+begin
+  Result := 0;
+  if kuDigitalSignature in AUsage then
+    Result := Result or $0080;
+  if kuNonRepudiation in AUsage then
+    Result := Result or $0040;
+  if kuKeyEncipherment in AUsage then
+    Result := Result or $0020;
+  if kuDataEncipherment in AUsage then
+    Result := Result or $0010;
+  if kuKeyAgreement in AUsage then
+    Result := Result or $0008;
+  if kuKeyCertSign in AUsage then
+    Result := Result or $0004;
+  if kuCRLSign in AUsage then
+    Result := Result or $0002;
+  if kuEncipherOnly in AUsage then
+    Result := Result or $0001;
+  if kuDecipherOnly in AUsage then
+    Result := Result or $8000;
+end;
+
 function X509ExtKeyUsageToStrings(const AUsage: TX509ExtKeyUsage): TSSLStringArray;
 
   procedure AddToResult(const AValue: string);
@@ -629,11 +652,7 @@ end;
 
 function TOpenSSLCertificate.GetInfo: TSSLCertificateInfo;
 var
-  SANs: TSSLStringArray;
-  KUList: TSSLStringArray;
-  I: Integer;
-  Item: string;
-  PathLen: LongInt;
+  LParser: TX509Certificate;
 begin
   FillChar(Result, SizeOf(Result), 0);
   Result.Subject := GetSubject;
@@ -643,57 +662,39 @@ begin
   Result.NotAfter := GetNotAfter;
   Result.FingerprintSHA1 := GetFingerprintSHA1;
   Result.FingerprintSHA256 := GetFingerprintSHA256;
-  Result.PublicKeyAlgorithm := GetPublicKeyAlgorithm;
-  Result.SignatureAlgorithm := GetSignatureAlgorithm;
   Result.Version := GetVersion;
-  Result.IsCA := IsCA;
-
-  // 路径长度约束（Basic Constraints）
   Result.PathLength := -1;
   Result.PathLenConstraint := -1;
-  if Assigned(X509_get_pathlen) and (FX509 <> nil) then
-  begin
-    PathLen := X509_get_pathlen(FX509);
-    // PathLen >= 0 表示显式的 pathLenConstraint；-1 表示无此约束；其他负值视为未知/错误
-    if PathLen >= 0 then
-    begin
-      Result.PathLength := PathLen;
-      Result.PathLenConstraint := PathLen;
-    end;
-  end;
-
-  // KeyUsage 位掩码：从字符串列表映射到 X509v3_KU_* 常量
   Result.KeyUsage := 0;
-  KUList := GetKeyUsage;
-  for I := 0 to Length(KUList) - 1 do
+
+  if TryLoadParsedOpenSSLCertificate(Self, LParser) then
   begin
-    Item := Trim(KUList[I]);
-    if Item = '' then
-      Continue;
+    try
+      Result.PublicKeyAlgorithm := LParser.PublicKeyInfo.Algorithm.Name;
+      if Result.PublicKeyAlgorithm = '' then
+        Result.PublicKeyAlgorithm := LParser.PublicKeyInfo.Algorithm.OID;
 
-    if SameText(Item, 'digitalSignature') or SameText(Item, 'Digital Signature') then
-      Result.KeyUsage := Result.KeyUsage or X509v3_KU_DIGITAL_SIGNATURE
-    else if SameText(Item, 'nonRepudiation') or SameText(Item, 'Non Repudiation') or
-            SameText(Item, 'contentCommitment') then
-      Result.KeyUsage := Result.KeyUsage or X509v3_KU_NON_REPUDIATION
-    else if SameText(Item, 'keyEncipherment') or SameText(Item, 'Key Encipherment') then
-      Result.KeyUsage := Result.KeyUsage or X509v3_KU_KEY_ENCIPHERMENT
-    else if SameText(Item, 'dataEncipherment') or SameText(Item, 'Data Encipherment') then
-      Result.KeyUsage := Result.KeyUsage or X509v3_KU_DATA_ENCIPHERMENT
-    else if SameText(Item, 'keyAgreement') or SameText(Item, 'Key Agreement') then
-      Result.KeyUsage := Result.KeyUsage or X509v3_KU_KEY_AGREEMENT
-    else if SameText(Item, 'keyCertSign') or SameText(Item, 'Key Cert Sign') then
-      Result.KeyUsage := Result.KeyUsage or X509v3_KU_KEY_CERT_SIGN
-    else if SameText(Item, 'cRLSign') or SameText(Item, 'CRL Sign') then
-      Result.KeyUsage := Result.KeyUsage or X509v3_KU_CRL_SIGN
-    else if SameText(Item, 'encipherOnly') or SameText(Item, 'Encipher Only') then
-      Result.KeyUsage := Result.KeyUsage or X509v3_KU_ENCIPHER_ONLY
-    else if SameText(Item, 'decipherOnly') or SameText(Item, 'Decipher Only') then
-      Result.KeyUsage := Result.KeyUsage or X509v3_KU_DECIPHER_ONLY;
+      Result.SignatureAlgorithm := LParser.SignatureAlgorithm.Name;
+      if Result.SignatureAlgorithm = '' then
+        Result.SignatureAlgorithm := LParser.SignatureAlgorithm.OID;
+
+      Result.PublicKeySize := LParser.PublicKeyInfo.KeySize;
+      Result.IsCA := LParser.IsCA;
+      Result.PathLenConstraint := LParser.BasicConstraints.PathLenConstraint;
+      Result.PathLength := LParser.BasicConstraints.PathLenConstraint;
+      Result.KeyUsage := X509KeyUsageToBitfield(LParser.KeyUsage);
+      Result.SubjectAltNames := X509SubjectAltNamesToStrings(LParser.SubjectAltNames);
+    finally
+      LParser.Free;
+    end;
+  end
+  else
+  begin
+    Result.PublicKeyAlgorithm := GetPublicKeyAlgorithm;
+    Result.SignatureAlgorithm := GetSignatureAlgorithm;
+    Result.IsCA := IsCA;
+    Result.SubjectAltNames := GetSubjectAltNames;
   end;
-
-  SANs := GetSubjectAltNames;
-  Result.SubjectAltNames := SANs;
 end;
 
 function TOpenSSLCertificate.GetSubject: string;

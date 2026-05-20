@@ -10,6 +10,109 @@
 
 ## Current Status
 
+- [completed] `main backends certificate metadata truth alignment`
+  当前 focused 目标：
+  - 把主 backend
+    `ISSLCertificate`
+    证书元数据读取面
+    继续收口到一致的 public truth，
+    重点解决：
+    - shared parser
+      仍漏
+      IPv6 SAN
+      truth
+    - `OpenSSL.GetInfo`
+      仍漏
+      `PublicKeySize`
+    - `WinSSL`
+      SAN / EKU / `GetInfo`
+      仍和 shared parser truth
+      分裂
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-main-backends-certificate-metadata-truth-alignment.md`
+  - 新增 focused test / fixture：
+    - `tests/certs/san-rich.pem`
+    - `tests/openssl/test_openssl_certificate_metadata_truth.pas`
+    - `tests/scripts/test_winssl_certificate_metadata_truth_contract.sh`
+  - 扩 runtime proof：
+    - `tests/winssl/test_winssl_unit_comprehensive.pas`
+  - 修改实现：
+    - `src/fafafa.ssl.x509.pas`
+    - `src/fafafa.ssl.openssl.certificate.pas`
+    - `src/fafafa.ssl.winssl.certificate.pas`
+    - `docs/reference/ARCHITECTURE.md`
+  当前实施判断：
+  - shared
+    `TX509Certificate`
+    在
+    `subjectAltName`
+    的
+    `ContextTag(7)`
+    分支此前只支持
+    IPv4，
+    这会让所有 parser-backed backend
+    对 rich SAN fixture
+    丢失 IPv6 truth
+  - 所以正确顺序不是盲目把
+    `WinSSL SAN`
+    切到 parser-first，
+    而是：
+    - 先修 shared parser
+      的 IPv6 SAN
+    - 再让
+      `OpenSSL.GetInfo`
+      /
+      `WinSSL SAN/KU/EKU/GetInfo`
+      回收到 parser-backed truth
+  - `WinSSL`
+    原生 fallback
+    还残留：
+    - SAN
+      只发
+      `DNS/IP`
+    - EKU
+      发
+      `OID + friendly name`
+    - `GetInfo`
+      漏
+      `PublicKeySize`
+      /
+      `PathLength`
+      /
+      `PathLenConstraint`
+      /
+      `KeyUsage`
+  当前 focused proof：
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_openssl_certificate_metadata_truth_units -FEtmp/test_openssl_certificate_metadata_truth_bin -otmp/test_openssl_certificate_metadata_truth_bin/test_openssl_certificate_metadata_truth tests/openssl/test_openssl_certificate_metadata_truth.pas`
+    - PASS
+  - `./tmp/test_openssl_certificate_metadata_truth_bin/test_openssl_certificate_metadata_truth`
+    - PASS
+  - `bash -n tests/scripts/test_winssl_certificate_metadata_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_winssl_certificate_metadata_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前状态：
+  - shared parser
+    现已补齐
+    IPv6 SAN
+    文本 truth
+  - `OpenSSL.GetInfo`
+    现已复用 parser snapshot，
+    不再漏
+    `PublicKeySize`
+  - `WinSSL`
+    现已优先发布 parser-backed
+    SAN / KU / EKU / `GetInfo`
+    truth，
+    native decode
+    仅保留为 fallback
+  - push 后只需要继续看：
+    - `CI`
+    - `WinSSL Runtime Gate`
+
 - [completed] `main backends certificate extension contract alignment`
   当前 focused 目标：
   - 把主 backend

@@ -6,6 +6,108 @@
 
 ## 2026-05-21
 
+### Main Backends Certificate Metadata Truth Alignment
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-main-backends-certificate-metadata-truth-alignment.md`
+  - `tests/certs/san-rich.pem`
+  - `tests/openssl/test_openssl_certificate_metadata_truth.pas`
+  - `tests/scripts/test_winssl_certificate_metadata_truth_contract.sh`
+  - change:
+    - recorded a bounded main-backend
+      certificate metadata truth batch
+    - fixed a rich SAN fixture
+      that covers
+      `DNS`
+      /
+      `IP`
+      /
+      `email`
+      /
+      `URI`
+      together
+
+- existing RED from this batch:
+  - `bash tests/scripts/test_winssl_certificate_metadata_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - captured the intended RED:
+        `WinSSL GetInfo still misses parser-backed metadata fields`
+      - confirmed
+        `WinSSL`
+        source still lacked
+        `Result.PublicKeySize :=`
+        and other snapshot projections
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_openssl_certificate_metadata_truth_units -FEtmp/test_openssl_certificate_metadata_truth_bin -otmp/test_openssl_certificate_metadata_truth_bin/test_openssl_certificate_metadata_truth tests/openssl/test_openssl_certificate_metadata_truth.pas`
+    - compile: PASS
+  - `./tmp/test_openssl_certificate_metadata_truth_bin/test_openssl_certificate_metadata_truth`
+    - result: FAIL
+    - summary:
+      - captured the intended RED:
+        `ECDSA CA fixture GetInfo exposes public-key size truth`
+        with
+        `Actual=0 Expected=256`
+      - the same batch also exposed a deeper shared-truth hole:
+        parser-backed SAN truth owner
+        was missing the IPv6 SAN
+        from the new rich fixture
+
+- update implementation:
+  - `src/fafafa.ssl.x509.pas`
+  - `src/fafafa.ssl.openssl.certificate.pas`
+  - `src/fafafa.ssl.winssl.certificate.pas`
+  - `docs/reference/ARCHITECTURE.md`
+  - change:
+    - shared
+      `TX509Certificate`
+      SAN parser
+      now emits IPv6
+      `iPAddress`
+      truth
+    - `OpenSSL.GetInfo`
+      now reuses parser snapshot for
+      `PublicKeySize`
+      /
+      `IsCA`
+      /
+      `PathLength`
+      /
+      `PathLenConstraint`
+      /
+      `KeyUsage`
+      /
+      `SubjectAltNames`
+    - `WinSSL`
+      now adds local parser-backed projection helpers and prefers parser truth for:
+      - `GetSubjectAltNames`
+      - `GetKeyUsage`
+      - `GetExtendedKeyUsage`
+      - `GetInfo`
+    - `WinSSL`
+      native fallback
+      no longer publishes
+      `OID + friendly name`
+      EKU drift
+    - architecture doc
+      now reflects parser-backed SAN truth instead of removed pretty-print fallback wording
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_openssl_certificate_metadata_truth_units -FEtmp/test_openssl_certificate_metadata_truth_bin -otmp/test_openssl_certificate_metadata_truth_bin/test_openssl_certificate_metadata_truth tests/openssl/test_openssl_certificate_metadata_truth.pas`
+- `./tmp/test_openssl_certificate_metadata_truth_bin/test_openssl_certificate_metadata_truth`
+- `bash -n tests/scripts/test_winssl_certificate_metadata_truth_contract.sh`
+- `bash tests/scripts/test_winssl_certificate_metadata_truth_contract.sh`
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - OpenSSL metadata contract
+      compile + runtime
+      are both green
+    - WinSSL source/runtime static contract
+      is green
+    - patch formatting is clean
+    - remaining proof after push is the existing
+      GitHub Windows runtime lane,
+      not another local re-run
+
 ### Main Backends Certificate Extension Contract Alignment
 
 - add focused batch inputs:

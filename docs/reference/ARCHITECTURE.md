@@ -194,11 +194,14 @@ TBaseSSLConnection (676 lines)
   - WinSSL 后端使用 `FileTimeToSystemTime` → `SystemTimeToDateTime` 解析 `CERT_INFO.NotBefore/NotAfter`，两端最终都返回正常的 `TDateTime`，并在 `TSSLCertificateInfo.NotBefore/NotAfter` 中对齐语义。
 
 - **subjectAltName（SAN）扩展**
-  - OpenSSL 简化后端（`fafafa.ssl.openssl.certificate`）优先通过 `X509_get_ext_d2i(..., NID_subject_alt_name, ...)` 解码为 `GENERAL_NAMES`，再枚举 `GENERAL_NAME` 条目：
+  - shared parser（`fafafa.ssl.x509`）会把 `subjectAltName` 统一投影成纯值数组，并覆盖：
+  - `dNSName` / `rfc822Name` / `uniformResourceIdentifier`；
+  - `iPAddress` 的 IPv4 与 IPv6 文本（例如 `127.0.0.1`、`2001:DB8:0:0:0:0:0:10`）。
+  - OpenSSL 简化后端（`fafafa.ssl.openssl.certificate`）在 native `GENERAL_NAMES` helper 可用时，会直接枚举 `GENERAL_NAME` 条目：
   - `GEN_DNS`/`GEN_EMAIL`/`GEN_URI` → 使用 ASN1 字符串工具转换为纯文本域名、邮箱、URI；
-  - `GEN_IPADD` → 按字节解析为 IPv4/IPv6 文本（如 `127.0.0.1`、`2001:db8::1`）。
-  - 如果运行环境缺少相关 X509v3/stack API，则回退到 `X509V3_EXT_print` 的文本输出并做简单字符串解析（兼容旧实现）。
-  - WinSSL 后端（`fafafa.ssl.winssl.certificate`）使用 `CertFindExtension(szOID_SUBJECT_ALT_NAME2, ...)` + `CryptDecodeObject` 解码为 `CERT_ALT_NAME_INFO`，当前已枚举 `CERT_ALT_NAME_DNS_NAME`、`CERT_ALT_NAME_IP_ADDRESS`、`CERT_ALT_NAME_RFC822_NAME`、`CERT_ALT_NAME_URL`，输出纯域名/IP/邮箱/URI，与 OpenSSL 一致。
+  - `GEN_IPADD` → 按字节解析为 IPv4/IPv6 文本；
+  - 若 native helper 不可用，则回退到 shared parser truth，而不是旧的 pretty-print 文本解析。
+  - WinSSL 后端（`fafafa.ssl.winssl.certificate`）优先复用 shared parser truth；native `CERT_ALT_NAME_INFO` 解码只作为 fallback，输出仍保持同一组纯域名/IP/邮箱/URI 值。
 - 抽象层约定：
   - `ISSLCertificate.GetSubjectAltNames` 始终返回 **不带前缀** 的主机名/IP/邮箱/URI 字符串（例如 `san-test.local`、`example.test`、`127.0.0.1`、`admin@example.test`、`spiffe://mesh/node`），不暴露 `DNS:` / `IP Address:` 等后端格式细节；
   - `TSSLCertificateInfo.SubjectAltNames` 为上述结果的只读快照，两后端语义保持一致，方便上层做主机名匹配或调试输出。

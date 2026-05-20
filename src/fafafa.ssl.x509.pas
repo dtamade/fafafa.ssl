@@ -941,6 +941,8 @@ var
   BitValue: Integer;
   J: Integer;
   SAN: TX509SubjectAltName;
+  SegValue: Word;
+  IPv6Value: string;
 begin
   for I := 0 to High(FExtensions) do
   begin
@@ -1036,7 +1038,20 @@ begin
                   // 转换 IP 地址
                   if Length(Child.RawData) = 4 then
                     SAN.Value := Format('%d.%d.%d.%d',
-                      [Child.RawData[0], Child.RawData[1], Child.RawData[2], Child.RawData[3]]);
+                      [Child.RawData[0], Child.RawData[1], Child.RawData[2], Child.RawData[3]])
+                  else if Length(Child.RawData) = 16 then
+                  begin
+                    IPv6Value := '';
+                    for BitValue := 0 to 7 do
+                    begin
+                      SegValue := (Word(Child.RawData[BitValue * 2]) shl 8) or
+                        Word(Child.RawData[BitValue * 2 + 1]);
+                      if BitValue > 0 then
+                        IPv6Value := IPv6Value + ':';
+                      IPv6Value := IPv6Value + IntToHex(SegValue, 1);
+                    end;
+                    SAN.Value := IPv6Value;
+                  end;
                 end;
 
                 if SAN.Value <> '' then

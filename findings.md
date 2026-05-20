@@ -2,6 +2,120 @@
 
 ## 2026-05-21
 
+- shared
+  `TX509Certificate`
+  在
+  `subjectAltName`
+  的
+  `iPAddress`
+  解析里此前只处理了
+  `Length=4`
+  的 IPv4，
+  没有处理
+  `Length=16`
+  的 IPv6；
+  这意味着 parser-backed truth owner
+  本身就会在 rich SAN fixture
+  上丢掉 IPv6 SAN
+
+- 因而这条线的正确修法顺序必须是：
+  - 先修 shared parser
+    的 IPv6 SAN truth
+  - 再让
+    `OpenSSL`
+    /
+    `WinSSL`
+    getter 与
+    `GetInfo`
+    回收到 parser-backed snapshot
+  - 否则如果先把
+    `WinSSL SAN`
+    切到 parser-first，
+    反而会把原先 native path
+    已能读出的 IPv6
+    也一起丢掉
+
+- `OpenSSL.GetInfo`
+  此前虽然 getter
+  已基本向 shared parser
+  对齐，
+  但
+  snapshot
+  仍是半套 native 投影：
+  - `PublicKeySize = 0`
+  - `PathLength`
+    /
+    `PathLenConstraint`
+    /
+    `KeyUsage`
+    /
+    `SubjectAltNames`
+    也没有统一绑定到同一份 parser snapshot
+
+- `WinSSL`
+  这条线暴露出的关键设计问题
+  不是“少几个 native case”
+  这么简单，
+  而是它把同一个
+  `ISSLCertificate`
+  surface
+  发布成了另一套 contract：
+  - SAN native path
+    只发
+    `DNS/IP`
+  - EKU native path
+    发
+    `OID + friendly name`
+  - `GetInfo`
+    只填
+    `SubjectAltNames`
+    而不填
+    `PublicKeySize`
+    /
+    `PathLength`
+    /
+    `PathLenConstraint`
+    /
+    `KeyUsage`
+
+- 这批收口后得到的 durable truth 是：
+  - shared parser
+    现在负责
+    IPv4 / IPv6 / email / URI
+    SAN
+    的统一纯值语义
+  - `OpenSSL`
+    /
+    `WinSSL`
+    在能加载 parser 时，
+    应优先把 getter
+    与
+    `GetInfo`
+    一起投影到同一份 parser snapshot
+  - native helper
+    只作为 fallback，
+    不能再继续发布另一套 pretty-text
+    /
+    OID+friendly-name
+    contract
+
+- `docs/reference/ARCHITECTURE.md`
+  之前也存在文档漂移：
+  - 仍写着
+    `OpenSSL`
+    会回退到
+    `X509V3_EXT_print`
+    文本解析
+  - 仍把
+    `WinSSL`
+    现状描述成已完整枚举
+    `RFC822/URL`
+    并与
+    `OpenSSL`
+    一致
+  - 实际源码 truth
+    直到这批收口前并非如此
+
 - 主 backend 的
   `ISSLCertificate.GetExtension`
   此前并不一致：
