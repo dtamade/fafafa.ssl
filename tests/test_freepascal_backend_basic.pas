@@ -82,6 +82,7 @@ var
   LIssuerVariant: string;
   LSerialCompact: string;
   LSerialVariant: string;
+  LFingerprintVariant: string;
   LCharIndex: Integer;
 begin
   WriteLn('Testing FreePascal backend registration and creation...');
@@ -244,6 +245,20 @@ begin
   AssertTrue(LStore.GetCertificate(0) <> nil, 'Certificate store should return certificate by index');
   AssertTrue(LStore.FindByFingerprint(LCert.GetFingerprintSHA256) <> nil,
     'Certificate store should find certificate by fingerprint');
+  LSerialCompact := StringReplace(StringReplace(UpperCase(LCert.GetFingerprintSHA256), ':', '', [rfReplaceAll]),
+    ' ', '', [rfReplaceAll]);
+  AssertTrue(LSerialCompact <> '',
+    'Loaded certificate should expose fingerprint for normalized fingerprint query contract');
+  LFingerprintVariant := '';
+  for LCharIndex := 1 to Length(LSerialCompact) do
+  begin
+    if (LCharIndex > 1) and (((LCharIndex - 1) mod 2) = 0) then
+      LFingerprintVariant := LFingerprintVariant + ':';
+    LFingerprintVariant := LFingerprintVariant + LowerCase(LSerialCompact[LCharIndex]);
+  end;
+  LFingerprintVariant := '  ' + LFingerprintVariant + '  ';
+  AssertTrue(LStore.FindByFingerprint(LFingerprintVariant) <> nil,
+    'Certificate store should find certificate by normalized fingerprint query');
 
   LSubjectVariant := BuildLooseDNQueryVariant('CN=Test Signer,O=Test Org');
   AssertTrue(LStore.FindBySubject(LSubjectVariant) <> nil,

@@ -11076,3 +11076,108 @@
        `ISSLCertificateStore`
        public-surface completeness
        查下一条活跃 doc/test/example residual
+121. `optional backends certificate store fingerprint query parity` 这批用于把 `MbedTLS` / `WolfSSL` 的 `FindByFingerprint` 收紧到与其他 backend 一致的 normalized query truth：
+   - 新 plan：
+     - `docs/plans/2026-05-21-optional-backends-certificate-store-fingerprint-query-parity.md`
+   - 当前新发现：
+     - `TMbedTLSCertificateStore.FindByFingerprint`
+       仍在拿
+       `GetFingerprintSHA1`
+       /
+       `GetFingerprintSHA256`
+       和输入做 raw-string compare
+     - `TWolfSSLCertificateStore.FindByFingerprint`
+       也还是同样的 raw-string compare
+     - 但：
+       - `OpenSSL`
+       - `FreePascal`
+       - `WinSSL`
+       已经都支持
+       去分隔符
+       /
+       大小写归一化
+   - 当前源码真相：
+     - `MbedTLS`
+       /
+       `WolfSSL`
+       两边都已经有：
+       - `NormalizeMbedTLSCertFingerprint(...)`
+       - `NormalizeWolfCertFingerprint(...)`
+     - 同一组 helper
+       已经用于：
+       - `Contains`
+       - `RemoveCertificate`
+       - chain de-dup
+     - 所以
+       `FindByFingerprint`
+       的 raw-string compare
+       是 public query residual，
+       不是 helper 缺失
+   - 当前最小修法：
+     - 先在：
+       - `tests/test_mbedtls_framework.pas`
+       - `tests/test_wolfssl_framework.pas`
+       - `tests/test_freepascal_backend_basic.pas`
+       补
+       normalized fingerprint query contract
+     - 再把
+       `TMbedTLSCertificateStore.FindByFingerprint`
+       /
+       `TWolfSSLCertificateStore.FindByFingerprint`
+       改成统一走现有 normalize helper
+   - 当前 focused proof：
+     - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`
+     - `./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+     - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas`
+     - `./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+     - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_freepascal_backend_basic_units -FEtmp/test_freepascal_backend_basic_units -otmp/test_freepascal_backend_basic_units/test_freepascal_backend_basic tests/test_freepascal_backend_basic.pas`
+     - `./tmp/test_freepascal_backend_basic_units/test_freepascal_backend_basic`
+     - `git diff --check`
+   - 当前最终收口证据：
+     - 首轮 RED：
+       - `MbedTLS`
+         只在
+         `FindByFingerprint supports normalized query variant`
+         失败
+       - `WolfSSL`
+         只在
+         `FindByFingerprint supports normalized query variant`
+         失败
+       - `FreePascal`
+         控制组继续通过
+     - 最小修复后：
+       - `MbedTLS Framework Test Summary`
+         `233 passed / 0 failed`
+       - `WolfSSL Framework Test Summary`
+         `247 passed / 0 failed`
+       - `FreePascal backend basic checks passed`
+   - 当前结论：
+     - 这批证明
+       `ISSLCertificateStore.FindByFingerprint`
+       在 optional backends
+       上确实还留着真实实现缺口，
+       现在已重新对齐到跨 backend 的 normalized query truth
+   - 当前总路线图进度：
+     - `接口设计`
+       继续从
+       “签名一致”
+       推进到
+       “查询语义也一致”
+     - `后端实现`
+       本批直接落在
+       `MbedTLS`
+       /
+       `WolfSSL`
+       实现收口
+     - `测试与文档`
+       新增：
+       - fingerprint query parity plan
+       - 三个 focused runtime/assertion proof
+   - 当前批收口后的默认下一步：
+     - 提交并推送本批
+     - 继续沿
+       `ISSLCertificate`
+       /
+       `ISSLCertificateStore`
+       public-surface completeness
+       查下一条真正的 backend implementation residual

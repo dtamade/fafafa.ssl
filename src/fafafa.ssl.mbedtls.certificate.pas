@@ -1890,13 +1890,23 @@ function TMbedTLSCertificateStore.FindByFingerprint(const AFingerprint: string):
 var
   I: Integer;
   LCert: ISSLCertificate;
+  LTarget: string;
 begin
   Result := nil;
+  LTarget := NormalizeMbedTLSCertFingerprint(AFingerprint);
+  if LTarget = '' then
+    Exit;
+
   for I := 0 to FCertificates.Count - 1 do
   begin
     LCert := FCertificates[I] as ISSLCertificate;
-    if (LCert.GetFingerprintSHA1 = AFingerprint) or
-      (LCert.GetFingerprintSHA256 = AFingerprint) then
+    if NormalizeMbedTLSCertFingerprint(LCert.GetFingerprintSHA256) = LTarget then
+    begin
+      Result := LCert;
+      Exit;
+    end;
+
+    if NormalizeMbedTLSCertFingerprint(LCert.GetFingerprintSHA1) = LTarget then
     begin
       Result := LCert;
       Exit;

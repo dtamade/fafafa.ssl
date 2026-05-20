@@ -10961,3 +10961,83 @@
     - 错接口
     - 错成员访问
     不再回流
+
+## 2026-05-21
+
+- 上一批 push 对应的
+  GitHub Actions run
+  `26176381529`
+  已确认全绿：
+  - `Code Quality (Light)`
+  - `Minimal Gate (Linux)`
+  - `FreePascal TLS 1.3 Completeness`
+
+- 顺着
+  `ISSLCertificate`
+  /
+  `ISSLCertificateStore`
+  public-surface completeness
+  继续往下扫时，
+  抓到了一条真正落在 backend implementation
+  而不是文档措辞上的 residual：
+  - `TMbedTLSCertificateStore.FindByFingerprint`
+    仍是 raw-string compare
+  - `TWolfSSLCertificateStore.FindByFingerprint`
+    也仍是 raw-string compare
+
+- 这条残差之所以可信，
+  是因为当前仓库其他 backend
+  已经都兑现了 normalized query truth：
+  - `OpenSSL`
+  - `FreePascal`
+  - `WinSSL`
+  都支持
+  去掉 `:`
+  /
+  `-`
+  /
+  空白并统一大小写
+
+- 更关键的是，
+  `MbedTLS`
+  /
+  `WolfSSL`
+  自己内部其实早就有：
+  - `NormalizeMbedTLSCertFingerprint(...)`
+  - `NormalizeWolfCertFingerprint(...)`
+  并已经用于：
+  - `Contains`
+  - `RemoveCertificate`
+  - chain de-dup
+
+- 所以当前不一致不是“能力做不到”，
+  而是 `FindByFingerprint`
+  这条 public query surface
+  没有接上现成 truth
+
+- focused RED 也非常干净：
+  - `MbedTLS`
+    只在
+    `FindByFingerprint supports normalized query variant`
+    失败
+  - `WolfSSL`
+    只在
+    `FindByFingerprint supports normalized query variant`
+    失败
+  - `FreePascal`
+    控制组继续通过
+
+- 因而这批最小正确修法
+  不是重开 store cache/index 设计，
+  而是直接把：
+  - `TMbedTLSCertificateStore.FindByFingerprint`
+  - `TWolfSSLCertificateStore.FindByFingerprint`
+  收回到现有 normalize helper
+
+- 修完后，
+  两个 optional backend
+  都已经重新对齐到：
+  - lower-case query
+  - 带 `:`
+  - 带首尾空白
+  仍能稳定命中同一张证书

@@ -921,6 +921,7 @@ var
   LChain: TSSLCertificateArray;
   LSerialCompact: string;
   LSerialVariant: string;
+  LFingerprintVariant: string;
   LCharIndex: Integer;
 begin
   WriteLn('');
@@ -955,6 +956,20 @@ begin
       Test('Remove clone should remove by fingerprint', LStore.RemoveCertificate(LStoreClone));
       Test('Store count returns to 0 after clone removal', LStore.GetCount = 0);
       Test('Re-add loaded cert returns true after clone removal', LStore.AddCertificate(LCert));
+
+      LSerialCompact := NormalizeHexish(LCert.GetFingerprintSHA256);
+      Test('Loaded fixture cert exposes fingerprint for normalized fingerprint query contract',
+        LSerialCompact <> '');
+      LFingerprintVariant := '';
+      for LCharIndex := 1 to Length(LSerialCompact) do
+      begin
+        if (LCharIndex > 1) and (((LCharIndex - 1) mod 2) = 0) then
+          LFingerprintVariant := LFingerprintVariant + ':';
+        LFingerprintVariant := LFingerprintVariant + LowerCase(LSerialCompact[LCharIndex]);
+      end;
+      LFingerprintVariant := '  ' + LFingerprintVariant + '  ';
+      Test('FindByFingerprint supports normalized query variant',
+        LStore.FindByFingerprint(LFingerprintVariant) <> nil);
 
       LSubjectVariant := UpperCase(StringReplace(StringReplace(LCert.GetSubject, ',', ' , ', [rfReplaceAll]),
         '=', ' = ', [rfReplaceAll]));

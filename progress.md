@@ -17863,6 +17863,73 @@
   - summary:
     - no whitespace or patch-format drift remains before commit
 
+## 2026-05-21
+
+### Optional Backends Certificate Store Fingerprint Query Parity
+
+- `gh run view 26176381529 --json status,conclusion,jobs,url`
+  - result: PASS
+  - summary:
+    - confirmed the previously pushed
+      `docs(winssl): align store active docs truth`
+      batch is now fully green in GitHub Actions:
+      - `Code Quality (Light)`
+      - `Minimal Gate (Linux)`
+      - `FreePascal TLS 1.3 Completeness`
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-optional-backends-certificate-store-fingerprint-query-parity.md`
+  - change:
+    - recorded a bounded optional-backend store-query batch around
+      `FindByFingerprint`
+      normalization parity
+    - added normalized fingerprint query assertions to:
+      - `tests/test_mbedtls_framework.pas`
+      - `tests/test_wolfssl_framework.pas`
+      - `tests/test_freepascal_backend_basic.pas`
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`
+- `./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas`
+- `./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_freepascal_backend_basic_units -FEtmp/test_freepascal_backend_basic_units -otmp/test_freepascal_backend_basic_units/test_freepascal_backend_basic tests/test_freepascal_backend_basic.pas`
+- `./tmp/test_freepascal_backend_basic_units/test_freepascal_backend_basic`
+  - result: RED -> GREEN
+  - summary:
+    - initial RED was perfectly focused:
+      - `MbedTLS` failed only on
+        `FindByFingerprint supports normalized query variant`
+      - `WolfSSL` failed only on
+        `FindByFingerprint supports normalized query variant`
+      - `FreePascal`
+        control proof continued to pass
+    - after the implementation patch:
+      - `MbedTLS Framework Test Summary`
+        became
+        `233 passed / 0 failed`
+      - `WolfSSL Framework Test Summary`
+        became
+        `247 passed / 0 failed`
+      - `FreePascal backend basic checks passed`
+
+- update implementation:
+  - `src/fafafa.ssl.mbedtls.certificate.pas`
+  - `src/fafafa.ssl.wolfssl.certificate.pas`
+  - change:
+    - `FindByFingerprint`
+      on both optional backends
+      now normalizes:
+      - input query
+      - candidate SHA256 fingerprint
+      - candidate SHA1 fingerprint
+    - empty normalized fingerprint query now returns `nil`
+    - the patch reuses the existing backend-local normalize helpers instead of adding a new cache/index family
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains before commit
+
 ### Optional Backends Certificate Stream/Memory Truth
 
 - add focused batch inputs:
