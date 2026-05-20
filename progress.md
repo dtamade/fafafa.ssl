@@ -17987,3 +17987,95 @@
   - result: PASS
   - summary:
     - no whitespace or patch-format drift remains before commit
+
+### Managed Result Init Safety Wave 3
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-20-managed-result-init-safety-wave3.md`
+  - `tests/scripts/test_managed_result_init_safety_wave3_contract.sh`
+  - change:
+    - recorded the third managed-result-init batch around shared TLS13 primitive helpers and the constant-time byte select helper
+    - added a focused contract for:
+      - `CopyBytes(...)`
+      - `ConcatBytes(...)`
+      - `BuildTLS13HKDFLabel(...)`
+      - `HKDF_Expand_SHA256(...)`
+      - `HKDF_Expand_SHA384(...)`
+      - `TConstantTime.Select(...)`
+
+- `gh run view 26163273748 --json status,conclusion,jobs,url`
+  - result: PASS
+  - summary:
+    - the previous pushed batch
+      `fix(tls13): initialize managed byte results safely`
+      is now fully green in GitHub Actions:
+      - `Code Quality (Light)` = success
+      - `Minimal Gate (Linux)` = success
+      - `FreePascal TLS 1.3 Completeness` = success
+
+- `bash -n tests/scripts/test_managed_result_init_safety_wave3_contract.sh`
+- `bash tests/scripts/test_managed_result_init_safety_wave3_contract.sh`
+  - result: RED -> GREEN
+  - summary:
+    - initial RED failed on
+      `CopyBytes initializes empty TBytes result with nil before SetLength`
+    - after the implementation patch,
+      the contract surfaced one script-only robustness bug around function-body matching
+    - after tightening the regexes to match the real implementation bodies directly,
+      the full wave3 contract turned green
+
+- update implementation:
+  - `src/fafafa.ssl.tls13.primitives.pas`
+  - `src/fafafa.ssl.crypto.constant_time.pas`
+  - change:
+    - `CopyBytes(...)` now initializes `Result := nil` before `SetLength(...)`
+    - `ConcatBytes(...)` now initializes `Result := nil` before `SetLength(...)`
+    - `BuildTLS13HKDFLabel(...)` now starts from `Result := nil` instead of `SetLength(Result, 0)`
+    - `HKDF_Expand_SHA256(...)` / `HKDF_Expand_SHA384(...)` now initialize `Result := nil` at function entry and no longer use `SetLength(Result, 0)` in the zero-length fast path
+    - `TConstantTime.Select(...)` now initializes `Result := nil` before sizing the output buffer
+
+- `mkdir -p tmp/tls13_foundation_units tmp/tls13_foundation_bin tmp/constant_time_units tmp/constant_time_bin`
+  - result: PASS
+  - summary:
+    - prepared isolated compile outputs for the two focused verification binaries
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/tls13_foundation_units -FEtmp/tls13_foundation_bin -otest_tls13_foundation tests/test_tls13_foundation.pas`
+- `./tmp/tls13_foundation_bin/test_tls13_foundation`
+  - result: PASS
+  - summary:
+    - TLS 1.3 foundation checks remained green after the primitives-helper initialization fix
+    - compile output still shows other repo-wide warnings,
+      but the previous `tls13.primitives` managed-result warning set is gone
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/constant_time_units -FEtmp/constant_time_bin -otest_constant_time tests/unit/test_constant_time.pas`
+- `./tmp/constant_time_bin/test_constant_time`
+  - result: PARTIAL PASS
+  - summary:
+    - compile succeeded and no
+      `crypto.constant_time`
+      managed-result warning remained
+    - runtime functional assertions for:
+      - `CompareBytes`
+      - `CompareStrings`
+      - `Select`
+      - `IsZero`
+      all passed
+    - the suite still failed on its pre-existing statistical gate:
+      `Timing variance is acceptable`
+      with an observed
+      `Average time: 0.010 ms, Max deviation: 9900.0%`
+    - this points to a flaky timing benchmark threshold,
+      not to a behavior regression from the `Result := nil` patch
+
+- `python3 scripts/compile_all_modules.py 2>&1 | rg -n "tls13\\.primitives|crypto\\.constant_time|Warning:"`
+  - result: PASS
+  - summary:
+    - focused broader-compile grep reported:
+      - `[21/186] 编译 fafafa.ssl.tls13.primitives.pas... ✓ 成功`
+      - `[114/186] 编译 fafafa.ssl.crypto.constant_time.pas... ✓ 成功`
+    - no managed-result warning from either target unit appeared in the grep output
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains before commit

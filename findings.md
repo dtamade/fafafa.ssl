@@ -218,6 +218,71 @@
   - focused WinSSL test
     自己的
     `FormatVerifyState(...)`
+
+- `src/fafafa.ssl.tls13.primitives.pas`
+  与
+  `src/fafafa.ssl.crypto.constant_time.pas`
+  里这批 warning
+  和前两波是同一类根因：
+  - managed `TBytes` function result
+    在首次
+    `SetLength(Result, ...)`
+    前没有显式初始化
+  - 或零长度分支还在用
+    `SetLength(Result, 0)`
+    兜底
+
+- 这条线的最小正确修法仍然一致：
+  - 在函数入口先
+    `Result := nil`
+  - 再进行
+    `SetLength(...)`
+    或 append
+  - 零长度直接
+    `Exit`
+    或保持
+    `Result := nil`
+    即可
+
+- 这批修完后，
+  `python3 scripts/compile_all_modules.py | rg -n "tls13\\.primitives|crypto\\.constant_time|Warning:"`
+  的 focused grep
+  只剩：
+  - `[21/186] 编译 fafafa.ssl.tls13.primitives.pas... ✓ 成功`
+  - `[114/186] 编译 fafafa.ssl.crypto.constant_time.pas... ✓ 成功`
+  没再伴随这两个单元自己的
+  managed-result warning
+
+- `tests/unit/test_constant_time.pas`
+  当前不是稳定的回归门：
+  - 功能断言
+    包括
+    `TConstantTime.Select`
+    都是绿色
+  - 失败的是
+    `Timing variance is acceptable`
+    这条统计型检查
+  - 它使用
+    `GetTickCount64`
+    和
+    `MAX_DEVIATION = 0.05`
+    的粗粒度组合，
+    在快机器上会因为大量
+    `0ms/1ms`
+    采样而放大成伪失败
+
+- 因而当前更准确的 next queue 是：
+  - 如果继续沿 shared-helper warning 高 ROI 收口，
+    优先转到：
+    - `fafafa.ssl.tls13.keyschedule.pas(228,19)`
+    - `fafafa.ssl.tls13.clienthello.pas`
+      剩余那组 managed-result warning
+  - 如果要收测试稳定性债，
+    就把
+    `test_constant_time`
+    的 timing gate
+    独立成一个测试工程问题，
+    不要和实现层 warning 修复混在一起
     格式化
 
 - 与此同时，

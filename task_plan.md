@@ -10053,14 +10053,84 @@
        与
        `freepascal.session`
        这三条 managed-result warning 已收口
-     - 上一批 managed-result-init CI
-       `26162602230`
-       当前也至少保持：
+     - 上一批 managed-result-init push 后的主 CI
+       `26163273748`
+       现已完整 `success`：
        - `Code Quality (Light)` success
        - `Minimal Gate (Linux)` success
-       - `FreePascal TLS 1.3 Completeness` still running
+       - `FreePascal TLS 1.3 Completeness` success
    - 当前批收口后的默认下一步：
      - 继续优先清 shared/public implementation
        里同类真实 warning 残口
      - 若这条线收益开始下降，再切回
        `ISSLConnection` remaining generic entry classification
+111. `managed result init safety wave3` 这批用于继续把同类 warning 从 shared TLS13 primitives / constant-time helper 里收掉：
+   - 新 plan：
+     - `docs/plans/2026-05-20-managed-result-init-safety-wave3.md`
+   - 当前新发现：
+     - `src/fafafa.ssl.tls13.primitives.pas`
+       里的：
+       - `CopyBytes(...)`
+       - `ConcatBytes(...)`
+       - `BuildTLS13HKDFLabel(...)`
+       - `HKDF_Expand_SHA256(...)`
+       - `HKDF_Expand_SHA384(...)`
+       都还存在
+       managed `TBytes` result
+       在显式初始化前直接
+       `SetLength(...)`
+       或
+       `SetLength(Result, 0)`
+       的写法
+     - `src/fafafa.ssl.crypto.constant_time.pas`
+       的
+       `TConstantTime.Select(...)`
+       也存在同类写法
+   - 当前最小修法：
+     - 这些 shared helper
+       统一先
+       `Result := nil`
+       再进入长度分配
+       或 append 逻辑
+     - 零长度返回分支
+       不再通过未初始化 result 上的
+       `SetLength(Result, 0)`
+       兜底
+   - 当前 focused proof：
+     - `bash -n tests/scripts/test_managed_result_init_safety_wave3_contract.sh`
+     - `bash tests/scripts/test_managed_result_init_safety_wave3_contract.sh`
+     - `fpc ... tests/test_tls13_foundation.pas`
+     - `./tmp/tls13_foundation_bin/test_tls13_foundation`
+     - `fpc ... tests/unit/test_constant_time.pas`
+     - `./tmp/constant_time_bin/test_constant_time`
+     - `python3 scripts/compile_all_modules.py | rg -n "tls13\\.primitives|crypto\\.constant_time|Warning:"`
+   - 当前结论：
+     - `tls13.primitives`
+       与
+       `crypto.constant_time`
+       这批 managed-result warning
+       已从 focused compile / broader compile grep 里收口
+     - `test_constant_time`
+       的
+       `Select`
+       功能断言保持绿色，
+       但整套测试仍带一个旧的统计型 timing gate：
+       - 基于
+         `GetTickCount64`
+       - 要求
+         `< 5%`
+         方差
+       这在快机器上会伪失败，
+       属于独立的测试稳定性问题，
+       不是这批初始化修复带来的行为回归
+   - 当前批收口后的默认下一步：
+     - 若继续沿 warning ROI 前进，
+       优先看：
+       - `fafafa.ssl.tls13.keyschedule.pas(228,19)`
+       - `fafafa.ssl.tls13.clienthello.pas`
+         剩余那组 managed-result warning
+     - 若要切回更高层 completeness 主线，
+       则回到：
+       - `ISSLConnection`
+       - `TSSLConfig`
+       - `ISSLServerConnection`

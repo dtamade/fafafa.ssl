@@ -56,6 +56,7 @@ const
 
 function CopyBytes(const AData: TBytes): TBytes;
 begin
+  Result := nil;
   SetLength(Result, Length(AData));
   if Length(AData) > 0 then
     Move(AData[0], Result[0], Length(AData));
@@ -67,6 +68,7 @@ var
 begin
   LLeftLen := Length(ALeft);
   LRightLen := Length(ARight);
+  Result := nil;
   SetLength(Result, LLeftLen + LRightLen);
 
   if LLeftLen > 0 then
@@ -98,7 +100,7 @@ begin
   for I := 1 to LLabelLen do
     LLabelBytes[I - 1] := Byte(LFullLabel[I]);
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendUInt16(Result, Word(ALength));
   AppendByte(Result, Byte(LLabelLen));
   AppendBytes(Result, LLabelBytes);
@@ -204,14 +206,13 @@ var
   LT, LPreviousT, LInput, LTemp: TBytes;
   LOffset, LCopyLen: Integer;
 begin
+  Result := nil;
+
   if ALength < 0 then
     RaiseInvalidParameter('HKDFExpandLength');
 
   if ALength = 0 then
-  begin
-    SetLength(Result, 0);
     Exit;
-  end;
 
   if Length(APRK) < SHA256_DIGEST_SIZE then
     RaiseInvalidParameter('HKDFExpandPRK');
@@ -250,14 +251,13 @@ var
   LT, LPreviousT, LInput, LTemp: TBytes;
   LOffset, LCopyLen: Integer;
 begin
+  Result := nil;
+
   if ALength < 0 then
     RaiseInvalidParameter('HKDFExpandLength');
 
   if ALength = 0 then
-  begin
-    SetLength(Result, 0);
     Exit;
-  end;
 
   if Length(APRK) < SHA384_DIGEST_SIZE then
     RaiseInvalidParameter('HKDFExpandPRK');

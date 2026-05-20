@@ -204,6 +204,7 @@ begin
   if Length(IfTrue) <> Length(IfFalse) then
     raise ESSLException.Create('Select requires equal-length arrays');
   
+  Result := nil;
   SetLength(Result, Length(IfTrue));
   
   // Constant-time selection
