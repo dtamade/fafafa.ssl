@@ -13,6 +13,7 @@ program test_error_mapping_contract;
 
 uses
   SysUtils, Classes,
+  fafafa.ssl,
   fafafa.ssl.base,
   fafafa.ssl.factory,
   fafafa.ssl.exceptions,
@@ -82,8 +83,8 @@ begin
     'GetLastErrorString crashed or returned nil');
 
   // SSLErrorToString should map known error codes
-  Check(ABackendName + ': SSLErrorToString maps sslErrOK',
-    SSLErrorToString(sslErrOK) <> '');
+  Check(ABackendName + ': SSLErrorToString maps sslErrNone',
+    SSLErrorToString(sslErrNone) <> '');
   Check(ABackendName + ': SSLErrorToString maps sslErrNotInitialized',
     SSLErrorToString(sslErrNotInitialized) <> '');
   Check(ABackendName + ': SSLErrorToString maps sslErrLoadFailed',

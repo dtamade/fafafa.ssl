@@ -6,6 +6,75 @@
 
 ## 2026-05-21
 
+### Error Mapping Contract Enum And Registration Alignment
+
+- inspect fresh RED from focused contract compile:
+  - `tests/contract/test_error_mapping_contract.pas`
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.errors.pas`
+  - `src/fafafa.ssl.pas`
+  - change:
+    - confirmed the compile failure came from
+      `sslErrOK`
+      no longer existing in current
+      `TSSLErrorCode`
+    - confirmed the current no-error truth is
+      `sslErrNone`
+    - confirmed the test did not explicitly pull a backend registration path
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-error-mapping-contract-enum-and-registration-alignment.md`
+  - `tests/scripts/test_error_mapping_contract_enum_and_registration_guard.sh`
+  - change:
+    - documented the batch as a compile/runtime truth repair
+    - added a static guard for:
+      - current no-error enum truth
+      - current facade registration path
+
+- repair error-mapping contract:
+  - `tests/contract/test_error_mapping_contract.pas`
+  - change:
+    - replaced
+      `SSLErrorToString(sslErrOK)`
+      with
+      `SSLErrorToString(sslErrNone)`
+    - added
+      `fafafa.ssl`
+      to the
+      `uses`
+      list so the test runs through the current facade registration path
+
+- verify static/runtime truth:
+  - `bash -n tests/scripts/test_error_mapping_contract_enum_and_registration_guard.sh`
+    - result: PASS
+  - `bash tests/scripts/test_error_mapping_contract_enum_and_registration_guard.sh`
+    - result: PASS
+    - summary:
+      - confirmed the contract keeps:
+        - `fafafa.ssl`
+        - `SSLErrorToString(sslErrNone)`
+      - confirmed the stale
+        `sslErrOK`
+        symbol is gone
+  - `mkdir -p tmp/test_error_mapping_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_error_mapping_contract -FEtmp/test_error_mapping_contract -otmp/test_error_mapping_contract/test_error_mapping_contract tests/contract/test_error_mapping_contract.pas && ./tmp/test_error_mapping_contract/test_error_mapping_contract`
+    - result: PASS
+    - summary:
+      - current Linux host
+        truly executes:
+        - `OpenSSL`
+        - `FreePascal`
+      - skipped:
+        - `MbedTLS`
+        - `WolfSSL`
+        - `WinSSL`
+      - final counters:
+        - `10 passed`
+        - `0 failed`
+        - `3 skipped`
+      - important conclusion:
+        - the old failure was stale enum truth + missing explicit registration path
+        - the contract is now back on current API/runtime truth
+
 ### Optional Backends PKCS12 Runtime FreePascal Coverage Completeness
 
 - inspect suspected focused-runtime coverage hole:

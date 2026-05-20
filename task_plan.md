@@ -10,6 +10,77 @@
 
 ## Current Status
 
+- [completed] `error mapping contract enum and registration alignment`
+  当前 focused 目标：
+  - 修复
+    `tests/contract/test_error_mapping_contract.pas`
+    当前的 fresh RED，
+    让它从
+    “旧符号导致编译失败”
+    收口成
+    “按当前 API truth
+    可编译、可运行、可覆盖当前可用 backend”
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-error-mapping-contract-enum-and-registration-alignment.md`
+  - 新增 contract：
+    - `tests/scripts/test_error_mapping_contract_enum_and_registration_guard.sh`
+  - 更新：
+    - `tests/contract/test_error_mapping_contract.pas`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_error_mapping_contract_enum_and_registration_guard.sh`
+    - PASS
+  - `bash tests/scripts/test_error_mapping_contract_enum_and_registration_guard.sh`
+    - PASS
+  - `tests/contract/test_error_mapping_contract.pas`
+    - PASS
+  当前状态：
+  - 这条 contract
+    不再使用已经不存在的
+    `sslErrOK`
+  - 当前 error-code truth
+    已对齐成：
+    - `sslErrNone`
+    - `sslErrNotInitialized`
+    - `sslErrLoadFailed`
+  - 测试现在也显式走
+    `fafafa.ssl`
+    主门面注册路径，
+    所以当前 Linux host
+    上不再只是“能编译”，
+    而是真实执行了：
+    - `OpenSSL`
+    - `FreePascal`
+  当前 runtime summary：
+  - `10 passed`
+  - `0 failed`
+  - `3 skipped`
+    - `MbedTLS`
+    - `WolfSSL`
+    - `WinSSL`
+  当前实施判断：
+  - 这批证明测试完整度主线
+    现在不仅要抓
+    coverage hole，
+    也要抓
+    contract 对当前 public truth
+    的枚举/入口漂移
+  当前路线图进度判断：
+  - 总路线继续保持不变：
+    - interface/implementation truth alignment
+    - backend implementation-completeness
+    - focused/shared proof completeness
+  - 当前又补齐了一条
+    cross-backend contract
+    的编译和 runtime 执行真相
+  下一刀：
+  - 继续优先排查：
+    - 仍含旧 public truth
+      命名的 contract
+    - 或虽然存在
+      但没有真正执行当前可用 backend
+      的 focused proofs
+
 - [completed] `optional backends pkcs12 runtime freepascal coverage completeness`
   当前 focused 目标：
   - 修复

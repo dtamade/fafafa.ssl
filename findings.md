@@ -2,6 +2,54 @@
 
 ## 2026-05-21
 
+- `tests/contract/test_error_mapping_contract.pas`
+  当前又暴露出一条更硬的
+  fresh RED：
+  它不是 runtime fail，
+  而是直接编译失败，
+  因为还在引用已经不存在的
+  `sslErrOK`
+
+- 当前 `TSSLErrorCode`
+  的 no-error 真相
+  是：
+  - `sslErrNone`
+  不是
+  - `sslErrOK`
+
+- 这说明：
+  error-mapping contract
+  已经从当前 public truth
+  漂开了一步，
+  不能再被当成
+  “现成可用的 focused proof”
+
+- 同时，
+  这条 contract
+  原本也没有显式走
+  backend registration path；
+  即便只把枚举名改对，
+  也仍可能退化成
+  “编过了，但实际全 skip”
+
+- 修复后，
+  当前 Linux host
+  上这条 contract
+  已经真实执行：
+  - `OpenSSL`
+  - `FreePascal`
+  并得到：
+  - `10 passed`
+  - `0 failed`
+  - `3 skipped`
+
+- 这批说明我们现在推进的
+  “测试完整”
+  不是只加更多测试文件，
+  而是把已有 contract
+  持续拉回当前 API truth
+  和真实 runtime execution path
+
 - `tests/test_optional_backends_pkcs12_capability_truth_contract.pas`
   里又暴露出一个典型的
   focused runtime coverage hole：
