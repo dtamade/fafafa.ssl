@@ -3,6 +3,65 @@
 ## 2026-05-20
 
 - optional backends
+  的 certificate store query family
+  继续往下收口后，
+  `FindByIssuer`
+  也暴露出
+  和前两条一样的
+  “原始字符串比较”问题
+
+- 这次如果继续用
+  self-signed fixture，
+  很容易把
+  `subject` / `issuer`
+  取错字段
+  也测不出来；
+  所以用
+  `signer_cert.pem`
+  这种 distinct-issuer fixture
+  是必要的
+
+- `MbedTLS` / `WolfSSL`
+  这批都证明：
+  当前 `FindByIssuer`
+  的真实缺口
+  不是“找不到证书 API”，
+  而是
+  issuer query
+  还没有进入 normalized text truth
+
+- 到这一批为止，
+  optional backends
+  的 store query family
+  已经形成一条更清晰的内部路线：
+  - `FindBySubject`
+  - `FindBySerialNumber`
+  - `FindByIssuer`
+  都应该至少先摆脱
+  原始展示字符串比较
+
+- 但这次也同时暴露出
+  更上层的接口设计债：
+  `FindByIssuer`
+  在全仓库范围内
+  仍然没有一个统一 canonical contract
+  - `FreePascal`
+    更像 exact match
+  - `OpenSSL` / `WinSSL`
+    更像 substring match
+  - optional backends
+    现在先被收口到
+    与自己当前 query family
+    更一致的 normalized substring truth
+
+- 也就是说，
+  这批修的是
+  “optional backends 不该再掉队”的实现问题，
+  不是
+  “全仓库 issuer-search 语义
+  已经最终统一”
+
+- optional backends
   的 certificate completeness
   继续往下收口后，
   public getter

@@ -556,6 +556,7 @@ var
   LCert: ISSLCertificate;
   LLib: ISSLLibrary;
   LSubjectVariant: string;
+  LIssuerVariant: string;
   LSerialCompact: string;
   LSerialVariant: string;
   LCharIndex: Integer;
@@ -605,6 +606,17 @@ begin
       Test('FindBySerialNumber supports normalized query variant', LStore.FindBySerialNumber(LSerialVariant) <> nil);
       Test('Remove loaded cert succeeds', LStore.RemoveCertificate(LCert));
       Test('Store count back to 0', LStore.GetCount = 0);
+
+      LCert := TMbedTLSCertificate.Create;
+      Test('Load distinct-issuer fixture for issuer query semantics',
+        LCert.LoadFromFile('tests/certificate/test_certs/signer_cert.pem'));
+      Test('Add distinct-issuer fixture returns true', LStore.AddCertificate(LCert));
+      LIssuerVariant := UpperCase(StringReplace(StringReplace(LCert.GetIssuer, ',', ' , ', [rfReplaceAll]),
+        '=', ' = ', [rfReplaceAll]));
+      Test('FindByIssuer supports normalized query variant', LStore.FindByIssuer(LIssuerVariant) <> nil);
+      Test('FindByIssuer empty query returns nil', LStore.FindByIssuer('') = nil);
+      Test('Remove distinct-issuer fixture succeeds', LStore.RemoveCertificate(LCert));
+      Test('Store count back to 0 after issuer query semantics', LStore.GetCount = 0);
       LLib.Finalize;
     end
     else

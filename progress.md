@@ -4,6 +4,64 @@
 
 ## 2026-05-20
 
+### Optional Backends Certificate Store Issuer Query Parity
+
+- `mcp__ace_tool__.search_context(...)`
+- `openssl x509 -in tests/certificate/test_certs/signer_cert.pem -noout -subject -issuer -serial`
+- `nl -ba src/fafafa.ssl.mbedtls.certificate.pas | sed -n '1538,1560p'`
+- `nl -ba src/fafafa.ssl.wolfssl.certificate.pas | sed -n '1433,1452p'`
+- `nl -ba src/fafafa.ssl.freepascal.lib.pas | sed -n '1205,1218p'`
+- `nl -ba src/fafafa.ssl.openssl.certstore.pas | sed -n '620,640p'`
+- `nl -ba src/fafafa.ssl.winssl.certstore.pas | sed -n '505,530p'`
+  - result: PASS
+  - summary:
+    - confirmed the next real optional-backend gap after subject/serial parity is issuer lookup normalization
+    - confirmed `signer_cert.pem` is the right distinct-issuer fixture:
+      - subject and issuer are different
+    - confirmed the higher-level design debt remains broader than this batch:
+      - `FreePascal` still behaves closer to exact match
+      - `OpenSSL` / `WinSSL` still behave closer to substring search
+
+- add focused plan/tests:
+  - `docs/plans/2026-05-20-optional-backends-certificate-store-issuer-query-parity.md`
+  - `tests/test_mbedtls_framework.pas`
+  - `tests/test_wolfssl_framework.pas`
+  - change:
+    - recorded a bounded issuer-query batch
+    - added contracts covering:
+      - normalized issuer query
+      - empty issuer query fail-closed
+
+- `mkdir -p tmp/test_mbedtls_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas && ./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+  - result: FAIL -> PASS
+  - summary:
+    - first RED surfaced one live implementation failure:
+      - `FindByIssuer supports normalized query variant`
+    - after aligning issuer lookup normalization:
+      - final result: `161 passed / 0 failed`
+
+- `mkdir -p tmp/test_wolfssl_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas && ./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+  - result: FAIL -> PASS
+  - summary:
+    - first RED surfaced the same remaining drift:
+      - `FindByIssuer supports normalized query variant`
+    - after aligning issuer lookup normalization:
+      - final result: `180 passed / 0 failed`
+
+- update implementation:
+  - `src/fafafa.ssl.mbedtls.certificate.pas`
+  - `src/fafafa.ssl.wolfssl.certificate.pas`
+  - change:
+    - `TMbedTLSCertificateStore`
+      now normalizes issuer queries before substring matching
+    - `TWolfSSLCertificateStore`
+      now normalizes issuer queries before substring matching
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remain after the issuer-query parity batch
+
 ### Optional Backends Certificate Store Query Parity
 
 - `mcp__ace_tool__.search_context(...)`

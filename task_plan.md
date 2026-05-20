@@ -10,6 +10,124 @@
 
 ## Current Status
 
+- [completed] `optional backends certificate store issuer query parity`
+  当前 focused 目标：
+  - 把
+    `MbedTLS` / `WolfSSL`
+    证书存储对象的
+    `FindByIssuer`
+    从原始字符串比较
+    收口到与当前 store query family
+    一致的可用程度
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-optional-backends-certificate-store-issuer-query-parity.md`
+  - 修改实现：
+    - `src/fafafa.ssl.mbedtls.certificate.pas`
+    - `src/fafafa.ssl.wolfssl.certificate.pas`
+  - 修改 focused tests：
+    - `tests/test_mbedtls_framework.pas`
+    - `tests/test_wolfssl_framework.pas`
+  当前预判：
+  - `MbedTLS` / `WolfSSL`
+    当前 `FindByIssuer`
+    都还是原始：
+    - `Pos(AIssuer, LCert.GetIssuer) > 0`
+  - 但上一批已经把
+    `FindBySubject` /
+    `FindBySerialNumber`
+    收口到 normalized query truth
+  - 所以当前最自然的 bounded 方向
+    不是立刻重定义
+    全仓库 issuer-search 契约，
+    而是先把 optional backends
+    收口到与自己同一家族 query surface
+    一致
+  当前验证策略：
+  - 用
+    `tests/certificate/test_certs/signer_cert.pem`
+    作为 distinct-issuer fixture，
+    避免
+    `subject = issuer`
+    把字段拿错也掩盖掉
+  - 继续只跑
+    framework focused tests
+  当前 done 条件：
+  - `MbedTLS` / `WolfSSL`
+    都支持 normalized issuer query
+  - empty issuer query
+    继续 fail-closed
+  - focused tests
+    通过
+  - `git diff --check`
+    通过
+  当前最终收口证据：
+  - `MbedTLS`
+    新增 issuer-query contract
+    首轮 RED
+    打出 1 个失败：
+    - `FindByIssuer supports normalized query variant`
+  - `WolfSSL`
+    同类 contract
+    首轮 RED
+    也打出 1 个失败：
+    - `FindByIssuer supports normalized query variant`
+  - GREEN 后证明：
+    - `TMbedTLSCertificateStore`
+      现在会对 issuer query
+      做归一化匹配
+    - `TWolfSSLCertificateStore`
+      现在也会对 issuer query
+      做归一化匹配
+  focused verification 已通过：
+  - `tests/test_mbedtls_framework.pas`: `161 passed / 0 failed`
+  - `tests/test_wolfssl_framework.pas`: `180 passed / 0 failed`
+  - `git diff --check`
+  当前结论：
+  - 这批继续收掉的是
+    optional backends
+    在 certificate store query family
+    上的实现缺口
+  - 但更上层的
+    “全仓库 `FindByIssuer` 契约”
+    仍然没有统一：
+    - `FreePascal`
+      仍偏 exact match
+    - `OpenSSL` / `WinSSL`
+      仍偏 substring match
+  当前总路线图进度：
+  - `发布/控制面`
+    已闭环，
+    当前不再是主阻塞
+  - `接口设计`
+    在 optional backend store query family
+    上已继续补齐，
+    但全局 issuer-search 语义
+    仍是下一层设计债
+  - `后端实现`
+    optional backends
+    的 certificate + certstore 族
+    已连续收口：
+    - `algorithm metadata`
+    - `extension metadata`
+    - `public surface`
+    - `identity getters`
+    - `store subject/serial parity`
+    - `store issuer parity`
+  - `测试与文档`
+    bounded batch
+    台账继续保持闭环
+  当前下一条真实工作：
+  - 先决定
+    `FindByIssuer`
+    的全仓库 canonical contract：
+    - exact normalized match
+    - 还是 substring match
+  - 如果暂不进入这条设计线，
+    再回到 certificate getter
+    的剩余直接疑点：
+    - `GetVersion`
+    但这条线需要先补非 v3 fixture
 - [completed] `optional backends certificate store query parity`
   当前 focused 目标：
   - 把

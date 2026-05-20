@@ -1434,12 +1434,17 @@ function TWolfSSLCertificateStore.FindByIssuer(const AIssuer: string): ISSLCerti
 var
   I: Integer;
   LCert: ISSLCertificate;
+  LTarget: string;
 begin
   Result := nil;
+  LTarget := NormalizeWolfCertText(AIssuer);
+  if LTarget = '' then
+    Exit;
+
   for I := 0 to FCertificates.Count - 1 do
   begin
     LCert := FCertificates[I] as ISSLCertificate;
-    if Pos(AIssuer, LCert.GetIssuer) > 0 then
+    if Pos(LTarget, NormalizeWolfCertText(LCert.GetIssuer)) > 0 then
     begin
       Result := LCert;
       Exit;
