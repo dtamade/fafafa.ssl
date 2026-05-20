@@ -16555,3 +16555,46 @@
   - change:
     - recorded the bounded WinSSL runtime closeout batch
     - scoped the fix to native full-DN extraction inside the store-query lane
+
+- `git diff --check`
+  - result: PASS
+
+- `git push origin master`
+  - result: PASS
+  - summary:
+    - pushed commit `77e55dc`
+      `fix(winssl): align certstore dn query contract`
+    - triggered:
+      - `CI` run `26140587184`
+      - `WinSSL Runtime Gate` run `26140587186`
+
+- `gh run view 26140587184 --json status,conclusion,jobs,url`
+  - result: PASS
+  - summary:
+    - current `CI` run completed with `conclusion=success`
+    - `Minimal Gate (Linux)` = PASS
+    - `FreePascal TLS 1.3 Completeness` = PASS
+    - `Code Quality (Light)` = PASS
+
+- `gh run view 26140587186 --job 76885107409 --log-failed`
+  - result: FAIL
+  - summary:
+    - the new WinSSL runtime run did not reach
+      `Run broader WinSSL runtime suite`
+    - it failed earlier in
+      `Run quick WinSSL smoke`
+      during compilation
+    - exact new errors:
+      - `src/fafafa.ssl.winssl.certstore.pas(265,64) Error: (3205) Illegal qualifier`
+      - `src/fafafa.ssl.winssl.certstore.pas(267,64) Error: (3205) Illegal qualifier`
+    - root cause:
+      - current `CERT_CONTEXT.pCertInfo`
+        is declared as bare `Pointer`
+      - the new code accessed it as if it were already
+        `PCERT_INFO`
+    - next mutation:
+      - explicitly cast
+        `LContext^.pCertInfo`
+        to `PCERT_INFO`
+        before reading
+        `Issuer` / `Subject`

@@ -247,12 +247,13 @@ begin
     Exit;
 
   SetLength(LBuffer, LWritten - 1);
-  Result := LBuffer;
+  Result := UTF8Encode(WideString(LBuffer));
 end;
 
 function GetCertificateStoreDNText(ACert: ISSLCertificate; AUseIssuer: Boolean): string;
 var
   LContext: PCCERT_CONTEXT;
+  LCertInfo: PCERT_INFO;
 begin
   Result := '';
   if ACert = nil then
@@ -261,10 +262,11 @@ begin
   LContext := PCCERT_CONTEXT(GetNativeHandleSafe(ACert, 'TWinSSLCertificateStore'));
   if (LContext <> nil) and (LContext^.pCertInfo <> nil) then
   begin
+    LCertInfo := PCERT_INFO(LContext^.pCertInfo);
     if AUseIssuer then
-      Result := CertNameBlobToX500String(@LContext^.pCertInfo^.Issuer)
+      Result := CertNameBlobToX500String(@LCertInfo^.Issuer)
     else
-      Result := CertNameBlobToX500String(@LContext^.pCertInfo^.Subject);
+      Result := CertNameBlobToX500String(@LCertInfo^.Subject);
   end;
 
   if Result <> '' then

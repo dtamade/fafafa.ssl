@@ -8780,3 +8780,21 @@
     `FindBySubject`
     / `FindByIssuer`
     回到 shared certstore contract
+126. `WinSSL` 这层 native 结构体还有一个容易踩坑的静态事实：
+  - `CERT_CONTEXT.pCertInfo`
+    在当前
+    `fafafa.ssl.winssl.base.pas`
+    里被声明成了裸 `Pointer`
+  - 所以调用点如果直接写：
+    - `LContext^.pCertInfo^.Issuer`
+    - `LContext^.pCertInfo^.Subject`
+    会在 Windows 编译期直接炸出
+    `Illegal qualifier`
+- 这不影响当前修复方向本身，
+  但说明 WinSSL native bridge
+  仍有一些旧声明
+  没有完全类型化；
+  调用点必须先显式转成
+  `PCERT_INFO`
+  再取
+  `Issuer` / `Subject`
