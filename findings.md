@@ -2,6 +2,76 @@
 
 ## 2026-05-21
 
+- 在
+  `session semantics residual sweep`
+  里，
+  当前最值钱的残留
+  已经不是
+  API 文档，
+  而是普通活跃 examples
+  仍在把读者带回
+  compatibility-core mirrors
+
+- 这批 examples residual
+  暴露出的不只是
+  owner-path drift，
+  还有一条真正的示例逻辑 bug：
+  - `examples/session_resumption_example.pas`
+    之前把所有
+    `SessionReused=False`
+    的后续连接
+    都打印成
+    `首次握手`
+  - 统计里也会把它们重新塞回
+    first-handshake bucket
+  - 结果就是：
+    一旦 warm resume 没命中，
+    示例输出和性能统计
+    都会继续误导
+
+- 所以这批最小正确动作
+  不是只改措辞，
+  而是同时收两层 truth：
+  - 普通活跃 examples
+    统一切回
+    `ISSLSessionResumption`
+    owner path
+  - `session_resumption_example`
+    运行输出和统计逻辑
+    也开始区分：
+    - first handshake
+    - observed reuse hit
+    - warm miss
+
+- 这条线收完之后，
+  session semantics
+  在当前活跃入口上的一致性
+  明显更高了：
+  - API/reference
+  - active guides
+  - generic examples
+  - high-entry user guide
+  现在都更少把
+  `SetSession(...)`
+  /
+  `candidate session`
+  混写成
+  `observed resumed handshake`
+
+- focused residual grep
+  也进一步证明：
+  当前活跃
+  `docs/examples/tests`
+  里的 direct-core session 命中
+  已基本只剩：
+  - intentional proof files
+  - 历史 / 当前 plan docs
+  这说明
+  `ISSLSessionResumption`
+  这条 ordinary guidance
+  已经不是“局部看起来收口”，
+  而是在高入口层面真实收得比较干净
+
 - 上一批
   `MbedTLS`
   /

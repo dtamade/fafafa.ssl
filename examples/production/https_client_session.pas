@@ -125,6 +125,7 @@ function DoSingleRequest(AContext: ISSLContext; const AHost, APath: string;
 var
   LConnection: ISSLConnection;
   LClientConn: ISSLClientConnection;
+  LResumption: ISSLSessionResumption;
   LSocket: TSocketHandle;
   LRequest: RawByteString;
   LStartTime: TDateTime;
@@ -154,7 +155,8 @@ begin
 
       // 检查会话是否被复用
       try
-        ASessionReused := LConnection.IsSessionReused;
+        ASessionReused := Supports(LConnection, ISSLSessionResumption, LResumption) and
+          LResumption.IsSessionReused;
       except
         // 某些实现可能不支持
       end;
@@ -321,7 +323,8 @@ begin
   WriteLn;
   WriteLn('说明:');
   WriteLn('  此示例对比使用和不使用会话复用时的性能差异。');
-  WriteLn('  会话复用可以显著减少TLS握手时间。');
+  WriteLn('  共享上下文与 session candidate 可能减少握手成本，但是否真的命中');
+  WriteLn('  恢复路径仍取决于 backend/目标主机/runtime truth。');
   WriteLn;
 end;
 
@@ -408,5 +411,4 @@ end;
 begin
   Main;
 end.
-
 

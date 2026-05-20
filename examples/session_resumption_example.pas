@@ -5,12 +5,13 @@ program session_resumption_example;
 {**
  * TLS 会话复用示例
  *
- * 演示如何使用会话复用来提升 TLS 连接性能
+ * 演示如何通过 `ISSLSessionResumption` owner path
+ * 保存 / 注入 session candidate，并观察当前运行里是否真的命中恢复路径。
  *
- * 性能对比：
- * - 首次握手：~1160ms (公网) / ~3.7ms (本地)
- * - 会话复用：~181ms (公网) / ~1ms (本地)
- * - 性能提升：6.4倍
+ * 注意：
+ * - 具体耗时和是否命中恢复路径取决于 backend、目标主机、网络路径、
+ *   TLS 版本以及服务器是否真的发放并接受可恢复的 session / ticket。
+ * - `SetSession(...)` 表示配置候选 session，不等于已经观测到 resumed handshake。
  *
  * 编译：
  *   fpc -Fusrc -Fusrc/openssl -o"examples/bin/session_resumption_example" \
@@ -94,6 +95,7 @@ function TestConnection(AContext: ISSLContext; AConnectionNum: Integer): Boolean
 var
   Sock: TSocketHandle;
   Conn: ISSLConnection;
+  Resumption: ISSLSessionResumption;
   TLS: TSSLStream;
   NetErr: string;
   StartTime, EndTime: QWord;
@@ -138,9 +140,14 @@ begin
     // 关键：必须在握手之前调用 SetSession
     if (AConnectionNum > 1) and (GSavedSession <> nil) then
     begin
-      WriteLn('  → 尝试恢复会话 (ID: ', Copy(GSavedSession.GetID, 1, 16), '...)');
-      Conn.SetSession(GSavedSession);
-      WriteLn('  → SetSession() 调用完成');
+      WriteLn('  → 尝试恢复会话候选 (ID: ', Copy(GSavedSession.GetID, 1, 16), '...)');
+      if Supports(Conn, ISSLSessionResumption, Resumption) then
+      begin
+        Resumption.SetSession(GSavedSession);
+        WriteLn('  → ISSLSessionResumption.SetSession() 调用完成');
+      end
+      else
+        WriteLn('  ⚠ 当前连接未暴露 ISSLSessionResumption，跳过 session candidate 注入');
     end
     else if (AConnectionNum > 1) and (GSavedSession = nil) then
     begin
@@ -184,13 +191,16 @@ begin
       GStats[StatIdx].EndTime := GetTickCount64MS;
       GStats[StatIdx].Duration := GStats[StatIdx].EndTime - StartTime;
 
-      // 通过 OpenSSL API 检查是否真正复用了会话
-      GStats[StatIdx].SessionReused := TLS.Connection.IsSessionReused;
+      // 通过 session owner path 读取当前握手是否真的命中恢复路径
+      GStats[StatIdx].SessionReused := Supports(TLS.Connection, ISSLSessionResumption,
+        Resumption) and Resumption.IsSessionReused;
 
       // 第一次连接成功后，保存会话供后续连接使用
       if (AConnectionNum = 1) and (GSavedSession = nil) then
       begin
-        GSavedSession := Conn.GetSession;
+        GSavedSession := nil;
+        if Supports(Conn, ISSLSessionResumption, Resumption) then
+          GSavedSession := Resumption.GetSession;
         if GSavedSession <> nil then
         begin
           WriteLn('  → 会话已保存');
@@ -200,16 +210,18 @@ begin
           WriteLn('     是否可复用: ', GSavedSession.IsResumable);
         end
         else
-          WriteLn('  ⚠ 警告: GetSession() 返回 nil');
+          WriteLn('  ⚠ 警告: ISSLSessionResumption.GetSession() 返回 nil');
       end;
 
       Result := True;
 
       Write('  [', AConnectionNum, '] 连接成功 - ', GStats[StatIdx].Duration, 'ms');
       if GStats[StatIdx].SessionReused then
-        WriteLn(' (会话复用)')
+        WriteLn(' (观测到恢复路径命中)')
+      else if AConnectionNum = 1 then
+        WriteLn(' (首次握手)')
       else
-        WriteLn(' (首次握手)');
+        WriteLn(' (未观测到恢复路径命中)');
     end
     else
     begin
@@ -241,7 +253,10 @@ var
   FirstHandshakeDuration: Int64;
   ResumedHandshakeCount: Integer;
   ResumedHandshakeTotalDuration: Int64;
+  WarmMissCount: Integer;
+  WarmMissTotalDuration: Int64;
   AvgResumedDuration: Double;
+  AvgWarmMissDuration: Double;
   Improvement: Double;
 begin
   WriteLn;
@@ -254,6 +269,8 @@ begin
   FirstHandshakeDuration := 0;
   ResumedHandshakeCount := 0;
   ResumedHandshakeTotalDuration := 0;
+  WarmMissCount := 0;
+  WarmMissTotalDuration := 0;
 
   for I := 0 to High(GStats) do
   begin
@@ -261,12 +278,17 @@ begin
     begin
       TotalDuration := TotalDuration + GStats[I].Duration;
 
-      if not GStats[I].SessionReused then
+      if I = 0 then
         FirstHandshakeDuration := GStats[I].Duration
-      else
+      else if GStats[I].SessionReused then
       begin
         Inc(ResumedHandshakeCount);
         ResumedHandshakeTotalDuration := ResumedHandshakeTotalDuration + GStats[I].Duration;
+      end
+      else
+      begin
+        Inc(WarmMissCount);
+        WarmMissTotalDuration := WarmMissTotalDuration + GStats[I].Duration;
       end;
     end;
   end;
@@ -285,7 +307,7 @@ begin
   if ResumedHandshakeCount > 0 then
   begin
     AvgResumedDuration := ResumedHandshakeTotalDuration / ResumedHandshakeCount;
-    WriteLn('会话复用 (', ResumedHandshakeCount, ' 次):');
+    WriteLn('观测到恢复路径命中 (', ResumedHandshakeCount, ' 次):');
     WriteLn('  平均耗时: ', AvgResumedDuration:0:2, 'ms');
     WriteLn('  总耗时: ', ResumedHandshakeTotalDuration, 'ms');
     WriteLn;
@@ -297,6 +319,15 @@ begin
       WriteLn('  ', Improvement:0:1, 'x 倍');
       WriteLn('  节省时间: ', FirstHandshakeDuration - Round(AvgResumedDuration), 'ms');
     end;
+  end;
+
+  if WarmMissCount > 0 then
+  begin
+    AvgWarmMissDuration := WarmMissTotalDuration / WarmMissCount;
+    WriteLn('未观测到恢复路径命中 (', WarmMissCount, ' 次):');
+    WriteLn('  平均耗时: ', AvgWarmMissDuration:0:2, 'ms');
+    WriteLn('  总耗时: ', WarmMissTotalDuration, 'ms');
+    WriteLn;
   end;
 
   WriteLn;
@@ -340,7 +371,7 @@ begin
     // 根据端口选择 TLS 版本：44330=TLS 1.2, 44331=TLS 1.3
     if GPort = 44331 then
     begin
-      WriteLn('使用 TLS 1.3（会话复用已完美支持）');
+      WriteLn('使用 TLS 1.3（是否命中恢复路径仍取决于运行时 truth）');
       Context := TSSLContextBuilder.Create
         .WithTLS13                   // 仅使用 TLS 1.3
         .WithVerifyNone              // 禁用证书验证（仅用于 localhost 测试）
@@ -350,7 +381,7 @@ begin
     end
     else
     begin
-      WriteLn('使用 TLS 1.2（会话复用已完美支持）');
+      WriteLn('使用 TLS 1.2（是否命中恢复路径仍取决于运行时 truth）');
       Context := TSSLContextBuilder.Create
         .WithTLS12                   // 仅使用 TLS 1.2
         .WithVerifyNone              // 禁用证书验证（仅用于 localhost 测试）
@@ -397,6 +428,6 @@ begin
     PrintStatistics;
 
   WriteLn;
-  WriteLn('提示: 使用会话复用可以显著提升性能！');
-  WriteLn('      首次连接建立会话，后续连接复用会话，减少握手开销。');
+  WriteLn('提示: 首次连接建立 session candidate 后，后续连接可以尝试恢复。');
+  WriteLn('      是否真的命中恢复路径，请以 IsSessionReused 的运行输出为准。');
 end.

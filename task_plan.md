@@ -10,6 +10,123 @@
 
 ## Current Status
 
+- [completed] `isslsessionresumption generic examples owner path`
+  当前 focused 目标：
+  - 把普通活跃 examples
+    里还在继续教学
+    direct core
+    `GetSession / SetSession / IsSessionReused`
+    的入口，
+    收口到
+    `ISSLSessionResumption`
+    owner path
+  - 同时修掉这批 session 示例里
+    “candidate path = observed truth”
+    的输出与统计误导
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-isslsessionresumption-generic-examples-owner-path.md`
+  - 新增 focused shell contract：
+    - `tests/scripts/test_isslsessionresumption_generic_examples_contract.sh`
+  - 修改普通活跃示例：
+    - `examples/session_reuse_example.pas`
+    - `examples/session_resumption_example.pas`
+    - `examples/https_client/https_client_session.pas`
+    - `examples/production/https_client_session.pas`
+  - 修改高入口通用文档：
+    - `docs/guides/USER_GUIDE.md`
+  当前实施判断：
+  - active docs/tests
+    这条 owner-path guidance
+    基本已经收口
+  - 但普通活跃 examples
+    仍会把读者带回：
+    - `Conn.SetSession(...)`
+    - `Conn.IsSessionReused`
+    - `Conn.GetSession`
+  - 更严重的是，
+    `session_resumption_example.pas`
+    还把后续未命中恢复路径的连接
+    继续打印成
+    `首次握手`
+    并错误卷进性能统计，
+    这已经不是 wording，
+    而是示例 truth bug
+  当前 focused proof：
+  - `bash -n tests/scripts/test_isslsessionresumption_generic_examples_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_isslsessionresumption_generic_examples_contract.sh`
+    - PASS
+  - `fpc -B -Fu./src -Fu./examples -FUtmp/example_session_reuse_example -FEtmp/example_session_reuse_example -otmp/example_session_reuse_example/session_reuse_example examples/session_reuse_example.pas`
+    - PASS
+  - `fpc -B -Fu./src -Fu./examples -FUtmp/example_session_resumption_example -FEtmp/example_session_resumption_example -otmp/example_session_resumption_example/session_resumption_example examples/session_resumption_example.pas`
+    - PASS
+  - `fpc -B -Fu./src -Fu./examples -FUtmp/example_https_client_session -FEtmp/example_https_client_session -otmp/example_https_client_session/https_client_session examples/https_client/https_client_session.pas`
+    - PASS
+  - `fpc -B -Fu./src -Fu./examples -FUtmp/example_production_https_client_session -FEtmp/example_production_https_client_session -otmp/example_production_https_client_session/https_client_session examples/production/https_client_session.pas`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前状态：
+  - 4 个普通活跃 session 示例
+    现在都优先走
+    `ISSLSessionResumption`
+    owner path
+  - `USER_GUIDE`
+    不再把
+    `IsSessionReused=True`
+    直接解释成
+    “握手更快”
+  - `session_resumption_example.pas`
+    现在会明确区分：
+    - 首次握手
+    - 观测到恢复路径命中
+    - 未观测到恢复路径命中
+    而不是把 warm miss
+    误报成
+    `首次握手`
+  - 这意味着
+    session semantics
+    这条线已经从：
+    - API 参考
+    - API 文档
+    - active guides
+    - ordinary examples
+    连成一条更一致的 owner truth
+  - focused residual grep
+    现在也显示：
+    - 活跃 `docs/examples/tests`
+      里的 direct-core session 命中
+      已基本只剩
+      intentional proof files
+      与 plan docs
+  当前总路线图进度：
+  - `接口设计`
+    继续从
+    “声明上有 owner surface”
+    推进到
+    “普通文档和普通示例也按 owner surface 教学”
+  - `实现完整性`
+    在
+    session semantics
+    这条线里，
+    当前更大的未闭合点
+    已从 ordinary guidance
+    收缩到真正的 backend/runtime gap
+  - `测试和文档`
+    多了一条 focused contract，
+    可以阻止普通活跃示例再次回退到 core mirrors
+  下一刀：
+  - 如果继续沿着
+    session semantics
+    收尾，
+    更值钱的是：
+    - repo-wide 再扫一遍 remaining direct-core session residual
+      把 intentional residual 和普通漂移彻底分开
+    - 或直接回到 backend/runtime gap，
+      继续审还有哪些实现层 truth
+      没被验证闭环
+
 - [completed] `mbedtls session resumption doc truth`
   当前 focused 目标：
   - 把

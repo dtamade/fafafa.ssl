@@ -6,6 +6,102 @@
 
 ## 2026-05-21
 
+### ISSLSessionResumption Generic Examples Owner Path
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-isslsessionresumption-generic-examples-owner-path.md`
+  - change:
+    - recorded a bounded owner-path batch around ordinary active session examples
+    - explicitly framed the problem as:
+      active docs already moved,
+      but ordinary examples still drifted back to direct core mirrors
+
+- inspect current residual examples + generic guide:
+  - `examples/session_reuse_example.pas`
+  - `examples/session_resumption_example.pas`
+  - `examples/https_client/https_client_session.pas`
+  - `examples/production/https_client_session.pas`
+  - `docs/guides/USER_GUIDE.md`
+  - change:
+    - confirmed all four active examples still used direct core
+      `GetSession / SetSession / IsSessionReused`
+      in ordinary guidance paths
+    - identified a real example-truth bug in
+      `session_resumption_example.pas`:
+      warm misses were still printed and bucketed as
+      `首次握手`
+
+- update examples + add focused contract:
+  - `examples/session_reuse_example.pas`
+  - `examples/session_resumption_example.pas`
+  - `examples/https_client/https_client_session.pas`
+  - `examples/production/https_client_session.pas`
+  - `docs/guides/USER_GUIDE.md`
+  - `tests/scripts/test_isslsessionresumption_generic_examples_contract.sh`
+  - change:
+    - migrated ordinary example session flows to
+      `ISSLSessionResumption`
+      owner path
+    - tightened the high-entry user-guide wording from
+      `会话已复用 - 握手更快！`
+      to a precise
+      `当前握手命中了恢复路径。`
+    - fixed
+      `session_resumption_example`
+      to distinguish:
+      - first handshake
+      - observed reuse hit
+      - warm miss
+    - removed example-level overclaims like
+      `会话复用已完美支持`
+      /
+      `显著提升性能`
+      when current runtime truth may not prove them
+
+- focused verification:
+  - `bash -n tests/scripts/test_isslsessionresumption_generic_examples_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_isslsessionresumption_generic_examples_contract.sh`
+    - result: PASS
+    - summary:
+      - generic examples and the high-entry user guide now stay on
+        `ISSLSessionResumption`
+        owner truth
+  - `fpc -B -Fu./src -Fu./examples -FUtmp/example_session_reuse_example -FEtmp/example_session_reuse_example -otmp/example_session_reuse_example/session_reuse_example examples/session_reuse_example.pas`
+    - result: PASS
+  - `fpc -B -Fu./src -Fu./examples -FUtmp/example_session_resumption_example -FEtmp/example_session_resumption_example -otmp/example_session_resumption_example/session_resumption_example examples/session_resumption_example.pas`
+    - result: PASS
+  - `fpc -B -Fu./src -Fu./examples -FUtmp/example_https_client_session -FEtmp/example_https_client_session -otmp/example_https_client_session/https_client_session examples/https_client/https_client_session.pas`
+    - result: PASS
+  - `fpc -B -Fu./src -Fu./examples -FUtmp/example_production_https_client_session -FEtmp/example_production_https_client_session -otmp/example_production_https_client_session/https_client_session examples/production/https_client_session.pas`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+    - summary:
+      - no whitespace or patch-format drift remains after the examples owner-path batch
+
+- next queue impact:
+  - active session semantics
+    这条线现在已经从：
+    - API/reference
+    - guides
+    - generic examples
+    形成更一致的 owner-path truth
+  - focused residual grep:
+    - `rg -lP '\b(?:Conn|LConn|Conn1|Conn2|LConnection|TLS\.Connection|InitialStream\.Connection|ResumedConn|InitialConn)\.(?:GetSession|SetSession|IsSessionReused)\b' docs examples tests --glob '!docs/archive/**' --glob '!tests/scripts/**' | sort`
+    - result:
+      - active hits now narrowed to:
+        - plan docs
+        - `tests/contract/test_backend_contract.pas`
+        - `tests/test_mbedtls_connection_session_reused_contract.pas`
+        - `tests/test_openssl_connection_session_reused_contract.pas`
+    - summary:
+      - ordinary active docs/examples no longer showed fresh direct-core session drift
+  - 后续如果继续深挖这条线，
+    更值钱的是：
+    - repo-wide classify remaining direct-core session residuals
+    - or move back to backend/runtime gaps instead of reopening ordinary examples
+
 ### MbedTLS Session Resumption Doc Truth
 
 - add focused batch inputs:

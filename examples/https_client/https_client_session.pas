@@ -88,6 +88,7 @@ function ExecuteRequest(AContext: ISSLContext; const AHost, APath: string;
 var
   LConnection: ISSLConnection;
   LClientConn: ISSLClientConnection;
+  LResumption: ISSLSessionResumption;
   LRequest: RawByteString;
   LSession: ISSLSession;
   LStart: TDateTime;
@@ -108,10 +109,11 @@ begin
     if Supports(LConnection, ISSLClientConnection, LClientConn) then
       LClientConn.SetServerName(AHost);
 
-    if (AReuseSession) and (ACachedSession <> nil) then
+    if (AReuseSession) and (ACachedSession <> nil) and
+       Supports(LConnection, ISSLSessionResumption, LResumption) then
     begin
       try
-        LConnection.SetSession(ACachedSession);
+        LResumption.SetSession(ACachedSession);
       except
         on E: Exception do
           WriteLn('  ⚠ 无法设置会话: ', E.Message);
@@ -131,14 +133,17 @@ begin
 
     Result.DurationMs := MilliSecondsBetween(Now, LStart);
     try
-      Result.SessionReused := LConnection.IsSessionReused;
+      Result.SessionReused := Supports(LConnection, ISSLSessionResumption, LResumption) and
+        LResumption.IsSessionReused;
     except
       Result.SessionReused := False;
     end;
 
     if ACachedSession = nil then
     begin
-      LSession := LConnection.GetSession;
+      LSession := nil;
+      if Supports(LConnection, ISSLSessionResumption, LResumption) then
+        LSession := LResumption.GetSession;
       if LSession <> nil then
         ACachedSession := LSession;
     end;

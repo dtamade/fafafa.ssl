@@ -5,13 +5,16 @@ program session_reuse_example;
 
 { TLS 会话复用示例
 
-  - 演示 in-process 的会话复用：GetSession / SetSession
+  - 演示 in-process 的会话恢复 owner path：
+    `ISSLSessionResumption.GetSession / SetSession / IsSessionReused`
   - 同时保存 Serialize() 的字节到文件（用于调试/持久化）
 
   注意:
   - 目前公共 API 没有“创建空 ISSLSession 实例”的后端无关工厂方法，
     因此从文件 Deserialize 到一个全新会话对象需要后端特定实现。
-  - 推荐在进程内缓存 ISSLSession 对象并复用。
+  - 推荐在进程内缓存 ISSLSession 对象，并通过
+    `ISSLSessionResumption.SetSession(...)`
+    复用。
 }
 
 uses
@@ -52,6 +55,7 @@ var
   Sock: TSocketHandle;
   Conn: ISSLConnection;
   ClientConn: ISSLClientConnection;
+  Resumption: ISSLSessionResumption;
   Req: RawByteString;
   StartTime: TDateTime;
   Session: ISSLSession;
@@ -71,8 +75,9 @@ begin
     if Supports(Conn, ISSLClientConnection, ClientConn) then
       ClientConn.SetServerName(AHost);
 
-    if AReuseSession and (ACachedSession <> nil) then
-      Conn.SetSession(ACachedSession);
+    if AReuseSession and (ACachedSession <> nil) and
+       Supports(Conn, ISSLSessionResumption, Resumption) then
+      Resumption.SetSession(ACachedSession);
 
     StartTime := Now;
     if not Conn.Connect then
@@ -87,12 +92,15 @@ begin
     Result := MilliSecondsBetween(Now, StartTime);
 
     try
-      ASessionReused := Conn.IsSessionReused;
+      ASessionReused := Supports(Conn, ISSLSessionResumption, Resumption) and
+        Resumption.IsSessionReused;
     except
       ASessionReused := False;
     end;
 
-    Session := Conn.GetSession;
+    Session := nil;
+    if Supports(Conn, ISSLSessionResumption, Resumption) then
+      Session := Resumption.GetSession;
     if (ACachedSession = nil) and (Session <> nil) then
       ACachedSession := Session;
 
@@ -147,7 +155,8 @@ begin
 
   WriteLn('Loaded ', Length(Data), ' bytes from ', SESSION_FILE);
   WriteLn('NOTE: Creating a fresh ISSLSession instance for Deserialize is backend-specific today.');
-  WriteLn('      Recommended: keep the ISSLSession object in memory and reuse it via SetSession().');
+  WriteLn('      Recommended: keep the ISSLSession object in memory and reuse it');
+  WriteLn('      through ISSLSessionResumption.SetSession(...).');
 end;
 
 procedure Run;
@@ -221,4 +230,3 @@ begin
   WriteLn('Press Enter to exit...');
   ReadLn;
 end.
-

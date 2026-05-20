@@ -501,7 +501,7 @@ var
 begin
   if Supports(LConn, ISSLSessionResumption, LSessionResumption) and
      LSessionResumption.IsSessionReused then
-    WriteLn('会话已复用 - 握手更快！');
+    WriteLn('当前握手命中了恢复路径。');
 end;
 ```
 
