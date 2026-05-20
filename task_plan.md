@@ -10,6 +10,124 @@
 
 ## Current Status
 
+- [completed] `clibrary direct-library runtime parity`
+  当前 focused 目标：
+  - 把
+    `OpenSSL`
+    /
+    `MbedTLS`
+    /
+    `WolfSSL`
+    这三条
+    C-library backend
+    的 direct-library
+    runtime parity
+    补齐到：
+    - `LogLevel / LogCallback`
+      library-default ownership truth
+    - `HandshakeTimeout / BufferSize`
+      connection-scope reject truth
+  - 避免我们继续只靠
+    `FreePascal`
+    runtime proof
+    去代表所有 backend
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-clibrary-direct-library-runtime-parity.md`
+  - 新增 focused shell contract：
+    - `tests/scripts/test_clibrary_direct_library_runtime_parity_contract.sh`
+  - 新增 focused runtime proofs：
+    - `tests/test_clibrary_library_default_logging_scope_clarification.pas`
+    - `tests/test_clibrary_library_default_config_connection_scope_clarification.pas`
+  当前实施判断：
+  - 这条线之前的主要问题
+    不是 source drift，
+    而是 proof asymmetry：
+    - factory logging / connection-scope
+      已有 runtime proof
+    - direct-library 静态 contract
+      已有 source truth
+    - `FreePascal`
+      也已有 direct-library connection-scope runtime proof
+    - 但
+      `OpenSSL/MbedTLS/WolfSSL`
+      还缺 direct-library runtime parity
+  当前 focused proof：
+  - `bash -n tests/scripts/test_clibrary_direct_library_runtime_parity_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_clibrary_direct_library_runtime_parity_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_library_default_logcallback_detachment_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_direct_library_connection_scope_clarification_contract.sh`
+    - PASS
+  - `mkdir -p tmp/test_clibrary_library_default_logging_scope_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_clibrary_library_default_logging_scope_clarification -FEtmp/test_clibrary_library_default_logging_scope_clarification -otmp/test_clibrary_library_default_logging_scope_clarification/test_clibrary_library_default_logging_scope_clarification tests/test_clibrary_library_default_logging_scope_clarification.pas && ./tmp/test_clibrary_library_default_logging_scope_clarification/test_clibrary_library_default_logging_scope_clarification`
+    - PASS
+  - `mkdir -p tmp/test_clibrary_library_default_config_connection_scope_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_clibrary_library_default_config_connection_scope_clarification -FEtmp/test_clibrary_library_default_config_connection_scope_clarification -otmp/test_clibrary_library_default_config_connection_scope_clarification/test_clibrary_library_default_config_connection_scope_clarification tests/test_clibrary_library_default_config_connection_scope_clarification.pas && ./tmp/test_clibrary_library_default_config_connection_scope_clarification/test_clibrary_library_default_config_connection_scope_clarification`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前状态：
+  - `OpenSSL`
+    direct-library path
+    现在已有 runtime evidence：
+    - `SetDefaultConfig(...)`
+      只写
+      `LogLevel`
+      不安装 callback
+    - `SetLogCallback(...)`
+      继续拥有 runtime callback
+    - `HandshakeTimeout / BufferSize`
+      自定义值会 reject
+    - request-safe defaults
+      仍能成功建 context
+  - `MbedTLS`
+    上述四条 truth
+    也已有同级 runtime evidence
+  - `WolfSSL`
+    上述四条 truth
+    也已有同级 runtime evidence
+  - 这意味着
+    `TSSLConfig`
+    这批 mixed-scope 字段里，
+    至少
+    `LogLevel / LogCallback`
+    与
+    `HandshakeTimeout / BufferSize`
+    已不再只靠：
+    - docs
+    - source contract
+    - `FreePascal`
+      局部 proof
+  当前总路线图进度：
+  - `接口设计`
+    继续从
+    “字段应该归哪一层”
+    推进到
+    “不同 backend 的真实入口语义也有对称证据”
+  - `实现完整性`
+    这批没有发现新的 runtime drift，
+    说明当前
+    C-library direct-library path
+    在这两组字段上
+    已经比较稳定
+  - `测试和文档`
+    新增了
+    2 条 runtime proof
+    +
+    1 条 focused shell contract，
+    后续不需要再把这三条 backend
+    从零重测一遍
+  下一刀：
+  - 更适合继续查：
+    - `WinSSL`
+      在当前 Linux 下仍只能静态守住的 mixed-scope 线
+    - 或 `TSSLConfig`
+      其余 context-safe 字段
+      是否还有 backend proof 缺口
+    - 或直接切回
+      pure Pascal backend completeness
+
 - [completed] `direct-library ServerName backend proof`
   当前 focused 目标：
   - 把

@@ -6,6 +6,114 @@
 
 ## 2026-05-21
 
+### C-Library Direct-Library Runtime Parity
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-clibrary-direct-library-runtime-parity.md`
+  - change:
+    - recorded a bounded backend-parity batch around
+      `OpenSSL/MbedTLS/WolfSSL`
+      direct-library runtime truth
+    - explicitly framed the problem as
+      `proof asymmetry`
+      rather than a fresh source-level bug hunt
+
+- inspect current proof coverage:
+  - `tests/test_factory_logging_scope_clarification.pas`
+  - `tests/test_factory_connection_scope_clarification.pas`
+  - `tests/test_freepascal_library_default_config_connection_scope_clarification.pas`
+  - `tests/scripts/test_direct_library_connection_scope_clarification_contract.sh`
+  - `tests/scripts/test_library_default_logcallback_detachment_contract.sh`
+  - `src/fafafa.ssl.openssl.backed.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - change:
+    - confirmed the current gap was no longer
+      docs/source truth,
+      but missing runtime parity for
+      `OpenSSL/MbedTLS/WolfSSL`
+      direct-library paths
+    - narrowed the next batch to two concrete field families:
+      - `LogLevel / LogCallback`
+      - `HandshakeTimeout / BufferSize`
+
+- add focused runtime proofs + parity contract:
+  - `tests/test_clibrary_library_default_logging_scope_clarification.pas`
+  - `tests/test_clibrary_library_default_config_connection_scope_clarification.pas`
+  - `tests/scripts/test_clibrary_direct_library_runtime_parity_contract.sh`
+  - change:
+    - added one runtime test that proves
+      `OpenSSL/MbedTLS/WolfSSL`
+      all keep the same logging ownership truth:
+      - `SetDefaultConfig(...)`
+        updates `LogLevel`
+        but does not install callbacks
+      - `SetLogCallback(...)`
+        remains the runtime callback owner
+      - filtered dispatch still follows configured `LogLevel`
+    - added one runtime test that proves
+      `OpenSSL/MbedTLS/WolfSSL`
+      all keep the same connection-scope truth:
+      - custom `HandshakeTimeout`
+        rejects
+      - custom `BufferSize`
+        rejects
+      - request-safe defaults
+        still build
+    - added a focused shell contract that freezes
+      the new backend runtime coverage surface
+
+- focused verification:
+  - `bash -n tests/scripts/test_clibrary_direct_library_runtime_parity_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_clibrary_direct_library_runtime_parity_contract.sh`
+    - result: PASS
+    - summary:
+      - the new parity batch still names and covers
+        `OpenSSL/MbedTLS/WolfSSL`
+        across both runtime proof files
+  - `bash tests/scripts/test_library_default_logcallback_detachment_contract.sh`
+    - result: PASS
+    - summary:
+      - backend library units still keep
+        `SetLogCallback`
+        as the runtime callback owner
+  - `bash tests/scripts/test_direct_library_connection_scope_clarification_contract.sh`
+    - result: PASS
+    - summary:
+      - backend library units still use the shared direct-library validator
+        for `HandshakeTimeout / BufferSize`
+  - `mkdir -p tmp/test_clibrary_library_default_logging_scope_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_clibrary_library_default_logging_scope_clarification -FEtmp/test_clibrary_library_default_logging_scope_clarification -otmp/test_clibrary_library_default_logging_scope_clarification/test_clibrary_library_default_logging_scope_clarification tests/test_clibrary_library_default_logging_scope_clarification.pas && ./tmp/test_clibrary_library_default_logging_scope_clarification/test_clibrary_library_default_logging_scope_clarification`
+    - result: PASS
+    - summary:
+      - `OpenSSL/MbedTLS/WolfSSL`
+        all preserved the same library-default logging truth
+  - `mkdir -p tmp/test_clibrary_library_default_config_connection_scope_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_clibrary_library_default_config_connection_scope_clarification -FEtmp/test_clibrary_library_default_config_connection_scope_clarification -otmp/test_clibrary_library_default_config_connection_scope_clarification/test_clibrary_library_default_config_connection_scope_clarification tests/test_clibrary_library_default_config_connection_scope_clarification.pas && ./tmp/test_clibrary_library_default_config_connection_scope_clarification/test_clibrary_library_default_config_connection_scope_clarification`
+    - result: PASS
+    - summary:
+      - `OpenSSL/MbedTLS/WolfSSL`
+        all preserved the same direct-library connection-scope reject truth
+  - `git diff --check`
+    - result: PASS
+    - summary:
+      - no whitespace or patch-format drift remains after the C-library parity batch
+
+- next queue impact:
+  - `TSSLConfig`
+    mixed-scope 这条线，
+    现在不必再默认把
+    `OpenSSL/MbedTLS/WolfSSL`
+    的 direct-library path
+    当成“只有 source truth”
+  - 后续如果继续沿着
+    interface / backend completeness
+    审查，
+    更值钱的是：
+    - `WinSSL`
+      当前平台外 proof
+    - 其他 context-safe fields 的 backend parity
+    - pure Pascal backend completeness 的 fresh RED
+
 ### Direct-Library ServerName Backend Proof
 
 - add focused batch inputs:

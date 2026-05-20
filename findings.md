@@ -2,6 +2,84 @@
 
 ## 2026-05-21
 
+- `OpenSSL/MbedTLS/WolfSSL`
+  这三条 C-library backend
+  在
+  `TSSLConfig`
+  mixed-scope 线上，
+  当前又补齐了两组 runtime parity proof：
+  - `LogLevel / LogCallback`
+    library-default ownership truth
+  - `HandshakeTimeout / BufferSize`
+    direct-library reject truth
+
+- 这批最重要的结论是：
+  当前缺口确实主要是
+  `proof gap`
+  而不是新的
+  implementation drift。
+  focused runtime tests
+  直接证明了：
+  - `SetDefaultConfig(...)`
+    只更新
+    `LogLevel`
+    与 default-config snapshot
+  - `SetDefaultConfig(LogCallback)`
+    不会安装 runtime callback
+  - `SetLogCallback(...)`
+    继续拥有 runtime callback 的唯一 owner truth
+  - `Lib.CreateContext(sslCtxClient)`
+    会 reject 自定义
+    `HandshakeTimeout / BufferSize`
+  - request-safe defaults
+    仍能成功建 context
+
+- 这意味着
+  `TSSLConfig`
+  的两条最容易跨层混淆的线，
+  现在已经从：
+  - source comments
+  - docs
+  - focused shell contracts
+  - factory proofs
+  - `FreePascal` direct-library proof
+  继续扩到：
+  - `OpenSSL`
+  - `MbedTLS`
+  - `WolfSSL`
+    direct-library runtime parity
+
+- 当前还没有 fresh 证据表明
+  `OpenSSL/MbedTLS/WolfSSL`
+  在这两组字段上存在实际实现分叉。
+  所以这批之后，
+  如果再回到
+  `TSSLConfig`
+  mixed-scope 线，
+  更该优先查的是：
+  - `WinSSL`
+    当前平台外的 proof handoff
+  - 其他 context-safe 字段
+    有没有还没补 runtime parity 的 backend gap
+  而不是重新怀疑
+  `LogLevel / LogCallback`
+  /
+  `HandshakeTimeout / BufferSize`
+  这两组已收口的 truth
+
+- 这批也再次证明：
+  focused shell contract
+  最适合守
+  backend 覆盖面
+  与核心语义；
+  runtime test
+  最适合守
+  owner / reject / dispatch
+  这类行为级 truth。
+  两者结合，
+  才能避免我们以后既重复考古源码，
+  又重复从零跑整套重型门禁
+
 - `TSSLConfig.ServerName`
   这条 direct-library compatibility 线，
   当前真正的缺口
