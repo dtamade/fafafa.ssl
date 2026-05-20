@@ -6,6 +6,78 @@
 
 ## 2026-05-21
 
+### MbedTLS Guide Connection Surface Truth Closeout
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-mbedtls-guide-connection-surface-truth-closeout.md`
+  - change:
+    - recorded a bounded
+      MbedTLS active-guide
+      connection-surface truth batch
+    - explicitly framed the root cause as
+      `active doc drift + stale contract guard`
+
+- update focused contract first:
+  - `tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+  - change:
+    - stopped treating
+      `Connection.GetLastErrorString`
+      as current truth
+    - started requiring
+      `ISSLLibrary.GetLastError`
+      /
+      `ISSLLibrary.GetLastErrorString`
+      for connection-failure reporting
+    - added guards for:
+      - `function GetError(ARet: Integer): TSSLErrorCode;`
+      - `function GetProtocolVersion: TSSLProtocolVersion;`
+      - absence of
+        `function GetProtocolVersion: string;`
+      - absence of
+        `function GetLastErrorString: string;`
+
+- existing RED from this batch:
+  - `bash -n tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - captured the intended RED:
+        `MbedTLS guide must route connection-failure error codes through ISSLLibrary`
+      - confirmed the guide still published
+        connection-level
+        `GetLastErrorString`
+        and a stale interface summary
+
+- update implementation:
+  - `docs/guides/MBEDTLS_USER_GUIDE.md`
+  - change:
+    - connection-failure example now reports errors through
+      `Lib.GetLastError`
+      /
+      `Lib.GetLastErrorString`
+    - interface summary now exposes the current
+      `GetError(ARet: Integer): TSSLErrorCode`
+      and
+      `GetProtocolVersion: TSSLProtocolVersion`
+      truth
+    - added an explicit note that the guide's interface block is a commonly used slice,
+      not the full
+      `v1.5.0`
+      source mirror
+
+- `bash -n tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+- `bash tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+- `bash tests/scripts/test_backend_quickstarts_direct_path_classification_contract.sh`
+- `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - the focused MbedTLS guide contract is now green against current source truth
+    - backend quickstart classification still holds
+    - public unit/import guidance still holds
+    - patch formatting is clean
+
 ### Main Backends Certificate Metadata Truth Alignment
 
 - add focused batch inputs:

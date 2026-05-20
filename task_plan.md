@@ -10,6 +10,79 @@
 
 ## Current Status
 
+- [completed] `mbedtls guide connection surface truth closeout`
+  当前 focused 目标：
+  - 收掉 `docs/guides/MBEDTLS_USER_GUIDE.md`
+    里仍在活跃传播的连接接口漂移，
+    并修复守护脚本自身把旧文档当成 current truth 的 workflow 问题：
+    - 示例错误地调用
+      `Connection.GetLastErrorString`
+    - 接口摘要错误地把
+      `GetProtocolVersion`
+      写成
+      `string`
+    - 现有
+      `tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+      还把这两处旧写法锁成绿灯
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-mbedtls-guide-connection-surface-truth-closeout.md`
+  - 修改文档：
+    - `docs/guides/MBEDTLS_USER_GUIDE.md`
+  - 修改 focused contract：
+    - `tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+  当前实施判断：
+  - 这不是单纯的文档错字，
+    而是 active guide
+    与
+    focused contract
+    一起漂移：
+    - 使用者复制示例会碰到不存在的 connection-level error-string API
+    - 后续审查却会因为 contract 仍绿而被误导成“这里没问题”
+  - 所以正确顺序必须是：
+    - 先把 contract 改成当前源码真相并拿到 RED
+    - 再最小修正文档
+  当前 focused proof：
+  - `bash -n tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+    - 首轮：
+      FAIL
+      - 预期 RED：
+        `MbedTLS guide must route connection-failure error codes through ISSLLibrary`
+    - 修复后：
+      PASS
+  - `bash tests/scripts/test_backend_quickstarts_direct_path_classification_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前状态：
+  - `MBEDTLS_USER_GUIDE`
+    已改成：
+    - 连接失败通过
+      `Lib.GetLastError`
+      /
+      `Lib.GetLastErrorString`
+      取错
+    - 接口摘要不再伪造
+      `GetProtocolVersion: string`
+      /
+      `GetLastErrorString`
+      这类不存在的 connection-level surface
+    - 新增说明：
+      当前接口块只是常用片段，
+      不是完整 shipped source 镜像
+  最新收口：
+  - 这批解决的不只是文档漂移，
+    还修掉了一条 workflow 根因：
+    - focused contract
+      不再继续为过时示例站岗
+    - 以后同类 drift
+      会直接 RED，
+      不会再“文档错了但测试仍绿”
+
 - [completed] `main backends certificate metadata truth alignment`
   当前 focused 目标：
   - 把主 backend

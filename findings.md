@@ -2,6 +2,74 @@
 
 ## 2026-05-21
 
+- `docs/guides/MBEDTLS_USER_GUIDE.md`
+  里还残留着一条真实的 active API drift：
+  - 示例在
+    `Connection.Connect`
+    失败后调用
+    `Connection.GetLastErrorString`
+  - 但当前 shipped source
+    只在
+    `ISSLLibrary`
+    上发布
+    `GetLastError`
+    /
+    `GetLastErrorString`
+
+- 同一文件的接口摘要也在继续伪造
+  `ISSLConnection`
+  surface：
+  - 把
+    `GetProtocolVersion`
+    写成
+    `string`
+  - 把
+    `GetLastErrorString`
+    写成 connection-level 方法
+  - 而当前源码真相实际是：
+    - `GetProtocolVersion: TSSLProtocolVersion`
+    - `GetError(ARet: Integer): TSSLErrorCode`
+    - 没有
+      `ISSLConnection.GetLastErrorString`
+
+- 更关键的 workflow 发现是：
+  这条 drift
+  之所以没有被后续审查持续暴露，
+  不是因为缺测试，
+  而是因为现有
+  `tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+  正在把旧文档当成正确答案：
+  - 它此前明确要求
+    `WriteLn('连接失败: ', Connection.GetLastErrorString);`
+  - 也没有防止
+    `function GetProtocolVersion: string;`
+    这类错误摘要继续存在
+
+- 因而这批最值钱的修法不是只改文档，
+  而是先把 focused contract
+  改成当前源码真相并拿到 RED，
+  再最小修正文档；
+  这样才能把“文档错了但测试仍绿”的 workflow 反向锁定一起消掉
+
+- 这批收口后的 durable truth 是：
+  - backend raw guide
+    可以继续展示
+    `CreateConnection(...)`
+    /
+    `ReadString`
+    /
+    `WriteString`
+    这类当前 shipped convenience surface
+  - 但错误获取必须回到
+    `ISSLLibrary.GetLastError`
+    /
+    `ISSLLibrary.GetLastErrorString`
+  - 接口摘要如果只列常用片段，
+    也必须显式标注：
+    不是完整
+    `v1.5.0`
+    source mirror
+
 - shared
   `TX509Certificate`
   在

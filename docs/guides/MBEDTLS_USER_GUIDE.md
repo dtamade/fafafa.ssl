@@ -182,7 +182,8 @@ begin
   // 5. 连接到服务器
   if not Connection.Connect then
   begin
-    WriteLn('连接失败: ', Connection.GetLastErrorString);
+    WriteLn('连接失败，错误码: ', Lib.GetLastError);
+    WriteLn('连接失败，错误信息: ', Lib.GetLastErrorString);
     Exit;
   end;
   
@@ -517,14 +518,16 @@ end;
 
 ### 连接管理
 
+这里只列当前 MbedTLS 指南最常用的 `ISSLConnection` / `ISSLClientConnection` 片段，不是 `v1.5.0` 完整源码镜像；完整签名以 `src/fafafa.ssl.base.pas` / `docs/reference/API_REFERENCE.md` 为准。
+
 ```pascal
 interface ISSLConnection
   function Connect: Boolean;
   function WriteString(const AStr: string): Boolean;
   function ReadString(out AStr: string): Boolean;
-  function GetProtocolVersion: string;
+  function GetError(ARet: Integer): TSSLErrorCode;
+  function GetProtocolVersion: TSSLProtocolVersion;
   function GetCipherName: string;
-  function GetLastErrorString: string;
 end;
 
 interface ISSLClientConnection

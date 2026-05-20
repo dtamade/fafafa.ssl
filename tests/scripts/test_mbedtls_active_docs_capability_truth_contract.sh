@@ -65,12 +65,20 @@ require_fixed "$mbedtls_guide" "if Supports(Connection, ISSLClientConnection, Cl
   "MbedTLS guide must use per-connection SNI access"
 require_fixed "$mbedtls_guide" "ClientConn.SetServerName('www.example.com');" \
   "MbedTLS guide must use current server-name setter"
-require_fixed "$mbedtls_guide" "WriteLn('连接失败: ', Connection.GetLastErrorString);" \
-  "MbedTLS guide must use current error-string API"
+require_fixed "$mbedtls_guide" "WriteLn('连接失败，错误码: ', Lib.GetLastError);" \
+  "MbedTLS guide must route connection-failure error codes through ISSLLibrary"
+require_fixed "$mbedtls_guide" "WriteLn('连接失败，错误信息: ', Lib.GetLastErrorString);" \
+  "MbedTLS guide must route connection-failure error strings through ISSLLibrary"
 require_fixed "$mbedtls_guide" "if Connection.ReadString(Response) then" \
   "MbedTLS guide must use current ReadString signature"
 require_fixed "$mbedtls_guide" "WriteLn('密码套件: ', Connection.GetCipherName);" \
   "MbedTLS guide must use current cipher-name API"
+require_fixed "$mbedtls_guide" '这里只列当前 MbedTLS 指南最常用的 `ISSLConnection` / `ISSLClientConnection` 片段，不是 `v1.5.0` 完整源码镜像；完整签名以 `src/fafafa.ssl.base.pas` / `docs/reference/API_REFERENCE.md` 为准。' \
+  "MbedTLS guide must label its interface summary as a partial current-surface slice"
+require_fixed "$mbedtls_guide" "function GetError(ARet: Integer): TSSLErrorCode;" \
+  "MbedTLS guide interface summary must expose current ISSLConnection error surface"
+require_fixed "$mbedtls_guide" "function GetProtocolVersion: TSSLProtocolVersion;" \
+  "MbedTLS guide interface summary must expose current protocol-version enum truth"
 require_absent "$mbedtls_guide" "完全相同的接口" \
   "MbedTLS guide must stop claiming identical interfaces"
 require_absent "$mbedtls_guide" "Context.LoadCertificateFromFile" \
@@ -85,7 +93,13 @@ require_absent "$mbedtls_guide" "Connection.ReadAll" \
   "MbedTLS guide must stop using stale ReadAll helper"
 require_absent "$mbedtls_guide" "GetCipherSuite" \
   "MbedTLS guide must stop using stale cipher-suite accessor name"
+require_absent "$mbedtls_guide" "Connection.GetLastErrorString" \
+  "MbedTLS guide must stop teaching a nonexistent connection-level error-string API"
 require_absent "$mbedtls_guide" "GetLastError: string" \
   "MbedTLS guide interface summary must stop exposing stale GetLastError signature"
+require_absent "$mbedtls_guide" "function GetProtocolVersion: string;" \
+  "MbedTLS guide interface summary must stop treating protocol version as string"
+require_absent "$mbedtls_guide" "function GetLastErrorString: string;" \
+  "MbedTLS guide interface summary must stop inventing connection-level error strings"
 
 echo "[PASS] MbedTLS active docs capability truth contract passed"
