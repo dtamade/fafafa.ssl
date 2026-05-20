@@ -251,6 +251,36 @@ begin
     Result := Result or $8000;
 end;
 
+function X509KeyUsageToStrings(const AUsage: TX509KeyUsage): TSSLStringArray;
+
+  procedure AddToResult(const AValue: string);
+  begin
+    SetLength(Result, Length(Result) + 1);
+    Result[High(Result)] := AValue;
+  end;
+
+begin
+  SetLength(Result, 0);
+  if kuDigitalSignature in AUsage then
+    AddToResult('digitalSignature');
+  if kuNonRepudiation in AUsage then
+    AddToResult('nonRepudiation');
+  if kuKeyEncipherment in AUsage then
+    AddToResult('keyEncipherment');
+  if kuDataEncipherment in AUsage then
+    AddToResult('dataEncipherment');
+  if kuKeyAgreement in AUsage then
+    AddToResult('keyAgreement');
+  if kuKeyCertSign in AUsage then
+    AddToResult('keyCertSign');
+  if kuCRLSign in AUsage then
+    AddToResult('cRLSign');
+  if kuEncipherOnly in AUsage then
+    AddToResult('encipherOnly');
+  if kuDecipherOnly in AUsage then
+    AddToResult('decipherOnly');
+end;
+
 function X509ExtKeyUsageToStrings(const AUsage: TX509ExtKeyUsage): TSSLStringArray;
 
   procedure AddToResult(const AValue: string);

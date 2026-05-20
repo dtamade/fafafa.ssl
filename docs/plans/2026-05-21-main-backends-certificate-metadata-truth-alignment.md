@@ -205,3 +205,20 @@
 - push 后继续观察：
   - `CI`
   - `WinSSL Runtime Gate`
+- latest remote feedback after first push:
+  - `CI 26185498941`
+    - PASS
+  - `WinSSL Runtime Gate 26185498809`
+    - FAIL
+    - failed step:
+      `Run quick WinSSL smoke`
+    - concrete cause:
+      Windows quick-smoke compile found
+      `Identifier not found "X509KeyUsageToStrings"`
+      in
+      `fafafa.ssl.winssl.certificate`
+  - follow-up:
+    - add the missing
+      `X509KeyUsageToStrings`
+      helper
+    - re-push and re-watch the Windows lane

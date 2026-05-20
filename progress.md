@@ -108,6 +108,57 @@
       GitHub Windows runtime lane,
       not another local re-run
 
+### WinSSL Metadata Remote Quick-Smoke Follow-up
+
+- `git push`
+  - result: PASS
+  - summary:
+    - pushed
+      `1b9b6af`
+      to
+      `master`
+
+- `gh run watch 26185498941 --exit-status`
+  - result: PASS
+  - summary:
+    - `CI`
+      fully green
+
+- `gh run watch 26185498809 --exit-status`
+  - result: FAIL
+  - summary:
+    - `WinSSL Runtime Gate`
+      failed in
+      `Run quick WinSSL smoke`
+    - failure happened before
+      Wave B
+      or broader runtime suite
+
+- `gh run view 26185498809 --log-failed`
+  - result: FAIL detail captured
+  - summary:
+    - quick smoke
+      failed while compiling
+      `tests/winssl/test_winssl_certificate_loading.lpi`
+    - concrete compiler error:
+      `Identifier not found "X509KeyUsageToStrings"`
+      in
+      `src/fafafa.ssl.winssl.certificate.pas`
+    - this proved the previous local static contract
+      did not cover the full
+      Windows cross-unit compile graph
+
+- update implementation:
+  - `src/fafafa.ssl.winssl.certificate.pas`
+  - change:
+    - added the missing
+      `X509KeyUsageToStrings`
+      helper
+    - kept the parser-backed
+      SAN / KU / EKU / `GetInfo`
+      design unchanged;
+      only closed the Windows compile hole
+
 ### Main Backends Certificate Extension Contract Alignment
 
 - add focused batch inputs:

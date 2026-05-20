@@ -112,6 +112,33 @@
   - push 后只需要继续看：
     - `CI`
     - `WinSSL Runtime Gate`
+  最新远端反馈：
+  - 首次 push
+    `1b9b6af`
+    后：
+    - `CI 26185498941`
+      已通过
+    - `WinSSL Runtime Gate 26185498809`
+      在
+      `Run quick WinSSL smoke`
+      失败
+  - 失败已收窄为
+    Windows-only compile hole：
+    - `fafafa.ssl.winssl.certificate`
+      调用了
+      `X509KeyUsageToStrings`
+    - 但本地补 helper
+      时只补了
+      bitfield / SAN / EKU
+      三类 helper，
+      漏掉了这个字符串 helper
+  - follow-up
+    最小修复：
+    - 补回
+      `X509KeyUsageToStrings`
+    - 重新 push
+      并继续观察
+      `WinSSL Runtime Gate`
 
 - [completed] `main backends certificate extension contract alignment`
   当前 focused 目标：

@@ -116,6 +116,43 @@
   - 实际源码 truth
     直到这批收口前并非如此
 
+- 首次 push
+  后的
+  `WinSSL Runtime Gate`
+  又补出了一条 workflow truth：
+  仅靠本地 source contract
+  还不够覆盖
+  Windows quick-smoke
+  的跨单元编译面
+
+- 更具体地说：
+  - 远端 quick smoke
+    不是行为失败，
+    而是在编译
+    `test_winssl_certificate_loading`
+    时直接报：
+    `Identifier not found "X509KeyUsageToStrings"`
+  - 这说明
+    `WinSSL`
+    这次 parser-first 收口
+    还需要把
+    key-usage string projection helper
+    一并补齐，
+    否则
+    Linux 侧静态 contract
+    无法发现这个缺口
+
+- 因而这批又留下一个 durable workflow 改进点：
+  - `WinSSL`
+    相关 getter
+    一旦改成 parser-backed helper
+    组合，
+    不能只靠 source grep contract；
+  - 真正的闭环
+    仍需要看
+    GitHub Windows quick smoke
+    是否能把整个单元图编译过去
+
 - 主 backend 的
   `ISSLCertificate.GetExtension`
   此前并不一致：
