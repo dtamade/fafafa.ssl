@@ -263,6 +263,52 @@
         crash
         是否就卡在
         override 成功分支的字符串处理
+  - 当前最新静态审查收口：
+    - `tests/winssl/test_winssl_cert_verify_ex.pas`
+      仍把
+      memory-backed store
+      持有为
+      `TWinSSLCertificateStore`
+      类引用，
+      然后反复临时转换成
+      `ISSLCertificateStore`
+      传给
+      `VerifyExWithTrace(...)`
+      /
+      `Verify(...)`
+    - 对
+      `TInterfacedObject`
+      这会制造经典生命周期洞：
+      - 第一次调用时的临时接口
+        `_AddRef`
+        /
+        `_Release`
+        后，
+        对象可能已经析构
+      - 第二次调用在真正进入 helper 前，
+        仅做参数求值/接口转换
+        就可能直接
+        `EAccessViolation`
+    - 这和最新 Windows trace
+      完全一致：
+      - 第二次
+        `expired/ignore-expiry`
+        根本没有打印
+        `VerifyEx start`
+      - 所以 fault boundary
+        比
+        `VerifyEx`
+        函数体还要更外一层
+    - 当前跟进修复：
+      - focused WinSSL test
+        改为始终用
+        `ISSLCertificateStore`
+        接口持有
+        memory store
+      - 先修掉测试生命周期洞，
+        再重新验证
+        WinSSL implementation
+        自身是否还剩真实 AV
 - [completed] `winssl certificate verifyex flag parity`
   当前 focused 目标：
   - 把

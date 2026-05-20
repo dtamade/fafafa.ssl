@@ -73,7 +73,7 @@ begin
   WriteLn('[INFO] VerifyEx end: ', AStage, ' ', FormatVerifyState(Result, AResult));
 end;
 
-function CreateMemoryBackedStore: TWinSSLCertificateStore;
+function CreateMemoryBackedStore: ISSLCertificateStore;
 var
   LStoreHandle: HCERTSTORE;
 begin
@@ -109,7 +109,7 @@ procedure TestIgnoreExpiryIsPerCallAndHonored;
 var
   LExpiredLeaf: ISSLCertificate;
   LCACert: ISSLCertificate;
-  LStore: TWinSSLCertificateStore;
+  LStore: ISSLCertificateStore;
   LVerifyResult: TSSLCertVerifyResult;
   LVerified: Boolean;
   LDiag: string;
@@ -153,7 +153,7 @@ end;
 procedure TestAllowSelfSignedIsPerCallAndHonored;
 var
   LSelfSignedLeaf: ISSLCertificate;
-  LEmptyStore: TWinSSLCertificateStore;
+  LEmptyStore: ISSLCertificateStore;
   LVerifyResult: TSSLCertVerifyResult;
   LVerified: Boolean;
   LDiag: string;
@@ -194,7 +194,7 @@ procedure TestStrictChainRequiresServerAuthUsage;
 var
   LLeafCert: ISSLCertificate;
   LCACert: ISSLCertificate;
-  LStore: TWinSSLCertificateStore;
+  LStore: ISSLCertificateStore;
   LVerifyResult: TSSLCertVerifyResult;
   LVerified: Boolean;
   LDiag: string;

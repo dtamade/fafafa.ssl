@@ -369,6 +369,43 @@
         `DetailedInfo`
         and extra success-message writes
       - keep only the minimal success-state field updates
+
+- static review:
+  - `tests/winssl/test_winssl_cert_verify_ex.pas`
+  - result: NEW ROOT CAUSE FOUND
+  - summary:
+    - the focused WinSSL test was still holding
+      memory stores
+      as
+      `TWinSSLCertificateStore`
+      class references,
+      not
+      `ISSLCertificateStore`
+      interfaces
+    - repeated calls then relied on temporary class-to-interface conversions
+      at each
+      `VerifyExWithTrace(...)`
+      /
+      `Verify(...)`
+      boundary
+    - because
+      `TWinSSLCertificateStore`
+      descends from
+      `TInterfacedObject`,
+      the first temporary interface release can destroy the store object,
+      leaving a dangling class pointer for the next call
+    - this exactly matches the runtime trace:
+      the second
+      `expired/ignore-expiry`
+      call never even printed
+      `VerifyEx start`
+    - focused fix:
+      - `CreateMemoryBackedStore`
+        now returns
+        `ISSLCertificateStore`
+      - all local store variables in
+        `test_winssl_cert_verify_ex.pas`
+        now hold the interface directly
       batch is now fully green on remote CI
     - `Code Quality (Light)` /
       `Minimal Gate (Linux)` /

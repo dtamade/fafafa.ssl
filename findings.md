@@ -331,6 +331,60 @@
   - 只保留
     `Success/ErrorCode/ChainStatus`
     这三个最小状态写入
+
+- 再看一遍最新 trace 和 focused test 源码后，
+  当前最可信根因已经变了：
+  - 不是
+    `VerifyEx`
+    override success
+    路径里的字符串写入
+  - 而是
+    `tests/winssl/test_winssl_cert_verify_ex.pas`
+    自己把
+    `TWinSSLCertificateStore`
+    当类实例持有，
+    再临时转换成
+    `ISSLCertificateStore`
+    传参
+
+- 这是一个典型的
+  `TInterfacedObject`
+  生命周期陷阱：
+  - 当对象只被类引用持有时，
+    临时接口参数的
+    `_Release`
+    可能把对象销毁
+  - 之后类变量仍指向已析构对象
+  - 下一次把它再转成接口，
+    在真正进入被调函数之前
+    就可能直接
+    `EAccessViolation`
+
+- 这条根因和 Windows runtime 证据逐项吻合：
+  - 第一条
+    `VerifyEx(..., [], ...)`
+    正常返回
+  - 第二条
+    `expired/ignore-expiry`
+    连
+    `VerifyEx start`
+    都没有打印
+  - 所以崩溃点其实在
+    helper
+    入参求值 / store
+    接口转换阶段，
+    不在
+    `TWinSSLCertificate.VerifyEx`
+    函数体内部
+
+- 当前最小正确修法因此是：
+  - focused WinSSL test
+    改成始终用
+    `ISSLCertificateStore`
+    接口持有
+    memory-backed store
+  - 先把测试本身的生命周期洞修掉，
+    再看 WinSSL 实现是否还有真实残余
 - `OpenSSL certificate.VerifyEx`
   这轮被打出来的真实问题
   不是
