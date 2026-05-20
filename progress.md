@@ -17522,3 +17522,60 @@
     - Linux-side `compile_all_modules.py` is not useful proof for this batch because it explicitly skips WinSSL units
     - this repo-local environment still cannot compile or run the Windows WinSSL test target
     - final proof for this batch must therefore come from the next pushed GitHub Actions Windows run
+
+- post-push Windows CI follow-up:
+  - `gh run view 26152137388 --log-failed`
+  - `gh api repos/dtamade/fafafa.ssl/actions/runs/26152137388/jobs`
+  - result: FAIL (third push / first custom-trust-engine iteration)
+  - summary:
+    - the new Windows run got materially farther:
+      - compile phase: PASS
+      - quick WinSSL smoke: PASS
+      - Windows Wave B gate: PASS
+      - runtime suite: only `WinSSL Certificate VerifyEx Flag Parity` failed
+    - the focused runtime output proved the trust direction is now correct:
+      - `expired-signer.pem + ca_cert.pem`
+      - first unflagged `VerifyEx`
+        failed with
+        `Certificate has expired`
+      - so the prior
+        `CERT_E_UNTRUSTEDROOT`
+        masking issue is gone
+    - the new residual is narrower:
+      - the next `VerifyEx(..., [sslCertVerifyIgnoreExpiry], ...)`
+        raised
+        `EAccessViolation`
+    - implementation diagnosis:
+      - `CreateChainEngineForStore(...)`
+        was passing
+        `CERT_CHAIN_ENGINE_CONFIG.rghAdditionalStore`
+        as a pointer to a helper-local stack array
+      - the chain engine could later read that stale pointer during the flagged follow-up call
+    - follow-up fix:
+      - keep
+        `hExclusiveRoot`
+        in the chain engine
+      - stop storing an additional-store array inside the engine config
+      - pass the same custom store back into
+        `CertGetCertificateChain(..., hAdditionalStore, ...)`
+        per call instead
+
+- update implementation/docs:
+  - `src/fafafa.ssl.winssl.certificate.pas`
+  - `docs/plans/2026-05-20-winssl-cert-verifyex-custom-trust-engine.md`
+  - `task_plan.md`
+  - `findings.md`
+  - `progress.md`
+  - change:
+    - narrowed the WinSSL custom trust-engine helper so it returns the store handle instead of caching a temporary additional-store pointer inside the chain-engine config
+    - `Verify`
+      /
+      `VerifyEx`
+      now pass that store handle directly to
+      `CertGetCertificateChain(...)`
+      on each call
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains after the chain-engine lifetime fix

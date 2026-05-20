@@ -201,14 +201,15 @@ end;
 function CreateChainEngineForStore(
   ACAStore: ISSLCertificateStore;
   const ACaller: string;
-  out AChainEngine: HCERTCHAINENGINE
+  out AChainEngine: HCERTCHAINENGINE;
+  out AAdditionalStore: HCERTSTORE
 ): Boolean;
 var
   LStoreHandle: HCERTSTORE;
   LEngineConfig: CERT_CHAIN_ENGINE_CONFIG;
-  LAdditionalStores: array[0..0] of HCERTSTORE;
 begin
   AChainEngine := nil;
+  AAdditionalStore := nil;
   Result := True;
 
   if ACAStore = nil then
@@ -222,9 +223,7 @@ begin
   LEngineConfig.cbSize := SizeOf(LEngineConfig);
   LEngineConfig.hExclusiveRoot := LStoreHandle;
   LEngineConfig.dwExclusiveFlags := CERT_CHAIN_EXCLUSIVE_ENABLE_CA_FLAG;
-  LAdditionalStores[0] := LStoreHandle;
-  LEngineConfig.cAdditionalStore := Length(LAdditionalStores);
-  LEngineConfig.rghAdditionalStore := @LAdditionalStores[0];
+  AAdditionalStore := LStoreHandle;
 
   Result := CertCreateCertificateChainEngine(@LEngineConfig, @AChainEngine);
 end;
@@ -712,6 +711,7 @@ var
   ChainPara: CERT_CHAIN_PARA;
   ChainContext: PCCERT_CHAIN_CONTEXT;
   ChainEngine: HCERTCHAINENGINE;
+  AdditionalStore: HCERTSTORE;
   PolicyPara: CERT_CHAIN_POLICY_PARA;
   PolicyStatus: CERT_CHAIN_POLICY_STATUS;
 begin
@@ -725,8 +725,14 @@ begin
   ChainPara.cbSize := SizeOf(ChainPara);
   ChainContext := nil;
   ChainEngine := nil;
+  AdditionalStore := nil;
 
-  if not CreateChainEngineForStore(ACAStore, 'TWinSSLCertificate.Verify', ChainEngine) then
+  if not CreateChainEngineForStore(
+    ACAStore,
+    'TWinSSLCertificate.Verify',
+    ChainEngine,
+    AdditionalStore
+  ) then
     Exit;
 
   // 构建证书链
@@ -734,7 +740,7 @@ begin
     ChainEngine,            // 使用默认或自定义链引擎
     FCertContext,           // 要验证的证书
     nil,                    // 使用当前时间
-    nil,                    // 自定义链引擎已包含附加证书存储
+    AdditionalStore,        // 同一个 custom store 继续参与建链
     @ChainPara,             // 链参数
     0,                      // 标志
     nil,                    // 保留
@@ -789,6 +795,7 @@ var
   LChainPara: CERT_CHAIN_PARA;
   LChainContext: PCCERT_CHAIN_CONTEXT;
   LChainEngine: HCERTCHAINENGINE;
+  LAdditionalStore: HCERTSTORE;
   LPolicyPara: CERT_CHAIN_POLICY_PARA;
   LPolicyStatus: CERT_CHAIN_POLICY_STATUS;
   LChainFlags: DWORD;
@@ -815,6 +822,7 @@ begin
   LChainPara.cbSize := SizeOf(LChainPara);
   LChainContext := nil;
   LChainEngine := nil;
+  LAdditionalStore := nil;
 
   // 根据标志配置链验证
   LChainFlags := 0;
@@ -826,7 +834,12 @@ begin
   if sslCertVerifyCheckCRL in AFlags then
     LChainFlags := LChainFlags or CERT_CHAIN_REVOCATION_CHECK_END_CERT;
 
-  if not CreateChainEngineForStore(ACAStore, 'TWinSSLCertificate.VerifyEx', LChainEngine) then
+  if not CreateChainEngineForStore(
+    ACAStore,
+    'TWinSSLCertificate.VerifyEx',
+    LChainEngine,
+    LAdditionalStore
+  ) then
   begin
     AResult.ErrorCode := GetLastError;
     AResult.ErrorMessage := 'Failed to create certificate chain engine';
@@ -838,7 +851,7 @@ begin
     LChainEngine,           // 使用默认或自定义链引擎
     FCertContext,           // 要验证的证书
     nil,                    // 使用当前时间
-    nil,                    // 自定义链引擎已包含附加证书存储
+    LAdditionalStore,       // 同一个 custom store 继续参与建链
     @LChainPara,            // 链参数
     LChainFlags,            // 验证标志
     nil,                    // 保留

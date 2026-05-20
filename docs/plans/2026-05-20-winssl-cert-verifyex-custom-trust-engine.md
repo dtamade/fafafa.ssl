@@ -84,7 +84,7 @@
 
 ## Execution Result
 
-- IMPLEMENTED (local static proof)
+- IMPLEMENTED (iteration 1) + FOLLOW-UP IN PROGRESS
 - 已完成：
   - 新增
     `CERT_CHAIN_ENGINE_CONFIG`
@@ -114,3 +114,30 @@
   - Linux 无法本地编译/运行 WinSSL
   - 最终真值仍需看 push 后的
     `WinSSL Runtime Gate`
+- 最新 Windows runtime truth
+  已进一步收窄出一条更具体的实现残余：
+  - `expired-signer.pem + ca_cert.pem`
+    现在已经能先正确暴露
+    expiry diagnostic
+  - 但紧接着第二次
+    `VerifyEx(..., [sslCertVerifyIgnoreExpiry], ...)`
+    触发
+    `EAccessViolation`
+  - 结合当前实现，
+    最可能的根因是：
+    `CERT_CHAIN_ENGINE_CONFIG.rghAdditionalStore`
+    被指向了 helper 栈上的临时数组
+    ，而 chain engine 在后续调用里仍会读取该地址
+- follow-up 修法：
+  - chain engine
+    只保留
+    `hExclusiveRoot`
+    trust-anchor 语义
+  - 同一个 custom store
+    改为在每次
+    `CertGetCertificateChain(...)`
+    调用时
+    显式传入
+    `hAdditionalStore`
+  - 这样既保留建链来源，
+    又消掉配置期临时指针的生命周期洞

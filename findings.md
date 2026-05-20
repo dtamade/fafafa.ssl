@@ -68,6 +68,56 @@
   `VerifyEx`
   在 custom store 语义上的分叉
   一起堵住
+
+- 最新 Windows run
+  `26152137388`
+  又补出了一条更窄的 runtime truth：
+  trust-root 方向本身已经成立，
+  但当前 custom chain-engine helper
+  还有一个生命周期 bug
+
+- 证据是：
+  - 第一次
+    `VerifyEx(..., [], ...)`
+    已经正确得到
+    `Certificate has expired`
+  - 说明：
+    - custom store
+      已经不再被误判成
+      `CERT_E_UNTRUSTEDROOT`
+    - `hExclusiveRoot`
+      这条 trust 修法
+      方向是对的
+  - 但第二次
+    `VerifyEx(..., [sslCertVerifyIgnoreExpiry], ...)`
+    紧接着抛出
+    `EAccessViolation`
+
+- 结合当前实现，
+  最可信的根因是：
+  `CreateChainEngineForStore(...)`
+  把
+  `CERT_CHAIN_ENGINE_CONFIG.rghAdditionalStore`
+  指向了 helper 栈上的临时数组
+  - `CertCreateCertificateChainEngine(...)`
+    返回后，
+    这个地址就不再稳定
+  - 后续建链再触发读取时，
+    就可能直接访问无效内存
+
+- 因而这条 lane 的更正做法不是撤回 custom trust engine，
+  而是把职责拆清：
+  - chain engine
+    只承载
+    `hExclusiveRoot`
+    trust-anchor 语义
+  - 建链所需的同一个 store
+    改为在每次
+    `CertGetCertificateChain(...)`
+    调用时
+    通过
+    `hAdditionalStore`
+    显式传入
 - `OpenSSL certificate.VerifyEx`
   这轮被打出来的真实问题
   不是

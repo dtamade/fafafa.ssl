@@ -79,6 +79,41 @@
       仍需看 push 后的
       GitHub Actions
       `WinSSL Runtime Gate`
+  最新远端反馈：
+  - 新 run
+    `26152137388`
+    已确认：
+    - 前置 compile / quick smoke / wave-b gate
+      全部通过
+    - 只在
+      `WinSSL Certificate VerifyEx Flag Parity`
+      里失败
+  - 更具体地说：
+    - 第一次
+      `VerifyEx(..., [], ...)`
+      已经正确返回
+      `Certificate has expired`
+    - 第二次
+      `VerifyEx(..., [sslCertVerifyIgnoreExpiry], ...)`
+      直接打出
+      `EAccessViolation`
+  - 这把当前 residual
+    收窄成了
+    custom chain-engine helper
+    的实现细节，
+    而不是 trust-direction 本身：
+    - 当前 helper
+      把
+      `CERT_CHAIN_ENGINE_CONFIG.rghAdditionalStore`
+      指到了栈上的临时数组
+    - follow-up
+      应改成：
+      - engine 只持有
+        `hExclusiveRoot`
+      - 每次
+        `CertGetCertificateChain(...)`
+        再显式传
+        `hAdditionalStore`
 - [completed] `winssl certificate verifyex flag parity`
   当前 focused 目标：
   - 把
