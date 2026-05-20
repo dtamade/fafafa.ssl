@@ -10592,3 +10592,39 @@
   变成了可编译验证的事实，
   而不是继续让调用方在 capability/native-handle 这组基础 public surface 上被迫 split
   `fafafa.ssl.base`
+
+- 当前又确认了一条新的
+  facade-only compile gap：
+  主门面
+  `src/fafafa.ssl.pas`
+  仍未 re-export：
+  - `TSSLStringArray`
+  - `TSSLCertVerifyResult`
+
+- 这两种类型都已经是当前 shipped certificate public surface
+  的直接组成部分：
+  - `ISSLCertificate.GetSubjectAltNames` /
+    `GetKeyUsage` /
+    `GetExtendedKeyUsage`
+    使用
+    `TSSLStringArray`
+  - `ISSLCertificate.VerifyEx(...)`
+    使用
+    `TSSLCertVerifyResult`
+
+- focused facade compile proof
+  首轮就直接失败在：
+  - `main facade must re-export TSSLStringArray`
+  这证明问题不在 backend runtime，
+  也不在文档解释，
+  而在主门面 supporting-type export
+  仍未闭合
+
+- 这批最小正确修法
+  不是新加 helper 或改证书行为，
+  而是：
+  - 在主门面补齐 supporting-type alias
+  - 在 canonical API reference
+    补一条主门面 supporting-type 覆盖说明
+  - 用 facade-only compile contract
+    把这层 truth 锁住

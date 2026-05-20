@@ -78,9 +78,11 @@ type
   TSSLHash = fafafa.ssl.base.TSSLHash;
   TSSLHashSupport = fafafa.ssl.base.TSSLHashSupport;
   
+  TSSLStringArray = fafafa.ssl.base.TSSLStringArray;
   TSSLCertificateInfo = fafafa.ssl.base.TSSLCertificateInfo;
   PSSLCertificateInfo = fafafa.ssl.base.PSSLCertificateInfo;
   TSSLCertificateArray = fafafa.ssl.base.TSSLCertificateArray;
+  TSSLCertVerifyResult = fafafa.ssl.base.TSSLCertVerifyResult;
   TSSLConnectionInfo = fafafa.ssl.base.TSSLConnectionInfo;
   PSSLConnectionInfo = fafafa.ssl.base.PSSLConnectionInfo;
   TSSLConfig = fafafa.ssl.base.TSSLConfig;

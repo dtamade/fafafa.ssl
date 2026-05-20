@@ -17863,6 +17863,75 @@
   - summary:
     - no whitespace or patch-format drift remains before commit
 
+### Facade Certificate Supporting-Type Export Closure
+
+- `gh run view 26168439073 --json status,conclusion,jobs,url`
+  - result: PASS
+  - summary:
+    - the previous pushed batch
+      `fix(facade): export capability and native-handle surface`
+      is now fully green in GitHub Actions:
+      - `Code Quality (Light)`
+      - `FreePascal TLS 1.3 Completeness`
+      - `Minimal Gate (Linux)`
+    - current repo-level next work can stay on
+      interface/facade completeness,
+      not old CI red-light triage
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-20-facade-certificate-supporting-type-export-closure.md`
+  - `tests/contract/test_facade_certificate_supporting_types_entry.pas`
+  - `tests/scripts/test_facade_certificate_supporting_types_export_contract.sh`
+  - change:
+    - recorded a bounded facade-export batch for certificate supporting types
+    - added a facade-only compile proof for
+      `TSSLStringArray`
+      /
+      `TSSLCertVerifyResult`
+
+- `bash -n tests/scripts/test_facade_certificate_supporting_types_export_contract.sh`
+  - result: PASS
+  - summary:
+    - new focused facade supporting-type contract syntax is valid
+
+- `bash tests/scripts/test_facade_certificate_supporting_types_export_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - initial RED proved a real compile gap:
+      - `main facade must re-export TSSLStringArray`
+    - after patching the facade aliases and API-reference note,
+      GREEN proves:
+      - `fafafa.ssl`
+        now re-exports:
+        - `TSSLStringArray`
+        - `TSSLCertVerifyResult`
+      - a consumer source that only
+        `uses fafafa.ssl;`
+        now compiles against current certificate supporting types
+
+- update source / docs:
+  - `src/fafafa.ssl.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - added the missing
+      `TSSLStringArray`
+      alias
+    - added the missing
+      `TSSLCertVerifyResult`
+      alias
+    - recorded the main-facade certificate supporting-type coverage in canonical reference
+
+- `bash tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+- `bash tests/scripts/test_facade_capability_native_handle_export_contract.sh`
+  - result: PASS
+  - summary:
+    - adjacent facade export contracts remained green after the new supporting-type aliases
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains before commit
+
 ### Capability Public Truth Freeze
 
 - add focused batch inputs:

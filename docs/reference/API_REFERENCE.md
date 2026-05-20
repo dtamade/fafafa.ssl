@@ -1336,6 +1336,8 @@ TSSLCertVerifyResult = record
 end;
 ```
 
+`fafafa.ssl` 主门面当前也 re-export 证书 public surface 常用 supporting types（如 `TSSLStringArray` / `TSSLCertVerifyResult` / `TSSLCertVerifyFlags`）。
+
 ### TSSLConnectionInfo
 
 ```pascal

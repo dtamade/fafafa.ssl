@@ -10483,3 +10483,114 @@
        或
        “源码/文档已说明但缺 compile/runtime contract”
        的残口
+116. `facade certificate supporting-type export closure` 这批用于修复主门面 `fafafa.ssl` 的下一条真实 public compile gap：
+   - 新 plan：
+     - `docs/plans/2026-05-20-facade-certificate-supporting-type-export-closure.md`
+   - 当前新发现：
+     - `src/fafafa.ssl.pas`
+       顶部注释仍写着
+       “导出所有公共接口和类型”
+     - 但只
+       `uses fafafa.ssl`
+       再声明当前证书 public surface 常用 supporting types 时，
+       仍会直接编译失败：
+       - `TSSLStringArray`
+       - `TSSLCertVerifyResult`
+     - 这两种类型并不是边缘内部类型，
+       而是当前 shipped surface 已直接使用的公共签名：
+       - `ISSLCertificate.GetSubjectAltNames`
+       - `ISSLCertificate.GetKeyUsage`
+       - `ISSLCertificate.GetExtendedKeyUsage`
+       - `ISSLCertificate.VerifyEx(...)`
+     - `docs/reference/API_REFERENCE.md`
+       也已经把这两种类型作为 canonical truth
+       直接展示出来
+   - 当前最小修法：
+     - 在
+       `src/fafafa.ssl.pas`
+       补齐：
+       - `TSSLStringArray`
+       - `TSSLCertVerifyResult`
+       的 type re-export
+     - 在
+       `API_REFERENCE`
+       补一句：
+       - 主门面
+         `fafafa.ssl`
+         也 re-export
+         证书 public surface 常用 supporting types
+     - 用 compile-based focused contract 锁住：
+       - source re-export truth
+       - `uses fafafa.ssl`
+         的最小 supporting-type probe
+         可编译并运行
+   - 当前 focused proof：
+     - `bash -n tests/scripts/test_facade_certificate_supporting_types_export_contract.sh`
+     - `bash tests/scripts/test_facade_certificate_supporting_types_export_contract.sh`
+     - `git diff --check`
+   - 当前最终收口证据：
+     - focused contract
+       首轮 RED
+       直接打出：
+       - `main facade must re-export TSSLStringArray`
+     - 这说明缺口不是文档抽象判断，
+       而是 facade-only compile proof
+       当场失败
+     - 最小修复后：
+       - `src/fafafa.ssl.pas`
+         已补齐：
+         - `TSSLStringArray`
+         - `TSSLCertVerifyResult`
+       - `docs/reference/API_REFERENCE.md`
+         已补一条主门面 supporting-type 覆盖说明
+     - 相邻门面 contract
+       继续全绿：
+       - `test_facade_optional_owner_surface_export_contract.sh`
+       - `test_facade_capability_native_handle_export_contract.sh`
+   - focused verification 已通过：
+     - `bash -n tests/scripts/test_facade_certificate_supporting_types_export_contract.sh`
+     - `bash tests/scripts/test_facade_certificate_supporting_types_export_contract.sh`
+     - `bash tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+     - `bash tests/scripts/test_facade_capability_native_handle_export_contract.sh`
+     - `git diff --check`
+   - 当前结论：
+     - 这批继续证明：
+       `fafafa.ssl`
+       主门面的完整性问题
+       不是一次性收完的，
+       而是需要 compile-based probing
+       去逐条把 supporting types /
+       owner surface /
+       capability surface
+       闭合
+     - 但到这一批为止，
+       证书 public surface 里最常用的 supporting-type compile gap
+       已经收口
+   - 当前总路线图进度：
+     - `接口设计`
+       主线已经从纯静态批评
+       进入
+       “活跃 public surface
+       是否真的 compile-closed”
+       的实证阶段
+     - `后端实现`
+       当前不需要为这条问题改 backend runtime，
+       说明这次 residual
+       确实在 facade/interface completeness
+       而不是 producer side
+     - `测试与文档`
+       本批继续补齐：
+       - focused compile contract
+       - canonical API reference truth
+       - docs/plans + working-memory 台账
+   - 当前批收口后的默认下一步：
+     - 继续回到
+       `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+       的 completeness 主线
+     - 优先再找：
+       - 其它已发布 public type / interface
+         是否仍未真正从主门面闭合
+       - 或 source / canonical docs
+         已说明存在，
+         但还缺 focused compile/runtime contract
+         的残口
