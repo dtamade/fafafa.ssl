@@ -10,6 +10,110 @@
 
 ## Current Status
 
+- [completed] `direct-library ServerName backend proof`
+  当前 focused 目标：
+  - 把
+    `TSSLConfig.ServerName`
+    在 direct-library
+    `CreateContext(...)`
+    路径上的 backend proof
+    补齐到：
+    - `OpenSSL`
+    - `FreePascal`
+    - `MbedTLS`
+    - `WolfSSL`
+    - `WinSSL(static only on Linux)`
+  - 避免这条 compatibility-only 语义
+    继续停留在
+    “源码看起来一致，
+    但 runtime 证据只覆盖部分 backend”
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-direct-library-server-name-backend-proof.md`
+  - 新增 focused shell contract：
+    - `tests/scripts/test_direct_library_server_name_backend_contract.sh`
+  - 新增 optional backend runtime proof：
+    - `tests/test_mbedtls_wolfssl_library_default_config_server_name_clarification.pas`
+  当前实施判断：
+  - 已有
+    `OpenSSL`
+    /
+    `FreePascal`
+    direct-library
+    `ServerName`
+    clarified proof
+    证明了：
+    - client default-config
+      warning + ignore
+    - server default-config
+      reject
+  - 但
+    `MbedTLS`
+    /
+    `WolfSSL`
+    这两条 backend path
+    之前还主要停留在源码与静态 contract 层
+  - 当前更值钱的动作
+    不是重开
+    context-level SNI
+    设计讨论，
+    而是把 backend proof
+    补成对称
+  当前 focused proof：
+  - `bash -n tests/scripts/test_direct_library_server_name_backend_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_direct_library_server_name_backend_contract.sh`
+    - PASS
+  - `mkdir -p tmp/test_mbedtls_wolfssl_library_default_config_server_name_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_wolfssl_library_default_config_server_name_clarification -FEtmp/test_mbedtls_wolfssl_library_default_config_server_name_clarification -otmp/test_mbedtls_wolfssl_library_default_config_server_name_clarification/test_mbedtls_wolfssl_library_default_config_server_name_clarification tests/test_mbedtls_wolfssl_library_default_config_server_name_clarification.pas && ./tmp/test_mbedtls_wolfssl_library_default_config_server_name_clarification/test_mbedtls_wolfssl_library_default_config_server_name_clarification`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前状态：
+  - `MbedTLS`
+    direct-library
+    default-config
+    `ServerName`
+    现在已有 runtime evidence：
+    - client path
+      warning + ignore
+    - server path
+      reject
+    - empty client path
+      no warning
+  - `WolfSSL`
+    这三条 truth
+    也已有同级 runtime evidence
+  - `WinSSL`
+    仍按当前 Linux 环境限制，
+    继续由 focused shell contract
+    守住源码 truth
+  - 这意味着
+    direct-library
+    `ServerName`
+    compatibility
+    不再只是
+    `OpenSSL/FreePascal`
+    两条 backend 的局部 proof
+  当前总路线图进度：
+  - `TSSLConfig mixed-scope`
+    这条线，
+    现在又少了一条
+    “各 backend 实现是否真的对齐”
+    的验证缺口
+  - 后续再审
+    direct-library path
+    时，
+    可以把注意力更多放回：
+    - 真正的 runtime capability drift
+    - 或更高层的 public-surface slimming
+  下一刀：
+  - 更适合继续查：
+    - `TSSLConfig`
+      其余 mixed-scope 字段
+      有没有还没补齐的 cross-backend runtime proof
+    - 或 pure Pascal backend completeness
+      是否还有 fresh RED
+
 - [completed] `isslsessionresumption generic examples owner path`
   当前 focused 目标：
   - 把普通活跃 examples

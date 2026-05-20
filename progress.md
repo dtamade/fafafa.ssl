@@ -6,6 +6,117 @@
 
 ## 2026-05-21
 
+### Direct-Library ServerName Backend Proof
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-direct-library-server-name-backend-proof.md`
+  - change:
+    - recorded a bounded backend-proof batch around
+      `TSSLConfig.ServerName`
+      on direct-library
+      `CreateContext(...)`
+      paths
+    - explicitly framed the problem as
+      `backend proof asymmetry`
+      rather than a fresh public-surface redesign
+
+- inspect current direct-library proof coverage:
+  - `tests/test_openssl_library_default_config_server_name_clarification.pas`
+  - `tests/test_freepascal_library_default_config_server_name_clarification.pas`
+  - `src/fafafa.ssl.openssl.backed.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - change:
+    - confirmed
+      `OpenSSL`
+      /
+      `FreePascal`
+      already had direct-library
+      `ServerName`
+      runtime clarification proofs
+    - confirmed
+      `MbedTLS`
+      /
+      `WolfSSL`
+      source paths already carried the same warning/reject truth,
+      but runtime proof was still missing
+
+- add backend contract + optional backend runtime proof:
+  - `tests/scripts/test_direct_library_server_name_backend_contract.sh`
+  - `tests/test_mbedtls_wolfssl_library_default_config_server_name_clarification.pas`
+  - change:
+    - added a focused shell contract that freezes:
+      - direct-library
+        `ServerName`
+        warning/reject source truth
+        across
+        `OpenSSL/FreePascal/MbedTLS/WolfSSL/WinSSL`
+      - proof-file coverage for
+        `OpenSSL`
+        /
+        `FreePascal`
+        existing runtime tests
+        plus the new optional-backend runtime proof
+    - added a combined optional-backend runtime test that proves:
+      - `MbedTLS`
+        client default-config
+        `ServerName`
+        warns + ignores
+      - `MbedTLS`
+        server default-config
+        `ServerName`
+        rejects
+      - `MbedTLS`
+        empty client default-config
+        stays quiet
+      - `WolfSSL`
+        carries the same three truths
+
+- first shell-contract failure and fix:
+  - `bash tests/scripts/test_direct_library_server_name_backend_contract.sh`
+    - first result: FAIL
+    - summary:
+      - the initial contract over-bound the runtime test to a specific helper implementation detail:
+        `TSSLFactory.IsLibraryAvailable(sslMbedTLS)`
+      - this was not a product drift;
+        it was a contract-design drift
+  - change:
+    - rewrote the contract to assert
+      backend coverage,
+      optional-backend skip semantics,
+      and warning/reject truth,
+      instead of one exact helper spelling
+
+- focused verification:
+  - `bash -n tests/scripts/test_direct_library_server_name_backend_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_direct_library_server_name_backend_contract.sh`
+    - result: PASS
+    - summary:
+      - direct-library
+        `ServerName`
+        backend proof remains aligned across
+        source truth
+        and focused runtime-proof coverage
+  - `mkdir -p tmp/test_mbedtls_wolfssl_library_default_config_server_name_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_wolfssl_library_default_config_server_name_clarification -FEtmp/test_mbedtls_wolfssl_library_default_config_server_name_clarification -otmp/test_mbedtls_wolfssl_library_default_config_server_name_clarification/test_mbedtls_wolfssl_library_default_config_server_name_clarification tests/test_mbedtls_wolfssl_library_default_config_server_name_clarification.pas && ./tmp/test_mbedtls_wolfssl_library_default_config_server_name_clarification/test_mbedtls_wolfssl_library_default_config_server_name_clarification`
+    - result: PASS
+    - summary:
+      - `MbedTLS`
+        and
+        `WolfSSL`
+        direct-library default-config
+        `ServerName`
+        semantics now have runtime proof:
+        warning + ignore on client,
+        reject on server,
+        quiet when empty
+  - `git diff --check`
+    - result: PASS
+    - summary:
+      - no whitespace or patch-format drift remains after the backend-proof batch
+
 ### ISSLSessionResumption Generic Examples Owner Path
 
 - add focused batch inputs:

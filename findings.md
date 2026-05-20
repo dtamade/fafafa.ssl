@@ -2,6 +2,57 @@
 
 ## 2026-05-21
 
+- `TSSLConfig.ServerName`
+  这条 direct-library compatibility 线，
+  当前真正的缺口
+  不是实现分叉，
+  而是 backend proof
+  不对称：
+  - `OpenSSL`
+  - `FreePascal`
+    已有 runtime proof
+  - `MbedTLS`
+  - `WolfSSL`
+    之前更多还是源码 truth
+
+- 补上
+  `MbedTLS/WolfSSL`
+  direct-library default-config
+  focused runtime proof 后，
+  当前 durable 结论已经更完整：
+  - client default-config `ServerName`
+    = warning + ignore
+  - server default-config `ServerName`
+    = reject
+  - empty client default-config
+    = no warning
+  这三条语义
+  现在不再只是
+  `OpenSSL/FreePascal`
+  的局部事实
+
+- `WinSSL`
+  这轮仍保持静态 contract 级证明，
+  但至少 direct-library source truth
+  已和其他 backend
+  一起被放进同一条 focused shell contract
+
+- 这批还有一个工作流层面的结论：
+  focused shell contract
+  不应把 runtime test
+  的 helper 写法钉死。
+  初版 contract
+  因为要求精确出现
+  `TSSLFactory.IsLibraryAvailable(sslMbedTLS)`
+  这类实现细节而误打红；
+  调整后只守：
+  - backend 覆盖事实
+  - optional-backend skip 语义
+  - warning/reject 核心断言
+  这样更耐重构，
+  也更符合
+  “记录真相而不是记录写法”
+
 - 在
   `session semantics residual sweep`
   里，
