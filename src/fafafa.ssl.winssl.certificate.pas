@@ -198,6 +198,11 @@ begin
   end;
 end;
 
+function FormatHexError(const AValue: DWORD): string;
+begin
+  Result := '0x' + IntToHex(AValue, 8);
+end;
+
 function CreateChainEngineForStore(
   ACAStore: ISSLCertificateStore;
   const ACaller: string;
@@ -895,23 +900,25 @@ begin
       AResult.ChainStatus := LNativePolicyError;
       
       // 检查验证结果
-      if (LNativePolicyError <> 0) and
-        (sslCertVerifyIgnoreExpiry in AFlags) and
+      if (LNativePolicyError <> 0) and then
+        (sslCertVerifyIgnoreExpiry in AFlags) and then
         (LNativePolicyError = DWORD(CERT_E_EXPIRED)) then
       begin
         LOverrideDetail :=
-          Format('WinSSL certificate verification accepted the chain after sslCertVerifyIgnoreExpiry overrode native policy error 0x%x',
-            [LNativePolicyError]);
+          'WinSSL certificate verification accepted the chain after ' +
+          'sslCertVerifyIgnoreExpiry overrode native policy error ' +
+          FormatHexError(LNativePolicyError);
         LNativePolicyError := 0;
       end
-      else if (LNativePolicyError <> 0) and
-        (sslCertVerifyAllowSelfSigned in AFlags) and
-        IsSelfSigned and
+      else if (LNativePolicyError <> 0) and then
+        (sslCertVerifyAllowSelfSigned in AFlags) and then
+        IsSelfSigned and then
         (LNativePolicyError = DWORD(CERT_E_UNTRUSTEDROOT)) then
       begin
         LOverrideDetail :=
-          Format('WinSSL certificate verification accepted a self-signed leaf after sslCertVerifyAllowSelfSigned overrode native policy error 0x%x',
-            [LNativePolicyError]);
+          'WinSSL certificate verification accepted a self-signed leaf after ' +
+          'sslCertVerifyAllowSelfSigned overrode native policy error ' +
+          FormatHexError(LNativePolicyError);
         LNativePolicyError := 0;
       end;
 
@@ -967,8 +974,9 @@ begin
           CERT_E_INVALID_NAME:
             AResult.ErrorMessage := 'Certificate name is invalid';
         else
-          AResult.ErrorMessage := Format('Certificate verification failed (Error: 0x%x)', 
-            [LNativePolicyError]);
+          AResult.ErrorMessage :=
+            'Certificate verification failed (Error: ' +
+            FormatHexError(LNativePolicyError) + ')';
         end;
       end;
     end

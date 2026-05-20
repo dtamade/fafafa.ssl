@@ -188,6 +188,52 @@
     的最终稳定性
     从不可靠的 native flag lane
     收回到我们自己可验证的 public surface
+
+- 最新 Windows run
+  `26153510516`
+  又给了我们一条更细的残差信号：
+  - 第一条
+    `VerifyEx(..., [], ...)`
+    已稳定返回
+    `Certificate has expired`
+  - 说明：
+    - custom trust engine
+      和
+      zero-flag native baseline
+      这两个方向没有再偏
+  - 但第二条
+    `VerifyEx(..., [sslCertVerifyIgnoreExpiry], ...)`
+    仍抛
+    `EAccessViolation`
+
+- 由于这次崩溃发生在
+  “进入 public-contract override 成功路径” 的第一枪，
+  当前最小可信 follow-up
+  不是再回退设计，
+  而是先消掉两个会掩盖真实 fault boundary 的因素：
+  - `WinSSL VerifyEx`
+    success override
+    路径里的
+    `Format(...0x%x...)`
+  - focused WinSSL test
+    自己的
+    `FormatVerifyState(...)`
+    格式化
+
+- 与此同时，
+  focused test
+  现在会输出
+  `VerifyEx start/end`
+  阶段 trace；
+  所以下一轮 Windows CI
+  即使仍失败，
+  也能直接回答：
+  - 崩在
+    `VerifyEx`
+    函数体内部
+  - 还是崩在
+    函数返回后的
+    结果字符串渲染
 - `OpenSSL certificate.VerifyEx`
   这轮被打出来的真实问题
   不是

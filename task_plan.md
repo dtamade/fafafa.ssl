@@ -157,6 +157,35 @@
       - 然后在
         public contract
         层做窄范围 success override
+  - 当前最新静态收口：
+    - 现有实现已经切到
+      zero-flag native baseline
+      + public-contract override
+    - 但最新 Windows run
+      `26153510516`
+      仍在
+      `expired/ignore-expiry`
+      第二次调用时抛
+      `EAccessViolation`
+    - 本轮 follow-up
+      先最小移除两个潜在干扰项：
+      - success override
+        路径上的
+        `Format(...0x%x...)`
+      - focused test
+        外层同样的
+        `Format(...)`
+        结果格式化
+    - 同时给
+      `tests/winssl/test_winssl_cert_verify_ex.pas`
+      增加阶段 trace，
+      让下一轮 Windows CI
+      能明确区分：
+      - 崩在
+        `VerifyEx`
+        内部
+      - 还是崩在
+        返回后的结果渲染
 - [completed] `winssl certificate verifyex flag parity`
   当前 focused 目标：
   - 把

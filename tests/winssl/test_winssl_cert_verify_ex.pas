@@ -52,16 +52,25 @@ end;
 
 function FormatVerifyState(AVerified: Boolean; const AResult: TSSLCertVerifyResult): string;
 begin
-  Result := Format(
-    'actual verified=%s success=%s error=%d msg=%s details=%s',
-    [
-      BoolToStr(AVerified, True),
-      BoolToStr(AResult.Success, True),
-      AResult.ErrorCode,
-      AResult.ErrorMessage,
-      AResult.DetailedInfo
-    ]
-  );
+  Result :=
+    'actual verified=' + BoolToStr(AVerified, True) +
+    ' success=' + BoolToStr(AResult.Success, True) +
+    ' error=' + IntToStr(Integer(AResult.ErrorCode)) +
+    ' msg=' + AResult.ErrorMessage +
+    ' details=' + AResult.DetailedInfo;
+end;
+
+function VerifyExWithTrace(
+  const AStage: string;
+  ACert: ISSLCertificate;
+  AStore: ISSLCertificateStore;
+  AFlags: TSSLCertVerifyFlags;
+  out AResult: TSSLCertVerifyResult
+): Boolean;
+begin
+  WriteLn('[INFO] VerifyEx start: ', AStage);
+  Result := ACert.VerifyEx(AStore, AFlags, AResult);
+  WriteLn('[INFO] VerifyEx end: ', AStage, ' ', FormatVerifyState(Result, AResult));
 end;
 
 function CreateMemoryBackedStore: TWinSSLCertificateStore;
@@ -115,7 +124,7 @@ begin
   Check(LStore.AddCertificate(LCACert),
     'CA fixture should be added to the expiry memory-backed store');
 
-  LVerified := LExpiredLeaf.VerifyEx(LStore, [], LVerifyResult);
+  LVerified := VerifyExWithTrace('expired/no-flags/initial', LExpiredLeaf, LStore, [], LVerifyResult);
   Check((not LVerified) and (not LVerifyResult.Success),
     'Expired leaf without IgnoreExpiry should fail; ' + FormatVerifyState(LVerified, LVerifyResult));
   LDiag := LVerifyResult.ErrorMessage + ' ' + LVerifyResult.DetailedInfo;
@@ -125,11 +134,17 @@ begin
     'Expired leaf failure should expose an expiry diagnostic once the CA is supplied via memory-backed trust'
   );
 
-  LVerified := LExpiredLeaf.VerifyEx(LStore, [sslCertVerifyIgnoreExpiry], LVerifyResult);
+  LVerified := VerifyExWithTrace(
+    'expired/ignore-expiry',
+    LExpiredLeaf,
+    LStore,
+    [sslCertVerifyIgnoreExpiry],
+    LVerifyResult
+  );
   Check(LVerified and LVerifyResult.Success,
     'Expired leaf with IgnoreExpiry should succeed; ' + FormatVerifyState(LVerified, LVerifyResult));
 
-  LVerified := LExpiredLeaf.VerifyEx(LStore, [], LVerifyResult);
+  LVerified := VerifyExWithTrace('expired/no-flags/final', LExpiredLeaf, LStore, [], LVerifyResult);
   Check((not LVerified) and (not LVerifyResult.Success),
     'IgnoreExpiry must stay per-call and not leak into a later unflagged verify; ' +
       FormatVerifyState(LVerified, LVerifyResult));
@@ -148,7 +163,7 @@ begin
   LEmptyStore := CreateMemoryBackedStore;
   Check(LEmptyStore <> nil, 'Empty WinSSL memory-backed store should be created');
 
-  LVerified := LSelfSignedLeaf.VerifyEx(LEmptyStore, [], LVerifyResult);
+  LVerified := VerifyExWithTrace('selfsigned/no-flags/initial', LSelfSignedLeaf, LEmptyStore, [], LVerifyResult);
   Check((not LVerified) and (not LVerifyResult.Success),
     'Self-signed leaf without AllowSelfSigned should fail; ' + FormatVerifyState(LVerified, LVerifyResult));
   LDiag := LVerifyResult.ErrorMessage + ' ' + LVerifyResult.DetailedInfo;
@@ -159,11 +174,17 @@ begin
     'Self-signed failure should expose a trust diagnostic'
   );
 
-  LVerified := LSelfSignedLeaf.VerifyEx(LEmptyStore, [sslCertVerifyAllowSelfSigned], LVerifyResult);
+  LVerified := VerifyExWithTrace(
+    'selfsigned/allow-self-signed',
+    LSelfSignedLeaf,
+    LEmptyStore,
+    [sslCertVerifyAllowSelfSigned],
+    LVerifyResult
+  );
   Check(LVerified and LVerifyResult.Success,
     'Self-signed leaf with AllowSelfSigned should succeed; ' + FormatVerifyState(LVerified, LVerifyResult));
 
-  LVerified := LSelfSignedLeaf.VerifyEx(LEmptyStore, [], LVerifyResult);
+  LVerified := VerifyExWithTrace('selfsigned/no-flags/final', LSelfSignedLeaf, LEmptyStore, [], LVerifyResult);
   Check((not LVerified) and (not LVerifyResult.Success),
     'AllowSelfSigned must stay per-call and not leak into a later unflagged verify; ' +
       FormatVerifyState(LVerified, LVerifyResult));
@@ -187,11 +208,17 @@ begin
   Check(LLeafCert.Verify(LStore),
     'CA-signed leaf should verify when its CA is supplied in the custom WinSSL store');
 
-  LVerified := LLeafCert.VerifyEx(LStore, [], LVerifyResult);
+  LVerified := VerifyExWithTrace('strict-chain/no-flags', LLeafCert, LStore, [], LVerifyResult);
   Check(LVerified and LVerifyResult.Success,
     'CA-signed leaf without strict-chain should succeed; ' + FormatVerifyState(LVerified, LVerifyResult));
 
-  LVerified := LLeafCert.VerifyEx(LStore, [sslCertVerifyStrictChain], LVerifyResult);
+  LVerified := VerifyExWithTrace(
+    'strict-chain/enforced',
+    LLeafCert,
+    LStore,
+    [sslCertVerifyStrictChain],
+    LVerifyResult
+  );
   Check((not LVerified) and (not LVerifyResult.Success),
     'Strict-chain should fail when the leaf certificate lacks serverAuth EKU; ' +
       FormatVerifyState(LVerified, LVerifyResult));

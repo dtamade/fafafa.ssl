@@ -258,6 +258,55 @@
   - summary:
     - confirmed the previously pushed
       `certificate version truth`
+
+### WinSSL VerifyEx Override AV Narrowing
+
+- update implementation:
+  - `src/fafafa.ssl.winssl.certificate.pas`
+  - `tests/winssl/test_winssl_cert_verify_ex.pas`
+  - change:
+    - replaced
+      WinSSL
+      `VerifyEx`
+      override-path
+      `Format(...0x%x...)`
+      calls
+      with
+      `IntToHex`
+      based string assembly
+    - converted the
+      override-condition
+      boolean chains
+      from
+      `and`
+      to
+      `and then`
+      so
+      `IsSelfSigned`
+      and later operands
+      are only evaluated when the earlier gates have already matched
+    - replaced
+      focused test
+      `FormatVerifyState(...)`
+      with plain string concatenation
+    - added
+      `VerifyExWithTrace(...)`
+      markers so the next Windows run can show whether the residual
+      `EAccessViolation`
+      fires inside
+      `VerifyEx`
+      or during outer result rendering
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift after the WinSSL AV-narrowing follow-up
+    - Linux local environment still cannot execute the real
+      WinSSL
+      runtime truth;
+      the decisive proof remains the next
+      GitHub Actions
+      `WinSSL Runtime Gate`
       batch is now fully green on remote CI
     - `Code Quality (Light)` /
       `Minimal Gate (Linux)` /
