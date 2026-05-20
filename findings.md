@@ -274,6 +274,63 @@
   - 只撤回
     `and then`
     这处不可编译改动
+
+- 新 run
+  `26158902571`
+  把这条线继续收窄了，而且这次证据更硬：
+  - `quick smoke`
+    和
+    `Wave B gate`
+    都恢复为
+    PASS
+  - 失败重新回到
+    `WinSSL Certificate VerifyEx Flag Parity`
+    focused runtime
+
+- 更关键的是，
+  新增的
+  `VerifyEx start/end`
+  trace
+  直接证伪了
+  “外层结果格式化触发 AV”
+  这个怀疑：
+  - 第一条
+    `expired/no-flags/initial`
+    能看到完整的
+    start/end
+  - 第二条
+    `expired/ignore-expiry`
+    在打出
+    start
+    之前的准备后，
+    直接抛
+    `EAccessViolation`
+  - 没有任何
+    `VerifyEx end`
+    记录
+
+- 这意味着：
+  - 外层 test helper
+    `FormatVerifyState(...)`
+    已经不是 fault boundary
+  - 问题仍然在
+    `TWinSSLCertificate.VerifyEx`
+    自己
+  - 而且高度集中在
+    override success
+    这条内部路径
+
+- 当前最小继续收口动作因此不是改测试，
+  而是进一步去掉
+  override success
+  路径里的字符串写入：
+  - 不再给
+    `DetailedInfo`
+    赋值
+  - override 成功时也先不写额外 success message
+  - 只保留
+    `Success/ErrorCode/ChainStatus`
+    这三个最小状态写入
 - `OpenSSL certificate.VerifyEx`
   这轮被打出来的真实问题
   不是

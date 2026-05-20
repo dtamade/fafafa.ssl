@@ -806,7 +806,7 @@ var
   LChainFlags: DWORD;
   LExtendedKeyUsage: TSSLStringArray;
   LNativePolicyError: DWORD;
-  LOverrideDetail: string;
+  LOverrideApplied: Boolean;
 begin
   // 初始化返回值
   AResult.Success := False;
@@ -881,7 +881,7 @@ begin
     FillChar(LPolicyPara, SizeOf(LPolicyPara), 0);
     LPolicyPara.cbSize := SizeOf(LPolicyPara);
     LPolicyPara.dwFlags := 0;
-    LOverrideDetail := '';
+    LOverrideApplied := False;
 
     // 初始化策略状态
     FillChar(LPolicyStatus, SizeOf(LPolicyStatus), 0);
@@ -904,10 +904,7 @@ begin
         (sslCertVerifyIgnoreExpiry in AFlags) and
         (LNativePolicyError = DWORD(CERT_E_EXPIRED)) then
       begin
-        LOverrideDetail :=
-          'WinSSL certificate verification accepted the chain after ' +
-          'sslCertVerifyIgnoreExpiry overrode native policy error ' +
-          FormatHexError(LNativePolicyError);
+        LOverrideApplied := True;
         LNativePolicyError := 0;
       end
       else if (LNativePolicyError <> 0) and
@@ -915,10 +912,7 @@ begin
         IsSelfSigned and
         (LNativePolicyError = DWORD(CERT_E_UNTRUSTEDROOT)) then
       begin
-        LOverrideDetail :=
-          'WinSSL certificate verification accepted a self-signed leaf after ' +
-          'sslCertVerifyAllowSelfSigned overrode native policy error ' +
-          FormatHexError(LNativePolicyError);
+        LOverrideApplied := True;
         LNativePolicyError := 0;
       end;
 
@@ -942,9 +936,8 @@ begin
         AResult.Success := True;
         AResult.ErrorCode := 0;
         AResult.ChainStatus := 0;
-        AResult.ErrorMessage := 'Certificate verified successfully';
-        if LOverrideDetail <> '' then
-          AResult.DetailedInfo := LOverrideDetail;
+        if not LOverrideApplied then
+          AResult.ErrorMessage := 'Certificate verified successfully';
         Result := True;
       end
       else

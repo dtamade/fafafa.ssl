@@ -217,6 +217,52 @@
       - 只把
         `and then`
         改回当前仓库可编译的布尔写法
+  - 最新远端反馈（第二枪）：
+    - 新 run
+      `26158902571`
+      已证明：
+      - `quick smoke`
+        恢复为
+        PASS
+      - `Windows Wave B gate`
+        也是
+        PASS
+      - 失败重新收敛回
+        `Run broader WinSSL runtime suite`
+        的
+        `WinSSL Certificate VerifyEx Flag Parity`
+    - 新增 trace
+      还给出了更强的边界：
+      - 能看到
+        `[INFO] VerifyEx start: expired/no-flags/initial`
+        和
+        `end`
+      - 但在第二次
+        `expired/ignore-expiry`
+        调用前后，
+        没有出现
+        `VerifyEx end`
+      - 说明这次
+        `EAccessViolation`
+        的确发生在
+        `TWinSSLCertificate.VerifyEx`
+        函数体内部，
+        而不是测试外层结果格式化
+    - 当前 follow-up
+      继续再缩一层：
+      - override success
+        路径先不再写
+        `DetailedInfo`
+        或额外 success
+        说明字符串
+      - 只返回：
+        - `Success=True`
+        - `ErrorCode=0`
+        - `ChainStatus=0`
+      - 目标是验证
+        crash
+        是否就卡在
+        override 成功分支的字符串处理
 - [completed] `winssl certificate verifyex flag parity`
   当前 focused 目标：
   - 把

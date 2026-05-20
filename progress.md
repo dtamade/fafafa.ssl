@@ -334,6 +334,41 @@
       - revert only the
         `and then`
         syntax
+
+- `gh run view 26158902571 --json jobs --jq '.jobs[0].steps[] | [.number,.name,.status,.conclusion] | @tsv'`
+- `gh run view --job 76945374423 --log-failed`
+  - result: FAIL
+  - summary:
+    - the compile regression is gone:
+      - `Run quick WinSSL smoke`
+        PASS
+      - `Run Windows Wave B gate`
+        PASS
+    - failure is back on the intended lane:
+      - `Run broader WinSSL runtime suite`
+      - test:
+        `WinSSL Certificate VerifyEx Flag Parity`
+    - trace evidence now proves the fault boundary more precisely:
+      - `expired/no-flags/initial`
+        prints both
+        `VerifyEx start`
+        and
+        `VerifyEx end`
+      - `expired/ignore-expiry`
+        crashes before any
+        `VerifyEx end`
+        line
+    - conclusion:
+      - the residual
+        `EAccessViolation`
+        is inside
+        `TWinSSLCertificate.VerifyEx`
+      - outer test-result rendering is no longer the likely cause
+    - next code follow-up:
+      - remove override-success
+        `DetailedInfo`
+        and extra success-message writes
+      - keep only the minimal success-state field updates
       batch is now fully green on remote CI
     - `Code Quality (Light)` /
       `Minimal Gate (Linux)` /
