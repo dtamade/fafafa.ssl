@@ -583,6 +583,69 @@ begin
   end;
 end;
 
+procedure TestMbedTLSCertificateVerificationTruthContract;
+var
+  LLib: ISSLLibrary;
+  LLeafCert: ISSLCertificate;
+  LRealCACert: ISSLCertificate;
+  LStore: ISSLCertificateStore;
+  LVerifyResult: TSSLCertVerifyResult;
+  LVerified: Boolean;
+begin
+  WriteLn('');
+  WriteLn('=== MbedTLS Certificate Verification Truth Contract ===');
+
+  LLib := CreateMbedTLSLibrary;
+  if not LLib.Initialize then
+  begin
+    WriteLn('  (Skipped - MbedTLS library not available)');
+    Test('Certificate verification truth contract skipped', True);
+    Exit;
+  end;
+
+  LLeafCert := TMbedTLSCertificate.Create;
+  LRealCACert := TMbedTLSCertificate.Create;
+  LStore := TMbedTLSCertificateStore.Create;
+  try
+    Test('Load verification leaf fixture',
+      LLeafCert.LoadFromFile('tests/certificate/test_certs/signer_cert.pem'));
+    Test('Load verification CA fixture',
+      LRealCACert.LoadFromFile('tests/certificate/test_certs/ca_cert.pem'));
+    Test('Add verification CA fixture to store',
+      LStore.AddCertificate(LRealCACert));
+
+    LVerified := LLeafCert.VerifyEx(LStore, [], LVerifyResult);
+    Test('VerifyEx succeeds with real issuer certificate',
+      LVerified and LVerifyResult.Success);
+    Test('VerifyEx success populates detail text',
+      Trim(LVerifyResult.DetailedInfo) <> '');
+    Test('VerifyEx success keeps revocation status clear',
+      LVerifyResult.RevocationStatus = 0);
+
+    LVerified := LLeafCert.VerifyEx(nil, [], LVerifyResult);
+    Test('VerifyEx nil store fails closed',
+      (not LVerified) and (not LVerifyResult.Success));
+    Test('VerifyEx nil store exposes error text',
+      Pos('store', LowerCase(LVerifyResult.ErrorMessage)) > 0);
+    Test('VerifyEx nil store exposes detailed info',
+      Trim(LVerifyResult.DetailedInfo) <> '');
+
+    LVerified := LLeafCert.VerifyEx(LStore, [sslCertVerifyCheckRevocation], LVerifyResult);
+    Test('VerifyEx revocation flag fails closed when unsupported',
+      (not LVerified) and (not LVerifyResult.Success));
+    Test('VerifyEx revocation flag exposes unavailable message',
+      Pos('revocation', LowerCase(LVerifyResult.ErrorMessage + ' ' +
+        LVerifyResult.DetailedInfo)) > 0);
+    Test('VerifyEx revocation flag marks unavailable revocation status',
+      LVerifyResult.RevocationStatus = 2);
+  finally
+    LStore := nil;
+    LRealCACert := nil;
+    LLeafCert := nil;
+    LLib.Finalize;
+  end;
+end;
+
 procedure TestMbedTLSCertificateExtensionMetadataContract;
 var
   LLib: ISSLLibrary;
@@ -1315,6 +1378,7 @@ begin
   TestMbedTLSCertificateIdentityGetterContract;
   TestMbedTLSCertificateVersionTruthContract;
   TestMbedTLSCertificateTimeTruthContract;
+  TestMbedTLSCertificateVerificationTruthContract;
   TestMbedTLSCertificateExtensionMetadataContract;
   TestMbedTLSCertificateStore;
   TestMbedTLSNativeHandleContract;

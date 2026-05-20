@@ -146,7 +146,9 @@ implementation
 uses
   Contnrs, DateUtils,
   fafafa.ssl.utils,
-  fafafa.ssl.crypto.hash;
+  fafafa.ssl.crypto.hash,
+  fafafa.ssl.tls13.wire,
+  fafafa.ssl.tls13.servercertverify;
 
 function NormalizeWolfCertText(const AValue: string): string;
 begin
@@ -174,6 +176,177 @@ begin
     LChar := UpCase(ASerialNumber[I]);
     if LChar in ['0'..'9', 'A'..'F'] then
       Result := Result + LChar;
+  end;
+end;
+
+procedure ResetCertVerifyResult(out AResult: TSSLCertVerifyResult);
+begin
+  AResult.Success := False;
+  AResult.ErrorCode := 0;
+  AResult.ErrorMessage := '';
+  AResult.ChainStatus := 0;
+  AResult.RevocationStatus := 0;
+  AResult.DetailedInfo := '';
+end;
+
+function TryLoadParsedCertificateFromInterface(ACert: ISSLCertificate;
+  out AParser: TX509Certificate; out AError: string): Boolean;
+var
+  LDER: TBytes;
+begin
+  Result := False;
+  AParser := nil;
+  AError := '';
+
+  if ACert = nil then
+  begin
+    AError := 'Certificate is not configured';
+    Exit;
+  end;
+
+  LDER := ACert.SaveToDER;
+  if Length(LDER) = 0 then
+  begin
+    AError := 'Certificate DER material is unavailable';
+    Exit;
+  end;
+
+  AParser := TX509Certificate.Create;
+  try
+    AParser.LoadFromDER(LDER);
+    Result := True;
+  except
+    on E: Exception do
+    begin
+      AError := 'Failed to parse certificate DER: ' + E.Message;
+      FreeAndNil(AParser);
+      Result := False;
+    end;
+  end;
+end;
+
+function TryMapCertificateSignatureScheme(const ASignatureOID: string;
+  const AIssuerKeyInfo: TX509PublicKeyInfo; out AScheme: Word;
+  out AError: string): Boolean;
+begin
+  Result := False;
+  AError := '';
+
+  if SameText(ASignatureOID, '1.2.840.113549.1.1.11') then
+  begin
+    if not SameText(AIssuerKeyInfo.KeyType, 'RSA') then
+    begin
+      AError := 'Issuer public key type is not RSA for sha256WithRSAEncryption';
+      Exit;
+    end;
+    AScheme := TLS13_SIG_RSA_PKCS1_SHA256;
+    Exit(True);
+  end;
+
+  if SameText(ASignatureOID, '1.2.840.113549.1.1.12') then
+  begin
+    if not SameText(AIssuerKeyInfo.KeyType, 'RSA') then
+    begin
+      AError := 'Issuer public key type is not RSA for sha384WithRSAEncryption';
+      Exit;
+    end;
+    AScheme := TLS13_SIG_RSA_PKCS1_SHA384;
+    Exit(True);
+  end;
+
+  if SameText(ASignatureOID, '1.2.840.10045.4.3.2') then
+  begin
+    if not SameText(AIssuerKeyInfo.KeyType, 'ECDSA') then
+    begin
+      AError := 'Issuer public key type is not ECDSA for ecdsa-with-SHA256';
+      Exit;
+    end;
+    if (not SameText(AIssuerKeyInfo.ECCurve, 'prime256v1')) and
+      (not SameText(AIssuerKeyInfo.ECCurve, 'secp256r1')) then
+    begin
+      AError := 'Issuer ECDSA curve is unsupported for ecdsa-with-SHA256';
+      Exit;
+    end;
+    AScheme := TLS13_SIG_ECDSA_SECP256R1_SHA256;
+    Exit(True);
+  end;
+
+  AError := 'Unsupported certificate signature algorithm: ' + ASignatureOID;
+end;
+
+function TryVerifyCertificateSignatureWithIssuer(ACert, AIssuer: ISSLCertificate;
+  out AError: string): Boolean;
+var
+  LCertParser: TX509Certificate;
+  LIssuerParser: TX509Certificate;
+  LScheme: Word;
+begin
+  Result := False;
+  AError := '';
+
+  if (ACert = nil) or (AIssuer = nil) then
+  begin
+    AError := 'Certificate signature verification requires both certificate and issuer';
+    Exit;
+  end;
+
+  if NormalizeWolfCertText(ACert.GetIssuer) <>
+    NormalizeWolfCertText(AIssuer.GetSubject) then
+  begin
+    AError := 'Certificate issuer does not match issuer subject';
+    Exit;
+  end;
+
+  if not TryLoadParsedCertificateFromInterface(ACert, LCertParser, AError) then
+    Exit;
+  try
+    if not TryLoadParsedCertificateFromInterface(AIssuer, LIssuerParser, AError) then
+      Exit;
+    try
+      if Length(LCertParser.RawTBSCertificate) = 0 then
+      begin
+        AError := 'Certificate TBS payload is unavailable';
+        Exit;
+      end;
+
+      if Length(LCertParser.Signature) = 0 then
+      begin
+        AError := 'Certificate signature payload is unavailable';
+        Exit;
+      end;
+
+      if not TryMapCertificateSignatureScheme(
+        LCertParser.SignatureAlgorithm.OID,
+        LIssuerParser.PublicKeyInfo,
+        LScheme,
+        AError
+      ) then
+        Exit;
+
+      Result := TryVerifyTLS13CertificateVerifySignature(
+        LScheme,
+        LIssuerParser.PublicKeyInfo,
+        LCertParser.RawTBSCertificate,
+        LCertParser.Signature,
+        AError
+      );
+    finally
+      LIssuerParser.Free;
+    end;
+  finally
+    LCertParser.Free;
+  end;
+end;
+
+function HasServerAuthUsage(const AUsage: TSSLStringArray): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 0 to High(AUsage) do
+  begin
+    if SameText(Trim(AUsage[I]), 'serverAuth') then
+      Exit(True);
   end;
 end;
 
@@ -787,75 +960,146 @@ end;
 
 function TWolfSSLCertificate.Verify(ACAStore: ISSLCertificateStore): Boolean;
 var
-  LStore: PWOLFSSL_X509_STORE;
-  LCACert: ISSLCertificate;
-  I: Integer;
+  LVerifyResult: TSSLCertVerifyResult;
 begin
-  Result := False;
-  if FX509 = nil then Exit;
-  if ACAStore = nil then Exit;
-
-  // 获取 CA Store 的原生句柄
-  LStore := PWOLFSSL_X509_STORE(GetNativeHandleSafe(ACAStore, 'TWolfSSLCertificate.Verify'));
-
-  // 如果有原生 Store，使用它进行验证
-  if LStore <> nil then
-  begin
-    // WolfSSL 需要使用 wolfSSL_X509_STORE_CTX 进行验证
-    // 由于 API 限制，我们使用简化的验证逻辑
-    // 检查证书是否在 CA Store 中或由 CA Store 中的证书签发
-    for I := 0 to ACAStore.GetCount - 1 do
-    begin
-      LCACert := ACAStore.GetCertificate(I);
-      if LCACert <> nil then
-      begin
-        // 检查是否是自签名证书且在 CA Store 中
-        if IsSelfSigned and (GetSubject = LCACert.GetSubject) then
-        begin
-          Result := True;
-          Exit;
-        end;
-        // 检查颁发者是否匹配
-        if GetIssuer = LCACert.GetSubject then
-        begin
-          Result := True;
-          Exit;
-        end;
-      end;
-    end;
-  end
-  else
-  begin
-    // 没有原生 Store，使用证书列表进行验证
-    for I := 0 to ACAStore.GetCount - 1 do
-    begin
-      LCACert := ACAStore.GetCertificate(I);
-      if LCACert <> nil then
-      begin
-        if IsSelfSigned and (GetSubject = LCACert.GetSubject) then
-        begin
-          Result := True;
-          Exit;
-        end;
-        if GetIssuer = LCACert.GetSubject then
-        begin
-          Result := True;
-          Exit;
-        end;
-      end;
-    end;
-  end;
-
-  // 如果是自签名证书且没有找到匹配的 CA，返回 False
-  // 这是安全的默认行为
+  Result := VerifyEx(ACAStore, [], LVerifyResult);
 end;
 
 function TWolfSSLCertificate.VerifyEx(ACAStore: ISSLCertificateStore;
   AFlags: TSSLCertVerifyFlags; out AResult: TSSLCertVerifyResult): Boolean;
+var
+  LChain: TSSLCertificateArray;
+  LCurrent: ISSLCertificate;
+  LRoot: ISSLCertificate;
+  LSignatureError: string;
+  LNotBefore: TDateTime;
+  LNotAfter: TDateTime;
+  LKeyUsage: TSSLStringArray;
+  I: Integer;
 begin
-  FillChar(AResult, SizeOf(AResult), 0);
-  AResult.Success := Verify(ACAStore);
-  Result := AResult.Success;
+  ResetCertVerifyResult(AResult);
+  Result := False;
+
+  if FX509 = nil then
+  begin
+    AResult.ErrorCode := 1;
+    AResult.ErrorMessage := 'Certificate not loaded';
+    AResult.DetailedInfo := 'WolfSSL VerifyEx requires a loaded certificate';
+    Exit;
+  end;
+
+  if ACAStore = nil then
+  begin
+    AResult.ErrorCode := 2;
+    AResult.ErrorMessage := 'Certificate store is not configured';
+    AResult.DetailedInfo := 'WolfSSL VerifyEx requires a configured certificate store';
+    Exit;
+  end;
+
+  LChain := ACAStore.BuildCertificateChain(Self);
+  if Length(LChain) = 0 then
+  begin
+    AResult.ErrorCode := 3;
+    AResult.ChainStatus := 1;
+    AResult.ErrorMessage := 'Certificate chain could not be built';
+    AResult.DetailedInfo := 'WolfSSL VerifyEx could not construct a certificate chain from the configured store';
+    Exit;
+  end;
+
+  for I := 0 to High(LChain) do
+  begin
+    LCurrent := LChain[I];
+    if LCurrent = nil then
+    begin
+      AResult.ErrorCode := 4;
+      AResult.ChainStatus := 1;
+      AResult.ErrorMessage := 'Certificate chain contains a nil entry';
+      AResult.DetailedInfo := Format('WolfSSL VerifyEx encountered a nil chain entry at index %d', [I]);
+      Exit;
+    end;
+
+    if not (sslCertVerifyIgnoreExpiry in AFlags) then
+    begin
+      LNotBefore := LCurrent.GetNotBefore;
+      LNotAfter := LCurrent.GetNotAfter;
+      if (LNotBefore <= 0) or (LNotAfter <= 0) then
+      begin
+        AResult.ErrorCode := 5;
+        AResult.ChainStatus := 1;
+        AResult.ErrorMessage := 'Certificate validity window is unavailable';
+        AResult.DetailedInfo := Format('WolfSSL VerifyEx requires validity metadata for chain entry %d', [I]);
+        Exit;
+      end;
+      if Now < LNotBefore then
+      begin
+        AResult.ErrorCode := 6;
+        AResult.ChainStatus := 1;
+        AResult.ErrorMessage := 'Certificate is not yet valid';
+        AResult.DetailedInfo := Format('WolfSSL VerifyEx rejected chain entry %d because notBefore is in the future', [I]);
+        Exit;
+      end;
+      if Now > LNotAfter then
+      begin
+        AResult.ErrorCode := 7;
+        AResult.ChainStatus := 1;
+        AResult.ErrorMessage := 'Certificate is expired';
+        AResult.DetailedInfo := Format('WolfSSL VerifyEx rejected chain entry %d because notAfter is in the past', [I]);
+        Exit;
+      end;
+    end;
+  end;
+
+  for I := 0 to High(LChain) - 1 do
+  begin
+    if not TryVerifyCertificateSignatureWithIssuer(LChain[I], LChain[I + 1], LSignatureError) then
+    begin
+      AResult.ErrorCode := 8;
+      AResult.ChainStatus := 1;
+      AResult.ErrorMessage := 'Certificate signature verification failed';
+      AResult.DetailedInfo := LSignatureError;
+      Exit;
+    end;
+  end;
+
+  LRoot := LChain[High(LChain)];
+  if ((LRoot = nil) or not ACAStore.Contains(LRoot)) and
+    (not ((sslCertVerifyAllowSelfSigned in AFlags) and (LRoot <> nil) and LRoot.IsSelfSigned)) then
+  begin
+    AResult.ErrorCode := 9;
+    AResult.ChainStatus := 1;
+    AResult.ErrorMessage := 'Certificate chain does not terminate at a trusted root';
+    AResult.DetailedInfo := 'WolfSSL VerifyEx requires the final chain certificate to be present in the configured store unless self-signed certificates are explicitly allowed';
+    Exit;
+  end;
+
+  if sslCertVerifyStrictChain in AFlags then
+  begin
+    LKeyUsage := GetExtendedKeyUsage;
+    if not HasServerAuthUsage(LKeyUsage) then
+    begin
+      AResult.ErrorCode := 10;
+      AResult.ChainStatus := 2;
+      AResult.ErrorMessage := 'Strict chain verification requires serverAuth extended key usage';
+      AResult.DetailedInfo := 'sslCertVerifyStrictChain requested but the leaf certificate is missing serverAuth extended key usage';
+      Exit;
+    end;
+  end;
+
+  if (sslCertVerifyCheckRevocation in AFlags) or
+    (sslCertVerifyCheckCRL in AFlags) or
+    (sslCertVerifyCheckOCSP in AFlags) then
+  begin
+    AResult.ErrorCode := 11;
+    AResult.RevocationStatus := 2;
+    AResult.ErrorMessage := 'Certificate revocation verification is unavailable';
+    AResult.DetailedInfo :=
+      'WolfSSL VerifyEx has no OCSP/CRL revocation material for sslCertVerifyCheckRevocation/sslCertVerifyCheckCRL/sslCertVerifyCheckOCSP';
+    Exit;
+  end;
+
+  Result := True;
+  AResult.Success := True;
+  AResult.DetailedInfo := 'WolfSSL certificate chain verification passed';
 end;
 
 function TWolfSSLCertificate.VerifyHostname(const AHostname: string): Boolean;

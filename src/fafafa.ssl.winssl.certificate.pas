@@ -744,8 +744,12 @@ var
   LChainFlags: DWORD;
 begin
   // 初始化返回值
-  FillChar(AResult, SizeOf(AResult), 0);
   AResult.Success := False;
+  AResult.ErrorCode := 0;
+  AResult.ErrorMessage := '';
+  AResult.ChainStatus := 0;
+  AResult.RevocationStatus := 0;
+  AResult.DetailedInfo := '';
   Result := False;
 
   if FCertContext = nil then

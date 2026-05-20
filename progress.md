@@ -4,6 +4,106 @@
 
 ## 2026-05-20
 
+### Optional Backends Certificate Verification Truth
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-20-optional-backends-certificate-verification-truth.md`
+  - `tests/certs/ca-subject-imposter.pem`
+  - `tests/test_wolfssl_framework.pas`
+  - `tests/test_mbedtls_framework.pas`
+  - change:
+    - recorded a bounded optional-backend certificate-verification batch
+    - added a deterministic subject-imposter CA fixture
+    - added focused verification-truth contracts for
+      `WolfSSL`
+      /
+      `MbedTLS`
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas`
+- `./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`
+- `./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+  - result: FAIL
+  - summary:
+    - `WolfSSL`
+      新增 RED
+      先打出了
+      `VerifyEx`
+      空壳结果
+      和
+      subject-imposter
+      false-positive lane
+    - `MbedTLS`
+      同批 RED
+      先打出了：
+      - `VerifyEx succeeds with real issuer certificate`
+        失败
+      - revocation flag
+        被静默忽略
+    - 同时顺手暴露了两个更深的实现问题：
+      - `VerifyEx`
+        初始化还在用
+        `FillChar`
+        处理带
+        `string`
+        的 result record
+      - 新测试最初用 class 引用直接穿接口调用，
+        会把
+        `TInterfacedObject`
+        生命周期弄坏；
+        这批后续已改成 interface 持有
+
+- update implementation:
+  - `src/fafafa.ssl.wolfssl.certificate.pas`
+  - `src/fafafa.ssl.mbedtls.certificate.pas`
+  - `src/fafafa.ssl.openssl.certificate.pas`
+  - `src/fafafa.ssl.winssl.certificate.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - change:
+    - `WolfSSL Verify`
+      改为走
+      `VerifyEx`
+      的最小可信验证路径
+    - `WolfSSL VerifyEx`
+      现在基于
+      parsed DER truth
+      + existing pure-Pascal signature verify
+      做链签名校验，
+      并对 revocation flags
+      fail-closed
+    - `TMbedTLSCertificateStore.AddCertificate`
+      现在会同步写入
+      native
+      `mbedtls_x509_crt`
+      CA chain
+    - `MbedTLS VerifyEx`
+      success / failure / nil-store /
+      unsupported revocation flags
+      结果字段已补齐
+    - 多 backend 的
+      `VerifyEx`
+      result 初始化
+      从
+      `FillChar`
+      改成显式字段重置
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas`
+- `./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`
+- `./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - `WolfSSL`
+      verification-truth contract
+      现已全绿：
+      `217 passed / 0 failed`
+    - `MbedTLS`
+      verification-truth contract
+      现已全绿：
+      `201 passed / 0 failed`
+    - no whitespace or patch-format issues remain before commit
+
 ### Optional Backends Certificate Time Truth
 
 - `gh run view 26143487129 --json status,conclusion,jobs,url`

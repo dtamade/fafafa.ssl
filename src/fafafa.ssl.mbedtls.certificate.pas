@@ -967,40 +967,100 @@ var
   LFlags: Cardinal;
   LCACerts: Pmbedtls_x509_crt;
   LBuf: array[0..1023] of AnsiChar;
+  LExtendedKeyUsage: TSSLStringArray;
+  I: Integer;
+  LHasServerAuth: Boolean;
 begin
-  FillChar(AResult, SizeOf(AResult), 0);
+  AResult.Success := False;
+  AResult.ErrorCode := 0;
+  AResult.ErrorMessage := '';
+  AResult.ChainStatus := 0;
+  AResult.RevocationStatus := 0;
+  AResult.DetailedInfo := '';
   Result := False;
 
   if FX509Crt = nil then
   begin
+    AResult.ErrorCode := 1;
     AResult.ErrorMessage := 'Certificate not loaded';
+    AResult.DetailedInfo := 'MbedTLS VerifyEx requires a loaded certificate';
     Exit;
   end;
 
   if ACAStore = nil then
   begin
+    AResult.ErrorCode := 2;
     AResult.ErrorMessage := 'CA store is nil';
+    AResult.DetailedInfo := 'MbedTLS VerifyEx requires a configured certificate store';
     Exit;
   end;
 
   if not Assigned(mbedtls_x509_crt_verify) then
   begin
+    AResult.ErrorCode := 3;
     AResult.ErrorMessage := 'mbedtls_x509_crt_verify not available';
+    AResult.DetailedInfo := 'MbedTLS X.509 verification API is unavailable';
     Exit;
   end;
 
   LCACerts := Pmbedtls_x509_crt(GetNativeHandleSafe(ACAStore, 'TMbedTLSCertificate.VerifyEx'));
+  if LCACerts = nil then
+  begin
+    AResult.ErrorCode := 4;
+    AResult.ErrorMessage := 'Invalid CA store handle';
+    AResult.DetailedInfo := 'MbedTLS VerifyEx requires a native CA store handle';
+    Exit;
+  end;
+
   LFlags := 0;
 
   if mbedtls_x509_crt_verify(FX509Crt, LCACerts, nil, nil, @LFlags, nil, nil) = 0 then
   begin
+    if sslCertVerifyStrictChain in AFlags then
+    begin
+      LExtendedKeyUsage := GetExtendedKeyUsage;
+      LHasServerAuth := False;
+      for I := 0 to High(LExtendedKeyUsage) do
+      begin
+        if SameText(Trim(LExtendedKeyUsage[I]), 'serverAuth') then
+        begin
+          LHasServerAuth := True;
+          Break;
+        end;
+      end;
+
+      if not LHasServerAuth then
+      begin
+        AResult.ErrorCode := 5;
+        AResult.ChainStatus := 2;
+        AResult.ErrorMessage := 'Strict chain verification requires serverAuth extended key usage';
+        AResult.DetailedInfo :=
+          'sslCertVerifyStrictChain requested but the leaf certificate is missing serverAuth extended key usage';
+        Exit;
+      end;
+    end;
+
+    if (sslCertVerifyCheckRevocation in AFlags) or
+      (sslCertVerifyCheckCRL in AFlags) or
+      (sslCertVerifyCheckOCSP in AFlags) then
+    begin
+      AResult.ErrorCode := 6;
+      AResult.RevocationStatus := 2;
+      AResult.ErrorMessage := 'Certificate revocation verification is unavailable';
+      AResult.DetailedInfo :=
+        'MbedTLS VerifyEx has no OCSP/CRL revocation material for sslCertVerifyCheckRevocation/sslCertVerifyCheckCRL/sslCertVerifyCheckOCSP';
+      Exit;
+    end;
+
     AResult.Success := True;
+    AResult.DetailedInfo := 'MbedTLS certificate verification passed';
     Result := True;
   end
   else
   begin
     AResult.Success := False;
     AResult.ErrorCode := Integer(LFlags);
+    AResult.ChainStatus := 1;
     // Get verification error info
     if Assigned(mbedtls_x509_crt_verify_info) then
     begin
@@ -1008,6 +1068,9 @@ begin
       mbedtls_x509_crt_verify_info(@LBuf[0], SizeOf(LBuf), '', LFlags);
       AResult.ErrorMessage := string(LBuf);
     end;
+    if Trim(AResult.ErrorMessage) = '' then
+      AResult.ErrorMessage := 'Certificate verification failed';
+    AResult.DetailedInfo := Format('MbedTLS verification flags: %u', [LFlags]);
   end;
 end;
 
@@ -1470,6 +1533,7 @@ end;
 function TMbedTLSCertificateStore.AddCertificate(ACert: ISSLCertificate): Boolean;
 var
   LTarget: string;
+  LDER: TBytes;
 begin
   Result := False;
   if ACert = nil then Exit;
@@ -1478,6 +1542,16 @@ begin
   LTarget := NormalizeMbedTLSCertFingerprint(ACert.GetFingerprintSHA256);
   if (LTarget <> '') and (FindByFingerprint(LTarget) <> nil) then
     Exit;
+
+  if FCACerts = nil then
+    AllocateStore;
+
+  LDER := ACert.SaveToDER;
+  if (Length(LDER) > 0) and Assigned(mbedtls_x509_crt_parse) then
+  begin
+    if mbedtls_x509_crt_parse(FCACerts, @LDER[0], Length(LDER)) <> 0 then
+      Exit(False);
+  end;
 
   FCertificates.Add(ACert);
   Result := True;

@@ -628,7 +628,9 @@ var
   I: Integer;
   LHasServerAuth: Boolean;
 begin
-  FillChar(AResult, SizeOf(AResult), 0);
+  AResult.Success := False;
+  AResult.ErrorCode := 0;
+  AResult.ErrorMessage := '';
   AResult.DetailedInfo := '';
   AResult.ChainStatus := 0;
   AResult.RevocationStatus := 0;

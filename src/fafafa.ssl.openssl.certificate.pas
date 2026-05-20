@@ -824,8 +824,12 @@ var
   ParsedCert: TX509Certificate;
   Chain: PSTACK_OF_X509;
 begin
-  FillChar(AResult, SizeOf(AResult), 0);
   AResult.Success := False;
+  AResult.ErrorCode := 0;
+  AResult.ErrorMessage := '';
+  AResult.ChainStatus := 0;
+  AResult.RevocationStatus := 0;
+  AResult.DetailedInfo := '';
   Result := False;
   
   if FX509 = nil then

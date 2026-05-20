@@ -568,6 +568,92 @@ begin
   end;
 end;
 
+procedure TestWolfSSLCertificateVerificationTruthContract;
+var
+  LLib: ISSLLibrary;
+  LLeafCert: ISSLCertificate;
+  LRealCACert: ISSLCertificate;
+  LImposterCACert: ISSLCertificate;
+  LStore: ISSLCertificateStore;
+  LImposterStore: ISSLCertificateStore;
+  LVerifyResult: TSSLCertVerifyResult;
+  LVerified: Boolean;
+begin
+  WriteLn('');
+  WriteLn('=== WolfSSL Certificate Verification Truth Contract ===');
+
+  LLib := CreateWolfSSLLibrary;
+  if not LLib.Initialize then
+  begin
+    WriteLn('  (Skipped - WolfSSL library not available)');
+    Test('Certificate verification truth contract skipped', True);
+    Exit;
+  end;
+
+  LLeafCert := TWolfSSLCertificate.Create;
+  LRealCACert := TWolfSSLCertificate.Create;
+  LImposterCACert := TWolfSSLCertificate.Create;
+  LStore := TWolfSSLCertificateStore.Create;
+  LImposterStore := TWolfSSLCertificateStore.Create;
+  try
+    Test('Load verification leaf fixture',
+      LLeafCert.LoadFromFile('tests/certificate/test_certs/signer_cert.pem'));
+    Test('Load verification CA fixture',
+      LRealCACert.LoadFromFile('tests/certificate/test_certs/ca_cert.pem'));
+    Test('Load subject-imposter CA fixture',
+      LImposterCACert.LoadFromFile('tests/certs/ca-subject-imposter.pem'));
+
+    Test('Add verification CA fixture to store',
+      LStore.AddCertificate(LRealCACert));
+    LVerified := LLeafCert.Verify(LStore);
+    Test('Verify succeeds with real issuer certificate', LVerified);
+
+    LVerified := LLeafCert.VerifyEx(LStore, [], LVerifyResult);
+    Test('VerifyEx succeeds with real issuer certificate',
+      LVerified and LVerifyResult.Success);
+    Test('VerifyEx success keeps error text empty',
+      Trim(LVerifyResult.ErrorMessage) = '');
+
+    Test('Add subject-imposter CA fixture to store',
+      LImposterStore.AddCertificate(LImposterCACert));
+    LVerified := LLeafCert.Verify(LImposterStore);
+    Test('Verify rejects issuer-name-only imposter CA',
+      not LVerified);
+
+    LVerified := LLeafCert.VerifyEx(LImposterStore, [], LVerifyResult);
+    Test('VerifyEx rejects issuer-name-only imposter CA',
+      (not LVerified) and (not LVerifyResult.Success));
+    Test('VerifyEx imposter failure exposes error text',
+      Trim(LVerifyResult.ErrorMessage) <> '');
+    Test('VerifyEx imposter failure marks chain status',
+      LVerifyResult.ChainStatus <> 0);
+
+    LVerified := LLeafCert.VerifyEx(nil, [], LVerifyResult);
+    Test('VerifyEx nil store fails closed',
+      (not LVerified) and (not LVerifyResult.Success));
+    Test('VerifyEx nil store exposes error text',
+      Pos('store', LowerCase(LVerifyResult.ErrorMessage)) > 0);
+    Test('VerifyEx nil store exposes detailed info',
+      Trim(LVerifyResult.DetailedInfo) <> '');
+
+    LVerified := LLeafCert.VerifyEx(LStore, [sslCertVerifyCheckRevocation], LVerifyResult);
+    Test('VerifyEx revocation flag fails closed when unsupported',
+      (not LVerified) and (not LVerifyResult.Success));
+    Test('VerifyEx revocation flag exposes unavailable message',
+      Pos('revocation', LowerCase(LVerifyResult.ErrorMessage + ' ' +
+        LVerifyResult.DetailedInfo)) > 0);
+    Test('VerifyEx revocation flag marks unavailable revocation status',
+      LVerifyResult.RevocationStatus = 2);
+  finally
+    LImposterStore := nil;
+    LStore := nil;
+    LImposterCACert := nil;
+    LRealCACert := nil;
+    LLeafCert := nil;
+    LLib.Finalize;
+  end;
+end;
+
 procedure TestWolfSSLCertificateExtensionMetadataContract;
 var
   LLib: ISSLLibrary;
@@ -1415,6 +1501,7 @@ begin
   TestWolfSSLCertificateIdentityGetterContract;
   TestWolfSSLCertificateVersionTruthContract;
   TestWolfSSLCertificateTimeTruthContract;
+  TestWolfSSLCertificateVerificationTruthContract;
   TestWolfSSLCertificateExtensionMetadataContract;
   TestWolfSSLCertificateCloneMaterializationContract;
   TestWolfSSLCertificateStore;

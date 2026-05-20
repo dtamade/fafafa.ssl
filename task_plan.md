@@ -10,6 +10,97 @@
 
 ## Current Status
 
+- [completed] `optional backends certificate verification truth`
+  当前 focused 目标：
+  - 把
+    `WolfSSL`
+    /
+    `MbedTLS`
+    证书对象的
+    `Verify`
+    /
+    `VerifyEx`
+    从
+    假成功 / flag 静默忽略 / 空壳结果
+    收紧成
+    更接近真实验证语义的 public truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-optional-backends-certificate-verification-truth.md`
+  - 新增 fixture：
+    - `tests/certs/ca-subject-imposter.pem`
+  - 修改实现：
+    - `src/fafafa.ssl.wolfssl.certificate.pas`
+    - `src/fafafa.ssl.mbedtls.certificate.pas`
+    - `src/fafafa.ssl.openssl.certificate.pas`
+    - `src/fafafa.ssl.winssl.certificate.pas`
+    - `src/fafafa.ssl.freepascal.lib.pas`
+  - 修改 focused tests：
+    - `tests/test_wolfssl_framework.pas`
+    - `tests/test_mbedtls_framework.pas`
+  当前实施判断：
+  - `WolfSSL`
+    当前最高价值的实现缺口
+    不是小文档漂移，
+    而是
+    `Verify`
+    仍用
+    issuer/subject
+    文本命中
+    代替真实签名验证
+  - `MbedTLS`
+    这批顺手暴露了第二个真问题：
+    `TMbedTLSCertificateStore.AddCertificate`
+    之前只进
+    interface list，
+    没有同步进
+    native CA chain，
+    导致
+    `Verify`
+    /
+    `VerifyEx`
+    对真实 CA
+    也会失败
+  - 新增 RED
+    还顺手打出了一个
+    shared safety smell：
+    `TSSLCertVerifyResult`
+    含有
+    `string`
+    字段，
+    多 backend
+    的
+    `VerifyEx`
+    还在用
+    `FillChar`
+    初始化
+  当前 focused proof：
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas`
+    - PASS
+  - `./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+    - PASS
+    - `217 passed / 0 failed`
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`
+    - PASS
+  - `./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+    - PASS
+    - `201 passed / 0 failed`
+  - `git diff --check`
+    - PASS
+  当前批收口后的默认下一步：
+  - 继续沿
+    optional backend
+    certificate verification
+    审 residual parity
+  - 优先看
+    `MbedTLS`
+    /
+    `WolfSSL`
+    是否还存在
+    strict-chain /
+    OCSP /
+    chain-status
+    结果字段细节漂移
 - [completed] `optional backends certificate time truth`
   当前 focused 目标：
   - 把

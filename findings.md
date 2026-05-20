@@ -2,6 +2,150 @@
 
 ## 2026-05-20
 
+- `WolfSSL`
+  当前
+  `Verify`
+  /
+  `VerifyEx`
+  原实现里最硬的 bug
+  不是“结果字段不够丰富”，
+  而是
+  `Verify`
+  只要
+  `GetIssuer = CACert.GetSubject`
+  就直接返回
+  `True`
+
+- 这意味着：
+  - 只要给它一个
+    subject 相同
+    但密钥错误的
+    CA
+  - 旧实现也会把它误判为验证成功
+  - 属于实打实的
+    false positive
+
+- 新增的
+  `tests/certs/ca-subject-imposter.pem`
+  把这条 bug
+  固化成了可重复的 RED，
+  避免下次又回到
+  “看起来像链上了”
+  的弱判断
+
+- `MbedTLS`
+  这批真正被打出来的
+  backend gap
+  不只是
+  `VerifyEx`
+  结果字段简陋；
+  更底层的是
+  `TMbedTLSCertificateStore.AddCertificate`
+  之前没有把新增证书
+  同步进
+  native
+  `mbedtls_x509_crt`
+  CA chain
+
+- 所以旧行为会出现：
+  - query / fingerprint / build-chain
+    看上去都能找到证书
+  - 但
+    `Verify`
+    /
+    `VerifyEx`
+    走 native verify 时
+    仍然像“空 trust store”
+
+- 这说明
+  optional backend
+  证书存储
+  之前存在
+  “public list truth”
+  和
+  “native verification truth”
+  分裂
+
+- 这批新测试还顺手暴露出一个
+  shared safety smell：
+  多个 backend 的
+  `VerifyEx`
+  之前都用
+  `FillChar`
+  初始化
+  `TSSLCertVerifyResult`
+  这种带
+  `string`
+  字段的 record
+
+- 本轮已经顺手把
+  `OpenSSL`
+  /
+  `WinSSL`
+  /
+  `FreePascal`
+  /
+  `MbedTLS`
+  /
+  `WolfSSL`
+  这几处初始化
+  全部改成
+  显式字段重置，
+  避免继续传播这类 unsafe pattern
+
+- `WolfSSL`
+  这一批更稳的修法
+  不是硬拉
+  不存在的
+  store-context
+  绑定，
+  而是：
+  - 复用当前仓库已有的
+    `TX509Certificate`
+    解析真相
+  - 结合
+    `tls13.servercertverify`
+    里的 RSA / ECDSA
+    纯 Pascal 签名校验
+  - 先把
+    假成功
+    收紧成
+    最小可信验证
+
+- 最终收口后的 live truth：
+  - `WolfSSL Verify`
+    不再用
+    issuer/subject
+    文本命中
+    代替签名校验
+  - `WolfSSL VerifyEx`
+    现在会：
+    - 构链
+    - 校验 validity
+    - 校验 issuer 签名
+    - 检查 strict-chain serverAuth
+    - 对 revocation / CRL / OCSP
+      fail-closed
+    - 填写
+      `ErrorCode`
+      /
+      `ChainStatus`
+      /
+      `RevocationStatus`
+      /
+      `DetailedInfo`
+  - `MbedTLS VerifyEx`
+    现在会：
+    - 对 nil store / invalid handle
+      给出明确错误
+    - 在 success path
+      填充
+      `DetailedInfo`
+    - 对 revocation / CRL / OCSP
+      fail-closed
+    - 对 strict-chain
+      检查
+      `serverAuth`
 - `gh run view 26143487129`
   最终
   `conclusion=success`，
