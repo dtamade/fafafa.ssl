@@ -17937,6 +17937,55 @@
       and is intentionally delegated to the existing
       GitHub Windows gate
 
+### WinSSL Certificate PublicKey Contract Alignment
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-winssl-certificate-publickey-contract-alignment.md`
+  - `tests/scripts/test_winssl_certificate_publickey_contract.sh`
+  - `tests/winssl/test_winssl_unit_comprehensive.pas`
+  - change:
+    - recorded a bounded WinSSL public-surface batch around
+      `GetPublicKey`
+    - added a static contract for the shared
+      `GetPublicKey = GetPublicKeyAlgorithm`
+      truth
+    - added a Windows runtime assertion into the existing comprehensive suite
+
+- `bash -n tests/scripts/test_winssl_certificate_publickey_contract.sh`
+- `bash tests/scripts/test_winssl_certificate_publickey_contract.sh`
+  - result: RED
+  - summary:
+    - the first failure landed directly on:
+      `WinSSL GetPublicKey is not aligned to GetPublicKeyAlgorithm contract`
+    - confirmed the issue is not doc-only drift;
+      current WinSSL source still published a different
+      `GetPublicKey`
+      semantic than the rest of the repo
+
+- update implementation:
+  - `src/fafafa.ssl.winssl.certificate.pas`
+  - change:
+    - simplified
+      `TWinSSLCertificate.GetPublicKey`
+      to return
+      `GetPublicKeyAlgorithm`
+    - this intentionally aligns WinSSL with the current shipped cross-backend contract
+      and does not try to introduce a one-off full public-key export surface
+
+- `bash -n tests/scripts/test_winssl_certificate_publickey_contract.sh`
+- `bash tests/scripts/test_winssl_certificate_publickey_contract.sh`
+  - result: PASS
+  - summary:
+    - the static contract now confirms both:
+      - source truth
+      - runtime-test coverage
+    - WinSSL public-key getter is aligned to the current repo contract
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains before commit
+
 ### X509 Ed25519 Algorithm Metadata Truth
 
 - `gh run view 26179498925 --json status,conclusion,jobs,url`

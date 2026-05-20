@@ -466,6 +466,9 @@ begin
     Test('GetPublicKeyAlgorithm exposes Ed25519 truth',
       SameText(LCert.GetPublicKeyAlgorithm, 'Ed25519'),
       'Actual=' + LCert.GetPublicKeyAlgorithm);
+    Test('GetPublicKey stays aligned with public-key algorithm contract',
+      SameText(LCert.GetPublicKey, LCert.GetPublicKeyAlgorithm),
+      'Actual=' + LCert.GetPublicKey);
     Test('GetSignatureAlgorithm exposes Ed25519 truth',
       SameText(LCert.GetSignatureAlgorithm, 'Ed25519'),
       'Actual=' + LCert.GetSignatureAlgorithm);

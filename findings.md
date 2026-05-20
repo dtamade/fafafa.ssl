@@ -11339,3 +11339,50 @@
   或改动
   `winssl`
   实现文件本身
+
+- `GetPublicKey`
+  在当前仓库里
+  已经不是“尝试导出完整公钥”的 surface，
+  而是一个已经冻结的最小 contract：
+  - 非空
+  - 与
+    `GetPublicKeyAlgorithm`
+    对齐
+
+- 这条真相并不是只存在于历史文档：
+  - `OpenSSL`
+    当前源码直接返回
+    `GetPublicKeyAlgorithm`
+  - `FreePascal`
+    也已经按同一语义收口
+  - `MbedTLS`
+    /
+    `WolfSSL`
+    之前的 public-surface completeness
+    批次，
+    也已经把
+    `GetPublicKey = GetPublicKeyAlgorithm`
+    当成 done 条件
+
+- 因而
+  `WinSSL.GetPublicKey`
+  继续单独返回
+  `SubjectPublicKeyInfo`
+  PEM
+  不是“实现更强”，
+  而是主 backend public contract drift：
+  - 同一接口
+    在不同 backend
+    发布了不同语义
+  - 上层调用方无法把
+    `ISSLCertificate.GetPublicKey`
+    当作稳定 surface
+
+- 这批最小正确修法
+  不是补全仓库里尚未统一的
+  “完整公钥导出能力”，
+  而是先把
+  `WinSSL`
+  收回到当前 shared contract；
+  真要做 PEM/DER 完整导出，
+  应另开专题并跨 backend 统一设计

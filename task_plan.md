@@ -11500,3 +11500,55 @@
     /
     `WinSSL Runtime Gate`
     是否接受这条主 backend 修正
+
+### 2026-05-21 WinSSL certificate publickey contract 对齐
+
+- [completed] 当前新的 residual
+  已明确落在
+  `WinSSL` 主 backend
+  的 certificate public surface：
+  - 仓库现行 contract
+    已经是
+    `GetPublicKey = GetPublicKeyAlgorithm`
+  - `OpenSSL`
+    /
+    `FreePascal`
+    /
+    `MbedTLS`
+    /
+    `WolfSSL`
+    都已经按这条最小语义收口
+  - 但
+    `TWinSSLCertificate.GetPublicKey`
+    仍单独返回
+    `SubjectPublicKeyInfo`
+    PEM 字符串
+- [completed] 当前 focused RED
+  已通过本地静态 contract
+  稳定坐实：
+  - 新增
+    `docs/plans/2026-05-21-winssl-certificate-publickey-contract-alignment.md`
+  - 新增
+    `tests/scripts/test_winssl_certificate_publickey_contract.sh`
+  - 首轮失败直接打在：
+    - `WinSSL GetPublicKey is not aligned to GetPublicKeyAlgorithm contract`
+- [completed] 最小正确修法已经落地：
+  - `src/fafafa.ssl.winssl.certificate.pas`
+    的
+    `GetPublicKey`
+    已收口到
+    `GetPublicKeyAlgorithm`
+  - `tests/winssl/test_winssl_unit_comprehensive.pas`
+    已补入
+    `GetPublicKey`
+    /
+    `GetPublicKeyAlgorithm`
+    对齐断言
+- [completed] 当前 focused proof：
+  - `bash tests/scripts/test_winssl_certificate_publickey_contract.sh`
+    PASS
+  - `git diff --check`
+    PASS
+  - push 后由
+    `WinSSL Runtime Gate`
+    最终确认这条 runtime truth

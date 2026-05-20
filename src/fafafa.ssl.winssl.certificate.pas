@@ -614,74 +614,8 @@ begin
 end;
 
 function TWinSSLCertificate.GetPublicKey: string;
-var
-  CertInfo: PCERT_INFO;
-  EncodedData: PByte;
-  EncodedSize: DWORD;
-  PEMData: PAnsiChar;
-  PEMSize: DWORD;
-  PEMStr: AnsiString;
 begin
-  Result := '';
-
-  CertInfo := GetCertInfo;
-  if CertInfo = nil then
-    Exit;
-
-  // 第一步：将 SubjectPublicKeyInfo 编码为 DER 格式
-  // 先获取需要的缓冲区大小
-  if not CryptEncodeObject(
-    X509_ASN_ENCODING or PKCS_7_ASN_ENCODING,
-    X509_PUBLIC_KEY_INFO,
-    @CertInfo^.SubjectPublicKeyInfo,
-    nil,
-    @EncodedSize
-  ) then
-    Exit;
-
-  // 分配缓冲区并编码
-  GetMem(EncodedData, EncodedSize);
-  try
-    if not CryptEncodeObject(
-      X509_ASN_ENCODING or PKCS_7_ASN_ENCODING,
-      X509_PUBLIC_KEY_INFO,
-      @CertInfo^.SubjectPublicKeyInfo,
-      EncodedData,
-      @EncodedSize
-    ) then
-      Exit;
-
-    // 第二步：将 DER 格式转换为 PEM 格式
-    // 先获取需要的缓冲区大小
-    if not CryptBinaryToStringA(
-      EncodedData,
-      EncodedSize,
-      CRYPT_STRING_BASE64HEADER,
-      nil,
-      @PEMSize
-    ) then
-      Exit;
-
-    // 分配缓冲区并转换
-    GetMem(PEMData, PEMSize);
-    try
-      if CryptBinaryToStringA(
-        EncodedData,
-        EncodedSize,
-        CRYPT_STRING_BASE64HEADER,
-        PEMData,
-        @PEMSize
-      ) then
-      begin
-        SetString(PEMStr, PEMData, PEMSize - 1); // -1 to exclude null terminator
-        Result := UTF8Decode(PEMStr);
-      end;
-    finally
-      FreeMem(PEMData);
-    end;
-  finally
-    FreeMem(EncodedData);
-  end;
+  Result := GetPublicKeyAlgorithm;
 end;
 
 function TWinSSLCertificate.GetPublicKeyAlgorithm: string;
