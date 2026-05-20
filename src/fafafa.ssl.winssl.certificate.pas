@@ -108,7 +108,9 @@ function CreateWinSSLCertificateFromContext(ACertContext: PCCERT_CONTEXT; AOwnsC
 implementation
 
 uses
-  fafafa.ssl.asn1;
+  fafafa.ssl.asn1,
+  fafafa.ssl.x509,
+  fafafa.ssl.crypto.hash;
 
 // StringsToArray 已移至 fafafa.ssl.utils（Phase 3.2）
 
@@ -119,6 +121,31 @@ uses
 function CreateWinSSLCertificateFromContext(ACertContext: PCCERT_CONTEXT; AOwnsContext: Boolean = True): ISSLCertificate;
 begin
   Result := TWinSSLCertificate.Create(ACertContext, AOwnsContext);
+end;
+
+function TryLoadParsedWinSSLCertificate(ACert: TWinSSLCertificate;
+  out AParser: TX509Certificate): Boolean;
+var
+  LDER: TBytes;
+begin
+  AParser := nil;
+  Result := False;
+
+  if (ACert = nil) or (ACert.FCertContext = nil) then
+    Exit;
+
+  LDER := ACert.SaveToDER;
+  if Length(LDER) = 0 then
+    Exit;
+
+  AParser := TX509Certificate.Create;
+  try
+    AParser.LoadFromDER(LDER);
+    Result := True;
+  except
+    FreeAndNil(AParser);
+    Result := False;
+  end;
 end;
 
 // ============================================================================
@@ -1213,29 +1240,34 @@ end;
 
 function TWinSSLCertificate.GetExtension(const AOID: string): string;
 var
-  ExtInfo: PCERT_EXTENSION;
-  OIDAnsi: AnsiString;
+  LParser: TX509Certificate;
+  LTargetOID: string;
+  I: Integer;
 begin
   Result := '';
 
-  if (FCertContext = nil) or (AOID = '') then
+  LTargetOID := Trim(AOID);
+  if (FCertContext = nil) or (LTargetOID = '') then
     Exit;
 
-  // 转换 OID 为 ANSI 字符串
-  OIDAnsi := AnsiString(AOID);
-
-  // 查找扩展
-  ExtInfo := CertFindExtension(
-    PAnsiChar(OIDAnsi),
-    GetCertInfo^.cExtension,
-    GetCertInfo^.rgExtension
-  );
-
-  if ExtInfo = nil then
+  if not TryLoadParsedWinSSLCertificate(Self, LParser) then
     Exit;
 
-  // 将扩展值转换为十六进制字符串
-  Result := BinaryToHexString(ExtInfo^.Value.pbData, ExtInfo^.Value.cbData);
+  try
+    for I := 0 to High(LParser.Extensions) do
+    begin
+      if SameText(LParser.Extensions[I].OID, LTargetOID) then
+      begin
+        if Length(LParser.Extensions[I].Value) > 0 then
+          Result := HashToHex(LParser.Extensions[I].Value)
+        else
+          Result := LParser.Extensions[I].Name;
+        Exit;
+      end;
+    end;
+  finally
+    LParser.Free;
+  end;
 end;
 
 function TWinSSLCertificate.GetSubjectAltNames: TSSLStringArray;

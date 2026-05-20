@@ -1,5 +1,66 @@
 # Findings - Interface Design And Backend Implementation Verification
 
+## 2026-05-21
+
+- 主 backend 的
+  `ISSLCertificate.GetExtension`
+  此前并不一致：
+  - `FreePascal`
+    /
+    `MbedTLS`
+    /
+    `WolfSSL`
+    走的是 parser-backed
+    `hex-or-name`
+    truth
+  - `OpenSSL`
+    返回的是
+    `X509V3_EXT_print(...)`
+    pretty text
+  - `WinSSL`
+    返回的是带 `:`
+    的原始 hex
+
+- 这说明
+  `GetExtension`
+  不是 isolated helper，
+  而是一个已经被不同 backend 当成 public contract 暴露出去的 surface；
+  所以只要还有一个主 backend 偏离，
+  调用方就会在同一个
+  `ISSLCertificate`
+  API
+  上遇到不同语义
+
+- `OpenSSL`
+  这条线还暴露出一个更隐蔽的设计问题：
+  `GetSubjectAltNames`
+  /
+  `GetKeyUsage`
+  /
+  `GetExtendedKeyUsage`
+  以及 strict-chain EKU gate
+  曾经部分依赖
+  `GetExtension`
+  的 pretty-text fallback
+
+- 因而正确修法不是单点替换返回值，
+  而是把这些 fallback
+  一并收回到 parser-backed SAN/KU/EKU truth，
+  否则 native helper 缺失时会出现新的行为回退
+
+- focused contract test
+  也补出了一条 durable workflow truth：
+  预期 parser truth
+  应该通过公开
+  `CreateFreePascalSSLLibrary.CreateCertificate`
+  surface
+  获取，
+  不该直接实例化实现段里的
+  `TFreePascalCertificate`
+  - 这既避免编译失败，
+    也避免后续 focused proof
+    误依赖内部类可见性
+
 ## 2026-05-20
 
 - `WinSSL certificate.Verify`

@@ -10,6 +10,85 @@
 
 ## Current Status
 
+- [completed] `main backends certificate extension contract alignment`
+  当前 focused 目标：
+  - 把主 backend
+    `ISSLCertificate.GetExtension`
+    的剩余语义漂移收口到仓库现行 shared truth：
+    - 扩展有原始值时返回无分隔符 hex
+    - 否则返回扩展名
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-main-backends-certificate-extension-contract-alignment.md`
+  - 新增 focused test：
+    - `tests/openssl/test_openssl_certificate_extension_contract.pas`
+    - `tests/scripts/test_winssl_certificate_extension_contract.sh`
+  - 扩 runtime proof：
+    - `tests/winssl/test_winssl_unit_comprehensive.pas`
+  - 修改实现：
+    - `src/fafafa.ssl.openssl.certificate.pas`
+    - `src/fafafa.ssl.winssl.certificate.pas`
+  当前实施判断：
+  - `FreePascal`
+    /
+    `MbedTLS`
+    /
+    `WolfSSL`
+    已经长期采用
+    parser-backed
+    `hex-or-name`
+    contract
+  - `OpenSSL`
+    继续发布
+    `X509V3_EXT_print(...)`
+    pretty text，
+    `WinSSL`
+    继续发布带 `:`
+    的 raw hex，
+    这已经构成主 backend public surface drift
+  - `OpenSSL`
+    还有一个隐藏耦合：
+    `GetSubjectAltNames`
+    /
+    `GetKeyUsage`
+    /
+    `GetExtendedKeyUsage`
+    以及 strict-chain EKU gate
+    都留有对旧 pretty-text fallback 的依赖
+  - 所以这批最小安全修法不是只改一个
+    `GetExtension`
+    返回值，
+    而是：
+    - `OpenSSL.GetExtension`
+      回收到 parser-backed truth
+    - 相关 fallback
+      同步回收到 parser-backed SAN/KU/EKU truth
+    - `WinSSL.GetExtension`
+      也回收到同一 parser-backed truth
+    - focused test
+      取预期值时只走公开
+      `ISSLLibrary.CreateCertificate`
+      surface，
+      不再直接依赖未导出的
+      `TFreePascalCertificate`
+  当前 focused proof：
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_openssl_certificate_extension_contract_units -FEtmp/test_openssl_certificate_extension_contract_bin -otmp/test_openssl_certificate_extension_contract_bin/test_openssl_certificate_extension_contract tests/openssl/test_openssl_certificate_extension_contract.pas`
+    - PASS
+  - `./tmp/test_openssl_certificate_extension_contract_bin/test_openssl_certificate_extension_contract`
+    - PASS
+  - `bash -n tests/scripts/test_winssl_certificate_extension_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_winssl_certificate_extension_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前状态：
+  - 本地 focused contract
+    已经收口完成
+  - push 后只需要继续看：
+    - `CI`
+    - `WinSSL Runtime Gate`
+
 - [completed] `winssl cert verifyex custom trust engine`
   当前 focused 目标：
   - 把

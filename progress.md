@@ -4,6 +4,84 @@
 
 ## 2026-05-20
 
+## 2026-05-21
+
+### Main Backends Certificate Extension Contract Alignment
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-main-backends-certificate-extension-contract-alignment.md`
+  - `tests/openssl/test_openssl_certificate_extension_contract.pas`
+  - `tests/scripts/test_winssl_certificate_extension_contract.sh`
+  - change:
+    - recorded a bounded main-backend
+      `GetExtension`
+      contract-alignment batch
+    - added focused OpenSSL / WinSSL proof surfaces for
+      `2.5.29.14`
+      Subject Key Identifier
+
+- `bash tests/scripts/test_winssl_certificate_extension_contract.sh`
+  - result: FAIL
+  - summary:
+    - captured the intended RED:
+      `WinSSL GetExtension still publishes colon-separated raw hex instead of parser-backed contract truth`
+    - confirmed
+      `WinSSL.GetExtension`
+      was still directly exposing
+      `BinaryToHexString(...)`
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_openssl_certificate_extension_contract_units -FEtmp/test_openssl_certificate_extension_contract_bin -otmp/test_openssl_certificate_extension_contract_bin/test_openssl_certificate_extension_contract tests/openssl/test_openssl_certificate_extension_contract.pas`
+  - result: FAIL
+  - summary:
+    - first RED exposed a focused-test design mistake:
+      the new contract test tried to instantiate the non-exported
+      `TFreePascalCertificate`
+    - follow-up fixed the test to obtain parser truth through the public
+      `CreateFreePascalSSLLibrary.CreateCertificate`
+      surface instead
+
+- update implementation:
+  - `src/fafafa.ssl.openssl.certificate.pas`
+  - `src/fafafa.ssl.winssl.certificate.pas`
+  - `tests/openssl/test_openssl_certificate_extension_contract.pas`
+  - `tests/winssl/test_winssl_unit_comprehensive.pas`
+  - change:
+    - `OpenSSL.GetExtension`
+      now returns the shared parser-backed
+      `hex-or-name`
+      truth
+    - `OpenSSL`
+      SAN / KU / EKU fallback paths
+      now use the same parser-backed truth instead of the old pretty-text contract
+    - `OpenSSL VerifyEx`
+      strict-chain EKU gate
+      now relies on
+      `GetExtendedKeyUsage`
+      truth only
+    - `WinSSL.GetExtension`
+      now returns the same parser-backed
+      `hex-or-name`
+      truth
+    - focused tests now obtain expected parser truth through the public
+      FreePascal library API
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_openssl_certificate_extension_contract_units -FEtmp/test_openssl_certificate_extension_contract_bin -otmp/test_openssl_certificate_extension_contract_bin/test_openssl_certificate_extension_contract tests/openssl/test_openssl_certificate_extension_contract.pas`
+- `./tmp/test_openssl_certificate_extension_contract_bin/test_openssl_certificate_extension_contract`
+- `bash -n tests/scripts/test_winssl_certificate_extension_contract.sh`
+- `bash tests/scripts/test_winssl_certificate_extension_contract.sh`
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - OpenSSL focused contract
+      compile + runtime
+      are both green
+    - WinSSL source/runtime static contract
+      is green
+    - patch formatting is clean
+    - remaining proof after push is the existing
+      GitHub Windows runtime lane,
+      not another local re-run
+
 ### OpenSSL Certificate VerifyEx Strict-Chain Parity
 
 - add focused batch inputs:

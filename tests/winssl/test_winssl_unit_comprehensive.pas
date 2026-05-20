@@ -11,6 +11,7 @@ uses
 
   fafafa.ssl.base,
   fafafa.ssl.cert.utils,
+  fafafa.ssl.freepascal.lib,
   fafafa.ssl.winssl.lib,
   fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.utils,
@@ -57,6 +58,30 @@ begin
     if aMessage <> '' then
       WriteLn('    Reason: ', aMessage);
     Inc(FailedTests);
+  end;
+end;
+
+function ResolveRepoFixturePath(const ARepoRelativePath: string): string;
+const
+  CandidatePrefixes: array[0..3] of string = (
+    '',
+    '../',
+    '../../',
+    '../../../'
+  );
+var
+  I: Integer;
+  LCandidate: string;
+begin
+  Result := '';
+  for I := Low(CandidatePrefixes) to High(CandidatePrefixes) do
+  begin
+    LCandidate := ExpandFileName(CandidatePrefixes[I] + ARepoRelativePath);
+    if FileExists(LCandidate) then
+    begin
+      Result := LCandidate;
+      Exit;
+    end;
   end;
 end;
 
@@ -487,6 +512,74 @@ begin
   end;
 end;
 
+procedure TestCertificateExtensionContract;
+const
+  EXTENSION_OID = '2.5.29.14';
+  FIXTURE_PATH = 'tests/certificate/test_certs/signer_ecdsa_cert.pem';
+var
+  LFixturePath: string;
+  LTruthLib: ISSLLibrary;
+  LExpectedCert: ISSLCertificate;
+  LExpectedExtension: string;
+  LCert: ISSLCertificate;
+begin
+  BeginSection('Certificate Extension Truth');
+
+  LFixturePath := ResolveRepoFixturePath(FIXTURE_PATH);
+  Test('Resolve ECDSA fixture path for extension truth', LFixturePath <> '', FIXTURE_PATH);
+  if LFixturePath = '' then
+    Exit;
+
+  LTruthLib := CreateFreePascalSSLLibrary;
+  Test('CreateFreePascalSSLLibrary returns extension truth owner', LTruthLib <> nil,
+    'CreateFreePascalSSLLibrary returned nil');
+  if LTruthLib = nil then
+    Exit;
+
+  Test('Initialize FreePascal library for extension truth owner',
+    LTruthLib.Initialize, LTruthLib.GetLastErrorString);
+  if not LTruthLib.IsInitialized then
+    Exit;
+
+  LExpectedCert := LTruthLib.CreateCertificate;
+  Test('Create FreePascal certificate truth owner', LExpectedCert <> nil,
+    'CreateCertificate returned nil');
+  if LExpectedCert = nil then
+    Exit;
+
+  Test('Load fixture into FreePascal parser truth owner',
+    LExpectedCert.LoadFromFile(LFixturePath), LFixturePath);
+  if not LExpectedCert.LoadFromFile(LFixturePath) then
+    Exit;
+
+  LExpectedExtension := LExpectedCert.GetExtension(EXTENSION_OID);
+  Test('Fixture exposes parser-backed Subject Key Identifier truth',
+    LExpectedExtension <> '', LExpectedExtension);
+  if LExpectedExtension = '' then
+    Exit;
+
+  LCert := TWinSSLCertificate.Create(nil, False);
+  Test('Create WinSSL certificate object for extension truth', LCert <> nil,
+    'TWinSSLCertificate.Create returned nil');
+  if LCert = nil then
+    Exit;
+
+  try
+    Test('Load fixture into WinSSL certificate for extension truth',
+      LCert.LoadFromFile(LFixturePath), LFixturePath);
+    if not LCert.LoadFromFile(LFixturePath) then
+      Exit;
+
+    Test('GetExtension returns parser-backed Subject Key Identifier truth',
+      LCert.GetExtension(EXTENSION_OID) = LExpectedExtension,
+      'Actual=' + LCert.GetExtension(EXTENSION_OID) + ' Expected=' + LExpectedExtension);
+  except
+    on E: Exception do
+      Test('WinSSL certificate extension truth probe should not raise', False,
+        E.ClassName + ': ' + E.Message);
+  end;
+end;
+
 // ============================================================================
 // Callback Configuration Tests
 // ============================================================================
@@ -748,6 +841,7 @@ begin
     TestContextManagement;
     TestCertificateManagement;
     TestGeneratedEd25519CertificateAlgorithmTruth;
+    TestCertificateExtensionContract;
     TestCallbackConfiguration;
     TestErrorHandling;
     TestUtilsModule;

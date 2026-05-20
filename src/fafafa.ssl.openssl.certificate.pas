@@ -93,7 +93,8 @@ type
 implementation
 
 uses
-  fafafa.ssl.utils;  // Phase 3.2 - StringsToArray 统一实现
+  fafafa.ssl.utils,  // Phase 3.2 - StringsToArray 统一实现
+  fafafa.ssl.crypto.hash;
 
 const
   // X509_NAME print flags
@@ -177,6 +178,130 @@ begin
       Result := Result + IntToHex(Value, 1);
     end;
     Exit;
+  end;
+end;
+
+function X509KeyUsageToStrings(const AUsage: TX509KeyUsage): TSSLStringArray;
+
+  procedure AddToResult(const AValue: string);
+  begin
+    SetLength(Result, Length(Result) + 1);
+    Result[High(Result)] := AValue;
+  end;
+
+begin
+  SetLength(Result, 0);
+  if kuDigitalSignature in AUsage then
+    AddToResult('digitalSignature');
+  if kuNonRepudiation in AUsage then
+    AddToResult('nonRepudiation');
+  if kuKeyEncipherment in AUsage then
+    AddToResult('keyEncipherment');
+  if kuDataEncipherment in AUsage then
+    AddToResult('dataEncipherment');
+  if kuKeyAgreement in AUsage then
+    AddToResult('keyAgreement');
+  if kuKeyCertSign in AUsage then
+    AddToResult('keyCertSign');
+  if kuCRLSign in AUsage then
+    AddToResult('cRLSign');
+  if kuEncipherOnly in AUsage then
+    AddToResult('encipherOnly');
+  if kuDecipherOnly in AUsage then
+    AddToResult('decipherOnly');
+end;
+
+function X509ExtKeyUsageToStrings(const AUsage: TX509ExtKeyUsage): TSSLStringArray;
+
+  procedure AddToResult(const AValue: string);
+  begin
+    SetLength(Result, Length(Result) + 1);
+    Result[High(Result)] := AValue;
+  end;
+
+begin
+  SetLength(Result, 0);
+  if ekuServerAuth in AUsage then
+    AddToResult('serverAuth');
+  if ekuClientAuth in AUsage then
+    AddToResult('clientAuth');
+  if ekuCodeSigning in AUsage then
+    AddToResult('codeSigning');
+  if ekuEmailProtection in AUsage then
+    AddToResult('emailProtection');
+  if ekuTimeStamping in AUsage then
+    AddToResult('timeStamping');
+  if ekuOCSPSigning in AUsage then
+    AddToResult('OCSPSigning');
+end;
+
+function X509SubjectAltNamesToStrings(
+  const ASANs: TX509SubjectAltNames): TSSLStringArray;
+var
+  I: Integer;
+begin
+  SetLength(Result, Length(ASANs));
+  for I := 0 to High(ASANs) do
+    Result[I] := ASANs[I].Value;
+end;
+
+function TryLoadParsedOpenSSLCertificate(ACert: TOpenSSLCertificate;
+  out AParser: TX509Certificate): Boolean;
+var
+  LDER: TBytes;
+  LPEM: string;
+begin
+  AParser := nil;
+  Result := False;
+
+  if (ACert = nil) or (ACert.FX509 = nil) then
+    Exit;
+
+  AParser := TX509Certificate.Create;
+  try
+    LDER := ACert.SaveToDER;
+    if Length(LDER) > 0 then
+      AParser.LoadFromDER(LDER)
+    else
+    begin
+      LPEM := ACert.SaveToPEM;
+      if LPEM = '' then
+        Exit;
+      AParser.LoadFromPEM(LPEM);
+    end;
+    Result := True;
+  except
+    FreeAndNil(AParser);
+    Result := False;
+  end;
+end;
+
+function TryGetParsedExtensionValue(const AParser: TX509Certificate;
+  const AOID: string; out AValue: string): Boolean;
+var
+  LTargetOID: string;
+  I: Integer;
+begin
+  AValue := '';
+  Result := False;
+
+  if AParser = nil then
+    Exit;
+
+  LTargetOID := Trim(AOID);
+  if LTargetOID = '' then
+    Exit;
+
+  for I := 0 to High(AParser.Extensions) do
+  begin
+    if SameText(AParser.Extensions[I].OID, LTargetOID) then
+    begin
+      if Length(AParser.Extensions[I].Value) > 0 then
+        AValue := HashToHex(AParser.Extensions[I].Value)
+      else
+        AValue := AParser.Extensions[I].Name;
+      Exit(True);
+    end;
   end;
 end;
 
@@ -894,7 +1019,6 @@ var
   ParsedCert: TX509Certificate;
   Chain: PSTACK_OF_X509;
   LExtendedKeyUsage: TSSLStringArray;
-  LExtendedKeyUsageText: string;
   LPerCallVerifyFlags: Cardinal;
   LSelfSignedOverride: Boolean;
 begin
@@ -1010,11 +1134,8 @@ begin
       begin
         if sslCertVerifyStrictChain in AFlags then
         begin
-          LExtendedKeyUsageText := Trim(GetExtension('2.5.29.37'));
           LExtendedKeyUsage := GetExtendedKeyUsage;
-          if (LExtendedKeyUsageText = '') or
-            (not HasServerAuthUsage(LExtendedKeyUsage) and
-             (Pos('serverAuth', LExtendedKeyUsageText) = 0)) then
+          if not HasServerAuthUsage(LExtendedKeyUsage) then
           begin
             AResult.Success := False;
             AResult.ErrorCode := X509_V_ERR_INVALID_PURPOSE;
@@ -1451,63 +1572,27 @@ end;
 
 function TOpenSSLCertificate.GetExtension(const AOID: string): string;
 var
-  LNID: Integer;
-  LIndex: Integer;
-  LExt: PX509_EXTENSION;
-  LBIO: PBIO;
-  LLen: Integer;
-  LBuf: PAnsiChar;
+  LParser: TX509Certificate;
 begin
   Result := '';
-  
-  if (FX509 = nil) or (AOID = '') then
+
+  if (FX509 = nil) or (Trim(AOID) = '') then
     Exit;
-  
-  // 将 OID 字符串转换为 NID
-  LNID := OIDToNID(AOID);
-  if (LNID = NID_undef) then
+
+  if not TryLoadParsedOpenSSLCertificate(Self, LParser) then
     Exit;
-  
-  // 检查必要的 API 是否已加载
-  if (not Assigned(X509_get_ext_by_NID)) or
-    (not Assigned(X509_get_ext)) or
-    (not Assigned(X509V3_EXT_print)) or
-    (not Assigned(BIO_new)) or
-    (not Assigned(BIO_s_mem)) or
-    (not Assigned(BIO_free)) then
-    Exit;
-  
-  // 定位扩展
-  LIndex := X509_get_ext_by_NID(FX509, LNID, -1);
-  if LIndex < 0 then
-    Exit;
-  
-  LExt := X509_get_ext(FX509, LIndex);
-  if LExt = nil then
-    Exit;
-  
-  // 使用 X509V3_EXT_print 将扩展内容转为可读文本
-  LBIO := BIO_new(BIO_s_mem());
-  if LBIO = nil then
-    Exit;
+
   try
-    if X509V3_EXT_print(LBIO, LExt, 0, 0) = 1 then
-    begin
-      LLen := BIO_get_mem_data(LBIO, PPAnsiChar(@LBuf));
-      if LLen > 0 then
-        SetString(Result, LBuf, LLen);
-    end;
+    TryGetParsedExtensionValue(LParser, AOID, Result);
   finally
-    BIO_free(LBIO);
+    LParser.Free;
   end;
 end;
 
 function TOpenSSLCertificate.GetSubjectAltNames: TSSLStringArray;
 var
-  ExtStr: string;
-  Parts: TStringList;
   I: Integer;
-  Item, Name: string;
+  ExtStr: string;
   Names: PGENERAL_NAMES;
   Gen: PGENERAL_NAME;
   Count: Integer;
@@ -1516,12 +1601,8 @@ var
   Data: PByte;
   Len: Integer;
   Crit, Idx: Integer;
-
-  procedure AddToResult(const S: string);
-  begin
-    SetLength(Result, Length(Result) + 1);
-    Result[High(Result)] := S;
-  end;
+  LValue: string;
+  LParser: TX509Certificate;
 
 begin
   SetLength(Result, 0);
@@ -1557,19 +1638,28 @@ begin
           begin
             ExtStr := ASN1StringToString(ASN1_STRING(Val));
             if ExtStr <> '' then
-              AddToResult(ExtStr);
+            begin
+              SetLength(Result, Length(Result) + 1);
+              Result[High(Result)] := ExtStr;
+            end;
           end
           else if LType = GEN_EMAIL then
           begin
             ExtStr := ASN1StringToString(ASN1_STRING(Val));
             if ExtStr <> '' then
-              AddToResult(ExtStr);
+            begin
+              SetLength(Result, Length(Result) + 1);
+              Result[High(Result)] := ExtStr;
+            end;
           end
           else if LType = GEN_URI then
           begin
             ExtStr := ASN1StringToString(ASN1_STRING(Val));
             if ExtStr <> '' then
-              AddToResult(ExtStr);
+            begin
+              SetLength(Result, Length(Result) + 1);
+              Result[High(Result)] := ExtStr;
+            end;
           end
           else if LType = GEN_IPADD then
           begin
@@ -1582,9 +1672,12 @@ begin
               Data := ASN1_STRING_data(ASN1_STRING(Val));
             if Data = nil then
               Continue;
-            Name := IpBytesToString(Data, Len);
-            if Name <> '' then
-              AddToResult(Name);
+            LValue := IpBytesToString(Data, Len);
+            if LValue <> '' then
+            begin
+              SetLength(Result, Length(Result) + 1);
+              Result[High(Result)] := LValue;
+            end;
           end;
         end;
       finally
@@ -1594,65 +1687,20 @@ begin
     end;
   end;
 
-  // 简化实现：从扩展字符串中解析
-  ExtStr := GetExtension('2.5.29.17'); // subjectAltName OID
-  if ExtStr <> '' then
-  begin
-    // 将换行统一替换为逗号分隔，便于拆分
-    ExtStr := StringReplace(ExtStr, LineEnding, ', ', [rfReplaceAll]);
-    Parts := TStringList.Create;
-    try
-      Parts.Delimiter := ',';
-      Parts.StrictDelimiter := False;
-      Parts.DelimitedText := ExtStr;
-      for I := 0 to Parts.Count - 1 do
-      begin
-        Item := Trim(Parts[I]);
-        if Item = '' then
-          Continue;
-        // 典型格式: "DNS:example.com"
-        if (Length(Item) > 4) and SameText(Copy(Item, 1, 4), 'DNS:') then
-        begin
-          Name := Trim(Copy(Item, 5, MaxInt));
-          if Name <> '' then
-            AddToResult(Name);
-        end;
-        // 邮箱地址，例如 "email:user@example.com" 或 "Email:user@example.com"
-        if (Length(Item) > 6) and
-          (SameText(Copy(Item, 1, 6), 'email:') or SameText(Copy(Item, 1, 6), 'e-mail:')) then
-        begin
-          Name := Trim(Copy(Item, 7, MaxInt));
-          if Name <> '' then
-            AddToResult(Name);
-        end;
-        // URI 条目，例如 "URI:https://example.test"
-        if (Length(Item) > 4) and SameText(Copy(Item, 1, 4), 'URI:') then
-        begin
-          Name := Trim(Copy(Item, 5, MaxInt));
-          if Name <> '' then
-            AddToResult(Name);
-        end;
-        // 额外支持 IP 地址条目，例如 "IP Address:192.168.0.1"
-        if (Length(Item) > 11) and SameText(Copy(Item, 1, 11), 'IP Address:') then
-        begin
-          Name := Trim(Copy(Item, 12, MaxInt));
-          if Name <> '' then
-            AddToResult(Name);
-        end;
-      end;
-    finally
-      Parts.Free;
-    end;
+  if not TryLoadParsedOpenSSLCertificate(Self, LParser) then
+    Exit;
+
+  try
+    Result := X509SubjectAltNamesToStrings(LParser.SubjectAltNames);
+  finally
+    LParser.Free;
   end;
 end;
 
 function TOpenSSLCertificate.GetKeyUsage: TSSLStringArray;
 var
-  ExtStr: string;
-  Parts: TStringList;
-  I: Integer;
-  Item: string;
   KUFlags: UInt32;
+  LParser: TX509Certificate;
 
   procedure AddToResult(const S: string);
   begin
@@ -1691,35 +1739,20 @@ begin
     Exit;
   end;
 
-  // 回退：从扩展文本解析
-  ExtStr := GetExtension('2.5.29.15'); // keyUsage OID
-  if ExtStr = '' then
+  if not TryLoadParsedOpenSSLCertificate(Self, LParser) then
     Exit;
 
-  ExtStr := StringReplace(ExtStr, LineEnding, ', ', [rfReplaceAll]);
-  Parts := TStringList.Create;
   try
-    Parts.Delimiter := ',';
-    Parts.StrictDelimiter := False;
-    Parts.DelimitedText := ExtStr;
-    for I := 0 to Parts.Count - 1 do
-    begin
-      Item := Trim(Parts[I]);
-      if Item <> '' then
-        AddToResult(Item);
-    end;
+    Result := X509KeyUsageToStrings(LParser.KeyUsage);
   finally
-    Parts.Free;
+    LParser.Free;
   end;
 end;
 
 function TOpenSSLCertificate.GetExtendedKeyUsage: TSSLStringArray;
 var
-  ExtStr: string;
-  Parts: TStringList;
-  I: Integer;
-  Item: string;
   EKUFlags: UInt32;
+  LParser: TX509Certificate;
 
   procedure AddToResult(const S: string);
   begin
@@ -1754,25 +1787,13 @@ begin
     Exit;
   end;
 
-  // 回退：返回从扩展中读取的原始文本
-  ExtStr := GetExtension('2.5.29.37'); // extKeyUsage OID
-  if ExtStr = '' then
+  if not TryLoadParsedOpenSSLCertificate(Self, LParser) then
     Exit;
 
-  ExtStr := StringReplace(ExtStr, LineEnding, ', ', [rfReplaceAll]);
-  Parts := TStringList.Create;
   try
-    Parts.Delimiter := ',';
-    Parts.StrictDelimiter := False;
-    Parts.DelimitedText := ExtStr;
-    for I := 0 to Parts.Count - 1 do
-    begin
-      Item := Trim(Parts[I]);
-      if Item <> '' then
-        AddToResult(Item);
-    end;
+    Result := X509ExtKeyUsageToStrings(LParser.ExtKeyUsage);
   finally
-    Parts.Free;
+    LParser.Free;
   end;
 end;
 
