@@ -557,6 +557,7 @@ var
   LLib: ISSLLibrary;
   LSubjectVariant: string;
   LIssuerVariant: string;
+  LStoreClone: ISSLCertificate;
   LSerialCompact: string;
   LSerialVariant: string;
   LCharIndex: Integer;
@@ -587,6 +588,12 @@ begin
       Test('Load fixture cert for certstore query semantics',
         LCert.LoadFromFile('tests/certificate/test_certs/signer_ecdsa_cert.pem'));
       Test('Add loaded cert returns true', LStore.AddCertificate(LCert));
+      LStoreClone := LCert.Clone;
+      Test('Contains clone should be true by fingerprint', LStore.Contains(LStoreClone));
+      Test('Add clone duplicate returns false', not LStore.AddCertificate(LStoreClone));
+      Test('Remove clone should remove by fingerprint', LStore.RemoveCertificate(LStoreClone));
+      Test('Store count returns to 0 after clone removal', LStore.GetCount = 0);
+      Test('Re-add loaded cert returns true after clone removal', LStore.AddCertificate(LCert));
 
       LSubjectVariant := UpperCase(StringReplace(StringReplace(LCert.GetSubject, ',', ' , ', [rfReplaceAll]),
         '=', ' = ', [rfReplaceAll]));

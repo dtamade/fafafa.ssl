@@ -1409,11 +1409,25 @@ begin
   end;
 end;
 
+function NormalizeMbedTLSCertFingerprint(const AValue: string): string;
+begin
+  Result := UpperCase(Trim(AValue));
+  Result := StringReplace(Result, ':', '', [rfReplaceAll]);
+  Result := StringReplace(Result, '-', '', [rfReplaceAll]);
+  Result := StringReplace(Result, ' ', '', [rfReplaceAll]);
+end;
+
 function TMbedTLSCertificateStore.AddCertificate(ACert: ISSLCertificate): Boolean;
+var
+  LTarget: string;
 begin
   Result := False;
   if ACert = nil then Exit;
   if Contains(ACert) then Exit;
+
+  LTarget := NormalizeMbedTLSCertFingerprint(ACert.GetFingerprintSHA256);
+  if (LTarget <> '') and (FindByFingerprint(LTarget) <> nil) then
+    Exit;
 
   FCertificates.Add(ACert);
   Result := True;
@@ -1422,11 +1436,34 @@ end;
 function TMbedTLSCertificateStore.RemoveCertificate(ACert: ISSLCertificate): Boolean;
 var
   LIndex: Integer;
+  LTarget: string;
+  I: Integer;
+  LExisting: ISSLCertificate;
 begin
   Result := False;
   if ACert = nil then Exit;
 
   LIndex := FCertificates.IndexOf(ACert);
+  if LIndex < 0 then
+  begin
+    LTarget := NormalizeMbedTLSCertFingerprint(ACert.GetFingerprintSHA256);
+    if LTarget = '' then
+      LTarget := NormalizeMbedTLSCertFingerprint(ACert.GetFingerprintSHA1);
+
+    if LTarget <> '' then
+    begin
+      for I := 0 to FCertificates.Count - 1 do
+      begin
+        LExisting := FCertificates[I] as ISSLCertificate;
+        if NormalizeMbedTLSCertFingerprint(LExisting.GetFingerprintSHA256) = LTarget then
+        begin
+          LIndex := I;
+          Break;
+        end;
+      end;
+    end;
+  end;
+
   if LIndex >= 0 then
   begin
     FCertificates.Delete(LIndex);
@@ -1435,8 +1472,30 @@ begin
 end;
 
 function TMbedTLSCertificateStore.Contains(ACert: ISSLCertificate): Boolean;
+var
+  LTarget: string;
+  I: Integer;
+  LExisting: ISSLCertificate;
 begin
-  Result := FCertificates.IndexOf(ACert) >= 0;
+  Result := False;
+  if ACert = nil then
+    Exit;
+
+  if FCertificates.IndexOf(ACert) >= 0 then
+    Exit(True);
+
+  LTarget := NormalizeMbedTLSCertFingerprint(ACert.GetFingerprintSHA256);
+  if LTarget = '' then
+    LTarget := NormalizeMbedTLSCertFingerprint(ACert.GetFingerprintSHA1);
+  if LTarget = '' then
+    Exit(False);
+
+  for I := 0 to FCertificates.Count - 1 do
+  begin
+    LExisting := FCertificates[I] as ISSLCertificate;
+    if NormalizeMbedTLSCertFingerprint(LExisting.GetFingerprintSHA256) = LTarget then
+      Exit(True);
+  end;
 end;
 
 procedure TMbedTLSCertificateStore.Clear;

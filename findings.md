@@ -2,6 +2,71 @@
 
 ## 2026-05-20
 
+- 当 `ISSLCertificateStore`
+  的 query family
+  收口以后，
+  下一层很容易被忽略但同样属于
+  shared public contract
+  的问题，
+  就是：
+  clone / duplicate / remove
+  到底按对象身份，
+  还是按 certificate truth
+
+- `MbedTLS`
+  这次证明了一个很典型的实现残缺：
+  query semantics
+  已经对齐了，
+  但 store ownership semantics
+  还停在最原始的
+  `IndexOf(ACert)`
+  级别
+
+- 对调用方来说，
+  `ISSLCertificateStore`
+  如果已经把
+  `Contains`
+  / duplicate reject
+  / `RemoveCertificate`
+  建立在 fingerprint truth 上，
+  那么 clone
+  就不该再被当作另一张证书；
+  否则“同一证书”这个 public 概念
+  在不同 backend 上
+  还是会裂开
+
+- optional backend 审查
+  也再次说明，
+  “接口设计看起来已经完整”
+  并不等于
+  “生命周期 / ownership semantics
+  也已经完整”
+
+- 这次远端 `WinSSL Runtime Gate`
+  的失败同样给了一个重要提醒：
+  workflow 新接入一个测试后，
+  红灯不一定是实现错，
+  也可能是
+  test project file
+  自己保留了错误 target truth
+
+- `test_winssl_certstore.lpi`
+  这次不是业务逻辑失败，
+  而是硬编码了
+  `TargetOS=linux`，
+  导致 Windows runner 上的
+  `lazbuild`
+  试图编 Linux target，
+  直接在编译前就摔倒
+
+- 所以
+  “让 Windows CI 真正替代本地 Windows 条件”
+  的前提，
+  不只是把测试接进 workflow，
+  还要保证对应 `.lpi`
+  的 target truth
+  不再藏着历史平台残留
+
 - 当我们把 optional backends
   的 query family
   收口完之后，

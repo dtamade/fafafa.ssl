@@ -10,6 +10,90 @@
 
 ## Current Status
 
+- [completed] `mbedtls certstore clone fingerprint parity`
+  当前 focused 目标：
+  - 把
+    `TMbedTLSCertificateStore`
+    仍然只按对象身份判断的
+    store semantics：
+    - `Contains`
+    - `RemoveCertificate`
+    - duplicate `AddCertificate`
+    收口到与
+    `FreePascal` /
+    `WolfSSL`
+    更一致的 fingerprint truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-mbedtls-certstore-clone-fingerprint-parity.md`
+  - 修改实现：
+    - `src/fafafa.ssl.mbedtls.certificate.pas`
+  - 修改 focused tests：
+    - `tests/test_mbedtls_framework.pas`
+  - 修改 WinSSL workflow fallout：
+    - `tests/winssl/test_winssl_certstore.lpi`
+  当前预判：
+  - `MbedTLS`
+    当前 certstore
+    对 clone
+    仍按对象身份判断
+  - 这和
+    `FreePascal` /
+    `WolfSSL`
+    已经存在的
+    fingerprint semantics
+    继续分叉
+  当前最终收口证据：
+  - `tests/test_mbedtls_framework.pas`
+    新增 RED：
+    - `Contains clone should be true by fingerprint`
+    - `Add clone duplicate returns false`
+    - `Remove clone should remove by fingerprint`
+  - 修复后：
+    - `TMbedTLSCertificateStore`
+      现在对：
+      - `Contains`
+      - `RemoveCertificate`
+      - `AddCertificate`
+      都支持 fingerprint fallback
+  - focused verification：
+    - `tests/test_mbedtls_framework.pas`
+      `166 passed / 0 failed`
+  - 同步修掉上一批远端 WinSSL lane 暴露的真实配置错误：
+    - `test_winssl_certstore.lpi`
+      硬编码了
+      `TargetOS=linux`
+    - 这会让 Windows runner
+      上的 `lazbuild`
+      直接去编 Linux target
+    - 现在已删除这段错误 target truth
+  当前结论：
+  - optional backends
+    在 certstore query family
+    收口之后，
+    下一层真实 drift
+    确实是 store ownership / duplicate semantics
+  - `MbedTLS`
+    不再是
+    “同一张证书 clone 后仍被当成另一张”
+  当前总路线图进度：
+  - `接口设计`
+    继续从 query semantics
+    推进到 duplicate/clone semantics
+  - `后端实现`
+    `MbedTLS` certstore
+    又补齐了一块 shared contract
+  当前下一条真实工作：
+  - push 这一批后
+    先看
+    `WinSSL Runtime Gate`
+    是否因 `.lpi` 修正转绿
+  - 再继续审查：
+    - `BuildCertificateChain`
+      dedup / loop semantics
+    - 以及其他
+      `ISSLCertificateStore`
+      剩余 cross-backend drift
 - [completed] `certificate store dn query canonical contract`
   当前 focused 目标：
   - 把

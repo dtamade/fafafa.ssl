@@ -4,6 +4,78 @@
 
 ## 2026-05-20
 
+### MbedTLS CertStore Clone Fingerprint Parity
+
+- `gh run view 26137377563 --job 76875393301 --log-failed`
+  - result: PASS
+  - summary:
+    - extracted the live Windows failure after the DN-query batch
+    - confirmed the failure was not runtime logic drift
+    - confirmed the root cause:
+      - `tests/winssl/test_winssl_certstore.lpi`
+        still hard-coded `TargetOS=linux`
+      - Windows runner `lazbuild`
+        therefore attempted to compile a Linux target and failed before execution
+
+- `mcp__ace_tool__.search_context(...)`
+- `nl -ba src/fafafa.ssl.mbedtls.certificate.pas | sed -n '1410,1638p'`
+- `nl -ba src/fafafa.ssl.wolfssl.certificate.pas | sed -n '1240,1538p'`
+- `nl -ba src/fafafa.ssl.freepascal.lib.pas | sed -n '1000,1365p'`
+- `nl -ba tests/test_mbedtls_framework.pas | sed -n '568,640p'`
+- `nl -ba tests/test_wolfssl_framework.pas | sed -n '630,705p'`
+  - result: PASS
+  - summary:
+    - confirmed the next real store-level drift after query parity is clone/fingerprint semantics
+    - confirmed current asymmetry:
+      - `FreePascal` supports fingerprint-based clone semantics
+      - `WolfSSL` supports fingerprint-based clone semantics
+      - `MbedTLS` still used raw object identity for
+        `Contains` / `RemoveCertificate` / duplicate reject
+
+- add focused plan/tests:
+  - `docs/plans/2026-05-20-mbedtls-certstore-clone-fingerprint-parity.md`
+  - `tests/test_mbedtls_framework.pas`
+  - change:
+    - recorded a bounded MbedTLS store-ownership batch
+    - added RED for:
+      - clone `Contains`
+      - clone duplicate reject
+      - clone `RemoveCertificate`
+
+- `mkdir -p tmp/test_mbedtls_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas && ./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+  - result: FAIL -> PASS
+  - summary:
+    - first failure was a narrow test harness issue:
+      - missing local `LStoreClone` declaration
+    - after fixing the test harness and applying fingerprint fallback in `TMbedTLSCertificateStore`:
+      - final result: `166 passed / 0 failed`
+    - new focused contracts now pass:
+      - `Contains clone should be true by fingerprint`
+      - `Add clone duplicate returns false`
+      - `Remove clone should remove by fingerprint`
+
+- update implementation:
+  - `src/fafafa.ssl.mbedtls.certificate.pas`
+  - change:
+    - added normalized fingerprint helper
+    - `AddCertificate`
+      now rejects duplicate fingerprint truth
+    - `Contains`
+      now supports fingerprint fallback
+    - `RemoveCertificate`
+      now supports fingerprint fallback
+
+- update WinSSL workflow fallout:
+  - `tests/winssl/test_winssl_certstore.lpi`
+  - change:
+    - removed stale hard-coded `TargetOS=linux`
+    - aligned the project file with other WinSSL `.lpi` files that compile on Windows runners
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remain after the MbedTLS clone/fingerprint batch and WinSSL `.lpi` hotfix
+
 ### Certificate Store DN Query Canonical Contract
 
 - `mcp__ace_tool__.search_context(...)`
