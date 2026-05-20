@@ -13471,3 +13471,52 @@
   - push 后由
     `WinSSL Runtime Gate`
     最终确认这条 runtime truth
+
+### 2026-05-21 FAQ / COMMON_PITFALLS 入口与 backend 真相对齐
+
+- [completed] 当前新的 residual
+  已从 runtime / shared contract
+  收窄到两份高入口活跃指南：
+  - `docs/guides/FAQ.md`
+    仍把
+    `OpenSSL`
+    发布成全平台唯一前提，
+    并继续教学
+    `TSSLLibrary.Instance.*`
+    旧入口
+  - `docs/guides/COMMON_PITFALLS.md`
+    仍把
+    `TSSLLibrary.Instance.SetCustomLibraryPath(...)`
+    当成当前 macOS brew OpenSSL 建议
+- [completed] 最小正确修法已经落地：
+  - 新增
+    `docs/plans/2026-05-21-faq-and-common-pitfalls-entrypoint-and-backend-truth-alignment.md`
+  - 新增
+    `tests/scripts/test_faq_and_common_pitfalls_entrypoint_truth_contract.sh`
+  - `FAQ`
+    已切回：
+    - backend-specific dependency truth
+    - `fafafa.ssl` / `TSSLContextBuilder` / `TSSLConnector`
+      首选入口
+    - `TSSLFactory.GetLibraryInstance(sslOpenSSL)`
+      与
+      `SetCustomLibraryPaths(...)`
+      的 OpenSSL-specific fallback
+  - `COMMON_PITFALLS`
+    已把 macOS 自定义路径示例改成当前真实的
+    `SetCustomLibraryPaths(libcrypto, libssl)`
+    形式，
+    并明确它不是通用初始化步骤
+  - 顺手修掉
+    `FAQ`
+    里的：
+    - placeholder GitHub URL
+    - 过期文档链接
+    - 版本号漂移
+- [completed] 当前批收口后的默认下一步：
+  - `bash -n tests/scripts/test_faq_and_common_pitfalls_entrypoint_truth_contract.sh`
+  - `bash tests/scripts/test_faq_and_common_pitfalls_entrypoint_truth_contract.sh`
+  - `git diff --check`
+  - 简短 review
+  - commit / push
+  - 继续扫下一层活跃文档里的旧入口 / backend drift

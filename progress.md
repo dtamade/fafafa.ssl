@@ -19737,6 +19737,80 @@
   - summary:
     - no whitespace or patch-format drift remains before commit
 
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - worktree started clean on `master...origin/master`
+    - suitable for one new focused docs-only batch
+
+- `mcp__ace_tool__.search_context`
+  - query:
+    - locate active getting-started / FAQ / common-pitfalls guidance around
+      `TSSLContextBuilder`
+      /
+      `TSSLConnector`
+      /
+      `TSSLFactory.GetLibraryInstance(...)`
+      /
+      `TSSLLibrary.Instance`
+  - result: PASS
+  - summary:
+    - confirmed
+      `docs/guides/FAQ.md`
+      still published:
+      - universal OpenSSL requirement wording
+      - `TSSLLibrary.Instance.Initialize;`
+      - `TSSLLibrary.Instance.SetCustomLibraryPath(...)`
+    - confirmed
+      `docs/guides/COMMON_PITFALLS.md`
+      still published singleton custom-path guidance
+    - confirmed current active preferred entrypoints remain:
+      - `fafafa.ssl`
+      - `TSSLContextBuilder`
+      - `TSSLConnector`
+      - `TSSLFactory.GetLibraryInstance(...)`
+
+- `rg -n "TSSLLibrary\\.Instance|SetCustomLibraryPath|OpenSSL 1\\.1\\.1\\+|yourusername|QuickStart.md|API_Reference.md" docs/guides/FAQ.md docs/guides/COMMON_PITFALLS.md`
+  - result: PASS
+  - summary:
+    - surfaced the exact stale entrypoint/backend strings in
+      `FAQ`
+      and
+      `COMMON_PITFALLS`
+    - also surfaced placeholder GitHub owner strings and stale FAQ doc links
+
+- update docs:
+  - `docs/guides/FAQ.md`
+  - `docs/guides/COMMON_PITFALLS.md`
+  - `docs/plans/2026-05-21-faq-and-common-pitfalls-entrypoint-and-backend-truth-alignment.md`
+  - `tests/scripts/test_faq_and_common_pitfalls_entrypoint_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - repaired active docs back to backend-specific dependency truth
+    - removed all
+      `TSSLLibrary.Instance.*`
+      guidance from the touched docs
+    - reintroduced the current explicit OpenSSL fallback as
+      `SetCustomLibraryPaths(...)`
+      +
+      `TSSLFactory.GetLibraryInstance(sslOpenSSL)`
+    - fixed live FAQ links / repo URL / version line while touching the file
+
+- `bash -n tests/scripts/test_faq_and_common_pitfalls_entrypoint_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - shell syntax for the new docs contract is clean
+
+- `bash tests/scripts/test_faq_and_common_pitfalls_entrypoint_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - active FAQ / COMMON_PITFALLS truth guard turned green after the doc repairs
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains after the docs batch
+
 ### Main Backends Ed25519 Certificate Algorithm Truth
 
 - add focused batch inputs:

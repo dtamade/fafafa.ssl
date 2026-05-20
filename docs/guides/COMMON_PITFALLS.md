@@ -93,10 +93,17 @@ export DYLD_LIBRARY_PATH=/opt/homebrew/opt/openssl@3/lib:$DYLD_LIBRARY_PATH
 
 # 方法2：编译时指定 rpath
 fpc -k"-rpath /opt/homebrew/opt/openssl@3/lib" your_program.pas
-
-# 方法3：代码中显式指定
-TSSLLibrary.Instance.SetCustomLibraryPath('/opt/homebrew/opt/openssl@3/lib');
 ```
+
+如果你明确固定 `OpenSSL` backend，也可以做 OpenSSL-specific override：
+
+```pascal
+uses fafafa.ssl.openssl.backed;
+
+SetCustomLibraryPaths('/opt/homebrew/opt/openssl@3/lib/libcrypto.dylib', '/opt/homebrew/opt/openssl@3/lib/libssl.dylib');
+```
+
+不要把 OpenSSL-specific override 当成所有平台的通用初始化步骤。
 
 ---
 

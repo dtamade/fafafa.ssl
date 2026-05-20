@@ -12836,3 +12836,50 @@
   收回到当前 shared contract；
   真要做 PEM/DER 完整导出，
   应另开专题并跨 backend 统一设计
+
+- 继续沿
+  “活跃文档真相”
+  主线扫描时，
+  当前最值钱的新残留
+  已不是实现缺口，
+  而是两份高入口指南还在持续教学旧入口：
+  - `docs/guides/FAQ.md`
+    仍写：
+    - `唯一要求：系统安装OpenSSL 1.1.1+或3.x。`
+    - `TSSLLibrary.Instance.Initialize;`
+    - `TSSLLibrary.Instance.SetCustomLibraryPath(...)`
+  - `docs/guides/COMMON_PITFALLS.md`
+    仍把
+    `TSSLLibrary.Instance.SetCustomLibraryPath(...)`
+    当成当前 macOS brew OpenSSL 方案
+
+- 这类 drift
+  的伤害并不亚于测试/实现真 bug：
+  - 它会把新用户重新导回已过时的 loader 心智模型
+  - 也会让后续静态审查误把
+    `OpenSSL`
+    当成仓库当前所有 backend 的全局唯一前提
+
+- 当前更准确的公开真相应明确保留：
+  - 普通新代码优先走：
+    `fafafa.ssl`
+    /
+    `TSSLContextBuilder`
+    /
+    `TSSLConnector`
+  - `OpenSSL`
+    依赖与动态库路径修复，
+    只属于相应 backend 的 runtime/fallback 话题
+  - Windows 可以直接走
+    `WinSSL`
+  - `sslFreePascal`
+    作为 pure Pascal backend，
+    不应再被任何活跃 FAQ 写成“仍需系统 OpenSSL”
+
+- 这次顺手也确认了一个容易被忽略的 FAQ 入口噪音：
+  - 活跃 FAQ 里仍残留
+    `yourusername`
+    placeholder
+    与错误文档链接
+  - 如果不在这次一起修，
+    后续入口审查还会反复被这些低级 drift 打断

@@ -10,7 +10,12 @@
 - ✅ macOS (Intel, Apple Silicon)
 - ✅ FreeBSD
 
-唯一要求：系统安装OpenSSL 1.1.1+或3.x。
+依赖取决于你实际选择的 backend：
+- Linux/macOS 上，常见路径是 `OpenSSL` backend，需要系统可用的 `libcrypto/libssl`
+- Windows 可以直接使用 `WinSSL` backend，不要求安装 OpenSSL。
+- FreePascal backend 是纯 Pascal 路径，不要求系统 OpenSSL。
+
+普通新代码推荐直接 `uses fafafa.ssl;` + `TSSLContextBuilder` / `TSSLConnector`；只有在你明确固定某个 backend 时，才需要关心 backend-specific 依赖。
 
 ---
 
@@ -22,19 +27,42 @@
 
 ### Q: 如何链接OpenSSL库？
 
-**A**: 库会自动加载系统OpenSSL：
+**A**: 普通新代码优先走统一入口，不需要先手动操作 OpenSSL loader：
 
 ```pascal
-// 自动初始化
-uses fafafa.ssl.factory;
+uses
+  fafafa.ssl,
+  fafafa.ssl.context.builder;
 
-// 或手动控制
-TSSLLibrary.Instance.Initialize;
+Ctx := TSSLContextBuilder.Create
+  .WithTLS12And13
+  .WithVerifyPeer
+  .WithSystemRoots
+  .BuildClient;
+
+TLS := TSSLConnector.FromContext(Ctx);
 ```
 
-**自定义路径**:
+如果你要显式固定 `OpenSSL` backend，再走工厂入口：
+
 ```pascal
-TSSLLibrary.Instance.SetCustomLibraryPath('/custom/path/libssl.so');
+uses fafafa.ssl;
+
+var
+  Lib: ISSLLibrary;
+begin
+  Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
+  if not Lib.Initialize then
+    raise Exception.Create(Lib.GetLastErrorString);
+end;
+```
+
+只有在系统搜索路径有问题、且你明确要走 OpenSSL backend 时，才使用 OpenSSL-specific fallback：
+
+```pascal
+uses fafafa.ssl.openssl.backed;
+
+SetCustomLibraryPaths('/custom/path/libcrypto.so', '/custom/path/libssl.so');
 ```
 
 ---
@@ -228,11 +256,15 @@ end;
 
 **A**:
 
-**原因**: 找不到OpenSSL库
+这只说明 `OpenSSL` backend 在当前机器上不可用，不代表 `fafafa.ssl` 整体不可用。
 
 **解决**:
 
-1. **检查安装**:
+1. **先确认是否真的需要 OpenSSL backend**:
+   - Windows 普通应用优先尝试 `sslWinSSL` 或 `sslAutoDetect`
+   - 如果你的场景可接受 pure Pascal path，也可以审查 `sslFreePascal`
+
+2. **检查安装 / 搜索路径**:
 ```bash
 # Linux
 ldconfig -p | grep libssl
@@ -244,12 +276,17 @@ ls /usr/local/opt/openssl/lib/
 where libssl-*.dll
 ```
 
-2. **指定路径**:
+3. **只有在你明确固定 OpenSSL backend 时，才指定自定义路径**:
 ```pascal
-TSSLLibrary.Instance.SetCustomLibraryPath('/path/to/openssl');
+uses
+  fafafa.ssl,
+  fafafa.ssl.openssl.backed;
+
+SetCustomLibraryPaths('/path/to/libcrypto.so', '/path/to/libssl.so');
+Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
 ```
 
-3. **版本兼容**:
+4. **版本兼容**:
    - 确保OpenSSL 1.1.1+或3.x
    - 避免使用OpenSSL 1.0.x（已EOL）
 
@@ -261,11 +298,16 @@ TSSLLibrary.Instance.SetCustomLibraryPath('/path/to/openssl');
 
 **常见原因**:
 
-1. **未初始化**:
+1. **绕过统一入口直接操作未就绪对象**:
 ```pascal
-// ✅ 确保初始化
-uses fafafa.ssl.factory;
-// 自动初始化
+// ✅ 普通新代码优先让统一入口创建 Context / Connection
+uses
+  fafafa.ssl,
+  fafafa.ssl.context.builder;
+
+Ctx := TSSLContextBuilder.Create
+  .WithTLS12And13
+  .BuildClient;
 ```
 
 2. **多线程竞争**（虽然API线程安全，但不当使用仍可能出错）
@@ -283,9 +325,11 @@ fpc -gh -gl program.pas
 
 ## 跨平台注意事项
 
-### Q: Windows上DLL加载失败？
+### Q: Windows上 OpenSSL DLL 加载失败？
 
 **A**:
+
+如果你当前跑的是 `WinSSL` backend，这个问题通常不成立；它主要针对你显式固定 `OpenSSL` backend 的场景。
 
 1. **确保DLL在PATH**:
 ```bash
@@ -301,7 +345,7 @@ set PATH=%PATH%;C:\OpenSSL\bin
 
 ---
 
-### Q: macOS上找不到OpenSSL？
+### Q: macOS上找不到OpenSSL后端？
 
 **A**:
 
@@ -316,20 +360,31 @@ brew link openssl@3 --force
 export DYLD_LIBRARY_PATH=/usr/local/opt/openssl@3/lib
 ```
 
+如果你明确固定 `OpenSSL` backend，也可以走 backend-specific fallback：
+
+```pascal
+uses fafafa.ssl.openssl.backed;
+
+SetCustomLibraryPaths('/usr/local/opt/openssl@3/lib/libcrypto.dylib',
+  '/usr/local/opt/openssl@3/lib/libssl.dylib');
+```
+
 ---
 
 ### Q: Linux不同发行版路径不同？
 
 **A**:
 
-库会自动尝试常见路径：
+这条问题只针对 `OpenSSL` backend。库会自动尝试常见路径：
 - `/usr/lib/libssl.so`
 - `/usr/lib/x86_64-linux-gnu/libssl.so`
 - `/lib/libssl.so`
 
 如失败，手动指定：
 ```pascal
-TSSLLibrary.Instance.SetCustomLibraryPath('/custom/path');
+uses fafafa.ssl.openssl.backed;
+
+SetCustomLibraryPaths('/custom/path/libcrypto.so', '/custom/path/libssl.so');
 ```
 
 ---
@@ -377,7 +432,7 @@ openssl pkcs12 -export -in cert.pem -inkey key.pem -out cert.p12
 
 ### Q: 如何生成CSR（证书签名请求）？
 
-**A**: 计划在下一版本添加。
+**A**: 当前版本尚未发布 CSR helper surface。
 
 **临时方案**: 使用OpenSSL命令行。
 
@@ -385,16 +440,16 @@ openssl pkcs12 -export -in cert.pem -inkey key.pem -out cert.p12
 
 ## 获取帮助
 
-- **GitHub Issues**: https://github.com/yourusername/fafafa.ssl/issues
-- **文档**: [QuickStart.md](QuickStart.md), [API_Reference.md](API_Reference.md)
+- **GitHub Issues**: https://github.com/dtamade/fafafa.ssl/issues
+- **文档**: [QUICKSTART.md](QUICKSTART.md), [API_REFERENCE.md](../reference/API_REFERENCE.md)
 - **示例**: `examples/` 目录
 
 ---
 
 ## 版本说明
 
-本FAQ基于fafafa.ssl v1.0。功能可能在新版本中变化。
+本FAQ基于fafafa.ssl v1.5.0。功能可能在新版本中变化。
 
 ---
 
-**未找到答案？** [提交Issue](https://github.com/yourusername/fafafa.ssl/issues/new)
+**未找到答案？** [提交Issue](https://github.com/dtamade/fafafa.ssl/issues/new)
