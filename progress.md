@@ -55,6 +55,31 @@
     `WinSSL Runtime Gate`
     for the real Windows runtime result
 
+- `gh run list --limit 8 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url`
+- `gh run view 26139236078 --json status,conclusion,jobs,url`
+- `gh run view 26139236078 --job 76881040831 --log-failed`
+- `gh run view 26139236078 --job 76881040831 --log | sed -n '8530,8660p'`
+  - result: FAIL
+  - summary:
+    - confirmed the new WinSSL chain contract itself passed on real Windows runtime:
+      - partial-chain case passed
+      - full-chain case passed
+    - confirmed the red light came from an older hidden test assumption:
+      `TestDeterministicDNQueryContract`
+      still used
+      `LoadFromFile('...pem')`
+      and now truthfully failed once non-zero exit propagation was enabled
+    - confirmed the failing detail:
+      WinSSL `LoadFromFile`
+      did not load the PEM fixture into a valid native handle
+
+- follow-up implementation:
+  - `src/fafafa.ssl.winssl.certificate.pas`
+  - change:
+    - `LoadFromStream`
+      now attempts DER first and falls back to PEM decoding when the file payload contains a certificate PEM block
+    - this preserves the shared public expectation that certificate files may be PEM-backed across backends
+
 ### OpenSSL CertStore Full-Chain Termination Contract
 
 - `gh run view 26138586148 --json status,conclusion,name,workflowName,headSha,url`

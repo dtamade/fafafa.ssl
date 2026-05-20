@@ -27,6 +27,7 @@
     - `docs/plans/2026-05-20-winssl-certstore-chain-runtime-contract.md`
   - 修改实现：
     - `src/fafafa.ssl.winssl.certstore.pas`
+    - `src/fafafa.ssl.winssl.certificate.pas`
   - 修改 focused test：
     - `tests/winssl/test_winssl_certstore.pas`
     - `tests/run_winssl_tests.ps1`
@@ -47,6 +48,12 @@
     `Assert` 失败，
     结尾也不会
     非零退出
+  - 远端红灯还进一步证明：
+    `TWinSSLCertificate.LoadFromFile`
+    在 Windows 上
+    对仓库常用的
+    `*.pem` fixture
+    并不会自动成功
   当前实施策略：
   - 先在
     WinSSL certstore test
@@ -67,6 +74,10 @@
       不再用
       `TList`
       存裸接口指针
+    - `LoadFromStream`
+      在 DER
+      失败时
+      fallback 到 PEM
   当前总路线图进度：
   - `接口设计`
     正在继续把

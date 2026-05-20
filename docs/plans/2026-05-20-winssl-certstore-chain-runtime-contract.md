@@ -27,6 +27,7 @@
 
 - 修改：
   - `src/fafafa.ssl.winssl.certstore.pas`
+  - `src/fafafa.ssl.winssl.certificate.pas`
   - `tests/winssl/test_winssl_certstore.pas`
   - `tests/run_winssl_tests.ps1`
   - `task_plan.md`
@@ -70,6 +71,13 @@
   `Halt(1)`，
   CI 可能把失败测试
   误看成成功执行
+- 这批远端红灯还进一步暴露出：
+  - `TWinSSLCertificate.LoadFromFile`
+    当前只走 DER
+  - 遇到仓库长期在用的
+    `*.pem` fixture
+    不会自动 fallback 到
+    `LoadFromPEM`
 
 ## TDD Steps
 
@@ -100,6 +108,9 @@
    - 直接写入
      `TSSLCertificateArray`
      保持引用计数
+   - `TWinSSLCertificate.LoadFromStream`
+     在 DER 失败时
+     fallback 到 PEM
 4. 验证：
    - push 后
      等待

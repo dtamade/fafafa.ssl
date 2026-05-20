@@ -225,6 +225,7 @@ function TWinSSLCertificate.LoadFromStream(AStream: TStream): Boolean;
 var
   Data: TBytes;
   Size: Int64;
+  LPEMText: RawByteString;
 begin
   Result := False;
   Size := AStream.Size - AStream.Position;
@@ -234,6 +235,17 @@ begin
   SetLength(Data, Size);
   AStream.Read(Data[0], Size);
   Result := LoadFromDER(Data);
+  if Result then
+    Exit;
+
+  // WinSSL current public certificate surface should accept PEM certificate files too.
+  // If DER loading fails, fall back to PEM text decoding before giving up.
+  if Length(Data) > 0 then
+  begin
+    SetString(LPEMText, PAnsiChar(@Data[0]), Length(Data));
+    if Pos('-----BEGIN CERTIFICATE-----', string(LPEMText)) > 0 then
+      Result := LoadFromPEM(string(LPEMText));
+  end;
 end;
 
 function TWinSSLCertificate.LoadFromMemory(const AData: Pointer; ASize: Integer): Boolean;

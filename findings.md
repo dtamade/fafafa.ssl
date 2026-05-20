@@ -61,6 +61,28 @@
   也不具备真正的
   CI 证明力
 
+- 这次远端红灯还顺手证实了
+  一个 WinSSL
+  backend completeness gap：
+  `TWinSSLCertificate.LoadFromFile`
+  当前只把文件内容
+  当 DER 走，
+  不会在失败后
+  fallback 到 PEM
+
+- 但从整个仓库
+  current public truth
+  看，
+  `*.pem` 证书文件
+  一直都是正常 caller input；
+  所以这里更合理的修复
+  不是把测试改回
+  手工读文本再 `LoadFromPEM`，
+  而是把 WinSSL 的
+  file-loading surface
+  补齐到
+  DER + PEM
+
 - `OpenSSL`
   当前
   `BuildCertificateChain`
