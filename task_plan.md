@@ -11436,3 +11436,67 @@
     是否接受这条
     parser/doc truth
     修正
+
+### 2026-05-21 主 backend Ed25519 证书算法真相收口
+
+- [completed] 当前新的 residual
+  已从 shared parser
+  收窄到两个主 backend
+  的证书算法 getter：
+  - `OpenSSL`
+    `GetPublicKeyAlgorithm`
+    /
+    `GetInfo.PublicKeyAlgorithm`
+    在
+    `Ed25519`
+    证书上仍是
+    `Unknown`
+  - `WinSSL`
+    `GetPublicKeyAlgorithm`
+    /
+    `GetSignatureAlgorithm`
+    仍发布裸 OID
+- [completed] 最小正确修法已经落地：
+  - `src/fafafa.ssl.openssl.certificate.pas`
+    补
+    `EVP_PKEY_ED25519`
+    /
+    `EVP_PKEY_ED448`
+    名称映射
+  - `src/fafafa.ssl.winssl.certificate.pas`
+    把算法 OID
+    收口到
+    `OIDToName(...)`
+    truth，
+    未知时才回退原始 OID
+- [completed] focused proof
+  已经补齐到
+  “Linux 本地 + Windows CI 待接管”
+  的闭环状态：
+  - 新增
+    `docs/plans/2026-05-21-main-backends-ed25519-certificate-algorithm-truth.md`
+  - 新增
+    `tests/openssl/test_openssl_ed25519_certificate_algorithm_truth.pas`
+    并已打出：
+    - RED：
+      `GetPublicKeyAlgorithm = Unknown`
+      /
+      `GetInfo.PublicKeyAlgorithm = Unknown`
+    - GREEN：
+      `9 passed / 0 failed`
+  - `tests/winssl/test_winssl_unit_comprehensive.pas`
+    已补入生成式
+    `Ed25519`
+    runtime assertion，
+    push 后由
+    `WinSSL Runtime Gate`
+    最终确认
+- [completed] 当前批收口后的默认下一步：
+  - `git diff --check`
+  - 简短 review
+  - commit / push
+  - 看新的
+    `CI`
+    /
+    `WinSSL Runtime Gate`
+    是否接受这条主 backend 修正

@@ -11281,3 +11281,61 @@
     算法名与
     `256-bit`
     公钥大小
+
+- `Ed25519`
+  在主 backend
+  上的残差
+  不是“所有算法 getter 都坏了”，
+  而是两种不同类型的 implementation gap：
+  - `OpenSSL`
+    签名算法路径
+    已经能给出
+    可读
+    `ED25519`
+  - 真正缺的是
+    `GetPublicKeyAlgorithm`
+    仍只映射
+    `RSA/DSA/DH/EC`
+  - `WinSSL`
+    则是
+    public getter
+    直接发布原始 OID，
+    没把仓库已有的
+    `OIDToName(...)`
+    接进来
+
+- 因而这批最小正确修法
+  不是再去扩新的 native parser/binding，
+  而是：
+  - `OpenSSL`
+    补
+    `EVP_PKEY_ED25519`
+    /
+    `EVP_PKEY_ED448`
+    到现有
+    `EVP_PKEY_id(...)`
+    case
+  - `WinSSL`
+    把
+    `pszObjId`
+    收口到
+    `OIDToName(...)`
+    并保留未知 OID fallback
+
+- 这条 lane
+  还补出一个 workflow 事实：
+  只修 shared parser/docs
+  时不会触发
+  `WinSSL Runtime Gate`
+  因为当前 workflow path filter
+  只盯：
+  - `src/fafafa.ssl.winssl*.pas`
+  - `tests/winssl/**`
+  等
+  Windows 相关路径
+  所以要拿到这条 runtime truth，
+  需要把证明放进
+  `tests/winssl/test_winssl_unit_comprehensive.pas`
+  或改动
+  `winssl`
+  实现文件本身

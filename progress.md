@@ -17863,6 +17863,80 @@
   - summary:
     - no whitespace or patch-format drift remains before commit
 
+### Main Backends Ed25519 Certificate Algorithm Truth
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-main-backends-ed25519-certificate-algorithm-truth.md`
+  - `tests/openssl/test_openssl_ed25519_certificate_algorithm_truth.pas`
+  - `tests/winssl/test_winssl_unit_comprehensive.pas`
+  - change:
+    - recorded a bounded main-backend
+      `Ed25519`
+      algorithm-metadata batch
+    - added a Linux-runnable OpenSSL contract
+    - added a Windows-runtime proof hook inside the existing comprehensive WinSSL suite
+
+- `mkdir -p tmp/test_openssl_ed25519_certificate_algorithm_truth_units tmp/test_openssl_ed25519_certificate_algorithm_truth_bin`
+  - result: PASS
+  - summary:
+    - prepared isolated build outputs for the focused OpenSSL contract
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_openssl_ed25519_certificate_algorithm_truth_units -FEtmp/test_openssl_ed25519_certificate_algorithm_truth_bin -otmp/test_openssl_ed25519_certificate_algorithm_truth_bin/test_openssl_ed25519_certificate_algorithm_truth tests/openssl/test_openssl_ed25519_certificate_algorithm_truth.pas`
+- `./tmp/test_openssl_ed25519_certificate_algorithm_truth_bin/test_openssl_ed25519_certificate_algorithm_truth`
+  - result: RED
+  - summary:
+    - the new OpenSSL contract failed only on:
+      - `GetPublicKeyAlgorithm exposes Ed25519 truth`
+      - `GetInfo.PublicKeyAlgorithm exposes Ed25519 truth`
+    - both still returned
+      `Unknown`
+    - `GetSignatureAlgorithm`
+      /
+      `GetInfo.SignatureAlgorithm`
+      already exposed readable
+      `Ed25519`
+      truth via case-insensitive match
+
+- update implementation:
+  - `src/fafafa.ssl.openssl.certificate.pas`
+  - `src/fafafa.ssl.winssl.certificate.pas`
+  - change:
+    - `OpenSSL.GetPublicKeyAlgorithm`
+      now maps:
+      - `EVP_PKEY_ED25519 -> Ed25519`
+      - `EVP_PKEY_ED448 -> Ed448`
+    - `WinSSL.GetPublicKeyAlgorithm`
+      /
+      `GetSignatureAlgorithm`
+      now publish
+      `OIDToName(...)`
+      when available and fallback to raw OID only for unknown values
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_openssl_ed25519_certificate_algorithm_truth_units -FEtmp/test_openssl_ed25519_certificate_algorithm_truth_bin -otmp/test_openssl_ed25519_certificate_algorithm_truth_bin/test_openssl_ed25519_certificate_algorithm_truth tests/openssl/test_openssl_ed25519_certificate_algorithm_truth.pas`
+- `./tmp/test_openssl_ed25519_certificate_algorithm_truth_bin/test_openssl_ed25519_certificate_algorithm_truth`
+  - result: PASS
+  - summary:
+    - the focused OpenSSL contract is now fully green:
+      `9 passed / 0 failed`
+    - public-key and signature algorithm metadata now both surface readable
+      `Ed25519`
+      truth
+
+- Windows CI follow-up prepared:
+  - `tests/winssl/test_winssl_unit_comprehensive.pas`
+  - result: PENDING PUSH
+  - summary:
+    - added a generated
+      `Ed25519`
+      runtime assertion for:
+      - `GetPublicKeyAlgorithm`
+      - `GetSignatureAlgorithm`
+      - `GetInfo.PublicKeyAlgorithm`
+      - `GetInfo.SignatureAlgorithm`
+    - this proof cannot run locally on Linux
+      and is intentionally delegated to the existing
+      GitHub Windows gate
+
 ### X509 Ed25519 Algorithm Metadata Truth
 
 - `gh run view 26179498925 --json status,conclusion,jobs,url`

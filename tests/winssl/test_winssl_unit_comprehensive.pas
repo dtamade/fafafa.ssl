@@ -8,12 +8,14 @@ uses
   Windows,
   {$ENDIF}
   SysUtils, Classes,
-  
+
   fafafa.ssl.base,
+  fafafa.ssl.cert.utils,
   fafafa.ssl.winssl.lib,
   fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.utils,
-  fafafa.ssl.winssl.certstore;
+  fafafa.ssl.winssl.certstore,
+  fafafa.ssl.winssl.certificate;
 
 var
   TotalTests: Integer = 0;
@@ -422,6 +424,66 @@ begin
   LLib := nil;
 end;
 
+procedure TestGeneratedEd25519CertificateAlgorithmTruth;
+var
+  LOptions: TCertGenOptions;
+  LCertPEM: string;
+  LKeyPEM: string;
+  LCert: ISSLCertificate;
+  LInfo: TSSLCertificateInfo;
+  LLoaded: Boolean;
+begin
+  BeginSection('Certificate Algorithm Metadata');
+
+  LOptions := TCertificateUtils.DefaultGenOptions;
+  LOptions.KeyType := ktEd25519;
+  LOptions.CommonName := 'winssl-ed25519-algorithm-truth.local';
+  LOptions.Organization := 'fafafa.ssl';
+
+  try
+    Test('GenerateSelfSigned(Ed25519)', TCertificateUtils.GenerateSelfSigned(
+      LOptions, LCertPEM, LKeyPEM));
+  except
+    on E: Exception do
+    begin
+      Test('GenerateSelfSigned(Ed25519)', False, E.ClassName + ': ' + E.Message);
+      Exit;
+    end;
+  end;
+
+  LCert := TWinSSLCertificate.Create(nil, False);
+  Test('Create WinSSL certificate object', LCert <> nil,
+    'TWinSSLCertificate.Create returned nil');
+  if LCert = nil then
+    Exit;
+
+  try
+    LLoaded := LCert.LoadFromPEM(LCertPEM);
+    Test('Load generated Ed25519 PEM', LLoaded);
+    if not LLoaded then
+      Exit;
+
+    Test('GetPublicKeyAlgorithm exposes Ed25519 truth',
+      SameText(LCert.GetPublicKeyAlgorithm, 'Ed25519'),
+      'Actual=' + LCert.GetPublicKeyAlgorithm);
+    Test('GetSignatureAlgorithm exposes Ed25519 truth',
+      SameText(LCert.GetSignatureAlgorithm, 'Ed25519'),
+      'Actual=' + LCert.GetSignatureAlgorithm);
+
+    LInfo := LCert.GetInfo;
+    Test('GetInfo.PublicKeyAlgorithm exposes Ed25519 truth',
+      SameText(LInfo.PublicKeyAlgorithm, 'Ed25519'),
+      'Actual=' + LInfo.PublicKeyAlgorithm);
+    Test('GetInfo.SignatureAlgorithm exposes Ed25519 truth',
+      SameText(LInfo.SignatureAlgorithm, 'Ed25519'),
+      'Actual=' + LInfo.SignatureAlgorithm);
+  except
+    on E: Exception do
+      Test('Generated Ed25519 algorithm metadata probe should not raise', False,
+        E.ClassName + ': ' + E.Message);
+  end;
+end;
+
 // ============================================================================
 // Callback Configuration Tests
 // ============================================================================
@@ -682,6 +744,7 @@ begin
     TestLibraryInitialization;
     TestContextManagement;
     TestCertificateManagement;
+    TestGeneratedEd25519CertificateAlgorithmTruth;
     TestCallbackConfiguration;
     TestErrorHandling;
     TestUtilsModule;

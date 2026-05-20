@@ -107,6 +107,9 @@ function CreateWinSSLCertificateFromContext(ACertContext: PCCERT_CONTEXT; AOwnsC
 
 implementation
 
+uses
+  fafafa.ssl.asn1;
+
 // StringsToArray 已移至 fafafa.ssl.utils（Phase 3.2）
 
 // ============================================================================
@@ -201,6 +204,17 @@ end;
 function FormatHexError(const AValue: DWORD): string;
 begin
   Result := '0x' + IntToHex(AValue, 8);
+end;
+
+function AlgorithmOIDToDisplayName(AOID: LPCSTR): string;
+begin
+  Result := '';
+  if AOID = nil then
+    Exit;
+
+  Result := OIDToName(string(AOID));
+  if Result = '' then
+    Result := string(AOID);
 end;
 
 function CreateChainEngineForStore(
@@ -679,8 +693,9 @@ begin
   CertInfo := GetCertInfo;
   if CertInfo = nil then
     Exit;
-  
-  Result := string(CertInfo^.SubjectPublicKeyInfo.Algorithm.pszObjId);
+
+  Result := AlgorithmOIDToDisplayName(
+    CertInfo^.SubjectPublicKeyInfo.Algorithm.pszObjId);
 end;
 
 function TWinSSLCertificate.GetSignatureAlgorithm: string;
@@ -692,8 +707,8 @@ begin
   CertInfo := GetCertInfo;
   if CertInfo = nil then
     Exit;
-  
-  Result := string(CertInfo^.SignatureAlgorithm.pszObjId);
+
+  Result := AlgorithmOIDToDisplayName(CertInfo^.SignatureAlgorithm.pszObjId);
 end;
 
 function TWinSSLCertificate.GetVersion: Integer;

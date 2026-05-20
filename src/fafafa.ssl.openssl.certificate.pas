@@ -762,6 +762,8 @@ begin
       EVP_PKEY_DSA: Result := 'DSA';
       EVP_PKEY_DH: Result := 'DH';
       EVP_PKEY_EC: Result := 'EC';
+      EVP_PKEY_ED25519: Result := 'Ed25519';
+      EVP_PKEY_ED448: Result := 'Ed448';
     else
       Result := 'Unknown';
     end;
