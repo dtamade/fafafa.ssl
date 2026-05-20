@@ -10,6 +10,69 @@
 
 ## Current Status
 
+- [completed] `api documentation certverify owner path closeout`
+  当前 focused 目标：
+  - 收掉 `docs/reference/API_DOCUMENTATION.md`
+    里证书验证排错示例仍在 direct-core
+    `Connection.GetVerifyResult`
+    /
+    `Connection.GetVerifyResultString`
+    的活跃漂移，
+    并修掉 focused contract
+    还把这条旧写法当成正确答案的问题
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-api-documentation-certverify-owner-path-closeout.md`
+  - 修改文档：
+    - `docs/reference/API_DOCUMENTATION.md`
+  - 修改 focused contract：
+    - `tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+  当前实施判断：
+  - 这批不是孤立文档错字，
+    而是同一页内部已经出现两套路线：
+    - CT 示例已走
+      `ISSLCertificateVerification`
+      owner path
+    - 错误处理 / 故障排查却又退回
+      direct-core mirror
+  - 所以最小正确顺序必须是：
+    - 先把 focused contract
+      改成 owner-path truth
+    - 拿到预期 RED
+    - 再最小修正文档
+  当前 focused proof：
+  - `bash -n tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+    - 首轮：
+      FAIL
+      - 预期 RED：
+        `API_DOCUMENTATION troubleshooting must query verify-result state through ISSLCertificateVerification`
+    - 修复后：
+      PASS
+  - `bash tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前状态：
+  - `API_DOCUMENTATION`
+    的错误处理 / 故障排查示例
+    现已统一切到：
+    - `Supports(Connection, ISSLCertificateVerification, CertVerify)`
+    - `CertVerify.GetVerifyResult`
+    - `CertVerify.GetVerifyResultString`
+  最新收口：
+  - 这批把
+    `API_DOCUMENTATION`
+    与
+    `INTEGRATION_GUIDE`
+    /
+    `OCSP_USAGE_GUIDE`
+    /
+    `CT_IMPLEMENTATION_GUIDE`
+    的证书验证 owner-path guidance
+    重新收成同一张图
+
 - [completed] `docs readme isslconnection slice truth closeout`
   当前 focused 目标：
   - 收掉 `docs/README.md`

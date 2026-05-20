@@ -6,6 +6,71 @@
 
 ## 2026-05-21
 
+### API Documentation CertVerify Owner-Path Closeout
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-api-documentation-certverify-owner-path-closeout.md`
+  - change:
+    - recorded a bounded
+      `API_DOCUMENTATION`
+      certificate-verification
+      owner-path batch
+    - explicitly framed the root cause as
+      `same-page guidance split + stale contract guard`
+
+- update focused contract first:
+  - `tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+  - change:
+    - stopped requiring
+      `Connection.GetVerifyResult`
+      /
+      `Connection.GetVerifyResultString`
+      in troubleshooting
+    - started requiring
+      `ISSLCertificateVerification`
+      owner-path guidance
+    - added absence guards for
+      direct-core
+      `Connection.GetVerifyResult*`
+      usage in active docs
+
+- existing RED from this batch:
+  - `bash -n tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - captured the intended RED:
+        `API_DOCUMENTATION troubleshooting must query verify-result state through ISSLCertificateVerification`
+      - confirmed the current doc still used
+        direct-core
+        `Connection.GetVerifyResult*`
+        in troubleshooting
+
+- update implementation:
+  - `docs/reference/API_DOCUMENTATION.md`
+  - change:
+    - error-handling snippet now declares
+      `CertVerify: ISSLCertificateVerification`
+      and reads verify-result state through
+      `Supports(...)`
+    - troubleshooting snippet now uses the same
+      owner-path pattern
+    - the page no longer mixes
+      CT-owner-path guidance
+      with
+      direct-core troubleshooting guidance
+
+- `bash -n tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+- `bash tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+- `bash tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - active connection API docs contract is now green against owner-path truth
+    - certificate-verification active guidance contract still holds
+    - patch formatting is clean
+
 ### Docs README ISSLConnection Slice Truth Closeout
 
 - add focused batch inputs:

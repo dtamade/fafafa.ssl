@@ -849,6 +849,9 @@ Context := Builder.BuildServer;
 ### 3. 错误处理
 
 ```pascal
+var
+  CertVerify: ISSLCertificateVerification;
+begin
 try
   if Connection.Connect then
   begin
@@ -856,14 +859,16 @@ try
   end
   else
   begin
-    if Connection.GetVerifyResult <> 0 then
-      WriteLn('证书验证失败: ', Connection.GetVerifyResultString)
+    if Supports(Connection, ISSLCertificateVerification, CertVerify) and
+       (CertVerify.GetVerifyResult <> 0) then
+      WriteLn('证书验证失败: ', CertVerify.GetVerifyResultString)
     else
       WriteLn('TLS 握手失败');
   end;
 except
   on E: ESSLException do
     WriteLn('SSL 错误: ', E.Message);
+end;
 end;
 ```
 
@@ -897,12 +902,17 @@ end;
 **解决方案:**
 
 ```pascal
-// 当前连接失败时，优先检查证书验证结果
-if Connection.GetVerifyResult <> 0 then
-  WriteLn('证书验证失败: ', Connection.GetVerifyResultString);
+var
+  CertVerify: ISSLCertificateVerification;
+begin
+  // 当前连接失败时，优先检查证书验证结果
+  if Supports(Connection, ISSLCertificateVerification, CertVerify) and
+     (CertVerify.GetVerifyResult <> 0) then
+    WriteLn('证书验证失败: ', CertVerify.GetVerifyResultString);
 
-// 对 client 连接，确认是否已在 Connect 前设置 per-connection SNI
-// (Connection as ISSLClientConnection).SetServerName('example.com');
+  // 对 client 连接，确认是否已在 Connect 前设置 per-connection SNI
+  // (Connection as ISSLClientConnection).SetServerName('example.com');
+end;
 ```
 
 #### 2. OCSP Stapling 未工作

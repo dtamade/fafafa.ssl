@@ -2,6 +2,53 @@
 
 ## 2026-05-21
 
+- `docs/reference/API_DOCUMENTATION.md`
+  在证书验证这条线上此前存在一类典型的“同页双真相”问题：
+  - CT 示例已经使用
+    `Supports(Conn, ISSLCertificateVerification, CertVerify)`
+  - 但错误处理 / 故障排查片段
+    还在直调
+    `Connection.GetVerifyResult`
+    /
+    `Connection.GetVerifyResultString`
+
+- 这说明
+  `ISSLCertificateVerification`
+  这条 owner-path
+  虽然已经在更高层指南和部分 reference 示例里落地，
+  但只要某个活跃 reference 页面没被 focused contract
+  明确守住，
+  它就仍可能局部回退到 direct-core mirror 叙事
+
+- 更关键的 workflow 根因是：
+  `tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+  此前还在显式要求：
+  - `if Connection.GetVerifyResult <> 0 then`
+  - `WriteLn('证书验证失败: ', Connection.GetVerifyResultString);`
+  这会继续把旧路线包装成“current truth”
+
+- 因而这批再次证明：
+  对已经进入 Stage-A owner demotion
+  的 surface，
+  真正要防反复拉起，
+  不能只改文档正文，
+  必须同步修 focused contract；
+  否则就会出现：
+  - 一部分文档已经教 owner path
+  - 另一部分文档和合同还在保 direct-core mirror
+
+- 这批收口后的 durable truth 是：
+  - 活跃文档的新代码示例
+    应优先通过
+    `ISSLCertificateVerification`
+    获取：
+    - `GetVerifyResult`
+    - `GetVerifyResultString`
+  - `ISSLConnection`
+    上的同名方法
+    仍是 compatibility mirror，
+    但不再适合继续作为 active guidance 主路径
+
 - `docs/README.md`
   里的
   `ISSLConnection`

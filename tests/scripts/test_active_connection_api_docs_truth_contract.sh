@@ -59,10 +59,12 @@ require_fixed "$api_doc" "function Read(var ABuffer; ACount: Integer): Integer;"
   "API_DOCUMENTATION ISSLConnection section must publish the current raw Read signature"
 require_fixed "$api_doc" "function ReadString(out AStr: string): Boolean;" \
   "API_DOCUMENTATION ISSLConnection section must publish the current ReadString helper"
-require_fixed "$api_doc" "if Connection.GetVerifyResult <> 0 then" \
-  "API_DOCUMENTATION troubleshooting must use current verify-result surface"
-require_fixed "$api_doc" "WriteLn('证书验证失败: ', Connection.GetVerifyResultString);" \
-  "API_DOCUMENTATION troubleshooting must use current verify-result string surface"
+require_fixed "$api_doc" "CertVerify: ISSLCertificateVerification;" \
+  "API_DOCUMENTATION troubleshooting must declare the current certificate-verification owner interface"
+require_fixed "$api_doc" "if Supports(Connection, ISSLCertificateVerification, CertVerify) and" \
+  "API_DOCUMENTATION troubleshooting must query verify-result state through ISSLCertificateVerification"
+require_fixed "$api_doc" "WriteLn('证书验证失败: ', CertVerify.GetVerifyResultString);" \
+  "API_DOCUMENTATION troubleshooting must use current verify-result owner path"
 require_absent "$api_doc" "**版本:** 2.0.0" \
   "API_DOCUMENTATION must stop advertising stale 2.0.0 version"
 require_absent "$api_doc" "WithSystemRootCerts" \
@@ -85,6 +87,10 @@ require_absent "$api_doc" "Connection.GetLastError" \
   "API_DOCUMENTATION must stop using nonexistent connection-level GetLastError"
 require_absent "$api_doc" "Connection.GetPeerCertificateVerified" \
   "API_DOCUMENTATION must stop using nonexistent GetPeerCertificateVerified"
+require_absent "$api_doc" "Connection.GetVerifyResult" \
+  "API_DOCUMENTATION must stop teaching direct core verify-result mirror usage in active docs"
+require_absent "$api_doc" "Connection.GetVerifyResultString" \
+  "API_DOCUMENTATION must stop teaching direct core verify-result string mirror usage in active docs"
 
 require_fixed "$winssl_practices" "(LConn as ISSLClientConnection).SetServerName('example.com');" \
   "WINSSL_BEST_PRACTICES must set example.com through ISSLClientConnection"
