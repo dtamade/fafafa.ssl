@@ -153,6 +153,28 @@
     GitHub Windows quick smoke
     是否能把整个单元图编译过去
 
+- follow-up
+  补回
+  `X509KeyUsageToStrings`
+  后，
+  第二轮远端 gate
+  `26185903650`
+  已经把：
+  - `quick smoke`
+  - `Wave B`
+  - `broader runtime suite`
+  全部跑绿
+
+- 这进一步证明：
+  - 本批 parser-backed metadata
+    收口本身没有破坏
+    WinSSL
+    运行时行为
+  - 首次失败的根因
+    确实只是
+    Windows-only compile hole，
+    不是 metadata 设计方向错误
+
 - 主 backend 的
   `ISSLCertificate.GetExtension`
   此前并不一致：

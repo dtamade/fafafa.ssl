@@ -222,3 +222,12 @@
       `X509KeyUsageToStrings`
       helper
     - re-push and re-watch the Windows lane
+- final remote closeout after follow-up push:
+  - `CI 26185903654`
+    - PASS
+  - `WinSSL Runtime Gate 26185903650`
+    - PASS
+  - validated end-to-end:
+    - `Run quick WinSSL smoke`
+    - `Run Windows Wave B gate`
+    - `Run broader WinSSL runtime suite`
