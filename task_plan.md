@@ -10,6 +10,76 @@
 
 ## Current Status
 
+- [completed] `api reference tsslerrorcode truth alignment`
+  当前 focused 目标：
+  - 修复
+    `docs/reference/API_REFERENCE.md`
+    里的
+    `TSSLErrorCode`
+    文档块漂移，
+    让活跃 API 文档
+    不再继续发布旧错误码名字
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-api-reference-tsslerrorcode-truth-alignment.md`
+  - 新增 contract：
+    - `tests/scripts/test_api_reference_tsslerrorcode_truth_contract.sh`
+  - 更新：
+    - `docs/reference/API_REFERENCE.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_api_reference_tsslerrorcode_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_api_reference_tsslerrorcode_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_error_mapping_contract_enum_and_registration_guard.sh`
+    - PASS
+  当前状态：
+  - `API_REFERENCE`
+    里的
+    `TSSLErrorCode`
+    现在已经对齐到当前源码真相：
+    - `sslErrNone`
+    - `sslErrMemory`
+    - `sslErrInvalidParam`
+    - `sslErrProtocol`
+    - `sslErrHandshake`
+    - `sslErrCertificate`
+    - `sslErrConnection`
+    - `sslErrUnsupported`
+    - `sslErrLoadFailed`
+    - `sslErrOther`
+    以及中间完整枚举集合
+  - 文档不再继续发布旧名字：
+    - `sslErrInvalidParameter`
+    - `sslErrOutOfMemory`
+    - `sslErrConnectionClosed`
+    - `sslErrHandshakeFailed`
+    - `sslErrCertificateVerifyFailed`
+    - `sslErrCipherNotSupported`
+    - `sslErrProtocolNotSupported`
+  当前实施判断：
+  - 这批继续证明：
+    当前“接口设计完整 / 文档完整”
+    的主线，
+    不只是代码接口本身，
+    还包括活跃 canonical docs
+    是否继续描述同一套 public truth
+  当前路线图进度判断：
+  - 总路线仍然不变：
+    - interface/implementation truth alignment
+    - backend completeness
+    - tests/docs completeness
+  - 当前又补齐了一条
+    active API reference
+    与源码/focused contract
+    的真相闭环
+  下一刀：
+  - 继续优先找
+    活跃文档里
+    仍然残留的旧 public truth
+    或与源码当前定义不一致的
+    enum / signature / capability blocks
+
 - [completed] `error mapping contract enum and registration alignment`
   当前 focused 目标：
   - 修复

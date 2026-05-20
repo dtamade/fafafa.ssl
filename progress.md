@@ -6,6 +6,62 @@
 
 ## 2026-05-21
 
+### API Reference TSSLErrorCode Truth Alignment
+
+- inspect active docs truth drift:
+  - `docs/reference/API_REFERENCE.md`
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.errors.pas`
+  - `tests/contract/test_error_mapping_contract.pas`
+  - change:
+    - confirmed the active API reference still published an older
+      `TSSLErrorCode`
+      subset with stale names
+    - confirmed current source/runtime truth now uses:
+      - `sslErrMemory`
+      - `sslErrInvalidParam`
+      - `sslErrProtocol`
+      - `sslErrHandshake`
+      - `sslErrCertificate`
+      - `sslErrConnection`
+      - `sslErrUnsupported`
+      - plus the newer phase-4 error codes
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-api-reference-tsslerrorcode-truth-alignment.md`
+  - `tests/scripts/test_api_reference_tsslerrorcode_truth_contract.sh`
+  - change:
+    - documented the batch as active API-reference truth repair
+    - added a static guard to keep the current error-code names anchored in docs
+
+- repair active API reference truth:
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - replaced the stale error-code block with the current full
+      `TSSLErrorCode`
+      list from source truth
+    - removed old names such as:
+      - `sslErrInvalidParameter`
+      - `sslErrOutOfMemory`
+      - `sslErrConnectionClosed`
+      - `sslErrHandshakeFailed`
+      - `sslErrCertificateVerifyFailed`
+      - `sslErrCipherNotSupported`
+      - `sslErrProtocolNotSupported`
+
+- verify static truth alignment:
+  - `bash -n tests/scripts/test_api_reference_tsslerrorcode_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_api_reference_tsslerrorcode_truth_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed the active API reference now keeps the current shipped names
+      - confirmed the stale names are absent
+  - `bash tests/scripts/test_error_mapping_contract_enum_and_registration_guard.sh`
+    - result: PASS
+    - summary:
+      - confirmed the focused error-mapping contract still aligns with the same current enum truth
+
 ### Error Mapping Contract Enum And Registration Alignment
 
 - inspect fresh RED from focused contract compile:

@@ -1509,15 +1509,39 @@ end;
 TSSLErrorCode = (
   sslErrNone,              // 无错误
   sslErrGeneral,           // 一般错误
+  sslErrMemory,            // 内存分配错误
+  sslErrInvalidParam,      // 无效参数
   sslErrNotInitialized,    // 未初始化
-  sslErrInvalidParameter,  // 无效参数
-  sslErrOutOfMemory,       // 内存不足
+  sslErrProtocol,          // 协议错误
+  sslErrHandshake,         // 握手错误
+  sslErrCertificate,       // 证书错误
+  sslErrCertificateExpired,// 证书过期
+  sslErrCertificateRevoked,// 证书被撤销
+  sslErrCertificateUnknown,// 未知证书
+  sslErrCertificateUntrusted, // 证书不受信任
+  sslErrHostnameMismatch,  // 主机名不匹配
+  sslErrConnection,        // 连接错误
   sslErrTimeout,           // 超时
-  sslErrConnectionClosed,  // 连接关闭
-  sslErrHandshakeFailed,   // 握手失败
-  sslErrCertificateVerifyFailed, // 证书验证失败
-  sslErrCipherNotSupported,      // 不支持的密码
-  sslErrProtocolNotSupported     // 不支持的协议
+  sslErrIO,                // I/O错误
+  sslErrWouldBlock,        // 非阻塞操作会阻塞
+  sslErrWantRead,          // SSL需要读取
+  sslErrWantWrite,         // SSL需要写入
+  sslErrUnsupported,       // 不支持的功能
+  sslErrLibraryNotFound,   // 库文件未找到
+  sslErrFunctionNotFound,  // 函数未找到
+  sslErrVersionMismatch,   // 版本不匹配
+  sslErrConfiguration,     // 配置错误
+  sslErrInvalidData,       // 数据格式错误
+  sslErrDecryptionFailed,  // 解密失败
+  sslErrEncryptionFailed,  // 加密失败
+  sslErrParseFailed,       // 解析失败
+  sslErrLoadFailed,        // 加载失败
+  sslErrVerificationFailed,// 验证失败
+  sslErrKeyDerivationFailed,// 密钥派生失败
+  sslErrInvalidFormat,     // 格式无效
+  sslErrBufferTooSmall,    // 缓冲区太小
+  sslErrResourceExhausted, // 资源耗尽
+  sslErrOther              // 其他错误
 );
 ```
 

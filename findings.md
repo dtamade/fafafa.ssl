@@ -2,6 +2,50 @@
 
 ## 2026-05-21
 
+- `docs/reference/API_REFERENCE.md`
+  里的
+  `TSSLErrorCode`
+  代码块
+  当前也存在明显文档真相漂移：
+  它还在发布一套更早的旧名字，
+  而源码当前真实枚举已经换成：
+  - `sslErrMemory`
+  - `sslErrInvalidParam`
+  - `sslErrProtocol`
+  - `sslErrHandshake`
+  - `sslErrCertificate`
+  - `sslErrConnection`
+  - `sslErrUnsupported`
+  等完整新集合
+
+- 这类问题的风险很直接：
+  它不会让生产实现立刻坏掉，
+  但会让活跃 canonical doc
+  持续把调用方、
+  审查与后续测试
+  带回旧 public truth
+
+- 当前这批收口后，
+  `API_REFERENCE`
+  已经不再继续发布这些过时名字：
+  - `sslErrInvalidParameter`
+  - `sslErrOutOfMemory`
+  - `sslErrConnectionClosed`
+  - `sslErrHandshakeFailed`
+  - `sslErrCertificateVerifyFailed`
+  - `sslErrCipherNotSupported`
+  - `sslErrProtocolNotSupported`
+
+- 这也说明我们现在的“完整度”推进已经更稳：
+  不只是修 contract / test，
+  而是把
+  source
+  /
+  focused proof
+  /
+  active API doc
+  三者重新压回同一套 error-code truth
+
 - `tests/contract/test_error_mapping_contract.pas`
   当前又暴露出一条更硬的
   fresh RED：
