@@ -616,6 +616,9 @@ var
   LCert: ISSLCertificate;
   LStoreClone: ISSLCertificate;
   LSubjectVariant: string;
+  LSerialCompact: string;
+  LSerialVariant: string;
+  LCharIndex: Integer;
   LLib: ISSLLibrary;
 begin
   WriteLn('');
@@ -658,6 +661,17 @@ begin
         '=', ' = ', [rfReplaceAll]));
       Test('FindBySubject supports normalized query variant', LStore.FindBySubject(LSubjectVariant) <> nil);
       Test('FindBySubject empty query returns nil', LStore.FindBySubject('') = nil);
+      LSerialCompact := NormalizeHexish(LCert.GetSerialNumber);
+      Test('Loaded fixture cert exposes serial for normalized serial query contract', LSerialCompact <> '');
+      LSerialVariant := '';
+      for LCharIndex := 1 to Length(LSerialCompact) do
+      begin
+        if (LCharIndex > 1) and (((LCharIndex - 1) mod 2) = 0) then
+          LSerialVariant := LSerialVariant + ':';
+        LSerialVariant := LSerialVariant + LowerCase(LSerialCompact[LCharIndex]);
+      end;
+      LSerialVariant := '  ' + LSerialVariant + '  ';
+      Test('FindBySerialNumber supports normalized query variant', LStore.FindBySerialNumber(LSerialVariant) <> nil);
       Test('Remove loaded cert succeeds', LStore.RemoveCertificate(LCert));
       Test('Store count back to 0', LStore.GetCount = 0);
       LLib.Finalize;

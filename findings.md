@@ -4,6 +4,74 @@
 
 - optional backends
   的 certificate completeness
+  继续往下收口后，
+  public getter
+  之外的另一层真实残缺
+  已经浮出来了：
+  store query semantics
+  也会直接分叉
+
+- `FreePascal`
+  其实已经给出了
+  更稳的 store query contract：
+  - `FindBySubject`
+    允许大小写 / 分隔符空格归一化
+  - `FindBySerialNumber`
+    允许 `AA:BB` / `aabb` / 带空格
+    这类展示格式差异
+
+- 但 optional backends
+  在这层长期落后：
+  - `MbedTLS`
+    subject / serial
+    都还是原始字符串比较
+  - `WolfSSL`
+    只补了 subject，
+    serial 仍是原始字符串比较
+
+- 这类问题看起来不像
+  getter AV
+  那么“炸裂”，
+  但它会把
+  同一张证书
+  在不同 backend
+  上的 lookup truth
+  直接分裂成
+  “能查到 / 查不到”
+
+- 也就是说，
+  `ISSLCertificateStore`
+  的完整性
+  不能只看：
+  - 能不能加证书
+  - 能不能删证书
+  - 指纹查找通不通
+  还要看：
+  - 面向人类输入的
+    subject / serial 查询
+    是否有基础归一化能力
+
+- 这一批也再次证明，
+  optional backend
+  最高价值的收口路线
+  不是再补一堆新 native helper，
+  而是优先把
+  仓库内部已经存在的
+  shared/public contract
+  对齐过来
+
+- 直到这一批之前，
+  `FreePascal`
+  已经有的 normalized query truth
+  其实还没有真正推广到
+  `MbedTLS` / `WolfSSL`
+  这说明
+  “接口设计已存在”
+  并不等于
+  “各 backend 实现已经完整”
+
+- optional backends
+  的 certificate completeness
   继续往下挖后，
   最危险的残缺
   不再是“空串”

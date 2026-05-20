@@ -554,11 +554,17 @@ procedure TestMbedTLSCertificateStore;
 var
   LStore: TMbedTLSCertificateStore;
   LCert: ISSLCertificate;
+  LLib: ISSLLibrary;
+  LSubjectVariant: string;
+  LSerialCompact: string;
+  LSerialVariant: string;
+  LCharIndex: Integer;
 begin
   WriteLn('');
   WriteLn('=== MbedTLS Certificate Store ===');
 
   LStore := TMbedTLSCertificateStore.Create;
+  LLib := CreateMbedTLSLibrary;
   try
     Test('Store created', LStore <> nil);
     Test('Store initially empty', LStore.GetCount = 0);
@@ -573,6 +579,38 @@ begin
 
     Test('RemoveCertificate returns true', LStore.RemoveCertificate(LCert));
     Test('Store count is 0', LStore.GetCount = 0);
+
+    if (LLib <> nil) and LLib.Initialize then
+    begin
+      LCert := TMbedTLSCertificate.Create;
+      Test('Load fixture cert for certstore query semantics',
+        LCert.LoadFromFile('tests/certificate/test_certs/signer_ecdsa_cert.pem'));
+      Test('Add loaded cert returns true', LStore.AddCertificate(LCert));
+
+      LSubjectVariant := UpperCase(StringReplace(StringReplace(LCert.GetSubject, ',', ' , ', [rfReplaceAll]),
+        '=', ' = ', [rfReplaceAll]));
+      Test('FindBySubject supports normalized query variant', LStore.FindBySubject(LSubjectVariant) <> nil);
+      Test('FindBySubject empty query returns nil', LStore.FindBySubject('') = nil);
+
+      LSerialCompact := NormalizeHexish(LCert.GetSerialNumber);
+      Test('Loaded fixture cert exposes serial for normalized serial query contract', LSerialCompact <> '');
+      LSerialVariant := '';
+      for LCharIndex := 1 to Length(LSerialCompact) do
+      begin
+        if (LCharIndex > 1) and (((LCharIndex - 1) mod 2) = 0) then
+          LSerialVariant := LSerialVariant + ':';
+        LSerialVariant := LSerialVariant + LowerCase(LSerialCompact[LCharIndex]);
+      end;
+      LSerialVariant := '  ' + LSerialVariant + '  ';
+      Test('FindBySerialNumber supports normalized query variant', LStore.FindBySerialNumber(LSerialVariant) <> nil);
+      Test('Remove loaded cert succeeds', LStore.RemoveCertificate(LCert));
+      Test('Store count back to 0', LStore.GetCount = 0);
+      LLib.Finalize;
+    end
+    else
+    begin
+      Test('Certstore query semantics skipped when MbedTLS runtime unavailable', True);
+    end;
 
     LStore.AddCertificate(TMbedTLSCertificate.Create);
     LStore.AddCertificate(TMbedTLSCertificate.Create);

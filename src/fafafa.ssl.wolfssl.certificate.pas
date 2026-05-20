@@ -163,6 +163,20 @@ begin
   Result := StringReplace(Result, ' ', '', [rfReplaceAll]);
 end;
 
+function NormalizeWolfCertSerial(const ASerialNumber: string): string;
+var
+  I: Integer;
+  LChar: Char;
+begin
+  Result := '';
+  for I := 1 to Length(ASerialNumber) do
+  begin
+    LChar := UpCase(ASerialNumber[I]);
+    if LChar in ['0'..'9', 'A'..'F'] then
+      Result := Result + LChar;
+  end;
+end;
+
 function X509KeyUsageToBitfield(const AUsage: TX509KeyUsage): Word;
 begin
   Result := 0;
@@ -1437,12 +1451,17 @@ function TWolfSSLCertificateStore.FindBySerialNumber(const ASerialNumber: string
 var
   I: Integer;
   LCert: ISSLCertificate;
+  LTarget: string;
 begin
   Result := nil;
+  LTarget := NormalizeWolfCertSerial(ASerialNumber);
+  if LTarget = '' then
+    Exit;
+
   for I := 0 to FCertificates.Count - 1 do
   begin
     LCert := FCertificates[I] as ISSLCertificate;
-    if LCert.GetSerialNumber = ASerialNumber then
+    if NormalizeWolfCertSerial(LCert.GetSerialNumber) = LTarget then
     begin
       Result := LCert;
       Exit;

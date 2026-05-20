@@ -10,6 +10,127 @@
 
 ## Current Status
 
+- [completed] `optional backends certificate store query parity`
+  当前 focused 目标：
+  - 把
+    `MbedTLS` / `WolfSSL`
+    证书存储对象
+    两条高频查询 surface
+    收口到更稳定的一致语义：
+    - `FindBySubject`
+    - `FindBySerialNumber`
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-optional-backends-certificate-store-query-parity.md`
+  - 修改实现：
+    - `src/fafafa.ssl.mbedtls.certificate.pas`
+    - `src/fafafa.ssl.wolfssl.certificate.pas`
+  - 修改 focused tests：
+    - `tests/test_mbedtls_framework.pas`
+    - `tests/test_wolfssl_framework.pas`
+  当前预判：
+  - `FreePascal`
+    已经有：
+    - subject 归一化查询
+    - serial 归一化查询
+  - `WolfSSL`
+    当前只补了
+    `FindBySubject`
+    的文本归一化，
+    `FindBySerialNumber`
+    仍是裸字符串比较
+  - `MbedTLS`
+    当前两条查询
+    都还停留在原始比较：
+    - `FindBySubject`
+      原样 `Pos(...)`
+    - `FindBySerialNumber`
+      原样 `=`
+  当前验证策略：
+  - 继续复用
+    framework tests，
+    不新开重量级 cross-backend gate
+  - 直接把
+    `FreePascal`
+    已经锁住的 normalized query contract
+    向 optional backends 对齐
+  当前 done 条件：
+  - `MbedTLS` / `WolfSSL`
+    都支持 normalized subject query
+  - `MbedTLS` / `WolfSSL`
+    都支持 normalized serial query
+  - `MbedTLS`
+    空 subject query
+    不再错误命中第一张证书
+  - focused tests
+    通过
+  - `git diff --check`
+    通过
+  当前最终收口证据：
+  - `MbedTLS`
+    新增 store-query contract
+    首轮 RED
+    打出 2 个失败：
+    - `FindBySubject supports normalized query variant`
+    - `FindBySerialNumber supports normalized query variant`
+  - `WolfSSL`
+    同类 contract
+    首轮 RED
+    打出 1 个失败：
+    - `FindBySerialNumber supports normalized query variant`
+  - GREEN 后证明：
+    - `TMbedTLSCertificateStore`
+      现在会对 subject / serial
+      做归一化查询
+    - `TWolfSSLCertificateStore`
+      现在会对 serial
+      做归一化查询
+  focused verification 已通过：
+  - `tests/test_mbedtls_framework.pas`: `155 passed / 0 failed`
+  - `tests/test_wolfssl_framework.pas`: `174 passed / 0 failed`
+  - `git diff --check`
+  当前结论：
+  - 这批收掉的是
+    optional backends
+    在 certificate store query
+    上的直接实现缺口，
+    不是文档或辅助脚本问题
+  - `FreePascal`
+    已经存在的 normalized query truth
+    现在不再只停留在单一 backend
+  当前总路线图进度：
+  - `发布/控制面`
+    已闭环，
+    当前不再是主阻塞
+  - `接口设计`
+    在
+    `ISSLCertificateStore`
+    这一层，
+    optional backends
+    已继续向 shared query contract
+    收口
+  - `后端实现`
+    optional backends
+    的 certificate 族
+    已连续收口：
+    - `algorithm metadata`
+    - `extension metadata`
+    - `public surface`
+    - `identity getters`
+    - `store query parity`
+  - `测试与文档`
+    bounded batch
+    台账继续保持闭环
+  当前下一条真实工作：
+  - 继续审
+    certificate store
+    剩余查询语义：
+    - `FindByIssuer`
+  - 或者切回
+    certificate getter
+    剩余直接疑点：
+    - `GetVersion`
+    但这条线需要先补非 v3 fixture
 - [completed] `optional backends certificate identity getter completeness`
   当前 focused 目标：
   - 把

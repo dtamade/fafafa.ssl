@@ -4,6 +4,68 @@
 
 ## 2026-05-20
 
+### Optional Backends Certificate Store Query Parity
+
+- `mcp__ace_tool__.search_context(...)`
+- `rg -n "TMbedTLSCertificateStore|TWolfSSLCertificateStore|function .*FindBySubject|function .*FindBySerialNumber|FindBySubject\\(|FindBySerialNumber\\(" src tests -S`
+- `nl -ba src/fafafa.ssl.mbedtls.certificate.pas | sed -n '1488,1540p'`
+- `nl -ba src/fafafa.ssl.wolfssl.certificate.pas | sed -n '1394,1452p'`
+- `nl -ba src/fafafa.ssl.freepascal.lib.pas | sed -n '1170,1248p'`
+- `nl -ba tests/test_freepascal_backend_basic.pas | sed -n '230,258p'`
+  - result: PASS
+  - summary:
+    - confirmed the next real gap after identity-getter closure moved into certificate-store query semantics
+    - confirmed the repo already has a stronger contract in `FreePascal`:
+      - normalized subject lookup
+      - normalized serial lookup
+    - confirmed live implementation drift:
+      - `MbedTLS` still used raw `Pos(...)` for subject and raw `=` for serial
+      - `WolfSSL` had normalized subject lookup but raw serial equality
+
+- add focused plan/tests:
+  - `docs/plans/2026-05-20-optional-backends-certificate-store-query-parity.md`
+  - `tests/test_mbedtls_framework.pas`
+  - `tests/test_wolfssl_framework.pas`
+  - change:
+    - recorded a bounded store-query batch
+    - added contracts covering:
+      - normalized subject query
+      - empty subject query fail-closed
+      - normalized serial query
+
+- `mkdir -p tmp/test_mbedtls_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas && ./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+  - result: FAIL -> PASS
+  - summary:
+    - first RED surfaced 2 live implementation failures:
+      - `FindBySubject supports normalized query variant`
+      - `FindBySerialNumber supports normalized query variant`
+    - after adding store-side normalization:
+      - final result: `155 passed / 0 failed`
+
+- `mkdir -p tmp/test_wolfssl_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas && ./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+  - result: FAIL -> PASS
+  - summary:
+    - first RED surfaced one remaining drift:
+      - `FindBySerialNumber supports normalized query variant`
+    - after aligning serial lookup normalization:
+      - final result: `174 passed / 0 failed`
+
+- update implementation:
+  - `src/fafafa.ssl.mbedtls.certificate.pas`
+  - `src/fafafa.ssl.wolfssl.certificate.pas`
+  - change:
+    - `TMbedTLSCertificateStore`
+      now normalizes subject queries before substring matching
+    - `TMbedTLSCertificateStore`
+      now normalizes serial queries to hex truth before comparison
+    - `TWolfSSLCertificateStore`
+      now normalizes serial queries to hex truth before comparison
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remain after the store-query parity batch
+
 ### Optional Backends Certificate Identity Getter Completeness
 
 - `mcp__ace_tool__.search_context(...)`

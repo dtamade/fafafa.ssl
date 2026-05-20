@@ -159,6 +159,31 @@ uses
 const
   MBEDTLS_X509_CRT_SIZE = 1024;  // 估算大小
 
+function NormalizeMbedTLSCertText(const AValue: string): string;
+begin
+  Result := UpperCase(Trim(AValue));
+  Result := StringReplace(Result, ' , ', ',', [rfReplaceAll]);
+  Result := StringReplace(Result, ', ', ',', [rfReplaceAll]);
+  Result := StringReplace(Result, ' ,', ',', [rfReplaceAll]);
+  Result := StringReplace(Result, ' = ', '=', [rfReplaceAll]);
+  Result := StringReplace(Result, '= ', '=', [rfReplaceAll]);
+  Result := StringReplace(Result, ' =', '=', [rfReplaceAll]);
+end;
+
+function NormalizeMbedTLSCertHex(const AValue: string): string;
+var
+  I: Integer;
+  LChar: Char;
+begin
+  Result := '';
+  for I := 1 to Length(AValue) do
+  begin
+    LChar := UpCase(AValue[I]);
+    if LChar in ['0'..'9', 'A'..'F'] then
+      Result := Result + LChar;
+  end;
+end;
+
 { Helper function to extract field from MbedTLS info output }
 function ExtractField(const AInfo, AFieldName: string): string;
 var
@@ -1492,12 +1517,17 @@ function TMbedTLSCertificateStore.FindBySubject(const ASubject: string): ISSLCer
 var
   I: Integer;
   LCert: ISSLCertificate;
+  LTarget: string;
 begin
   Result := nil;
+  LTarget := NormalizeMbedTLSCertText(ASubject);
+  if LTarget = '' then
+    Exit;
+
   for I := 0 to FCertificates.Count - 1 do
   begin
     LCert := FCertificates[I] as ISSLCertificate;
-    if Pos(ASubject, LCert.GetSubject) > 0 then
+    if Pos(LTarget, NormalizeMbedTLSCertText(LCert.GetSubject)) > 0 then
     begin
       Result := LCert;
       Exit;
@@ -1526,12 +1556,17 @@ function TMbedTLSCertificateStore.FindBySerialNumber(const ASerialNumber: string
 var
   I: Integer;
   LCert: ISSLCertificate;
+  LTarget: string;
 begin
   Result := nil;
+  LTarget := NormalizeMbedTLSCertHex(ASerialNumber);
+  if LTarget = '' then
+    Exit;
+
   for I := 0 to FCertificates.Count - 1 do
   begin
     LCert := FCertificates[I] as ISSLCertificate;
-    if LCert.GetSerialNumber = ASerialNumber then
+    if NormalizeMbedTLSCertHex(LCert.GetSerialNumber) = LTarget then
     begin
       Result := LCert;
       Exit;
