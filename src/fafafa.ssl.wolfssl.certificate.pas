@@ -605,11 +605,23 @@ end;
 
 function TWolfSSLCertificate.GetSubject: string;
 var
+  LParser: TX509Certificate;
   LBuf: array[0..511] of AnsiChar;
   LName: Pointer;
 begin
   Result := '';
   if FX509 = nil then Exit;
+
+  if TryLoadX509Parser(LParser) then
+  begin
+    try
+      Result := LParser.Subject.ToString;
+      if Result <> '' then
+        Exit;
+    finally
+      LParser.Free;
+    end;
+  end;
 
   if Assigned(wolfSSL_X509_get_subject_name) and Assigned(wolfSSL_X509_NAME_oneline) then
   begin
@@ -628,11 +640,23 @@ end;
 
 function TWolfSSLCertificate.GetIssuer: string;
 var
+  LParser: TX509Certificate;
   LBuf: array[0..511] of AnsiChar;
   LName: Pointer;
 begin
   Result := '';
   if FX509 = nil then Exit;
+
+  if TryLoadX509Parser(LParser) then
+  begin
+    try
+      Result := LParser.Issuer.ToString;
+      if Result <> '' then
+        Exit;
+    finally
+      LParser.Free;
+    end;
+  end;
 
   if Assigned(wolfSSL_X509_get_issuer_name) and Assigned(wolfSSL_X509_NAME_oneline) then
   begin
@@ -651,21 +675,19 @@ end;
 
 function TWolfSSLCertificate.GetSerialNumber: string;
 var
-  LSerial: Pointer;
-  LBuf: array[0..127] of Byte;
-  I, LLen: Integer;
+  LParser: TX509Certificate;
 begin
   Result := '';
   if FX509 = nil then Exit;
 
-  if Assigned(wolfSSL_X509_get_serial_number) then
+  if TryLoadX509Parser(LParser) then
   begin
-    LSerial := wolfSSL_X509_get_serial_number(FX509);
-    if LSerial <> nil then
-    begin
-      // WolfSSL 返回 ASN1_INTEGER 指针，需要转换为十六进制字符串
-      // 简化实现：返回指针地址作为标识符
-      Result := IntToHex(PtrUInt(LSerial), 16);
+    try
+      Result := LParser.SerialNumberAsHex;
+      if Result <> '' then
+        Exit;
+    finally
+      LParser.Free;
     end;
   end;
 

@@ -609,11 +609,24 @@ end;
 
 function TMbedTLSCertificate.GetSubject: string;
 var
+  LParser: TX509Certificate;
   LBuf: array[0..2047] of AnsiChar;
   LLen: Integer;
 begin
   Result := '';
   if FX509Crt = nil then Exit;
+
+  if TryLoadX509Parser(LParser) then
+  begin
+    try
+      Result := LParser.Subject.ToString;
+      if Result <> '' then
+        Exit;
+    finally
+      LParser.Free;
+    end;
+  end;
+
   if not Assigned(mbedtls_x509_crt_info) then Exit;
 
   FillChar(LBuf, SizeOf(LBuf), 0);
@@ -631,11 +644,24 @@ end;
 
 function TMbedTLSCertificate.GetIssuer: string;
 var
+  LParser: TX509Certificate;
   LBuf: array[0..2047] of AnsiChar;
   LLen: Integer;
 begin
   Result := '';
   if FX509Crt = nil then Exit;
+
+  if TryLoadX509Parser(LParser) then
+  begin
+    try
+      Result := LParser.Issuer.ToString;
+      if Result <> '' then
+        Exit;
+    finally
+      LParser.Free;
+    end;
+  end;
+
   if not Assigned(mbedtls_x509_crt_info) then Exit;
 
   FillChar(LBuf, SizeOf(LBuf), 0);
@@ -653,6 +679,7 @@ end;
 
 function TMbedTLSCertificate.GetSerialNumber: string;
 var
+  LParser: TX509Certificate;
   LBuf: array[0..4095] of AnsiChar;
   LLen: Integer;
   LInfo: string;
@@ -660,6 +687,18 @@ var
 begin
   Result := '';
   if FX509Crt = nil then Exit;
+
+  if TryLoadX509Parser(LParser) then
+  begin
+    try
+      Result := LParser.SerialNumberAsHex;
+      if Result <> '' then
+        Exit;
+    finally
+      LParser.Free;
+    end;
+  end;
+
   if not Assigned(mbedtls_x509_crt_info) then Exit;
 
   FillChar(LBuf, SizeOf(LBuf), 0);

@@ -2,6 +2,80 @@
 
 ## 2026-05-20
 
+- optional backends
+  的 certificate completeness
+  继续往下挖后，
+  最危险的残缺
+  不再是“空串”
+  或“默认算法名”，
+  而是
+  identity getter
+  已经可能直接发布错误 truth
+  甚至触发异常
+
+- `TWolfSSLCertificate.GetSerialNumber`
+  这次暴露出来的
+  不是简单格式问题，
+  而是把 serial 对象指针
+  当成 public serial value；
+  在 focused contract 下
+  这会进一步表现成
+  `EAccessViolation`
+  风险
+
+- 这说明，
+  optional backend 审查
+  不能只盯
+  “返回值看起来是不是空/默认”，
+  还要盯：
+  - getter 是否安全
+  - getter 是否发布真实 X.509 truth
+
+- `TX509Certificate`
+  这批再次证明
+  不只是 metadata helper，
+  它已经足够作为
+  optional backends
+  的 certificate identity truth owner：
+  - `Subject.ToString`
+  - `Issuer.ToString`
+  - `Subject.CommonName`
+  - `SerialNumberAsHex`
+
+- 所以
+  `MbedTLS` / `WolfSSL`
+  上
+  `GetSubject` /
+  `GetIssuer` /
+  `GetSerialNumber`
+  的正确路线
+  不是继续各自维护
+  native 文本切片/one-line helper 语义，
+  而是优先复用同一条 parser truth path，
+  native 路径只做 fallback
+
+- `GetVersion`
+  虽然仍是
+  certificate identity surface
+  的残余疑点，
+  但当前仓库夹具全是 `Version: 3`；
+  在没有非 v3 fixture 前，
+  继续做这条线很容易变成
+  没有有效 RED 的“实现猜测”
+
+- 到这一批为止，
+  optional backends
+  的 certificate surface
+  已连续收口四层高价值缺口：
+  - algorithm metadata
+  - public surface
+  - extension metadata
+  - identity getters
+  这比继续回头讨论 release 流程
+  更贴近当前总 goal
+  里的
+  “接口设计完整 / 各 backend 实现完整”
+
 - 在 optional backends
   证书实现里，
   算法 metadata

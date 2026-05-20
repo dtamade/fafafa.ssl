@@ -10,6 +10,160 @@
 
 ## Current Status
 
+- [completed] `optional backends certificate identity getter completeness`
+  当前 focused 目标：
+  - 把
+    `MbedTLS` / `WolfSSL`
+    证书对象的
+    identity getter
+    收口到
+    parser truth：
+    - `GetSubject`
+    - `GetIssuer`
+    - `GetSerialNumber`
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-optional-backends-certificate-identity-getter-completeness.md`
+  - 预期修改实现：
+    - `src/fafafa.ssl.mbedtls.certificate.pas`
+    - `src/fafafa.ssl.wolfssl.certificate.pas`
+  - 预期修改 focused tests：
+    - `tests/test_mbedtls_framework.pas`
+    - `tests/test_wolfssl_framework.pas`
+  当前预判：
+  - 上一批把
+    `GetPublicKey` /
+    `GetExtension`
+    收口后，
+    optional backends
+    在 certificate identity surface
+    上仍残留三条高价值 truth gap：
+    - `GetSubject`
+    - `GetIssuer`
+    - `GetSerialNumber`
+  - 其中最强的真 bug
+    不是文案漂移，
+    而是
+    `TWolfSSLCertificate.GetSerialNumber`
+    把 serial 指针地址
+    当作返回值
+  - `GetVersion`
+    仍值得继续审，
+    但当前仓库夹具全是 v3；
+    在没有新夹具前，
+    很难形成有意义的 RED，
+    所以这批先不把它和 identity getter batch 绑死
+  当前验证策略：
+  - 继续复用
+    `TX509Certificate`
+    作为 identity truth owner
+  - 用
+    `signer_ecdsa_cert.pem`
+    同时覆盖：
+    - `CN=Test Signer ECDSA`
+    - serial 真值
+  当前 done 条件：
+  - `MbedTLS` / `WolfSSL`
+    的 `GetSubject`
+    含正确 CN
+  - `MbedTLS` / `WolfSSL`
+    的 `GetIssuer`
+    含正确 CN
+  - `MbedTLS` / `WolfSSL`
+    的 `GetSubjectCN`
+    为
+    `Test Signer ECDSA`
+  - `MbedTLS` / `WolfSSL`
+    的 serial getter
+    归一化后与 fixture 真值一致
+  - focused tests
+    通过
+  - `git diff --check`
+    通过
+  当前最终收口证据：
+  - `MbedTLS`
+    新增 identity contract
+    首轮即 GREEN，
+    证明：
+    - `signer_ecdsa_cert.pem`
+      上的 subject / issuer / CN / serial truth
+      已可稳定读取
+    - 这批需要的是把该 truth
+      显式冻结到 focused contract
+  - `WolfSSL`
+    同类 contract
+    首轮暴露的不只是格式 drift，
+    而是
+    `GetSerialNumber`
+    直接触发 `EAccessViolation`
+  - 在把测试改成
+    “serial getter 必须安全且值正确”
+    的 fail-closed 断言后，
+    稳定 RED
+    收敛成 1 个 serial failure；
+    修复后最终：
+    - `tests/test_wolfssl_framework.pas`
+      `172 passed / 0 failed`
+  - 最终实现收口：
+    - `TMbedTLSCertificate`
+      / `TWolfSSLCertificate`
+      都会优先通过
+      `TX509Certificate`
+      发布：
+      - `Subject.ToString`
+      - `Issuer.ToString`
+      - `SerialNumberAsHex`
+    - native text / oneline path
+      只保留为 parser 不可用时的 fallback
+  focused verification 已通过：
+  - `tests/test_mbedtls_framework.pas`: `147 passed / 0 failed`
+  - `tests/test_wolfssl_framework.pas`: `172 passed / 0 failed`
+  - `git diff --check`
+  当前结论：
+  - 这批收掉的是
+    optional backends
+    在 certificate identity getter
+    上最基础的一层实现缺口，
+    不是单纯格式美化
+  - `TX509Certificate`
+    已经足够作为
+    optional backends
+    的 identity truth owner；
+    后续若没有 parser 缺口，
+    不应再优先走分散的 native text helper
+  当前总路线图进度：
+  - `发布/控制面`
+    已闭环，
+    当前不再是主阻塞
+  - `接口设计`
+    已有
+    `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+    作为静态审查基线；
+    当前正沿 optional backend certificate surface
+    做实装收口
+  - `后端实现`
+    在 optional backends
+    上已连续收口：
+    - `algorithm metadata`
+    - `extension metadata`
+    - `public surface`
+    - `identity getters`
+  - `测试与文档`
+    当前每个 bounded batch
+    都有：
+    - focused contract
+    - `docs/plans/...`
+    - `task_plan.md` / `findings.md` / `progress.md`
+    形成可复用记录
+  当前下一条真实工作：
+  - 优先继续审
+    certificate store query parity：
+    - `FindBySerialNumber`
+    - `FindBySubject`
+  - 再决定是否为
+    `GetVersion`
+    专门补一张非 v3 fixture，
+    让这条线先有意义的 RED
 - [completed] `optional backends certificate public surface completeness`
   当前 focused 目标：
   - 把

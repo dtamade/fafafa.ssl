@@ -164,6 +164,12 @@ begin
   end;
 end;
 
+function NormalizeHexish(const AValue: string): string;
+begin
+  Result := UpperCase(StringReplace(StringReplace(Trim(AValue), ':', '', [rfReplaceAll]),
+    ' ', '', [rfReplaceAll]));
+end;
+
 procedure Test(const AName: string; ACondition: Boolean);
 begin
   Inc(GTestCount);
@@ -397,6 +403,54 @@ begin
       SameText(LInfo.PublicKeyAlgorithm, LCert.GetPublicKeyAlgorithm));
     Test('GetInfo signature algorithm matches getter truth',
       SameText(LInfo.SignatureAlgorithm, LCert.GetSignatureAlgorithm));
+  finally
+    LCert.Free;
+    LLib.Finalize;
+  end;
+end;
+
+procedure TestMbedTLSCertificateIdentityGetterContract;
+const
+  EXPECTED_CN = 'Test Signer ECDSA';
+  EXPECTED_SERIAL = '3CE7A277AAE4DB33E123ED853328E5D5E21B38F4';
+var
+  LLib: ISSLLibrary;
+  LCert: TMbedTLSCertificate;
+  LSubject: string;
+  LIssuer: string;
+  LSerial: string;
+begin
+  WriteLn('');
+  WriteLn('=== MbedTLS Certificate Identity Getter Contract ===');
+
+  LLib := CreateMbedTLSLibrary;
+  if not LLib.Initialize then
+  begin
+    WriteLn('  (Skipped - MbedTLS library not available)');
+    Test('Certificate identity getter contract skipped', True);
+    Exit;
+  end;
+
+  LCert := TMbedTLSCertificate.Create;
+  try
+    if not LCert.LoadFromFile('tests/certificate/test_certs/signer_ecdsa_cert.pem') then
+    begin
+      Test('Load ECDSA identity fixture', False);
+      Exit;
+    end;
+    Test('Load ECDSA identity fixture', True);
+
+    LSubject := LCert.GetSubject;
+    LIssuer := LCert.GetIssuer;
+    Test('ECDSA identity fixture subject contains CN truth',
+      Pos('CN=' + UpperCase(EXPECTED_CN), UpperCase(LSubject)) > 0);
+    Test('ECDSA identity fixture issuer contains CN truth',
+      Pos('CN=' + UpperCase(EXPECTED_CN), UpperCase(LIssuer)) > 0);
+    Test('ECDSA identity fixture GetSubjectCN exposes parsed CN truth',
+      SameText(LCert.GetSubjectCN, EXPECTED_CN));
+    LSerial := LCert.GetSerialNumber;
+    Test('ECDSA identity fixture serial exposes parsed truth',
+      NormalizeHexish(LSerial) = EXPECTED_SERIAL);
   finally
     LCert.Free;
     LLib.Finalize;
@@ -1056,6 +1110,7 @@ begin
   // Certificate tests
   TestMbedTLSCertificateClass;
   TestMbedTLSCertificateAlgorithmMetadataContract;
+  TestMbedTLSCertificateIdentityGetterContract;
   TestMbedTLSCertificateExtensionMetadataContract;
   TestMbedTLSCertificateStore;
   TestMbedTLSNativeHandleContract;

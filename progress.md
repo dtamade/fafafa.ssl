@@ -4,6 +4,65 @@
 
 ## 2026-05-20
 
+### Optional Backends Certificate Identity Getter Completeness
+
+- `mcp__ace_tool__.search_context(...)`
+- `git diff -- src/fafafa.ssl.mbedtls.certificate.pas`
+- `git diff -- src/fafafa.ssl.wolfssl.certificate.pas`
+- `git diff -- tests/test_mbedtls_framework.pas`
+- `git diff -- tests/test_wolfssl_framework.pas`
+  - result: PASS
+  - summary:
+    - confirmed the next real gap after public-surface closure is certificate identity truth:
+      - `GetSubject`
+      - `GetIssuer`
+      - `GetSerialNumber`
+    - confirmed the repair path should stay on shared parser truth:
+      - `TX509Certificate.Subject.ToString`
+      - `TX509Certificate.Issuer.ToString`
+      - `TX509Certificate.SerialNumberAsHex`
+
+- update tests:
+  - `tests/test_mbedtls_framework.pas`
+  - `tests/test_wolfssl_framework.pas`
+  - change:
+    - added identity getter contracts covering:
+      - subject CN truth
+      - issuer CN truth
+      - `GetSubjectCN`
+      - normalized serial truth
+    - `WolfSSL` contract keeps serial access fail-closed so AV-class regressions are recorded as test failures
+
+- `mkdir -p tmp/test_mbedtls_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas && ./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+  - result: PASS
+  - summary:
+    - new identity contract was green on the first focused run
+    - final result: `147 passed / 0 failed`
+
+- `mkdir -p tmp/test_wolfssl_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas && ./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+  - result: FAIL -> PASS
+  - summary:
+    - first focused run exposed a live implementation bug in `GetSerialNumber`:
+      - the getter could raise `EAccessViolation`
+    - after freezing serial access as a fail-closed assertion,
+      the stable RED narrowed to one serial-truth failure
+    - after aligning the getter to parser truth:
+      - final result: `172 passed / 0 failed`
+
+- update implementation:
+  - `src/fafafa.ssl.mbedtls.certificate.pas`
+  - `src/fafafa.ssl.wolfssl.certificate.pas`
+  - change:
+    - aligned `GetSubject` to `TX509Certificate.Subject.ToString`
+    - aligned `GetIssuer` to `TX509Certificate.Issuer.ToString`
+    - aligned `GetSerialNumber` to `TX509Certificate.SerialNumberAsHex`
+    - kept native text helpers only as fallback paths when parser truth is unavailable
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remain after the identity-getter completeness batch
+
 ### Optional Backends Certificate Public Surface Completeness
 
 - `mcp__ace_tool__.search_context(...)`
