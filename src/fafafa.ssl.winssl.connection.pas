@@ -229,7 +229,6 @@ type
 implementation
 
 uses
-  fafafa.ssl.context.compat,
   fafafa.ssl.winssl.lib;
 
 function NormalizeWinSSLCertificateLinkText(const AValue: string): string;
@@ -620,8 +619,6 @@ end;
 // ============================================================================
 
 constructor TWinSSLConnection.Create(AContext: ISSLContext; ASocket: THandle);
-var
-  LCompatibilityServerName: string;
 begin
   inherited Create(AContext);
   FSocket := ASocket;
@@ -629,11 +626,7 @@ begin
   FHandshakeState := sslHsNotStarted;
   FTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;
 
-  // 从上下文获取服务器名称
   FServerName := '';
-  LCompatibilityServerName := GetContextLevelServerNameCompatibilityValue(AContext);
-  if LCompatibilityServerName <> '' then
-    FServerName := LCompatibilityServerName;
 
   FRecvBufferUsed := 0;
   FDecryptedBufferUsed := 0;
@@ -650,8 +643,6 @@ begin
 end;
 
 constructor TWinSSLConnection.Create(AContext: ISSLContext; AStream: TStream);
-var
-  LCompatibilityServerName: string;
 begin
   inherited Create(AContext);
   FSocket := INVALID_HANDLE_VALUE;
@@ -660,9 +651,6 @@ begin
   FTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;
 
   FServerName := '';
-  LCompatibilityServerName := GetContextLevelServerNameCompatibilityValue(AContext);
-  if LCompatibilityServerName <> '' then
-    FServerName := LCompatibilityServerName;
 
   FRecvBufferUsed := 0;
   FDecryptedBufferUsed := 0;

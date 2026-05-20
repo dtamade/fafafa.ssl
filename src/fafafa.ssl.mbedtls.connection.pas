@@ -101,7 +101,6 @@ type
 implementation
 
 uses
-  fafafa.ssl.context.compat,
   fafafa.ssl.mbedtls.certificate,
   fafafa.ssl.mbedtls.session;
 
@@ -280,7 +279,6 @@ end;
 procedure TMbedTLSConnection.AllocateSSLContext;
 var
   LRet: Integer;
-  LCompatibilityServerName: string;
 begin
   if FSSLContext <> nil then
     FreeSSLContext;
@@ -313,10 +311,6 @@ begin
         @MbedTLSSocketSend, @MbedTLSSocketRecv, nil);
   end;
 
-  // Set server name (SNI) if configured
-  LCompatibilityServerName := GetContextLevelServerNameCompatibilityValue(FContext);
-  if LCompatibilityServerName <> '' then
-    SetServerName(LCompatibilityServerName);
 end;
 
 procedure TMbedTLSConnection.FreeSSLContext;
