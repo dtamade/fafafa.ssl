@@ -17863,6 +17863,20 @@
   - summary:
     - no whitespace or patch-format drift remains before commit
 
+- `gh run list --branch master --limit 8`
+  - result: PASS
+  - summary:
+    - previously in-progress remote runs are now fully green:
+      - `26164040638`
+        `CI`
+        = success
+      - `26164040634`
+        `TLS13 Signer Gate`
+        = success
+      - `26164134931`
+        docs-only `CI`
+        = success
+
 - `git commit -m "fix(shared): initialize managed byte helpers safely"`
   - result: PASS
   - summary:
@@ -17901,6 +17915,92 @@
         - `Code Quality (Light)`
         - `FreePascal TLS 1.3 Completeness`
         - `Minimal Gate (Linux)`
+
+### Managed Result Init Safety Wave 4
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-20-managed-result-init-safety-wave4.md`
+  - `tests/scripts/test_managed_result_init_safety_wave4_contract.sh`
+  - change:
+    - recorded the fourth managed-result-init batch around shared TLS13 key-schedule helpers and the ClientHello builder / PSK builder path
+    - added a focused contract for:
+      - `HashTranscriptForSuite(...)`
+      - `HKDFExtractForSuite(...)`
+      - `HKDFExpandLabelForSuite(...)`
+      - `TLS13ComputePSKBinderForCipherSuite(...)`
+      - `BuildExtensionServerName(...)`
+      - `BuildExtensionALPN(...)`
+      - `BuildExtensionPreSharedKey(...)`
+      - `BuildTLS13ClientHelloBody(...)`
+      - `BuildTLS13ClientHelloBodyWithPSKCore(...)`
+      - `BuildTLS13ClientHelloHandshake(...)`
+      - `BuildTLS13ClientHelloHandshakeWithPSK(...)`
+      - `BuildTLS13ClientHelloHandshakeWithComputedPSKBinder(...)`
+
+- `bash -n tests/scripts/test_managed_result_init_safety_wave4_contract.sh`
+- `bash tests/scripts/test_managed_result_init_safety_wave4_contract.sh`
+  - result: RED -> GREEN
+  - summary:
+    - initial RED failed on
+      `HashTranscriptForSuite initializes empty TBytes result with nil before early exits`
+    - after the implementation patch,
+      the full wave4 contract turned green
+
+- update implementation:
+  - `src/fafafa.ssl.tls13.keyschedule.pas`
+  - `src/fafafa.ssl.tls13.clienthello.pas`
+  - change:
+    - `keyschedule`
+      shared helpers now initialize empty `TBytes` result with `Result := nil`
+      and no longer use `SetLength(Result, 0)` for unsupported-cipher / empty-result fallback
+    - `clienthello`
+      builder and PSK helper paths now initialize empty `TBytes` result with `Result := nil`
+      before append/assembly,
+      and empty/invalid fast paths now return `nil` directly
+    - the same cleanup was extended to nearby same-family helper sites in these two units
+
+- `mkdir -p tmp/tls13_foundation_units tmp/tls13_foundation_bin tmp/tls13_resumption_units tmp/tls13_resumption_bin`
+  - result: PASS
+  - summary:
+    - prepared isolated compile outputs for the two focused verification binaries
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/tls13_foundation_units -FEtmp/tls13_foundation_bin -otest_tls13_foundation tests/test_tls13_foundation.pas`
+- `./tmp/tls13_foundation_bin/test_tls13_foundation`
+  - result: PASS
+  - summary:
+    - ordinary TLS 1.3 ClientHello record / foundation checks remained green after the ClientHello builder initialization fix
+    - compile output no longer reports managed-result warnings from
+      `tls13.keyschedule`
+      or
+      `tls13.clienthello`
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/tls13_resumption_units -FEtmp/tls13_resumption_bin -otest_tls13_resumption tests/test_tls13_resumption.pas`
+- `./tmp/tls13_resumption_bin/test_tls13_resumption`
+  - result: PASS
+  - summary:
+    - PSK / binder / resumption primitive checks remained green after the
+      `keyschedule`
+      and
+      `clienthello`
+      initialization fix
+    - compile output still shows unrelated next-wave warnings in:
+      - `tls13.appschedule`
+      - `tls13.serverhello`
+      - `tests/test_tls13_resumption.pas`
+        helper code
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/tls13_foundation_units -FEtmp/tls13_foundation_bin -otest_tls13_foundation tests/test_tls13_foundation.pas 2>&1 | rg -n "tls13\\.keyschedule|tls13\\.clienthello|Warning: Function result variable of a managed type does not seem to be initialized"`
+  - result: PASS
+  - summary:
+    - focused compile grep now reports only:
+      - `Compiling ./src/fafafa.ssl.tls13.clienthello.pas`
+      - `Compiling ./src/fafafa.ssl.tls13.keyschedule.pas`
+    - no managed-result warning from either target unit remains in the grep output
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains before commit
 
 ### Managed Result Init Safety Wave 2
 

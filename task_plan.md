@@ -10134,3 +10134,72 @@
        - `ISSLConnection`
        - `TSSLConfig`
        - `ISSLServerConnection`
+112. `managed result init safety wave4` 这批用于继续把同类 warning 从 shared TLS13 key-schedule / ClientHello builder 里收掉：
+   - 新 plan：
+     - `docs/plans/2026-05-20-managed-result-init-safety-wave4.md`
+   - 当前新发现：
+     - `src/fafafa.ssl.tls13.keyschedule.pas`
+       里的：
+       - `HashTranscriptForSuite(...)`
+       - `HKDFExtractForSuite(...)`
+       - `HKDFExpandLabelForSuite(...)`
+       - `TLS13ComputePSKBinderForCipherSuite(...)`
+       还留着同家族的空 `TBytes` result 初始化写法
+     - `src/fafafa.ssl.tls13.clienthello.pas`
+       里的：
+       - `BuildExtensionServerName(...)`
+       - `BuildExtensionALPN(...)`
+       - `BuildExtensionPreSharedKey(...)`
+       - `BuildTLS13ClientHelloBody(...)`
+       - `BuildTLS13ClientHelloBodyWithPSKCore(...)`
+       - `BuildTLS13ClientHelloHandshake(...)`
+       - `BuildTLS13ClientHelloHandshakeWithPSK(...)`
+       - `BuildTLS13ClientHelloHandshakeWithComputedPSKBinder(...)`
+       也还在通过
+       `SetLength(Result, 0)`
+       或未显式初始化 result 后直接进入 append 路径
+   - 当前最小修法：
+     - 这些 TLS13 shared helper / builder
+       统一先
+       `Result := nil`
+     - unsupported/invalid/empty 的 fast path
+       直接保留空 `nil` 结果并
+       `Exit`
+     - 删除目标函数里对 result 的
+       `SetLength(Result, 0)`
+       兜底
+   - 当前 focused proof：
+     - `bash -n tests/scripts/test_managed_result_init_safety_wave4_contract.sh`
+     - `bash tests/scripts/test_managed_result_init_safety_wave4_contract.sh`
+     - `fpc ... tests/test_tls13_foundation.pas`
+     - `./tmp/tls13_foundation_bin/test_tls13_foundation`
+     - `fpc ... tests/test_tls13_resumption.pas`
+     - `./tmp/tls13_resumption_bin/test_tls13_resumption`
+     - `fpc ... tests/test_tls13_foundation.pas 2>&1 | rg "tls13\\.keyschedule|tls13\\.clienthello|Warning: Function result variable of a managed type does not seem to be initialized"`
+   - 当前结论：
+     - `tls13.keyschedule`
+       与
+       `tls13.clienthello`
+       这批 managed-result warning
+       已从 focused compile 中收口
+     - 普通 ClientHello、
+       PSK ClientHello、
+       binder transcript /
+       resumption 基础回归
+       都保持绿色
+     - 当前 compile 剩余 warning
+       已经移到下一层：
+       - `fafafa.ssl.tls13.appschedule.pas`
+       - `fafafa.ssl.tls13.serverhello.pas`
+       - `tests/test_tls13_resumption.pas`
+         自己的 helper
+   - 当前批收口后的默认下一步：
+     - 若继续沿 warning ROI 前进，
+       优先看：
+       - `fafafa.ssl.tls13.appschedule.pas`
+       - `fafafa.ssl.tls13.serverhello.pas`
+     - 若切回更高层 completeness 主线，
+       则回到：
+       - `ISSLConnection`
+       - `TSSLConfig`
+       - `ISSLServerConnection`

@@ -119,7 +119,6 @@ var
   LCount: Integer;
 begin
   Result := nil;
-  SetLength(Result, 0);
   LCount := 0;
   LStart := 1;
 
@@ -149,7 +148,6 @@ end;
 function BuildExtensionHeader(AType: Word; const AData: TBytes): TBytes;
 begin
   Result := nil;
-  SetLength(Result, 0);
   AppendUInt16(Result, AType);
   AppendUInt16(Result, Word(Length(AData)));
   AppendBytes(Result, AData);
@@ -163,7 +161,6 @@ begin
   if AServerName = '' then
   begin
     Result := nil;
-    SetLength(Result, 0);
     Exit;
   end;
 
@@ -173,7 +170,7 @@ begin
   AppendUInt16(LListData, Word(Length(LHostBytes)));
   AppendBytes(LListData, LHostBytes);
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendUInt16(Result, Word(Length(LListData)));
   AppendBytes(Result, LListData);
 
@@ -190,7 +187,6 @@ begin
   if Length(LProtocols) = 0 then
   begin
     Result := nil;
-    SetLength(Result, 0);
     Exit;
   end;
 
@@ -205,7 +201,7 @@ begin
     AppendBytes(LListData, LProtoBytes);
   end;
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendUInt16(Result, Word(Length(LListData)));
   AppendBytes(Result, LListData);
 
@@ -316,7 +312,7 @@ var
 begin
   if not APSKOffer.Valid then
   begin
-    SetLength(Result, 0);
+    Result := nil;
     Exit;
   end;
 
@@ -338,7 +334,6 @@ begin
   AppendBytes(LData, LBinders);
 
   Result := nil;
-  SetLength(Result, 0);
   AppendBytes(Result, LIdentities);
   AppendBytes(Result, LData);
 
@@ -404,7 +399,7 @@ begin
   LExt := BuildExtensionALPN(AALPNProtocols);
   AppendBytes(LExtensions, LExt);
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendUInt16(Result, TLS_LEGACY_VERSION);
   AppendBytes(Result, LRandom);
   AppendByte(Result, Byte(Length(LSessionId)));
@@ -505,7 +500,7 @@ begin
     AppendBytes(APartialBody, LBaseExtensions);
     AppendBytes(APartialBody, LPartialPSKExtension);
 
-    SetLength(Result, 0);
+    Result := nil;
     AppendUInt16(Result, TLS_LEGACY_VERSION);
     AppendBytes(Result, ARandom);
     AppendByte(Result, Byte(Length(ASessionId)));
@@ -570,7 +565,7 @@ begin
     AIncludeSignedCertificateTimestamp
   );
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendByte(Result, TLS_HANDSHAKE_TYPE_CLIENT_HELLO);
   AppendUInt24(Result, Length(LBody));
   AppendBytes(Result, LBody);
@@ -624,7 +619,7 @@ begin
   AppendUInt24(APartialHandshake, Length(LPartialBody));
   AppendBytes(APartialHandshake, LPartialBody);
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendByte(Result, TLS_HANDSHAKE_TYPE_CLIENT_HELLO);
   AppendUInt24(Result, Length(LBody));
   AppendBytes(Result, LBody);
@@ -695,7 +690,7 @@ begin
     AIncludeSignedCertificateTimestamp
   );
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendByte(Result, TLS_HANDSHAKE_TYPE_CLIENT_HELLO);
   AppendUInt24(Result, Length(LBody));
   AppendBytes(Result, LBody);

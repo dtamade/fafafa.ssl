@@ -283,6 +283,54 @@
     的 timing gate
     独立成一个测试工程问题，
     不要和实现层 warning 修复混在一起
+
+- `src/fafafa.ssl.tls13.keyschedule.pas`
+  与
+  `src/fafafa.ssl.tls13.clienthello.pas`
+  这一批和前几波仍然是同一家族问题：
+  - empty managed `TBytes` result
+    在 unsupported / invalid / builder 入口
+    仍靠
+    `SetLength(Result, 0)`
+    兜底
+  - 或直接在没有显式初始化 result 的情况下进入 append 路径
+
+- 这批修法的边界仍然很稳：
+  - 不碰 TLS 1.3 transcript / binder / ClientHello 语义
+  - 只把目标函数收回到
+    `Result := nil`
+    作为空结果起点
+  - 然后继续原有 append / `Exit(...)` 路径
+
+- `tests/test_tls13_foundation.pas`
+  与
+  `tests/test_tls13_resumption.pas`
+  是这批最合适的真实验证面：
+  - `foundation`
+    覆盖普通 ClientHello record / handshake 组包
+  - `resumption`
+    覆盖 PSK ClientHello、
+    computed binder、
+    binder transcript rebuild、
+    early-data ordering
+
+- 这批收口后，
+  focused compile grep
+  `fpc ... tests/test_tls13_foundation.pas 2>&1 | rg "tls13\\.keyschedule|tls13\\.clienthello|Warning: Function result variable of a managed type does not seem to be initialized"`
+  只剩：
+  - `Compiling ./src/fafafa.ssl.tls13.clienthello.pas`
+  - `Compiling ./src/fafafa.ssl.tls13.keyschedule.pas`
+  不再伴随这两个单元自己的
+  managed-result warning
+
+- 当前更准确的 next queue 进一步收窄成：
+  - shared TLS13 warning 路线的下一批：
+    - `fafafa.ssl.tls13.appschedule.pas`
+    - `fafafa.ssl.tls13.serverhello.pas`
+  - `tests/test_tls13_resumption.pas`
+    自身的 managed-result warning
+    属于测试 helper 级别，
+    可以放在生产单元 warning 收口之后处理
     格式化
 
 - 与此同时，
