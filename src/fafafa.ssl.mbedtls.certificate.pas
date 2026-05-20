@@ -908,8 +908,22 @@ begin
 end;
 
 function TMbedTLSCertificate.GetVersion: Integer;
+var
+  LParser: TX509Certificate;
 begin
   Result := 3;  // X.509 v3 默认值
+  if FX509Crt = nil then
+    Exit;
+
+  if TryLoadX509Parser(LParser) then
+  begin
+    try
+      Result := Ord(LParser.Version) + 1;
+      Exit;
+    finally
+      LParser.Free;
+    end;
+  end;
 end;
 
 function TMbedTLSCertificate.Verify(ACAStore: ISSLCertificateStore): Boolean;

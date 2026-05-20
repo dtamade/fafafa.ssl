@@ -2,6 +2,64 @@
 
 ## 2026-05-20
 
+- `MbedTLS`
+  当前
+  `GetVersion`
+  的真实残留
+  不是没有数据源，
+  而是实现仍固定返回
+  `3`
+
+- 这条问题之前一直没被打成
+  真正 RED，
+  主要是因为仓库里
+  没有现成非 v3 fixture，
+  不是因为 optional backend
+  没法表达版本真相
+
+- 用最小 OpenSSL config
+  配合
+  `openssl req -new -x509 -x509v1`
+  可以稳定生成
+  真实
+  X.509 v1
+  证书；
+  这比 mock / field patch
+  更接近 public runtime truth
+
+- 还顺手暴露了一个
+  repo workflow 细节：
+  `tests/certificate/test_certs/`
+  下新增文件
+  会被
+  `.gitignore`
+  里的
+  `tests/**/test_*`
+  模式吞掉，
+  因为目录名
+  `test_certs`
+  本身命中规则
+
+- 所以这批更稳的夹具落点
+  不是继续往
+  `tests/certificate/test_certs/`
+  塞新文件，
+  而是放到
+  `tests/certs/`
+  这类已跟踪路径，
+  避免后续每次都要
+  `git add -f`
+
+- 最终收口方式是：
+  - 用真实 v1 fixture
+    证明
+    `WolfSSL`
+    已经能发布正确版本真相
+  - 再把
+    `TMbedTLSCertificate.GetVersion`
+    改成 parser-backed truth
+    而不是继续默认 `3`
+
 - `WinSSL`
   当前 public
   `GetSubject`

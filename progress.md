@@ -4,6 +4,69 @@
 
 ## 2026-05-20
 
+### Optional Backends Certificate Version Truth
+
+- `openssl req -help | sed -n '1,160p'`
+- `openssl req -new -x509 -x509v1 ...`
+- `openssl x509 -in /tmp/fafafa-ssl-v1probe/v1-min-cert.pem -noout -text | sed -n '1,20p'`
+  - result: PASS
+  - summary:
+    - confirmed local OpenSSL supports
+      `-x509v1`
+    - confirmed a minimal custom config is required to suppress default extensions
+    - confirmed this path can generate a real
+      `Version: 1`
+      certificate, not another implicit v3 cert
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-20-optional-backends-certificate-version-truth.md`
+  - `tests/certs/version1-cert.pem`
+  - `tests/test_mbedtls_framework.pas`
+  - `tests/test_wolfssl_framework.pas`
+  - change:
+    - recorded a bounded optional-backend certificate-version batch
+    - added a real v1 self-signed fixture under a non-ignored repo path
+    - added version-truth contracts for both
+      `MbedTLS`
+      and
+      `WolfSSL`
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`
+- `./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+  - result: FAIL
+  - summary:
+    - captured the intended RED on
+      `MbedTLS`
+      only
+    - failure narrowed cleanly to:
+      - `Version1 fixture GetVersion exposes real v1 truth`
+      - `Version1 fixture GetInfo.Version preserves v1 truth`
+    - confirmed the rest of the MbedTLS certificate surface stayed green
+
+- update implementation:
+  - `src/fafafa.ssl.mbedtls.certificate.pas`
+  - change:
+    - `GetVersion`
+      now uses
+      `TX509Certificate.Version`
+      when parser truth is available
+    - preserved the legacy fallback
+      `3`
+      for unloaded / parser-unavailable cases
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`
+- `./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas`
+- `./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - `MbedTLS` version-truth contract is now green:
+      `175 passed / 0 failed`
+    - `WolfSSL` same-fixture control contract stays green:
+      `189 passed / 0 failed`
+    - no whitespace or patch-format issues remain before commit
+
 ### WinSSL Certificate Identity Getter Full-DN Truth
 
 - `mcp__ace_tool__.search_context(...)`

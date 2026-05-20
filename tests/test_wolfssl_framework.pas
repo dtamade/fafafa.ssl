@@ -456,6 +456,45 @@ begin
   end;
 end;
 
+procedure TestWolfSSLCertificateVersionTruthContract;
+var
+  LLib: ISSLLibrary;
+  LCert: TWolfSSLCertificate;
+  LInfo: TSSLCertificateInfo;
+begin
+  WriteLn('');
+  WriteLn('=== WolfSSL Certificate Version Truth Contract ===');
+
+  LLib := CreateWolfSSLLibrary;
+  if not LLib.Initialize then
+  begin
+    WriteLn('  (Skipped - WolfSSL library not available)');
+    Test('Certificate version truth contract skipped', True);
+    Exit;
+  end;
+
+  LCert := TWolfSSLCertificate.Create;
+  try
+    if not LCert.LoadFromFile('tests/certs/version1-cert.pem') then
+    begin
+      Test('Load version1 certificate fixture', False);
+      Exit;
+    end;
+    Test('Load version1 certificate fixture', True);
+
+    LInfo := LCert.GetInfo;
+    Test('Version1 fixture GetVersion exposes real v1 truth',
+      LCert.GetVersion = 1);
+    Test('Version1 fixture GetInfo.Version matches getter truth',
+      LInfo.Version = LCert.GetVersion);
+    Test('Version1 fixture GetInfo.Version preserves v1 truth',
+      LInfo.Version = 1);
+  finally
+    LCert.Free;
+    LLib.Finalize;
+  end;
+end;
+
 procedure TestWolfSSLCertificateExtensionMetadataContract;
 var
   LLib: ISSLLibrary;
@@ -1301,6 +1340,7 @@ begin
   TestWolfSSLCertificateClass;
   TestWolfSSLCertificateAlgorithmMetadataContract;
   TestWolfSSLCertificateIdentityGetterContract;
+  TestWolfSSLCertificateVersionTruthContract;
   TestWolfSSLCertificateExtensionMetadataContract;
   TestWolfSSLCertificateCloneMaterializationContract;
   TestWolfSSLCertificateStore;

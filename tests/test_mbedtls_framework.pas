@@ -457,6 +457,45 @@ begin
   end;
 end;
 
+procedure TestMbedTLSCertificateVersionTruthContract;
+var
+  LLib: ISSLLibrary;
+  LCert: TMbedTLSCertificate;
+  LInfo: TSSLCertificateInfo;
+begin
+  WriteLn('');
+  WriteLn('=== MbedTLS Certificate Version Truth Contract ===');
+
+  LLib := CreateMbedTLSLibrary;
+  if not LLib.Initialize then
+  begin
+    WriteLn('  (Skipped - MbedTLS library not available)');
+    Test('Certificate version truth contract skipped', True);
+    Exit;
+  end;
+
+  LCert := TMbedTLSCertificate.Create;
+  try
+    if not LCert.LoadFromFile('tests/certs/version1-cert.pem') then
+    begin
+      Test('Load version1 certificate fixture', False);
+      Exit;
+    end;
+    Test('Load version1 certificate fixture', True);
+
+    LInfo := LCert.GetInfo;
+    Test('Version1 fixture GetVersion exposes real v1 truth',
+      LCert.GetVersion = 1);
+    Test('Version1 fixture GetInfo.Version matches getter truth',
+      LInfo.Version = LCert.GetVersion);
+    Test('Version1 fixture GetInfo.Version preserves v1 truth',
+      LInfo.Version = 1);
+  finally
+    LCert.Free;
+    LLib.Finalize;
+  end;
+end;
+
 procedure TestMbedTLSCertificateExtensionMetadataContract;
 var
   LLib: ISSLLibrary;
@@ -1187,6 +1226,7 @@ begin
   TestMbedTLSCertificateClass;
   TestMbedTLSCertificateAlgorithmMetadataContract;
   TestMbedTLSCertificateIdentityGetterContract;
+  TestMbedTLSCertificateVersionTruthContract;
   TestMbedTLSCertificateExtensionMetadataContract;
   TestMbedTLSCertificateStore;
   TestMbedTLSNativeHandleContract;

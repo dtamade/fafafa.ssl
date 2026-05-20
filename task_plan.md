@@ -10,6 +10,72 @@
 
 ## Current Status
 
+- [completed] `optional backends certificate version truth`
+  当前 focused 目标：
+  - 把
+    `MbedTLS`
+    /
+    `WolfSSL`
+    的
+    `ISSLCertificate.GetVersion`
+    从
+    “默认 v3”
+    的弱证据
+    收紧成
+    有真实非 v3 fixture
+    覆盖的 public truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-optional-backends-certificate-version-truth.md`
+  - 新增 fixture：
+    - `tests/certs/version1-cert.pem`
+  - 修改实现：
+    - `src/fafafa.ssl.mbedtls.certificate.pas`
+  - 修改 focused tests：
+    - `tests/test_mbedtls_framework.pas`
+    - `tests/test_wolfssl_framework.pas`
+  当前实施判断：
+  - 这批不是
+    新文档漂移，
+    也不是
+    broader certificate redesign；
+    而是
+    `MbedTLS.GetVersion`
+    仍停在
+    固定 `3`
+  - `WolfSSL`
+    已经有
+    non-default version path，
+    所以更合适的收口方式是：
+    - 用同一个真实
+      v1 fixture
+      做 cross-backend 对照
+    - 只修
+      `MbedTLS`
+      这一处实现
+  当前 focused proof：
+  - `openssl req -new -x509 -x509v1 ...`
+    生成真实
+    `Version: 1`
+    fixture
+    - PASS
+  - `fpc ... tests/test_mbedtls_framework.pas`
+    - PASS
+  - `./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+    - FAIL -> PASS
+  - `fpc ... tests/test_wolfssl_framework.pas`
+    - PASS
+  - `./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前批收口后的默认下一步：
+  - 继续沿
+    certificate surface
+    审 residual completeness
+  - 优先找
+    “已发布但仍缺强证据”
+    的下一条非文档 lane
 - [completed] `winssl certificate identity getter full-dn truth`
   当前 focused 目标：
   - 把
