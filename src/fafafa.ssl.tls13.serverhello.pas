@@ -54,7 +54,6 @@ uses
 function BuildExtensionHeader(AType: Word; const AData: TBytes): TBytes;
 begin
   Result := nil;
-  SetLength(Result, 0);
   AppendUInt16(Result, AType);
   AppendUInt16(Result, Word(Length(AData)));
   AppendBytes(Result, AData);
@@ -106,7 +105,7 @@ var
   LExtensions: TBytes;
   LExtension: TBytes;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 
   if Length(ALegacySessionID) > 32 then
     RaiseInvalidParameter('LegacySessionIDLength');
@@ -135,7 +134,7 @@ begin
     AppendBytes(LExtensions, LExtension);
   end;
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendUInt16(Result, TLS_LEGACY_VERSION);
   AppendBytes(Result, LRandom);
   AppendByte(Result, Byte(Length(ALegacySessionID)));
@@ -155,7 +154,7 @@ function BuildTLS13ServerHelloHandshake(
 var
   LBody: TBytes;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   LBody := BuildTLS13ServerHelloBody(
     ALegacySessionID,
     ACipherSuite,
@@ -165,7 +164,7 @@ begin
     0
   );
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendByte(Result, TLS_HANDSHAKE_TYPE_SERVER_HELLO);
   AppendUInt24(Result, Length(LBody));
   AppendBytes(Result, LBody);
@@ -181,7 +180,7 @@ function BuildTLS13ServerHelloHandshakeWithSelectedPSK(
 var
   LBody: TBytes;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   LBody := BuildTLS13ServerHelloBody(
     ALegacySessionID,
     ACipherSuite,
@@ -191,7 +190,7 @@ begin
     ASelectedIdentity
   );
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendByte(Result, TLS_HANDSHAKE_TYPE_SERVER_HELLO);
   AppendUInt24(Result, Length(LBody));
   AppendBytes(Result, LBody);

@@ -130,7 +130,7 @@ function TLS13ComputeResumptionMasterSecretFromTranscriptHash(
 var
   LHashSize: Integer;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   LHashSize := TLS13CipherSuiteHashSize(ACipherSuite);
   if (LHashSize <= 0) or (Length(AMasterSecret) <> LHashSize) or
     (Length(AHandshakeTranscriptHash) <> LHashSize) then
@@ -153,7 +153,7 @@ var
   LHashSize: Integer;
   LResumptionMasterSecret: TBytes;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   LHashSize := TLS13CipherSuiteHashSize(ACipherSuite);
   if LHashSize <= 0 then
     Exit;
@@ -190,24 +190,24 @@ end;
 
 function HashTranscriptForSuite(ACipherSuite: Word; const AData: TBytes): TBytes;
 begin
+  Result := nil;
+
   if TLS13CipherSuiteIsSHA256(ACipherSuite) then
     Exit(SHA256(AData));
 
   if TLS13CipherSuiteIsSHA384(ACipherSuite) then
     Exit(SHA384(AData));
-
-  SetLength(Result, 0);
 end;
 
 function HKDFExtractForSuite(ACipherSuite: Word; const ASalt, AIKM: TBytes): TBytes;
 begin
+  Result := nil;
+
   if TLS13CipherSuiteIsSHA256(ACipherSuite) then
     Exit(HKDF_Extract_SHA256(ASalt, AIKM));
 
   if TLS13CipherSuiteIsSHA384(ACipherSuite) then
     Exit(HKDF_Extract_SHA384(ASalt, AIKM));
-
-  SetLength(Result, 0);
 end;
 
 function HKDFExpandLabelForSuite(
@@ -218,13 +218,13 @@ function HKDFExpandLabelForSuite(
   ALength: Integer
 ): TBytes;
 begin
+  Result := nil;
+
   if TLS13CipherSuiteIsSHA256(ACipherSuite) then
     Exit(TLS13_HKDF_Expand_Label_SHA256(ASecret, ALabel, AContext, ALength));
 
   if TLS13CipherSuiteIsSHA384(ACipherSuite) then
     Exit(TLS13_HKDF_Expand_Label_SHA384(ASecret, ALabel, AContext, ALength));
-
-  SetLength(Result, 0);
 end;
 
 function TryDeriveTLS13ApplicationSecrets(

@@ -17877,6 +17877,119 @@
         docs-only `CI`
         = success
 
+### Managed Result Init Safety Wave 5
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-20-managed-result-init-safety-wave5.md`
+  - `tests/scripts/test_managed_result_init_safety_wave5_contract.sh`
+  - change:
+    - recorded the fifth managed-result-init batch around shared TLS13 application schedule / ServerHello builder helpers
+    - also pulled in the adjacent `test_tls13_resumption` `HexToBytes(...)` helper warning
+    - added a focused contract for:
+      - `TLS13ComputeResumptionMasterSecretFromTranscriptHash(...)`
+      - `TLS13DeriveResumptionPSKFromTranscriptHash(...)`
+      - `HashTranscriptForSuite(...)`
+      - `HKDFExtractForSuite(...)`
+      - `HKDFExpandLabelForSuite(...)`
+      - `BuildExtensionHeader(...)`
+      - `BuildTLS13ServerHelloBody(...)`
+      - `BuildTLS13ServerHelloHandshake(...)`
+      - `BuildTLS13ServerHelloHandshakeWithSelectedPSK(...)`
+      - `HexToBytes(...)` in `tests/test_tls13_resumption.pas`
+
+- `gh run view 26164972660 --json status,conclusion,jobs,url`
+  - result: PASS
+  - summary:
+    - the previous pushed batch
+      `fix(tls13): initialize key schedule and clienthello results safely`
+      is now fully green in GitHub Actions:
+      - `Code Quality (Light)` = success
+      - `Minimal Gate (Linux)` = success
+      - `FreePascal TLS 1.3 Completeness` = success
+
+- `bash -n tests/scripts/test_managed_result_init_safety_wave5_contract.sh`
+- `bash tests/scripts/test_managed_result_init_safety_wave5_contract.sh`
+  - result: RED -> GREEN
+  - summary:
+    - initial RED failed on
+      `TLS13ComputeResumptionMasterSecretFromTranscriptHash initializes empty TBytes result with nil before validation`
+    - after the implementation patch,
+      the full wave5 contract turned green
+
+- update implementation:
+  - `src/fafafa.ssl.tls13.appschedule.pas`
+  - `src/fafafa.ssl.tls13.serverhello.pas`
+  - `tests/test_tls13_resumption.pas`
+  - change:
+    - `appschedule`
+      resumption-secret helpers and nearby hash/HKDF forwarders now initialize empty `TBytes` result with `Result := nil`
+      and no longer use `SetLength(Result, 0)` fallback
+    - `serverhello`
+      extension/header/body/handshake builders now initialize empty `TBytes` result with `Result := nil`
+      before append/assembly
+    - `test_tls13_resumption`
+      helper `HexToBytes(...)` now initializes its managed result safely before sizing the output buffer
+
+- `mkdir -p tmp/tls13_appschedule_units tmp/tls13_appschedule_bin tmp/tls13_serverhello_units tmp/tls13_serverhello_bin tmp/tls13_resumption_units tmp/tls13_resumption_bin tmp/tmp`
+  - result: PASS
+  - summary:
+    - prepared isolated compile outputs for the focused verification binaries
+    - first attempt had a harmless orchestration mistake:
+      compiling in parallel with directory creation raced two `fpc` commands against their output directories
+    - rerunning the compile steps sequentially fixed that immediately;
+      this was not a code regression
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/tls13_appschedule_units -FEtmp/tls13_appschedule_bin -otest_tls13_appschedule tests/test_tls13_appschedule.pas`
+- `./tmp/tls13_appschedule_bin/test_tls13_appschedule`
+  - result: PASS
+  - summary:
+    - TLS 1.3 application key schedule checks remained green after the
+      `appschedule`
+      initialization fix
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/tls13_serverhello_units -FEtmp/tls13_serverhello_bin -otest_tls13_serverhello_builder tests/test_tls13_serverhello_builder.pas`
+- `./tmp/tls13_serverhello_bin/test_tls13_serverhello_builder`
+  - result: PASS
+  - summary:
+    - TLS 1.3 ServerHello builder checks remained green after the
+      `serverhello`
+      initialization fix
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/tls13_resumption_units -FEtmp/tls13_resumption_bin -otest_tls13_resumption tests/test_tls13_resumption.pas`
+- `./tmp/tls13_resumption_bin/test_tls13_resumption`
+  - result: PASS
+  - summary:
+    - PSK / resumption primitive checks remained green after the
+      `appschedule`
+      /
+      `serverhello`
+      /
+      `HexToBytes`
+      initialization fix
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/tls13_resumption_units -FEtmp/tls13_resumption_bin -otest_tls13_resumption tests/test_tls13_resumption.pas 2>&1 | rg -n "tls13\\.appschedule|tls13\\.serverhello|test_tls13_resumption|Warning: Function result variable of a managed type does not seem to be initialized"`
+  - result: PASS
+  - summary:
+    - focused compile grep now reports only:
+      - `Compiling tests/test_tls13_resumption.pas`
+      - `Compiling ./src/fafafa.ssl.tls13.appschedule.pas`
+      - `Compiling ./src/fafafa.ssl.tls13.serverhello.pas`
+      - `Linking tmp/tls13_resumption_bin/test_tls13_resumption`
+    - no managed-result warning from any of those three sources remains in the grep output
+
+- `python3 scripts/compile_all_modules.py 2>&1 | rg -n "Warning: Function result variable of a managed type does not seem to be initialized"`
+  - result: PASS
+  - summary:
+    - broader grep returned no matches
+    - this suggests the repo's current
+      managed-result warning
+      lane is now effectively closed out
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains before commit
+
 - `git commit -m "fix(shared): initialize managed byte helpers safely"`
   - result: PASS
   - summary:

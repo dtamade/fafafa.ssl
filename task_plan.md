@@ -10203,3 +10203,99 @@
        - `ISSLConnection`
        - `TSSLConfig`
        - `ISSLServerConnection`
+113. `managed result init safety wave5` 这批用于继续把同类 warning 从 shared TLS13 application-schedule / ServerHello builder 里收掉，并顺手清理同批测试 helper：
+   - 新 plan：
+     - `docs/plans/2026-05-20-managed-result-init-safety-wave5.md`
+   - 当前新发现：
+     - `src/fafafa.ssl.tls13.appschedule.pas`
+       里的：
+       - `TLS13ComputeResumptionMasterSecretFromTranscriptHash(...)`
+       - `TLS13DeriveResumptionPSKFromTranscriptHash(...)`
+       仍对 managed `TBytes` result
+       直接
+       `SetLength(Result, 0)`
+     - 同单元里的：
+       - `HashTranscriptForSuite(...)`
+       - `HKDFExtractForSuite(...)`
+       - `HKDFExpandLabelForSuite(...)`
+       也还保留同家族 empty-result 兜底
+     - `src/fafafa.ssl.tls13.serverhello.pas`
+       里的：
+       - `BuildExtensionHeader(...)`
+       - `BuildTLS13ServerHelloBody(...)`
+       - `BuildTLS13ServerHelloHandshake(...)`
+       - `BuildTLS13ServerHelloHandshakeWithSelectedPSK(...)`
+       也还在通过
+       `SetLength(Result, 0)`
+       或未显式初始化 result 后直接进入 append 路径
+     - `tests/test_tls13_resumption.pas`
+       的
+       `HexToBytes(...)`
+       也属于同家族测试 helper warning
+   - 当前最小修法：
+     - 这些生产 helper / builder
+       统一先
+       `Result := nil`
+     - unsupported / invalid / empty 的 fast path
+       直接保留空 `nil` 结果并
+       `Exit`
+     - 删掉目标函数里对 result 的
+       `SetLength(Result, 0)`
+       兜底
+     - `test_tls13_resumption`
+       的
+       `HexToBytes(...)`
+       同步改成
+       `Result := nil`
+       后再分配
+   - 当前 focused proof：
+     - `bash -n tests/scripts/test_managed_result_init_safety_wave5_contract.sh`
+     - `bash tests/scripts/test_managed_result_init_safety_wave5_contract.sh`
+     - `fpc ... tests/test_tls13_appschedule.pas`
+     - `./tmp/tls13_appschedule_bin/test_tls13_appschedule`
+     - `fpc ... tests/test_tls13_serverhello_builder.pas`
+     - `./tmp/tls13_serverhello_bin/test_tls13_serverhello_builder`
+     - `fpc ... tests/test_tls13_resumption.pas`
+     - `./tmp/tls13_resumption_bin/test_tls13_resumption`
+     - `fpc ... tests/test_tls13_resumption.pas 2>&1 | rg "tls13\\.appschedule|tls13\\.serverhello|test_tls13_resumption|Warning: Function result variable of a managed type does not seem to be initialized"`
+     - `python3 scripts/compile_all_modules.py 2>&1 | rg "Warning: Function result variable of a managed type does not seem to be initialized"`
+   - 当前结论：
+     - `tls13.appschedule`
+       与
+       `tls13.serverhello`
+       这批 managed-result warning
+       已从 focused compile 中收口
+     - `tests/test_tls13_resumption.pas`
+       自己的 helper warning
+       也一起收口
+     - `test_tls13_appschedule`
+       /
+       `test_tls13_serverhello_builder`
+       /
+       `test_tls13_resumption`
+       都保持绿色
+     - broader grep
+       没有再匹配到
+       `Function result variable of a managed type does not seem to be initialized`
+       这类 warning；
+       说明这条
+       managed-result warning
+       主线当前已经基本收口
+   - 当前批收口后的默认下一步：
+     - warning 清扫主线可暂时降级，
+       优先切回更高层 completeness 主线：
+       - `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+         里的
+         `ISSLConnection`
+         /
+         `TSSLConfig`
+         /
+         `ISSLServerConnection`
+         残口
+     - 若继续做静态编译 hygiene，
+       下一类更真实的 residual
+       是：
+       - implicit string conversion warnings
+         （`crypto.hash` / `crypto.constant_time`）
+       - `test_constant_time`
+         的 timing-flaky gate

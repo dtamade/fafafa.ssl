@@ -331,6 +331,83 @@
     自身的 managed-result warning
     属于测试 helper 级别，
     可以放在生产单元 warning 收口之后处理
+
+- `src/fafafa.ssl.tls13.appschedule.pas`
+  与
+  `src/fafafa.ssl.tls13.serverhello.pas`
+  这一批仍然和前几波是同一家族问题：
+  - empty managed `TBytes` result
+    在 resumption secret 派生 / ServerHello builder 入口
+    仍靠
+    `SetLength(Result, 0)`
+    兜底
+  - 或直接在没有显式初始化 result 的情况下进入 append 路径
+
+- `tests/test_tls13_resumption.pas`
+  的
+  `HexToBytes(...)`
+  也是同家族测试 helper：
+  - 它不是生产实现残口
+  - 但和这批 production compile 紧邻，
+    顺手收掉能让 focused compile 更干净
+
+- 这批修法的边界仍然很稳：
+  - 不碰 TLS 1.3 resumption master secret /
+    resumption PSK /
+    ServerHello 语义
+  - 只把目标函数收回到
+    `Result := nil`
+    作为空结果起点
+  - 然后继续原有 append /
+    `Exit(...)`
+    路径
+
+- `tests/test_tls13_appschedule.pas`
+  /
+  `tests/test_tls13_serverhello_builder.pas`
+  /
+  `tests/test_tls13_resumption.pas`
+  是这批最合适的真实验证面：
+  - `appschedule`
+    直接覆盖 application secret derivation
+  - `serverhello_builder`
+    直接覆盖 ServerHello handshake / record 组包
+  - `resumption`
+    继续覆盖 selected PSK / resumption lane
+
+- 这批收口后，
+  focused compile grep
+  `fpc ... tests/test_tls13_resumption.pas 2>&1 | rg "tls13\\.appschedule|tls13\\.serverhello|test_tls13_resumption|Warning: Function result variable of a managed type does not seem to be initialized"`
+  只剩：
+  - `Compiling tests/test_tls13_resumption.pas`
+  - `Compiling ./src/fafafa.ssl.tls13.appschedule.pas`
+  - `Compiling ./src/fafafa.ssl.tls13.serverhello.pas`
+  - `Linking tmp/tls13_resumption_bin/test_tls13_resumption`
+  不再伴随这三个源自己的
+  managed-result warning
+
+- 更重要的是，
+  `python3 scripts/compile_all_modules.py 2>&1 | rg "Warning: Function result variable of a managed type does not seem to be initialized"`
+  没再匹配到任何结果；
+  这说明当前 repo 里这条
+  managed-result warning
+  主线已经基本被我们收口了
+
+- 因而当前更准确的 next queue
+  不再是继续追这同一类 warning，
+  而是应切回更高层 completeness 主线：
+  - `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+    中剩余的
+    `ISSLConnection`
+    /
+    `TSSLConfig`
+    /
+    `ISSLServerConnection`
+    设计与实现残口
+  - 以及独立的测试稳定性 / 其它 warning 家族：
+    - implicit string conversion
+    - `test_constant_time`
+      timing-flaky gate
     格式化
 
 - 与此同时，
