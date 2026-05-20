@@ -17428,3 +17428,23 @@
   - result: FAIL (expected local limitation)
   - summary:
     - this Linux environment has no local PowerShell parser/runtime, so script parsing and real WinSSL compile/runtime proof must come from the post-push Windows workflow instead of a local rerun
+
+- post-push Windows CI follow-up:
+  - `gh run view 26149122178 --log-failed`
+  - result: FAIL (first push)
+  - summary:
+    - the new WinSSL runtime contract compiled and was executed by the Windows suite
+    - the first real failure was not a compile/integration issue:
+      - `WinSSL Certificate VerifyEx Flag Parity`
+      - failed on the first `IgnoreExpiry` assertion
+    - the runtime log showed:
+      - `expired-signer.pem + ca_cert.pem`
+      - still failed with `CERT_E_UNTRUSTEDROOT`
+      - before any expiry diagnostic surfaced
+    - this proved an important WinSSL-specific truth:
+      - the additional memory store participates in chain building
+      - but does not automatically make that CA a trusted root under `CERT_CHAIN_POLICY_BASE`
+    - follow-up fix:
+      - rewrote the expiry contract to use a generated expired self-signed leaf
+      - first neutralize trust with `sslCertVerifyAllowSelfSigned`
+      - then assert that `sslCertVerifyIgnoreExpiry` is what flips the result

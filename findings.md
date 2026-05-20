@@ -9651,6 +9651,33 @@
        push 后的
        `WinSSL Runtime Gate`
        承接
+   - 首轮 Windows CI 反馈补充了一条必须记住的 backend truth：
+     - `CERT_CHAIN_POLICY_BASE`
+       下，
+       把 `ca_cert.pem`
+       放进 memory-backed additional store
+       并不会让它在 WinSSL cert-level `VerifyEx`
+       上自动变成 trusted root
+     - 所以
+       `expired-signer.pem`
+       这类 CA-signed expired fixture
+       会先暴露
+       `CERT_E_UNTRUSTEDROOT`
+       把 expiry 错误遮住
+     - 这意味着：
+       - WinSSL 的 expiry contract
+         不能直接照搬
+         OpenSSL / FreePascal
+         的那组 fixture 设计
+       - 正确做法是：
+         - 先用
+           self-signed expired leaf
+           +
+           `AllowSelfSigned`
+           去掉 trust 干扰
+         - 再验证
+           `IgnoreExpiry`
+           是否真正改变结果
    - 当前批收口后的默认下一步：
      - 观察
        `WinSSL Runtime Gate`

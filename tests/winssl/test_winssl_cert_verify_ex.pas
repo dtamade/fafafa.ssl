@@ -6,6 +6,7 @@ uses
   Windows,
   SysUtils,
   fafafa.ssl.base,
+  fafafa.ssl.cert.utils,
   fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.api,
   fafafa.ssl.winssl.certstore,
@@ -96,41 +97,73 @@ begin
   Check(Result.LoadFromFile(LFixturePath), ALabel + ' fixture should load');
 end;
 
+function LoadPEMCertificate(const APEM, ALabel: string): ISSLCertificate;
+begin
+  Result := CreateWinSSLCertificate;
+  Check(Result.LoadFromPEM(APEM), ALabel + ' PEM should load');
+end;
+
+function GenerateExpiredSelfSignedPEM: string;
+var
+  LOptions: TCertGenOptions;
+  LKeyPEM: string;
+begin
+  LOptions := TCertificateUtils.DefaultGenOptions;
+  LOptions.CommonName := 'winssl-expired-selfsigned.local';
+  LOptions.Organization := 'fafafa.ssl-tests';
+  LOptions.ValidDays := 30;
+  LOptions.NotBefore := Now - 30;
+  LOptions.NotAfter := Now - 1;
+  if not TCertificateUtils.GenerateSelfSigned(LOptions, Result, LKeyPEM) then
+    raise Exception.Create('GenerateSelfSigned returned False for expired self-signed WinSSL fixture');
+  Check(Result <> '', 'Expired self-signed PEM should be generated');
+  Check(LKeyPEM <> '', 'Expired self-signed private key PEM should be generated');
+end;
+
 procedure TestIgnoreExpiryIsPerCallAndHonored;
 var
   LExpiredLeaf: ISSLCertificate;
-  LCACert: ISSLCertificate;
-  LStore: TWinSSLCertificateStore;
+  LExpiredSelfSignedPEM: string;
+  LEmptyStore: TWinSSLCertificateStore;
   LVerifyResult: TSSLCertVerifyResult;
   LVerified: Boolean;
   LDiag: string;
 begin
   WriteLn('=== WinSSL VerifyEx Flag Parity ===');
 
-  LExpiredLeaf := LoadFixtureCertificate('tests/certs/expired-signer.pem', 'Expired leaf');
-  LCACert := LoadFixtureCertificate('tests/certificate/test_certs/ca_cert.pem', 'CA');
+  LExpiredSelfSignedPEM := GenerateExpiredSelfSignedPEM;
+  LExpiredLeaf := LoadPEMCertificate(LExpiredSelfSignedPEM, 'Expired self-signed leaf');
 
-  LStore := CreateMemoryBackedStore;
-  Check(LStore <> nil, 'WinSSL memory-backed store should be created');
-  Check(LStore.AddCertificate(LCACert), 'CA fixture should be added to memory-backed store');
+  LEmptyStore := CreateMemoryBackedStore;
+  Check(LEmptyStore <> nil, 'WinSSL memory-backed store should be created');
 
-  LVerified := LExpiredLeaf.VerifyEx(LStore, [], LVerifyResult);
+  LVerified := LExpiredLeaf.VerifyEx(LEmptyStore, [], LVerifyResult);
   Check((not LVerified) and (not LVerifyResult.Success),
-    'Expired leaf without IgnoreExpiry should fail; ' + FormatVerifyState(LVerified, LVerifyResult));
+    'Expired self-signed leaf without flags should fail; ' + FormatVerifyState(LVerified, LVerifyResult));
+
+  LVerified := LExpiredLeaf.VerifyEx(LEmptyStore, [sslCertVerifyAllowSelfSigned], LVerifyResult);
+  Check((not LVerified) and (not LVerifyResult.Success),
+    'Expired self-signed leaf with AllowSelfSigned only should still fail on expiry; ' +
+      FormatVerifyState(LVerified, LVerifyResult));
   LDiag := LVerifyResult.ErrorMessage + ' ' + LVerifyResult.DetailedInfo;
   Check(
     ContainsTextInsensitive(LDiag, 'expired') or
     ContainsTextInsensitive(LDiag, 'time'),
-    'Expired leaf failure should expose an expiry diagnostic'
+    'AllowSelfSigned-only failure should expose an expiry diagnostic'
   );
 
-  LVerified := LExpiredLeaf.VerifyEx(LStore, [sslCertVerifyIgnoreExpiry], LVerifyResult);
+  LVerified := LExpiredLeaf.VerifyEx(
+    LEmptyStore,
+    [sslCertVerifyAllowSelfSigned, sslCertVerifyIgnoreExpiry],
+    LVerifyResult
+  );
   Check(LVerified and LVerifyResult.Success,
-    'Expired leaf with IgnoreExpiry should succeed; ' + FormatVerifyState(LVerified, LVerifyResult));
+    'Expired self-signed leaf with AllowSelfSigned + IgnoreExpiry should succeed; ' +
+      FormatVerifyState(LVerified, LVerifyResult));
 
-  LVerified := LExpiredLeaf.VerifyEx(LStore, [], LVerifyResult);
+  LVerified := LExpiredLeaf.VerifyEx(LEmptyStore, [sslCertVerifyAllowSelfSigned], LVerifyResult);
   Check((not LVerified) and (not LVerifyResult.Success),
-    'IgnoreExpiry must stay per-call and not leak into a later unflagged verify; ' +
+    'IgnoreExpiry must stay per-call and not leak into a later AllowSelfSigned-only verify; ' +
       FormatVerifyState(LVerified, LVerifyResult));
 end;
 

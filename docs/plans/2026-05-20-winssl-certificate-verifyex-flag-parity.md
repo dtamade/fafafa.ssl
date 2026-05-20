@@ -105,13 +105,15 @@
 1. 把
    `tests/winssl/test_winssl_cert_verify_ex.pas`
    从常量烟雾测试升级成真实运行时契约：
-   - `expired-signer.pem`
-     +
-     `ca_cert.pem`
+   - 运行时生成
+     expired self-signed leaf
+     + empty memory store
      下：
      - `VerifyEx(..., [])`
        必须失败
-     - `VerifyEx(..., [sslCertVerifyIgnoreExpiry])`
+     - `VerifyEx(..., [sslCertVerifyAllowSelfSigned])`
+       仍必须因 expiry 失败
+     - `VerifyEx(..., [sslCertVerifyAllowSelfSigned, sslCertVerifyIgnoreExpiry])`
        必须成功
    - `version1-cert.pem`
      +
@@ -205,6 +207,28 @@
       `sslCertVerifyAllowSelfSigned`
     - `sslCertVerifyStrictChain`
       fail-closed
+- 当前 Windows CI 首轮反馈又补充了一个重要真相：
+  - `CERT_CHAIN_POLICY_BASE`
+    下，
+    `memory-backed additional store`
+    可以参与建链，
+    但不会自动把那张 CA 当成 trusted root
+  - 因而
+    `expired-signer.pem + ca_cert.pem`
+    在 WinSSL cert-level `VerifyEx`
+    上会先暴露
+    `untrusted root`
+    而不是 expiry
+  - 所以 expiry contract
+    已改成：
+    - 先用
+      self-signed leaf
+      +
+      `AllowSelfSigned`
+      去掉 trust 干扰
+    - 再验证
+      `IgnoreExpiry`
+      的 live 语义
 - 当前本地 proof：
   - `git diff --check`
     - PASS

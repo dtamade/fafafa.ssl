@@ -53,6 +53,30 @@
       `TargetOS=linux`
     - `tests/run_winssl_tests.ps1`
       之前也没有真正执行这个 focused test
+  - 首轮 Windows CI
+    进一步证明了一个
+    WinSSL-specific 细节：
+    - `CERT_CHAIN_POLICY_BASE`
+      下，
+      memory-backed additional store
+      不会自动把那张 CA
+      当成 trusted root
+    - 所以
+      `expired-signer.pem + ca_cert.pem`
+      会先暴露
+      `untrusted root`
+      而不是 expiry
+    - 因而这批里
+      `IgnoreExpiry`
+      的 focused contract
+      已改成：
+      - expired self-signed leaf
+      - 先用
+        `AllowSelfSigned`
+        消掉 trust 干扰
+      - 再验证
+        `IgnoreExpiry`
+        是否真正改变结果
   - 最小正确修法
     不是重开连接层 hostname / SSL policy，
     而是：
