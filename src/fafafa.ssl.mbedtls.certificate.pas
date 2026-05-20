@@ -1667,8 +1667,11 @@ function TMbedTLSCertificateStore.BuildCertificateChain(ACert: ISSLCertificate):
 var
   LChain: array of ISSLCertificate;
   LCurrent: ISSLCertificate;
+  LNext: ISSLCertificate;
   LIssuer: ISSLCertificate;
   LMaxDepth: Integer;
+  I: Integer;
+  LExists: Boolean;
 begin
   SetLength(Result, 0);
   if ACert = nil then Exit;
@@ -1685,10 +1688,33 @@ begin
     if LCurrent.IsSelfSigned then
       Break;
 
-    LIssuer := FindBySubject(LCurrent.GetIssuer);
-    if LIssuer = nil then
+    LNext := LCurrent.GetIssuerCertificate;
+    if LNext = nil then
+      LNext := FindBySubject(LCurrent.GetIssuer);
+
+    if LNext = nil then
       Break;
 
+    LExists := False;
+    for I := 0 to High(LChain) do
+    begin
+      if LChain[I] = LNext then
+      begin
+        LExists := True;
+        Break;
+      end;
+
+      if NormalizeMbedTLSCertFingerprint(LChain[I].GetFingerprintSHA256) =
+        NormalizeMbedTLSCertFingerprint(LNext.GetFingerprintSHA256) then
+      begin
+        LExists := True;
+        Break;
+      end;
+    end;
+    if LExists then
+      Break;
+
+    LIssuer := LNext;
     LCurrent := LIssuer;
   end;
 

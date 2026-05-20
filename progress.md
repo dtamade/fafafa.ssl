@@ -4,6 +4,64 @@
 
 ## 2026-05-20
 
+### Optional Backends BuildCertificateChain Issuer-Link Parity
+
+- `mcp__ace_tool__.search_context(...)`
+- `nl -ba src/fafafa.ssl.freepascal.lib.pas | sed -n '1324,1388p'`
+- `nl -ba src/fafafa.ssl.mbedtls.certificate.pas | sed -n '1666,1696p'`
+- `nl -ba src/fafafa.ssl.wolfssl.certificate.pas | sed -n '1502,1534p'`
+- `nl -ba tests/test_freepascal_backend_basic.pas | sed -n '268,310p'`
+- `nl -ba tests/test_mbedtls_framework.pas | sed -n '560,640p'`
+- `nl -ba tests/test_wolfssl_framework.pas | sed -n '648,700p'`
+- `openssl x509 -in tests/certificate/test_certs/signer_cert.pem -noout -subject -issuer -serial`
+  - result: PASS
+  - summary:
+    - confirmed the next real chain-building drift after certstore query / clone parity
+    - confirmed `FreePascal` already consumes explicit issuer-link truth before store fallback
+    - confirmed `MbedTLS` / `WolfSSL` still ignored `GetIssuerCertificate()`
+    - confirmed the old `FreePascal` chain-dedup test was accidentally masked by a self-signed fixture
+
+- add focused plan/tests:
+  - `docs/plans/2026-05-20-optional-backends-build-certificate-chain-issuer-link-parity.md`
+  - `tests/test_freepascal_backend_basic.pas`
+  - `tests/test_mbedtls_framework.pas`
+  - `tests/test_wolfssl_framework.pas`
+  - change:
+    - recorded a bounded chain-building batch
+    - replaced the masked self-signed `FreePascal` check with a real non-self-signed issuer-link contract
+    - added RED proving optional backends must follow explicit issuer-link even when the store lacks issuer certificates
+
+- update implementation:
+  - `src/fafafa.ssl.mbedtls.certificate.pas`
+  - `src/fafafa.ssl.wolfssl.certificate.pas`
+  - change:
+    - both stores now check `GetIssuerCertificate()` before `FindBySubject(GetIssuer)`
+    - both stores now perform object / fingerprint dedup before appending the next chain element
+
+- `mkdir -p tmp/test_freepascal_backend_basic_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_freepascal_backend_basic_units -FEtmp/test_freepascal_backend_basic_units -otmp/test_freepascal_backend_basic_units/test_freepascal_backend_basic tests/test_freepascal_backend_basic.pas && ./tmp/test_freepascal_backend_basic_units/test_freepascal_backend_basic`
+  - result: PASS
+  - summary:
+    - `FreePascal` now has a real non-self-signed explicit issuer-link contract in its focused backend smoke
+    - the old masked self-signed check is gone
+
+- `mkdir -p tmp/test_mbedtls_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas && ./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+  - result: PASS
+  - summary:
+    - final result: `171 passed / 0 failed`
+    - new contract passes:
+      - `BuildCertificateChain follows explicit issuer-link when store lacks issuer`
+      - `BuildCertificateChain appends explicit issuer certificate`
+      - `BuildCertificateChain preserves explicit issuer fingerprint truth`
+
+- `mkdir -p tmp/test_wolfssl_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas && ./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+  - result: PASS
+  - summary:
+    - final result: `185 passed / 0 failed`
+    - new contract passes:
+      - `BuildCertificateChain follows explicit issuer-link when store lacks issuer`
+      - `BuildCertificateChain appends explicit issuer certificate`
+      - `BuildCertificateChain preserves explicit issuer fingerprint truth`
+
 ### MbedTLS CertStore Clone Fingerprint Parity
 
 - `gh run view 26137377563 --job 76875393301 --log-failed`

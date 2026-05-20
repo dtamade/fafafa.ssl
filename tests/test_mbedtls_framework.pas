@@ -558,6 +558,8 @@ var
   LSubjectVariant: string;
   LIssuerVariant: string;
   LStoreClone: ISSLCertificate;
+  LChainIssuer: ISSLCertificate;
+  LChain: TSSLCertificateArray;
   LSerialCompact: string;
   LSerialVariant: string;
   LCharIndex: Integer;
@@ -624,6 +626,23 @@ begin
       Test('FindByIssuer empty query returns nil', LStore.FindByIssuer('') = nil);
       Test('Remove distinct-issuer fixture succeeds', LStore.RemoveCertificate(LCert));
       Test('Store count back to 0 after issuer query semantics', LStore.GetCount = 0);
+
+      LCert := TMbedTLSCertificate.Create;
+      Test('Load chain leaf fixture for explicit issuer-link semantics',
+        LCert.LoadFromFile('tests/certificate/test_certs/signer_cert.pem'));
+      LChainIssuer := TMbedTLSCertificate.Create;
+      Test('Load chain issuer fixture for explicit issuer-link semantics',
+        LChainIssuer.LoadFromFile('tests/certificate/test_certs/ca_cert.pem'));
+      LCert.SetIssuerCertificate(LChainIssuer);
+      LChain := LStore.BuildCertificateChain(LCert);
+      Test('BuildCertificateChain follows explicit issuer-link when store lacks issuer',
+        Length(LChain) = 2);
+      Test('BuildCertificateChain appends explicit issuer certificate',
+        (Length(LChain) = 2) and (LChain[1] <> nil));
+      Test('BuildCertificateChain preserves explicit issuer fingerprint truth',
+        (Length(LChain) = 2) and
+        (NormalizeHexish(LChain[1].GetFingerprintSHA256) =
+         NormalizeHexish(LChainIssuer.GetFingerprintSHA256)));
       LLib.Finalize;
     end
     else

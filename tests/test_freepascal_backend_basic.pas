@@ -52,7 +52,7 @@ var
   LHostCert: ISSLCertificate;
   LWildcardCert: ISSLCertificate;
   LLoopLeaf: ISSLCertificate;
-  LLoopIssuer: ISSLCertificate;
+  LChainIssuer: ISSLCertificate;
   LChain: TSSLCertificateArray;
   LInvalidStream: TStringStream;
   LValidDER: TBytes;
@@ -280,13 +280,19 @@ begin
     'Certificate store should allow re-adding certificate after clone-based removal');
 
   LLoopLeaf := LCert.Clone;
-  LLoopIssuer := LCert.Clone;
-  AssertTrue(LLoopLeaf <> nil, 'Clone leaf certificate should be created for chain dedup contract');
-  AssertTrue(LLoopIssuer <> nil, 'Clone issuer certificate should be created for chain dedup contract');
-  LLoopLeaf.SetIssuerCertificate(LLoopIssuer);
+  LChainIssuer := LLib.CreateCertificate;
+  AssertTrue(LLoopLeaf <> nil, 'Leaf certificate clone should be created for chain issuer-link contract');
+  AssertTrue(LChainIssuer <> nil, 'Issuer certificate should be created for chain issuer-link contract');
+  AssertTrue(LChainIssuer.LoadFromFile('tests/certificate/test_certs/ca_cert.pem'),
+    'Issuer fixture should load for chain issuer-link contract');
+  LLoopLeaf.SetIssuerCertificate(LChainIssuer);
   LChain := LStore.BuildCertificateChain(LLoopLeaf);
-  AssertTrue(Length(LChain) = 1,
-    'BuildCertificateChain should de-duplicate cloned issuer certificate by fingerprint');
+  AssertTrue(Length(LChain) = 2,
+    'BuildCertificateChain should follow explicit issuer-link when store lacks issuer certificate');
+  AssertTrue(LChain[1] <> nil,
+    'BuildCertificateChain should append issuer certificate from explicit issuer-link');
+  AssertTrue(LChain[1].GetFingerprintSHA256 = LChainIssuer.GetFingerprintSHA256,
+    'BuildCertificateChain should preserve explicit issuer certificate truth');
 
   if DirectoryExists('/etc/ssl/certs') then
     AssertTrue(LStore.LoadSystemStore,

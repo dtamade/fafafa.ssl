@@ -1503,8 +1503,11 @@ function TWolfSSLCertificateStore.BuildCertificateChain(ACert: ISSLCertificate):
 var
   LChain: array of ISSLCertificate;
   LCurrent: ISSLCertificate;
+  LNext: ISSLCertificate;
   LIssuer: ISSLCertificate;
   LMaxDepth: Integer;
+  I: Integer;
+  LExists: Boolean;
 begin
   SetLength(Result, 0);
   if ACert = nil then Exit;
@@ -1523,10 +1526,33 @@ begin
       Break;
 
     // 查找颁发者
-    LIssuer := FindBySubject(LCurrent.GetIssuer);
-    if LIssuer = nil then
+    LNext := LCurrent.GetIssuerCertificate;
+    if LNext = nil then
+      LNext := FindBySubject(LCurrent.GetIssuer);
+
+    if LNext = nil then
       Break;
 
+    LExists := False;
+    for I := 0 to High(LChain) do
+    begin
+      if LChain[I] = LNext then
+      begin
+        LExists := True;
+        Break;
+      end;
+
+      if NormalizeWolfCertFingerprint(LChain[I].GetFingerprintSHA256) =
+        NormalizeWolfCertFingerprint(LNext.GetFingerprintSHA256) then
+      begin
+        LExists := True;
+        Break;
+      end;
+    end;
+    if LExists then
+      Break;
+
+    LIssuer := LNext;
     LCurrent := LIssuer;
   end;
 

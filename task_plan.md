@@ -10,6 +10,98 @@
 
 ## Current Status
 
+- [completed] `optional backends buildcertificatechain issuer-link parity`
+  当前 focused 目标：
+  - 把
+    `MbedTLS` /
+    `WolfSSL`
+    的
+    `BuildCertificateChain`
+    从只靠 store lookup
+    的简化实现，
+    收口到与
+    `FreePascal`
+    更一致的 public chain truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-optional-backends-build-certificate-chain-issuer-link-parity.md`
+  - 修改实现：
+    - `src/fafafa.ssl.mbedtls.certificate.pas`
+    - `src/fafafa.ssl.wolfssl.certificate.pas`
+  - 修改 focused tests：
+    - `tests/test_freepascal_backend_basic.pas`
+    - `tests/test_mbedtls_framework.pas`
+    - `tests/test_wolfssl_framework.pas`
+  当前预判：
+  - `FreePascal`
+    已经会先吃
+    `GetIssuerCertificate()`
+    再 fallback 到
+    store lookup
+  - `MbedTLS` /
+    `WolfSSL`
+    还停在
+    `FindBySubject(GetIssuer)`
+    级别
+  当前最终收口证据：
+  - `FreePascal`
+    旧测试里那个
+    “chain dedup”
+    实际被 self-signed fixture
+    短路，
+    并没有真的锁住
+    non-self-signed issuer-link path
+  - 新测试改成：
+    - leaf:
+      `tests/certificate/test_certs/signer_cert.pem`
+    - issuer:
+      `tests/certificate/test_certs/ca_cert.pem`
+    - store 中故意不放 issuer
+  - 修复后：
+    - `MbedTLS`
+      `BuildCertificateChain`
+      会先跟随显式 issuer-link
+    - `WolfSSL`
+      也同样先跟随显式 issuer-link
+    - 两者都在追加下一跳前
+      做 object / fingerprint 去重
+  focused verification：
+  - `tests/test_freepascal_backend_basic.pas`
+    - PASS
+  - `tests/test_mbedtls_framework.pas`
+    - `171 passed / 0 failed`
+  - `tests/test_wolfssl_framework.pas`
+    - `185 passed / 0 failed`
+  当前结论：
+  - earlier
+    `issuer-link truth`
+    修复，
+    现在终于贯通到
+    certstore chain building
+  - optional backends
+    不再把
+    “证书自己已经带着 issuer”
+    这条公共真相
+    直接丢掉
+  当前总路线图进度：
+  - `接口设计`
+    已经从
+    query / clone semantics
+    推进到
+    chain-building semantics
+  - `后端实现`
+    `MbedTLS` /
+    `WolfSSL`
+    又补齐一层 shared contract
+  当前下一条真实工作：
+  - 继续看
+    `OpenSSL` /
+    `WinSSL`
+    的
+    `BuildCertificateChain`
+    / generic chain verifier
+    是否还存在
+    shared contract drift
 - [completed] `mbedtls certstore clone fingerprint parity`
   当前 focused 目标：
   - 把

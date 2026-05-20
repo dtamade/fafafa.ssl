@@ -2,6 +2,70 @@
 
 ## 2026-05-20
 
+- `BuildCertificateChain`
+  这条 public surface
+  继续往下审，
+  真正的新问题不是
+  “返回数组就算完成”，
+  而是
+  certificate
+  自己已经持有的
+  `issuer-link truth`
+  有没有真的被 chain builder 消费
+
+- `FreePascal`
+  之前已经把这条 truth
+  打通了：
+  - 先读 `GetIssuerCertificate()`
+  - 再 fallback 到 store lookup
+  - 追加前做 object / fingerprint 去重
+
+- `MbedTLS` /
+  `WolfSSL`
+  之前都还只是：
+  - append current
+  - `FindBySubject(GetIssuer)`
+  - max depth break
+  这意味着：
+  - earlier peer-cert /
+    clone issuer-link 修复
+    不能传导到 certstore
+  - public `ISSLCertificate`
+    明明公开了 issuer-link，
+    但 optional backends
+    的 chain builder
+    实际上视而不见
+
+- 这次还暴露出一个
+  很容易骗过审查的测试问题：
+  `FreePascal`
+  旧的 chain-dedup 用例
+  用的是 self-signed 证书，
+  所以在
+  `IsSelfSigned`
+  处就提前结束，
+  并没有真的覆盖
+  non-self-signed issuer-link path
+
+- 所以更稳的 shared contract
+  应该是：
+  - 如果 leaf cert
+    已经携带显式 issuer-link
+  - 即使 store
+    里没有 issuer
+  - `BuildCertificateChain`
+    也应该返回
+    leaf -> issuer
+    的最小链
+
+- 一旦开始消费显式 issuer-link，
+  loop suppression
+  就不能再省略；
+  否则 chain builder
+  很容易在 clone /
+  cycle 场景下
+  只靠深度上限硬停
+
 - 当 `ISSLCertificateStore`
   的 query family
   收口以后，
