@@ -8738,3 +8738,45 @@
   - `TSSLConfig`
   - `ISSLServerConnection`
   这组更大的 interface-design / backend completeness 主线
+125. 当前 `WinSSL CertStore DN Query Contract` 在 GitHub Windows runtime 上剩余的真实根因，不只是“DN 顺序可能不同”，而是更基础的 truth-source 错位：
+  - `TWinSSLCertificateStore.FindBySubject`
+    / `FindByIssuer`
+    现在虽然已经做了
+    normalization
+    和 exact-first / substring fallback
+  - 但它们比较的 candidate
+    仍来自：
+    - `TWinSSLCertificate.GetSubject`
+    - `TWinSSLCertificate.GetIssuer`
+  - 这两个 getter
+    当前走的是
+    `CERT_NAME_SIMPLE_DISPLAY_TYPE`
+    更接近 simple display name，
+    不是 full X.500 DN
+  - 所以像
+    `CN=Test Signer,O=Test Org`
+    或
+    `O=Test Org,CN=Test Signer`
+    这类 component query
+    在 WinSSL 上
+    根本没有足够的 candidate truth
+    可以匹配
+- 这意味着当前更安全的最小修复
+  不一定要立刻改 public getter surface，
+  但至少应把 store-query lane
+  的 truth source
+  切回 native
+  `CERT_CONTEXT^.pCertInfo^.Subject/Issuer`
+  并通过
+  `CertNameToStrW(..., CERT_X500_NAME_STR ...)`
+  生成 full DN candidate
+- 这样可以：
+  - 修复当前 GitHub Windows runtime 红灯
+  - 继续保留现有
+    `GetSubject` / `GetIssuer`
+    作为 display-oriented surface
+    的兼容性
+  - 同时让
+    `FindBySubject`
+    / `FindByIssuer`
+    回到 shared certstore contract

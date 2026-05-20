@@ -16498,3 +16498,60 @@
       - `ISSLConnection`
       - `TSSLConfig`
       - `ISSLServerConnection`
+
+### WinSSL CertStore DN Query Runtime Closeout
+
+- `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
+  - result: PASS
+  - summary:
+    - current planning files already existed
+    - resumed from the latest clean `master` state without extra unsynced diff
+
+- `mcp__ace_tool__.search_context(...)`
+  - result: PASS
+  - summary:
+    - re-confirmed the earlier cross-backend DN-query plan already exists
+    - narrowed the remaining work to the WinSSL runtime remainder only
+    - confirmed the intended contract is:
+      - normalized query
+      - partial DN fragment support
+      - empty query fail-closed
+
+- `gh run view 26139989408 --job 76883328793 --log-failed`
+  - result: PASS
+  - summary:
+    - re-confirmed the latest Windows runtime suite failed only on:
+      - `WinSSL CertStore DN Query Contract`
+    - suite summary:
+      - `passed=8`
+      - `failed=1`
+      - `total=9`
+
+- static source review:
+  - `src/fafafa.ssl.winssl.certstore.pas`
+  - `src/fafafa.ssl.winssl.certificate.pas`
+  - `tests/winssl/test_winssl_certstore.pas`
+  - result: PASS
+  - summary:
+    - confirmed the direct failing boundary is no longer:
+      - chain builder lifetime
+      - PEM fallback
+      - fixture path
+    - confirmed the deeper root cause:
+      - `FindBySubject` / `FindByIssuer`
+        normalize
+        `GetSubject` / `GetIssuer`
+      - but WinSSL getters currently use
+        `CERT_NAME_SIMPLE_DISPLAY_TYPE`
+        and therefore expose simple display names,
+        not full X.500 DN candidates
+    - conclusion:
+      - order-sensitive matching is not the only issue
+      - the current store-query truth source itself is too weak for
+        full-DN component queries
+
+- add focused plan:
+  - `docs/plans/2026-05-20-winssl-certstore-dn-query-runtime-closeout.md`
+  - change:
+    - recorded the bounded WinSSL runtime closeout batch
+    - scoped the fix to native full-DN extraction inside the store-query lane

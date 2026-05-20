@@ -215,6 +215,121 @@ begin
   Result := StringReplace(Result, ' =', '=', [rfReplaceAll]);
 end;
 
+function CertNameBlobToX500String(AName: PCERT_NAME_BLOB): string;
+var
+  LSize: DWORD;
+  LWritten: DWORD;
+  LBuffer: UnicodeString;
+begin
+  Result := '';
+  if (AName = nil) or (AName^.cbData = 0) or (AName^.pbData = nil) then
+    Exit;
+
+  LSize := CertNameToStrW(
+    X509_ASN_ENCODING or PKCS_7_ASN_ENCODING,
+    AName,
+    CERT_X500_NAME_STR or CERT_NAME_STR_COMMA_FLAG,
+    nil,
+    0
+  );
+  if LSize <= 1 then
+    Exit;
+
+  SetLength(LBuffer, LSize);
+  LWritten := CertNameToStrW(
+    X509_ASN_ENCODING or PKCS_7_ASN_ENCODING,
+    AName,
+    CERT_X500_NAME_STR or CERT_NAME_STR_COMMA_FLAG,
+    PWideChar(LBuffer),
+    LSize
+  );
+  if LWritten <= 1 then
+    Exit;
+
+  SetLength(LBuffer, LWritten - 1);
+  Result := LBuffer;
+end;
+
+function GetCertificateStoreDNText(ACert: ISSLCertificate; AUseIssuer: Boolean): string;
+var
+  LContext: PCCERT_CONTEXT;
+begin
+  Result := '';
+  if ACert = nil then
+    Exit;
+
+  LContext := PCCERT_CONTEXT(GetNativeHandleSafe(ACert, 'TWinSSLCertificateStore'));
+  if (LContext <> nil) and (LContext^.pCertInfo <> nil) then
+  begin
+    if AUseIssuer then
+      Result := CertNameBlobToX500String(@LContext^.pCertInfo^.Issuer)
+    else
+      Result := CertNameBlobToX500String(@LContext^.pCertInfo^.Subject);
+  end;
+
+  if Result <> '' then
+    Exit;
+
+  if AUseIssuer then
+    Result := ACert.GetIssuer
+  else
+    Result := ACert.GetSubject;
+end;
+
+function CandidateHasDNComponent(const ACandidate, AComponent: string): Boolean;
+begin
+  Result := False;
+  if (ACandidate = '') or (AComponent = '') then
+    Exit;
+
+  if ACandidate = AComponent then
+    Exit(True);
+
+  Result := Pos(',' + AComponent + ',', ',' + ACandidate + ',') > 0;
+end;
+
+function CandidateContainsAllDNComponents(const ACandidate, ATarget: string): Boolean;
+var
+  LStart: Integer;
+  LStop: Integer;
+  LComponent: string;
+begin
+  Result := False;
+  if (ACandidate = '') or (ATarget = '') or (Pos('=', ATarget) = 0) then
+    Exit;
+
+  LStart := 1;
+  while LStart <= Length(ATarget) do
+  begin
+    LStop := LStart;
+    while (LStop <= Length(ATarget)) and (ATarget[LStop] <> ',') do
+      Inc(LStop);
+
+    LComponent := Copy(ATarget, LStart, LStop - LStart);
+    if (LComponent = '') or (not CandidateHasDNComponent(ACandidate, LComponent)) then
+      Exit(False);
+
+    LStart := LStop + 1;
+  end;
+
+  Result := True;
+end;
+
+function CertificateStoreDNMatches(const ACandidate, ATarget: string): Boolean;
+begin
+  Result := False;
+  if (ACandidate = '') or (ATarget = '') then
+    Exit;
+
+  if ACandidate = ATarget then
+    Exit(True);
+
+  if CandidateContainsAllDNComponents(ACandidate, ATarget) then
+    Exit(True);
+
+  Result := Pos(ATarget, ACandidate) > 0;
+end;
+
 // ============================================================================
 // ISSLCertificateStore - 存储管理
 // ============================================================================
@@ -508,7 +623,7 @@ begin
   for I := 0 to FCertificates.Count - 1 do
   begin
     Cert := ISSLCertificate(FCertificates[I]);
-    LCandidate := NormalizeCertificateStoreDN(Cert.GetSubject);
+    LCandidate := NormalizeCertificateStoreDN(GetCertificateStoreDNText(Cert, False));
     if LCandidate = LTarget then
       Exit(Cert);
   end;
@@ -516,8 +631,8 @@ begin
   for I := 0 to FCertificates.Count - 1 do
   begin
     Cert := ISSLCertificate(FCertificates[I]);
-    LCandidate := NormalizeCertificateStoreDN(Cert.GetSubject);
-    if Pos(LTarget, LCandidate) > 0 then
+    LCandidate := NormalizeCertificateStoreDN(GetCertificateStoreDNText(Cert, False));
+    if CertificateStoreDNMatches(LCandidate, LTarget) then
       Exit(Cert);
   end;
 end;
@@ -541,7 +656,7 @@ begin
   for I := 0 to FCertificates.Count - 1 do
   begin
     Cert := ISSLCertificate(FCertificates[I]);
-    LCandidate := NormalizeCertificateStoreDN(Cert.GetIssuer);
+    LCandidate := NormalizeCertificateStoreDN(GetCertificateStoreDNText(Cert, True));
     if LCandidate = LTarget then
       Exit(Cert);
   end;
@@ -549,8 +664,8 @@ begin
   for I := 0 to FCertificates.Count - 1 do
   begin
     Cert := ISSLCertificate(FCertificates[I]);
-    LCandidate := NormalizeCertificateStoreDN(Cert.GetIssuer);
-    if Pos(LTarget, LCandidate) > 0 then
+    LCandidate := NormalizeCertificateStoreDN(GetCertificateStoreDNText(Cert, True));
+    if CertificateStoreDNMatches(LCandidate, LTarget) then
       Exit(Cert);
   end;
 end;

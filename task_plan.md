@@ -10,7 +10,92 @@
 
 ## Current Status
 
-- [in_progress] `winssl certstore chain runtime contract`
+- [in_progress] `winssl certstore dn query runtime closeout`
+  当前 focused 目标：
+  - 收掉
+    GitHub Windows runtime
+    上仅剩的
+    `WinSSL CertStore DN Query Contract`
+    红灯
+  - 让
+    `FindBySubject`
+    / `FindByIssuer`
+    对 full DN component query、
+    loose normalized query、
+    plain text fragment query
+    都继续满足当前 repo 共享契约
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-winssl-certstore-dn-query-runtime-closeout.md`
+  - 修改实现：
+    - `src/fafafa.ssl.winssl.certstore.pas`
+  - 修改 focused test：
+    - `tests/winssl/test_winssl_certstore.pas`
+  当前预判：
+  - 当前失败证据
+    已收敛到：
+    GitHub Actions
+    `WinSSL Runtime Gate`
+    run `26139989408`
+    的
+    `TestDeterministicDNQueryContract`
+  - 当前红灯只剩两条断言：
+    - `按归一化主题片段查询成功`
+    - `按归一化颁发者片段查询成功`
+  - 静态阅读源码后确认：
+    `FindBySubject`
+    / `FindByIssuer`
+    当前归一化的是
+    `TWinSSLCertificate.GetSubject`
+    / `GetIssuer`
+    的返回值
+  - 但
+    `TWinSSLCertificate.GetSubject`
+    / `GetIssuer`
+    现在走的是
+    `CERT_NAME_SIMPLE_DISPLAY_TYPE`
+    而不是 full X.500 DN，
+    所以像
+    `CN=Test Signer,O=Test Org`
+    这类 component query
+    在 WinSSL 上天然匹配不到
+  当前实施策略：
+  - 先把
+    `TestDeterministicDNQueryContract`
+    的 query
+    明确改成
+    逆序 component 变体，
+    确保它真正锁住
+    order-insensitive DN contract
+  - 最小修复：
+    - 在
+      `TWinSSLCertificateStore`
+      内直接从
+      native `CERT_CONTEXT`
+      读取
+      full subject / issuer DN
+    - 用
+      `CertNameToStrW(..., CERT_X500_NAME_STR ...)`
+      生成 canonical candidate
+    - 保留
+      normalized exact-first
+      再加
+      component-subset / substring
+      fallback
+  当前总路线图进度：
+  - `接口设计`
+    继续把
+    certstore query
+    的 shared contract
+    真正收口到
+    WinSSL runtime
+  - `测试完整性`
+    现在重点不再是
+    harness / fixture path，
+    而是
+    Windows 上剩余的
+    DN semantic drift
+- [completed] `winssl certstore chain runtime contract`
   当前 focused 目标：
   - 补齐
     `TWinSSLCertificateStore.BuildCertificateChain`
@@ -22,90 +107,26 @@
     把 `ISSLCertificate`
     裸指针塞进 `TList`
     的接口保活风险
-  当前 batch 范围：
-  - 新增计划：
-    - `docs/plans/2026-05-20-winssl-certstore-chain-runtime-contract.md`
-  - 修改实现：
-    - `src/fafafa.ssl.winssl.certstore.pas`
-    - `src/fafafa.ssl.winssl.certificate.pas`
-  - 修改 focused test：
-    - `tests/winssl/test_winssl_certstore.pas`
-    - `tests/run_winssl_tests.ps1`
-  当前预判：
-  - 当前 WinSSL chain builder
-    本身走的是
-    `CertGetCertificateChain`
-    原生链引擎
-  - 但结果收集时
-    先放进
-    `TList`
-    的 raw pointer
-    再转回 interface，
-    这会绕开 refcount
-  - 另外
-    `test_winssl_certstore.pas`
-    当前即使存在
-    `Assert` 失败，
-    结尾也不会
-    非零退出
-  - 远端红灯还进一步证明：
-    `TWinSSLCertificate.LoadFromFile`
-    在 Windows 上
-    对仓库常用的
-    `*.pem` fixture
-    并不会自动成功
-  - 深挖日志后又确认：
-    更直接的失败边界
-    其实是
-    `TestDeterministicDNQueryContract`
-    在
-    `tests/winssl`
-    工作目录下
-    还在用
-    repo-root
-    相对路径取 fixture
-  当前实施策略：
-  - 先在
-    WinSSL certstore test
-    里加入
-    `root -> intermediate -> leaf`
-    的两条 contract：
-    - store 只有 intermediate
-      -> 长度 `2`
-    - store 有
-      `intermediate + root`
-      -> 长度 `3`
-  - 同时让 test harness
-    对失败真实
-    `Halt(1)`
-  - 最小修复：
-    - `BuildCertificateChain`
-      改为直接写入结果数组，
-      不再用
-      `TList`
-      存裸接口指针
-    - `LoadFromStream`
-      在 DER
-      失败时
-      fallback 到 PEM
-    - `TestDeterministicDNQueryContract`
-      增加 fixture path
-      解析 helper，
-      保证 Windows runtime
-      真正命中仓库 fixture
-  当前总路线图进度：
-  - `接口设计`
-    正在继续把
-    certstore / chain-building
-    这条 public surface
-    从 OpenSSL
-    推进到 WinSSL
-  - `测试完整性`
-    开始补
-    Windows runtime
-    下之前缺失的
-    chain contract
-    与 failure propagation truth
+  当前最终收口证据：
+  - 已落地提交：
+    - `7f9dfd6`
+      `fix(winssl): harden certstore chain runtime`
+    - `46fb048`
+      `fix(winssl): accept pem certificate files`
+    - `995417b`
+      `fix(winssl): resolve certstore fixture paths`
+  - GitHub Windows runtime
+    已证明：
+    - partial/full chain
+      contract 通过
+    - PEM fixture
+      加载通过
+    - fixture path
+      解析通过
+  - 同一条 runtime
+    最终把剩余红灯
+    精确收敛到
+    `DN Query Contract`
 - [completed] `openssl certstore full-chain termination contract`
   当前 focused 目标：
   - 修掉

@@ -447,12 +447,12 @@ begin
       '加载 distinct-issuer fixture 成功');
     Assert(LStore.AddCertificate(LCert), '夹具证书加入内存存储成功');
 
-    LSubjectVariant := BuildLooseDNQueryVariant('CN=Test Signer,O=Test Org');
+    LSubjectVariant := BuildLooseDNQueryVariant('O=Test Org,CN=Test Signer');
     Assert(LStore.FindBySubject(LSubjectVariant) <> nil,
       '按归一化主题片段查找成功');
     Assert(LStore.FindBySubject('') = nil, '空主题查询返回 nil');
 
-    LIssuerVariant := BuildLooseDNQueryVariant('CN=Test CA,O=Test CA');
+    LIssuerVariant := BuildLooseDNQueryVariant('O=Test CA,CN=Test CA');
     Assert(LStore.FindByIssuer(LIssuerVariant) <> nil,
       '按归一化颁发者片段查找成功');
     Assert(LStore.FindByIssuer('') = nil, '空颁发者查询返回 nil');
