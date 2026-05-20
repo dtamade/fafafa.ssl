@@ -10,6 +10,96 @@
 
 ## Current Status
 
+- [completed] `api documentation isslconnection slice and ocsp mirror classification`
+  当前 focused 目标：
+  - 收掉 `docs/reference/API_DOCUMENTATION.md`
+    里最后一层 section-level 语义漂移：
+    - `ISSLConnection` 小节还像在描述完整 shipped source truth
+    - `GetOCSP*` 虽然示例/prose 已走
+      `ISSLOCSPStapling`
+      owner path，
+      但条目层级仍容易被误读成核心主接口
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-api-documentation-isslconnection-slice-ocsp-mirror-classification.md`
+  - 修改文档：
+    - `docs/reference/API_DOCUMENTATION.md`
+  - 修改 focused contract：
+    - `tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+    - `tests/scripts/test_isslocspstapling_active_guidance_contract.sh`
+  当前实施判断：
+  - 这批不是签名错误，
+    而是 active reference 入口仍在发布模糊心智：
+    - `README`
+      /
+      `ARCHITECTURE`
+      已经明确
+      `ISSLConnection`
+      只是 slice
+    - 但
+      `API_DOCUMENTATION`
+      还缺这层 classification
+    - 同时
+      `GetOCSP*`
+      也只在示例/prose 层 owner-first，
+      section 级语义仍容易回流成 core 主入口
+  - 所以最小正确顺序必须是：
+    - 先把 focused contract
+      改成要求：
+      slice truth
+      /
+      API_REFERENCE full truth
+      /
+      OCSP compatibility-mirror classification
+    - 拿到预期 RED
+    - 再最小补文档说明
+  当前 focused proof：
+  - `bash -n tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+    - 首轮：
+      FAIL
+      - 预期 RED：
+        `API_DOCUMENTATION ISSLConnection section must classify itself as a current slice instead of full shipped truth`
+    - 修复后：
+      PASS
+  - `bash -n tests/scripts/test_isslocspstapling_active_guidance_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_isslocspstapling_active_guidance_contract.sh`
+    - 首轮：
+      FAIL
+      - 预期 RED：
+        `API documentation missing ISSLOCSPStapling-first guidance: 下面这组 GetOCSP* 条目之所以仍保留在 ISSLConnection 小节，是因为当前 shipped source 仍向后兼容这些 compatibility-core mirrors。`
+    - 修复后：
+      PASS
+  - `git diff --check`
+    - PASS
+  当前状态：
+  - `API_DOCUMENTATION`
+    现已明确：
+    - `ISSLConnection`
+      小节只是当前常用连接方法切片
+    - 完整 shipped truth
+      需要回到
+      `docs/reference/API_REFERENCE.md`
+    - `GetOCSP*`
+      在这一层只是
+      compatibility-core mirrors
+    - 新代码优先通过
+      `ISSLOCSPStapling`
+      访问 stapling state / response / verify status / status string
+  最新收口：
+  - 这批把
+    `README`
+    /
+    `ARCHITECTURE`
+    /
+    `API_DOCUMENTATION`
+    三个高可见入口重新收成同一条路线：
+    - slice 入口
+    - owner-path 推荐
+    - `API_REFERENCE` full truth
+
 - [completed] `api documentation certverify owner path closeout`
   当前 focused 目标：
   - 收掉 `docs/reference/API_DOCUMENTATION.md`

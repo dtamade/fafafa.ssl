@@ -3,6 +3,70 @@
 ## 2026-05-21
 
 - `docs/reference/API_DOCUMENTATION.md`
+  在
+  `ISSLConnection`
+  这层此前已经不再大面积写错签名，
+  但还残留一个更隐蔽的 active drift：
+  - `README`
+    /
+    `ARCHITECTURE`
+    已把它标成
+    slice
+  - `API_DOCUMENTATION`
+    却仍像在发布完整 shipped source truth
+
+- 这会造成一种“入口级双真相”：
+  - landing / architecture 文档教的是
+    slice + full reference 回跳
+  - active API docs
+    却还让读者自然理解成：
+    “这就是当前
+    `ISSLConnection`
+    的完整公开面”
+
+- `GetOCSP*`
+  这组 surface
+  则暴露出另一种同页漂移：
+  - 示例与 prose
+    已经 owner-first
+    走
+    `ISSLOCSPStapling`
+  - 但条目层级仍用
+    `##### GetOCSP...`
+    直接挂在
+    `ISSLConnection`
+    下
+  - 如果没有 section 级 classification，
+    读者仍会把它读成核心主接口而不是 compatibility mirror
+
+- 这再次说明：
+  active docs
+  的风险不只在签名和示例，
+  还在 section-level framing；
+  只守 snippet truth
+  不守 classification truth，
+  后续仍会反复从入口语义里把旧心智拉回来
+
+- 这批收口后的 durable truth 是：
+  - `API_DOCUMENTATION`
+    的
+    `ISSLConnection`
+    小节现在明确只是当前常用连接方法切片
+  - 完整 shipped source truth
+    应回到：
+    - `src/fafafa.ssl.base.pas`
+    - `docs/reference/API_REFERENCE.md`
+  - `GetOCSP*`
+    在
+    `ISSLConnection`
+    上仍保留，
+    但在 active reference 里已经被明确标记为：
+    - compatibility-core mirrors
+  - 新代码优先通过
+    `ISSLOCSPStapling`
+    获取 stapling state / response / verify status / status string
+
+- `docs/reference/API_DOCUMENTATION.md`
   在证书验证这条线上此前存在一类典型的“同页双真相”问题：
   - CT 示例已经使用
     `Supports(Conn, ISSLCertificateVerification, CertVerify)`

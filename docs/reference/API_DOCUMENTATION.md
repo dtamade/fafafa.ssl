@@ -268,6 +268,9 @@ ServerContext := Builder.BuildServer;
 
 SSL/TLS 连接接口。
 
+下面列的是当前常用连接方法切片，不是 `v1.5.0` 当前 shipped source 的完整逐行镜像。
+完整 source-truth 请看 `docs/reference/API_REFERENCE.md`。
+
 #### 方法
 
 ##### Connect
@@ -365,6 +368,9 @@ function ReadString(out AStr: string): Boolean;
 if Connection.ReadString(Response) then
   WriteLn(Response);
 ```
+
+下面这组 `GetOCSP*` 条目之所以仍保留在 `ISSLConnection` 小节，是因为当前 shipped source 仍向后兼容这些 compatibility-core mirrors。
+新代码优先通过 `ISSLOCSPStapling` 读取 stapling 状态 / response / verify status / status string。
 
 ##### GetOCSPStaplingEnabled
 

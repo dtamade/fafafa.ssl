@@ -51,6 +51,10 @@ require_fixed "$api_doc" "Connection.Shutdown;" \
   "API_DOCUMENTATION must use Shutdown instead of stale Disconnect"
 require_fixed "$api_doc" "function Connect: Boolean;" \
   "API_DOCUMENTATION ISSLConnection section must publish the current Connect signature"
+require_fixed "$api_doc" "下面列的是当前常用连接方法切片，不是 \`v1.5.0\` 当前 shipped source 的完整逐行镜像。" \
+  "API_DOCUMENTATION ISSLConnection section must classify itself as a current slice instead of full shipped truth"
+require_fixed "$api_doc" "完整 source-truth 请看 \`docs/reference/API_REFERENCE.md\`。" \
+  "API_DOCUMENTATION ISSLConnection section must route full source truth to API_REFERENCE"
 require_fixed "$api_doc" "function Write(const ABuffer; ACount: Integer): Integer;" \
   "API_DOCUMENTATION ISSLConnection section must publish the current raw Write signature"
 require_fixed "$api_doc" "function WriteString(const AStr: string): Boolean;" \
@@ -59,6 +63,10 @@ require_fixed "$api_doc" "function Read(var ABuffer; ACount: Integer): Integer;"
   "API_DOCUMENTATION ISSLConnection section must publish the current raw Read signature"
 require_fixed "$api_doc" "function ReadString(out AStr: string): Boolean;" \
   "API_DOCUMENTATION ISSLConnection section must publish the current ReadString helper"
+require_fixed "$api_doc" "下面这组 \`GetOCSP*\` 条目之所以仍保留在 \`ISSLConnection\` 小节，是因为当前 shipped source 仍向后兼容这些 compatibility-core mirrors。" \
+  "API_DOCUMENTATION must classify ISSLConnection GetOCSP* entries as compatibility-core mirrors"
+require_fixed "$api_doc" "新代码优先通过 \`ISSLOCSPStapling\` 读取 stapling 状态 / response / verify status / status string。" \
+  "API_DOCUMENTATION must route new OCSP stapling guidance through ISSLOCSPStapling at section level"
 require_fixed "$api_doc" "CertVerify: ISSLCertificateVerification;" \
   "API_DOCUMENTATION troubleshooting must declare the current certificate-verification owner interface"
 require_fixed "$api_doc" "if Supports(Connection, ISSLCertificateVerification, CertVerify) and" \

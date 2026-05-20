@@ -6,6 +6,83 @@
 
 ## 2026-05-21
 
+### API Documentation ISSLConnection Slice And OCSP Mirror Classification
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-api-documentation-isslconnection-slice-ocsp-mirror-classification.md`
+  - change:
+    - recorded a bounded
+      `API_DOCUMENTATION`
+      section-level
+      `ISSLConnection`
+      slice / OCSP mirror classification batch
+    - explicitly framed the problem as
+      `active reference semantic drift + missing section-level contract guard`
+
+- update focused contracts first:
+  - `tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+  - `tests/scripts/test_isslocspstapling_active_guidance_contract.sh`
+  - change:
+    - required
+      `API_DOCUMENTATION`
+      to say its
+      `ISSLConnection`
+      section is a current slice,
+      not full shipped truth
+    - required the page to route complete source truth back to
+      `docs/reference/API_REFERENCE.md`
+    - required section-level wording that
+      `GetOCSP*`
+      remains
+      compatibility-core mirrors
+      while new guidance prefers
+      `ISSLOCSPStapling`
+
+- existing RED from this batch:
+  - `bash -n tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - captured the intended RED:
+        `API_DOCUMENTATION ISSLConnection section must classify itself as a current slice instead of full shipped truth`
+  - `bash -n tests/scripts/test_isslocspstapling_active_guidance_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_isslocspstapling_active_guidance_contract.sh`
+    - result: FAIL
+    - summary:
+      - captured the intended RED:
+        `API documentation missing ISSLOCSPStapling-first guidance: 下面这组 GetOCSP* 条目之所以仍保留在 ISSLConnection 小节，是因为当前 shipped source 仍向后兼容这些 compatibility-core mirrors。`
+
+- update implementation:
+  - `docs/reference/API_DOCUMENTATION.md`
+  - change:
+    - added a section-level note that
+      `ISSLConnection`
+      is a current commonly used slice,
+      not the full
+      `v1.5.0`
+      shipped source truth
+    - routed full source truth back to
+      `docs/reference/API_REFERENCE.md`
+    - added explicit wording that
+      `GetOCSP*`
+      entries remain
+      compatibility-core mirrors
+      and new code should prefer
+      `ISSLOCSPStapling`
+
+- `bash -n tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+- `bash tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+- `bash -n tests/scripts/test_isslocspstapling_active_guidance_contract.sh`
+- `bash tests/scripts/test_isslocspstapling_active_guidance_contract.sh`
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - active connection API docs truth contract is now green with section-level slice classification
+    - OCSP owner-first active guidance contract now also guards compatibility-mirror section wording
+    - patch formatting is clean
+
 ### API Documentation CertVerify Owner-Path Closeout
 
 - add focused batch inputs:

@@ -29,6 +29,8 @@ declare -a required_api_patterns=(
   "OCSPResponse := OCSP.GetOCSPResponse;"
   "if Supports(Connection, ISSLOCSPStapling, OCSP) and OCSP.IsOCSPResponseVerified then"
   "WriteLn('OCSP 状态: ', OCSP.GetOCSPResponseStatus);"
+  '下面这组 `GetOCSP*` 条目之所以仍保留在 `ISSLConnection` 小节，是因为当前 shipped source 仍向后兼容这些 compatibility-core mirrors。'
+  '新代码优先通过 `ISSLOCSPStapling` 读取 stapling 状态 / response / verify status / status string。'
   '优先通过 `ISSLOCSPStapling.GetOCSPStaplingEnabled`'
   '优先通过 `ISSLOCSPStapling.GetOCSPResponse`'
   '优先通过 `ISSLOCSPStapling.IsOCSPResponseVerified`'
