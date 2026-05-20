@@ -2,6 +2,72 @@
 
 ## 2026-05-20
 
+- `WinSSL certificate.Verify`
+  /
+  `VerifyEx`
+  这轮被进一步证实的根因
+  不是 policy flag 本身，
+  而是
+  `ACAStore`
+  只被当成了
+  `CertGetCertificateChain(..., hAdditionalStore, ...)`
+  的附加 store
+
+- 在
+  `CERT_CHAIN_POLICY_BASE`
+  这条 cert-level 路径上，
+  这意味着：
+  - store 里的 CA
+    可以参与建链
+  - 但不会自动成为 trusted root
+  - 所以
+    `expired-signer.pem + ca_cert.pem`
+    这组夹具
+    会先暴露
+    `CERT_E_UNTRUSTEDROOT`
+    而不是 expiry
+
+- 因而
+  `CurrentUser\\ROOT`
+  workaround
+  虽然能让 focused test
+  暂时跑通，
+  但它掩盖了真正的 backend 实现缺口：
+  WinSSL cert-level public surface
+  没有把 custom store 兑现成真实 trust source
+
+- 这批最小正确修法是：
+  - 给 WinSSL 补上
+    `CERT_CHAIN_ENGINE_CONFIG`
+    /
+    `CertCreateCertificateChainEngine`
+    /
+    `CertFreeCertificateChainEngine`
+    绑定
+  - 在 custom store 存在时，
+    为
+    `Verify`
+    /
+    `VerifyEx`
+    创建专用 chain engine
+  - 通过
+    `hExclusiveRoot`
+    把该 store
+    作为 trust anchor，
+    再通过
+    `cAdditionalStore`
+    让同一个 store
+    继续参与建链
+
+- 这样收口后，
+  focused WinSSL expiry 契约
+  可以重新回到纯 memory-store fixture，
+  同时也把
+  `Verify`
+  与
+  `VerifyEx`
+  在 custom store 语义上的分叉
+  一起堵住
 - `OpenSSL certificate.VerifyEx`
   这轮被打出来的真实问题
   不是

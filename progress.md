@@ -17461,3 +17461,64 @@
       - switched the expiry contract to temporarily trust `ca_cert.pem` via `CurrentUser\\ROOT`
       - reused `expired-signer.pem` as the expiry-only fixture
       - removed the generated self-signed path from the focused WinSSL contract
+
+### WinSSL Cert VerifyEx Custom Trust Engine
+
+- `gh run view 26150399681 --log-failed`
+  - result: IN PROGRESS
+  - summary:
+    - the previous Windows run had still not completed at the time this follow-up batch started
+    - that reinforced the decision to stop iterating on the `CurrentUser\\ROOT` workaround and fix the cert-level trust semantics directly
+
+- `mcp__ace_tool__.search_context(...)`
+  - result: PASS
+  - summary:
+    - re-located the exact WinSSL cert-level verification path, confirmed `HCERTCHAINENGINE` already existed, and confirmed the missing pieces were:
+      - `CERT_CHAIN_ENGINE_CONFIG`
+      - `CertCreateCertificateChainEngine`
+      - `CertFreeCertificateChainEngine`
+
+- static source review:
+  - `sed -n '1,260p' src/fafafa.ssl.winssl.certificate.pas`
+  - `sed -n '660,940p' src/fafafa.ssl.winssl.certificate.pas`
+  - `sed -n '1,260p' src/fafafa.ssl.winssl.base.pas`
+  - `sed -n '1,320p' src/fafafa.ssl.winssl.api.pas`
+  - `sed -n '1,260p' tests/winssl/test_winssl_cert_verify_ex.pas`
+  - result: PASS
+  - summary:
+    - confirmed the current implementation still passed `ACAStore` only as `hAdditionalStore`
+    - confirmed the focused test was still mutating `CurrentUser\\ROOT`
+
+- update implementation/docs:
+  - `docs/plans/2026-05-20-winssl-cert-verifyex-custom-trust-engine.md`
+  - `src/fafafa.ssl.winssl.base.pas`
+  - `src/fafafa.ssl.winssl.api.pas`
+  - `src/fafafa.ssl.winssl.certificate.pas`
+  - `tests/winssl/test_winssl_cert_verify_ex.pas`
+  - `task_plan.md`
+  - `findings.md`
+  - `progress.md`
+  - change:
+    - added WinSSL chain-engine config/binding support for custom cert-store trust
+    - `TWinSSLCertificate.Verify`
+      /
+      `VerifyEx`
+      now create a custom chain engine when `ACAStore` is provided
+    - the custom engine uses:
+      - `hExclusiveRoot`
+      - `cAdditionalStore`
+      against the same store handle
+    - reverted the expiry-focused WinSSL contract back to pure memory-store fixtures
+    - added a focused `Verify(LStore)` assertion so simple verify and `VerifyEx` cannot drift again on custom-trust semantics
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remain after the custom trust-engine follow-up batch
+
+- local verification limitation:
+  - result: EXPECTED LIMITATION
+  - summary:
+    - Linux-side `compile_all_modules.py` is not useful proof for this batch because it explicitly skips WinSSL units
+    - this repo-local environment still cannot compile or run the Windows WinSSL test target
+    - final proof for this batch must therefore come from the next pushed GitHub Actions Windows run

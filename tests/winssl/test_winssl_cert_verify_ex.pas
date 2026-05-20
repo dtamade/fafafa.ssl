@@ -80,22 +80,6 @@ begin
     Result := TWinSSLCertificateStore.Create(LStoreHandle, True);
 end;
 
-function OpenWritableCurrentUserRootStore: TWinSSLCertificateStore;
-var
-  LStoreHandle: HCERTSTORE;
-begin
-  Result := nil;
-  LStoreHandle := CertOpenStore(
-    CERT_STORE_PROV_SYSTEM,
-    X509_ASN_ENCODING or PKCS_7_ASN_ENCODING,
-    0,
-    CERT_SYSTEM_STORE_CURRENT_USER,
-    PWideChar(WideString('ROOT'))
-  );
-  if LStoreHandle <> nil then
-    Result := TWinSSLCertificateStore.Create(LStoreHandle, True);
-end;
-
 function CreateWinSSLCertificate: ISSLCertificate;
 begin
   Result := TWinSSLCertificate.Create(nil, False);
@@ -116,7 +100,7 @@ procedure TestIgnoreExpiryIsPerCallAndHonored;
 var
   LExpiredLeaf: ISSLCertificate;
   LCACert: ISSLCertificate;
-  LRootStore: TWinSSLCertificateStore;
+  LStore: TWinSSLCertificateStore;
   LVerifyResult: TSSLCertVerifyResult;
   LVerified: Boolean;
   LDiag: string;
@@ -126,34 +110,29 @@ begin
   LExpiredLeaf := LoadFixtureCertificate('tests/certs/expired-signer.pem', 'Expired leaf');
   LCACert := LoadFixtureCertificate('tests/certificate/test_certs/ca_cert.pem', 'CA');
 
-  LRootStore := OpenWritableCurrentUserRootStore;
-  Check(LRootStore <> nil, 'Writable CurrentUser ROOT store should be opened');
-  Check(LRootStore.AddCertificate(LCACert),
-    'CA fixture should be temporarily added to CurrentUser ROOT store');
+  LStore := CreateMemoryBackedStore;
+  Check(LStore <> nil, 'Expiry memory-backed store should be created');
+  Check(LStore.AddCertificate(LCACert),
+    'CA fixture should be added to the expiry memory-backed store');
 
-  try
-    LVerified := LExpiredLeaf.VerifyEx(nil, [], LVerifyResult);
-    Check((not LVerified) and (not LVerifyResult.Success),
-      'Expired leaf without IgnoreExpiry should fail; ' + FormatVerifyState(LVerified, LVerifyResult));
-    LDiag := LVerifyResult.ErrorMessage + ' ' + LVerifyResult.DetailedInfo;
-    Check(
-      ContainsTextInsensitive(LDiag, 'expired') or
-      ContainsTextInsensitive(LDiag, 'time'),
-      'Expired leaf failure should expose an expiry diagnostic once the CA is trusted'
-    );
+  LVerified := LExpiredLeaf.VerifyEx(LStore, [], LVerifyResult);
+  Check((not LVerified) and (not LVerifyResult.Success),
+    'Expired leaf without IgnoreExpiry should fail; ' + FormatVerifyState(LVerified, LVerifyResult));
+  LDiag := LVerifyResult.ErrorMessage + ' ' + LVerifyResult.DetailedInfo;
+  Check(
+    ContainsTextInsensitive(LDiag, 'expired') or
+    ContainsTextInsensitive(LDiag, 'time'),
+    'Expired leaf failure should expose an expiry diagnostic once the CA is supplied via memory-backed trust'
+  );
 
-    LVerified := LExpiredLeaf.VerifyEx(nil, [sslCertVerifyIgnoreExpiry], LVerifyResult);
-    Check(LVerified and LVerifyResult.Success,
-      'Expired leaf with IgnoreExpiry should succeed; ' + FormatVerifyState(LVerified, LVerifyResult));
+  LVerified := LExpiredLeaf.VerifyEx(LStore, [sslCertVerifyIgnoreExpiry], LVerifyResult);
+  Check(LVerified and LVerifyResult.Success,
+    'Expired leaf with IgnoreExpiry should succeed; ' + FormatVerifyState(LVerified, LVerifyResult));
 
-    LVerified := LExpiredLeaf.VerifyEx(nil, [], LVerifyResult);
-    Check((not LVerified) and (not LVerifyResult.Success),
-      'IgnoreExpiry must stay per-call and not leak into a later unflagged verify; ' +
-        FormatVerifyState(LVerified, LVerifyResult));
-  finally
-    if LRootStore <> nil then
-      LRootStore.RemoveCertificate(LCACert);
-  end;
+  LVerified := LExpiredLeaf.VerifyEx(LStore, [], LVerifyResult);
+  Check((not LVerified) and (not LVerifyResult.Success),
+    'IgnoreExpiry must stay per-call and not leak into a later unflagged verify; ' +
+      FormatVerifyState(LVerified, LVerifyResult));
 end;
 
 procedure TestAllowSelfSignedIsPerCallAndHonored;
@@ -205,6 +184,8 @@ begin
   LStore := CreateMemoryBackedStore;
   Check(LStore <> nil, 'Strict-chain memory-backed store should be created');
   Check(LStore.AddCertificate(LCACert), 'Strict-chain CA fixture should be added to store');
+  Check(LLeafCert.Verify(LStore),
+    'CA-signed leaf should verify when its CA is supplied in the custom WinSSL store');
 
   LVerified := LLeafCert.VerifyEx(LStore, [], LVerifyResult);
   Check(LVerified and LVerifyResult.Success,

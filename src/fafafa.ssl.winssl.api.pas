@@ -257,6 +257,17 @@ procedure CertFreeCertificateChain(
   pChainContext: PCCERT_CHAIN_CONTEXT  // 链上下文
 ); stdcall; external CRYPT32_DLL;
 
+// 创建证书链引擎
+function CertCreateCertificateChainEngine(
+  pConfig: PCERT_CHAIN_ENGINE_CONFIG;
+  phChainEngine: PHCERTCHAINENGINE
+): BOOL; stdcall; external CRYPT32_DLL;
+
+// 释放证书链引擎
+procedure CertFreeCertificateChainEngine(
+  hChainEngine: HCERTCHAINENGINE
+); stdcall; external CRYPT32_DLL;
+
 // 验证证书链策略
 function CertVerifyCertificateChainPolicy(
   pszPolicyOID: LPCSTR;              // 策略 OID

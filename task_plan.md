@@ -10,6 +10,75 @@
 
 ## Current Status
 
+- [in_progress] `winssl cert verifyex custom trust engine`
+  当前 focused 目标：
+  - 把
+    `WinSSL`
+    证书级
+    `Verify`
+    /
+    `VerifyEx`
+    对
+    `ACAStore`
+    的语义
+    从
+    “只是 additional store”
+    收紧成真正可作为 trust anchor 的 public truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-winssl-cert-verifyex-custom-trust-engine.md`
+  - 修改实现：
+    - `src/fafafa.ssl.winssl.base.pas`
+    - `src/fafafa.ssl.winssl.api.pas`
+    - `src/fafafa.ssl.winssl.certificate.pas`
+  - 修改 focused test：
+    - `tests/winssl/test_winssl_cert_verify_ex.pas`
+  当前实施判断：
+  - 上一批 push 后的
+    Windows runtime truth
+    已经证明：
+    - `ACAStore`
+      只作为
+      `hAdditionalStore`
+      时，
+      不会把
+      `ca_cert.pem`
+      自动视为 trusted root
+    - 因而
+      `expired-signer.pem`
+      的 expiry lane
+      被
+      `CERT_E_UNTRUSTEDROOT`
+      抢先遮住
+  - 继续依赖
+    `CurrentUser\ROOT`
+    workaround
+    会让 focused contract
+    依赖系统状态，
+    不是稳定 public truth
+  - 所以这批最小正确修法是：
+    - 给 WinSSL 补
+      `CERT_CHAIN_ENGINE_CONFIG`
+      相关绑定
+    - 对 custom store
+      创建专用 chain engine
+    - 通过
+      `hExclusiveRoot`
+      +
+      `cAdditionalStore`
+      同时提供 trust anchor 与建链来源
+    - 把 expiry 测试
+      收回纯 memory-store fixture
+  当前 focused proof：
+  - `git diff --check`
+    - PASS
+  - 本地限制：
+    - Linux 环境无法本地编译/运行
+      WinSSL
+    - 真正的运行时证明
+      仍需看 push 后的
+      GitHub Actions
+      `WinSSL Runtime Gate`
 - [completed] `winssl certificate verifyex flag parity`
   当前 focused 目标：
   - 把

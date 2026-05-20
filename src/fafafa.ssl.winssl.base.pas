@@ -189,6 +189,24 @@ type
 
   // 证书链相关
   HCERTCHAINENGINE = Pointer;
+  PHCERTCHAINENGINE = ^HCERTCHAINENGINE;
+
+  PCERT_CHAIN_ENGINE_CONFIG = ^CERT_CHAIN_ENGINE_CONFIG;
+  CERT_CHAIN_ENGINE_CONFIG = record
+    cbSize: DWORD;
+    hRestrictedRoot: HCERTSTORE;
+    hRestrictedTrust: HCERTSTORE;
+    hRestrictedOther: HCERTSTORE;
+    cAdditionalStore: DWORD;
+    rghAdditionalStore: ^HCERTSTORE;
+    dwFlags: DWORD;
+    dwUrlRetrievalTimeout: DWORD;
+    MaximumCachedCertificates: DWORD;
+    CycleDetectionModulus: DWORD;
+    hExclusiveRoot: HCERTSTORE;
+    hExclusiveTrustedPeople: HCERTSTORE;
+    dwExclusiveFlags: DWORD;
+  end;
   
   PCERT_CHAIN_PARA = ^CERT_CHAIN_PARA;
   CERT_CHAIN_PARA = record
@@ -741,6 +759,9 @@ const
   // 证书链策略
   CERT_CHAIN_POLICY_BASE         = LPCSTR(1);
   CERT_CHAIN_POLICY_SSL          = LPCSTR(4);
+
+  // CERT_CHAIN_ENGINE_CONFIG.dwExclusiveFlags
+  CERT_CHAIN_EXCLUSIVE_ENABLE_CA_FLAG = $00000001;
 
   // CERT_CHAIN_POLICY_* dwFlags (CERT_CHAIN_POLICY_PARA.dwFlags)
   CERT_CHAIN_POLICY_IGNORE_NOT_TIME_VALID_FLAG = $00000001;

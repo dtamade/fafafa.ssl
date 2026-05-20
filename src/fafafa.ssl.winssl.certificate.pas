@@ -198,6 +198,37 @@ begin
   end;
 end;
 
+function CreateChainEngineForStore(
+  ACAStore: ISSLCertificateStore;
+  const ACaller: string;
+  out AChainEngine: HCERTCHAINENGINE
+): Boolean;
+var
+  LStoreHandle: HCERTSTORE;
+  LEngineConfig: CERT_CHAIN_ENGINE_CONFIG;
+  LAdditionalStores: array[0..0] of HCERTSTORE;
+begin
+  AChainEngine := nil;
+  Result := True;
+
+  if ACAStore = nil then
+    Exit;
+
+  LStoreHandle := HCERTSTORE(GetNativeHandleSafe(ACAStore, ACaller));
+  if LStoreHandle = nil then
+    Exit(False);
+
+  FillChar(LEngineConfig, SizeOf(LEngineConfig), 0);
+  LEngineConfig.cbSize := SizeOf(LEngineConfig);
+  LEngineConfig.hExclusiveRoot := LStoreHandle;
+  LEngineConfig.dwExclusiveFlags := CERT_CHAIN_EXCLUSIVE_ENABLE_CA_FLAG;
+  LAdditionalStores[0] := LStoreHandle;
+  LEngineConfig.cAdditionalStore := Length(LAdditionalStores);
+  LEngineConfig.rghAdditionalStore := @LAdditionalStores[0];
+
+  Result := CertCreateCertificateChainEngine(@LEngineConfig, @AChainEngine);
+end;
+
 function TWinSSLCertificate.BinaryToHexString(const AData: PByte; ASize: DWORD): string;
 var
   i: Integer;
@@ -680,9 +711,9 @@ function TWinSSLCertificate.Verify(ACAStore: ISSLCertificateStore): Boolean;
 var
   ChainPara: CERT_CHAIN_PARA;
   ChainContext: PCCERT_CHAIN_CONTEXT;
+  ChainEngine: HCERTCHAINENGINE;
   PolicyPara: CERT_CHAIN_POLICY_PARA;
   PolicyStatus: CERT_CHAIN_POLICY_STATUS;
-  StoreHandle: HCERTSTORE;
 begin
   Result := False;
 
@@ -692,26 +723,28 @@ begin
   // 初始化证书链参数
   FillChar(ChainPara, SizeOf(ChainPara), 0);
   ChainPara.cbSize := SizeOf(ChainPara);
+  ChainContext := nil;
+  ChainEngine := nil;
 
-  StoreHandle := nil;
-  if ACAStore <> nil then
-  begin
-    // 如果提供了自定义 CA 存储，使用它
-    StoreHandle := HCERTSTORE(GetNativeHandleSafe(ACAStore, 'TWinSSLCertificate.Verify'));
-  end;
+  if not CreateChainEngineForStore(ACAStore, 'TWinSSLCertificate.Verify', ChainEngine) then
+    Exit;
 
   // 构建证书链
   if not CertGetCertificateChain(
-    nil,                    // 使用默认链引擎
+    ChainEngine,            // 使用默认或自定义链引擎
     FCertContext,           // 要验证的证书
     nil,                    // 使用当前时间
-    StoreHandle,            // 附加证书存储（可选）
+    nil,                    // 自定义链引擎已包含附加证书存储
     @ChainPara,             // 链参数
     0,                      // 标志
     nil,                    // 保留
     @ChainContext           // 输出链上下文
   ) then
+  begin
+    if ChainEngine <> nil then
+      CertFreeCertificateChainEngine(ChainEngine);
     Exit;
+  end;
 
   try
     // 初始化策略参数
@@ -745,6 +778,8 @@ begin
   finally
     // 释放证书链上下文
     CertFreeCertificateChain(ChainContext);
+    if ChainEngine <> nil then
+      CertFreeCertificateChainEngine(ChainEngine);
   end;
 end;
 
@@ -753,9 +788,9 @@ function TWinSSLCertificate.VerifyEx(ACAStore: ISSLCertificateStore;
 var
   LChainPara: CERT_CHAIN_PARA;
   LChainContext: PCCERT_CHAIN_CONTEXT;
+  LChainEngine: HCERTCHAINENGINE;
   LPolicyPara: CERT_CHAIN_POLICY_PARA;
   LPolicyStatus: CERT_CHAIN_POLICY_STATUS;
-  LStoreHandle: HCERTSTORE;
   LChainFlags: DWORD;
   LExtendedKeyUsage: TSSLStringArray;
 begin
@@ -778,10 +813,8 @@ begin
   // 初始化证书链参数
   FillChar(LChainPara, SizeOf(LChainPara), 0);
   LChainPara.cbSize := SizeOf(LChainPara);
-
-  LStoreHandle := nil;
-  if ACAStore <> nil then
-    LStoreHandle := HCERTSTORE(GetNativeHandleSafe(ACAStore, 'TWinSSLCertificate.VerifyEx'));
+  LChainContext := nil;
+  LChainEngine := nil;
 
   // 根据标志配置链验证
   LChainFlags := 0;
@@ -793,12 +826,19 @@ begin
   if sslCertVerifyCheckCRL in AFlags then
     LChainFlags := LChainFlags or CERT_CHAIN_REVOCATION_CHECK_END_CERT;
 
+  if not CreateChainEngineForStore(ACAStore, 'TWinSSLCertificate.VerifyEx', LChainEngine) then
+  begin
+    AResult.ErrorCode := GetLastError;
+    AResult.ErrorMessage := 'Failed to create certificate chain engine';
+    Exit;
+  end;
+
   // 构建证书链
   if not CertGetCertificateChain(
-    nil,                    // 使用默认链引擎
+    LChainEngine,           // 使用默认或自定义链引擎
     FCertContext,           // 要验证的证书
     nil,                    // 使用当前时间
-    LStoreHandle,           // 附加证书存储（可选）
+    nil,                    // 自定义链引擎已包含附加证书存储
     @LChainPara,            // 链参数
     LChainFlags,            // 验证标志
     nil,                    // 保留
@@ -807,6 +847,8 @@ begin
   begin
     AResult.ErrorCode := GetLastError;
     AResult.ErrorMessage := 'Failed to build certificate chain';
+    if LChainEngine <> nil then
+      CertFreeCertificateChainEngine(LChainEngine);
     Exit;
   end;
 
@@ -904,6 +946,8 @@ begin
   finally
     // 释放证书链上下文
     CertFreeCertificateChain(LChainContext);
+    if LChainEngine <> nil then
+      CertFreeCertificateChainEngine(LChainEngine);
   end;
 end;
 
