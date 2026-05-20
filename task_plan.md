@@ -68,12 +68,27 @@
       而不是 expiry
     - 因而这批里
       `IgnoreExpiry`
-      的 focused contract
-      已改成：
-      - expired self-signed leaf
-      - 先用
-        `AllowSelfSigned`
-        消掉 trust 干扰
+      不能直接靠 additional store 设计
+  - 第二轮 Windows CI
+    又补充了另一条真实边界：
+    - 运行时生成的
+      expired self-signed leaf
+      一触发
+      `AllowSelfSigned`
+      分支
+      就在
+      WinSSL cert-level `VerifyEx`
+      上打出
+      `EAccessViolation`
+    - 所以这批最终稳定契约
+      已收成：
+      - 临时把
+        `ca_cert.pem`
+        加入
+        `CurrentUser\ROOT`
+      - 让
+        `expired-signer.pem`
+        真正只剩 expiry 变量
       - 再验证
         `IgnoreExpiry`
         是否真正改变结果

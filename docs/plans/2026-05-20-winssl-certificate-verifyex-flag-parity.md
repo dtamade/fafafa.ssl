@@ -105,15 +105,17 @@
 1. 把
    `tests/winssl/test_winssl_cert_verify_ex.pas`
    从常量烟雾测试升级成真实运行时契约：
-   - 运行时生成
-     expired self-signed leaf
-     + empty memory store
+   - 临时把
+     `ca_cert.pem`
+     加进
+     `CurrentUser\ROOT`
+   - 用
+     `expired-signer.pem`
+     做 expiry fixture
      下：
      - `VerifyEx(..., [])`
        必须失败
-     - `VerifyEx(..., [sslCertVerifyAllowSelfSigned])`
-       仍必须因 expiry 失败
-     - `VerifyEx(..., [sslCertVerifyAllowSelfSigned, sslCertVerifyIgnoreExpiry])`
+     - `VerifyEx(..., [sslCertVerifyIgnoreExpiry])`
        必须成功
    - `version1-cert.pem`
      +
@@ -220,12 +222,34 @@
     `untrusted root`
     而不是 expiry
   - 所以 expiry contract
+    不能直接靠 additional store 设计
+- 当前 Windows CI 第二轮反馈又补充了另一条必须记录的真相：
+  - 运行时生成的
+    expired self-signed leaf
+    在 WinSSL cert-level `VerifyEx`
+    上，
+    一进入
+    `sslCertVerifyAllowSelfSigned`
+    分支
+    就触发了
+    `EAccessViolation`
+  - 这说明：
+    - 在当前批次里，
+      不应该继续拿
+      generated self-signed
+      路径
+      给
+      `IgnoreExpiry`
+      做主契约
+  - 所以最终稳定契约
     已改成：
-    - 先用
-      self-signed leaf
-      +
-      `AllowSelfSigned`
-      去掉 trust 干扰
+    - 临时把
+      `ca_cert.pem`
+      加入
+      `CurrentUser\ROOT`
+    - 让
+      `expired-signer.pem`
+      真正只剩 expiry 变量
     - 再验证
       `IgnoreExpiry`
       的 live 语义

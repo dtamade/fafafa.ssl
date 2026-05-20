@@ -9668,16 +9668,36 @@
        - WinSSL 的 expiry contract
          不能直接照搬
          OpenSSL / FreePascal
-         的那组 fixture 设计
-       - 正确做法是：
-         - 先用
-           self-signed expired leaf
-           +
-           `AllowSelfSigned`
-           去掉 trust 干扰
-         - 再验证
-           `IgnoreExpiry`
-           是否真正改变结果
+         的那组
+         `additional store`
+         fixture 设计
+   - 第二轮 Windows CI 反馈又补充了一条不同层面的 backend truth：
+     - 运行时生成的
+       expired self-signed leaf
+       在当前 WinSSL cert-level `VerifyEx`
+       上，
+       一进入
+       `sslCertVerifyAllowSelfSigned`
+       分支
+       就打出
+       `EAccessViolation`
+     - 所以当前批次里，
+       `IgnoreExpiry`
+       的稳定 runtime contract
+       不应继续依赖
+       generated self-signed
+       路径
+     - 当前更稳的做法是：
+       - 临时把
+         `ca_cert.pem`
+         加入
+         `CurrentUser\ROOT`
+       - 用
+         `expired-signer.pem`
+         做 expiry-only fixture
+       - 再验证
+         `sslCertVerifyIgnoreExpiry`
+         是否真正改变 cert-level 结果
    - 当前批收口后的默认下一步：
      - 观察
        `WinSSL Runtime Gate`

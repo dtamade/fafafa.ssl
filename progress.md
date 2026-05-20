@@ -17445,6 +17445,19 @@
       - the additional memory store participates in chain building
       - but does not automatically make that CA a trusted root under `CERT_CHAIN_POLICY_BASE`
     - follow-up fix:
-      - rewrote the expiry contract to use a generated expired self-signed leaf
-      - first neutralize trust with `sslCertVerifyAllowSelfSigned`
-      - then assert that `sslCertVerifyIgnoreExpiry` is what flips the result
+      - stopped using the `additional store` assumption for the WinSSL expiry contract
+      - first tried a generated expired self-signed leaf to neutralize trust separately
+
+- second post-push Windows CI follow-up:
+  - `gh run view 26149822653 --log-failed`
+  - result: FAIL (second push)
+  - summary:
+    - the revised focused test got past the previous trust-masking issue
+    - but the generated self-signed expiry path exposed a deeper runtime edge:
+      - once the test entered the `sslCertVerifyAllowSelfSigned` branch
+      - the WinSSL certificate-level `VerifyEx` path raised `EAccessViolation`
+    - this made the generated-self-signed approach unsuitable as the stable `IgnoreExpiry` contract for the current batch
+    - follow-up fix:
+      - switched the expiry contract to temporarily trust `ca_cert.pem` via `CurrentUser\\ROOT`
+      - reused `expired-signer.pem` as the expiry-only fixture
+      - removed the generated self-signed path from the focused WinSSL contract

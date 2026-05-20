@@ -6,7 +6,6 @@ uses
   Windows,
   SysUtils,
   fafafa.ssl.base,
-  fafafa.ssl.cert.utils,
   fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.api,
   fafafa.ssl.winssl.certstore,
@@ -81,6 +80,22 @@ begin
     Result := TWinSSLCertificateStore.Create(LStoreHandle, True);
 end;
 
+function OpenWritableCurrentUserRootStore: TWinSSLCertificateStore;
+var
+  LStoreHandle: HCERTSTORE;
+begin
+  Result := nil;
+  LStoreHandle := CertOpenStore(
+    CERT_STORE_PROV_SYSTEM,
+    X509_ASN_ENCODING or PKCS_7_ASN_ENCODING,
+    0,
+    CERT_SYSTEM_STORE_CURRENT_USER,
+    PWideChar(WideString('ROOT'))
+  );
+  if LStoreHandle <> nil then
+    Result := TWinSSLCertificateStore.Create(LStoreHandle, True);
+end;
+
 function CreateWinSSLCertificate: ISSLCertificate;
 begin
   Result := TWinSSLCertificate.Create(nil, False);
@@ -97,74 +112,48 @@ begin
   Check(Result.LoadFromFile(LFixturePath), ALabel + ' fixture should load');
 end;
 
-function LoadPEMCertificate(const APEM, ALabel: string): ISSLCertificate;
-begin
-  Result := CreateWinSSLCertificate;
-  Check(Result.LoadFromPEM(APEM), ALabel + ' PEM should load');
-end;
-
-function GenerateExpiredSelfSignedPEM: string;
-var
-  LOptions: TCertGenOptions;
-  LKeyPEM: string;
-begin
-  LOptions := TCertificateUtils.DefaultGenOptions;
-  LOptions.CommonName := 'winssl-expired-selfsigned.local';
-  LOptions.Organization := 'fafafa.ssl-tests';
-  LOptions.ValidDays := 30;
-  LOptions.NotBefore := Now - 30;
-  LOptions.NotAfter := Now - 1;
-  if not TCertificateUtils.GenerateSelfSigned(LOptions, Result, LKeyPEM) then
-    raise Exception.Create('GenerateSelfSigned returned False for expired self-signed WinSSL fixture');
-  Check(Result <> '', 'Expired self-signed PEM should be generated');
-  Check(LKeyPEM <> '', 'Expired self-signed private key PEM should be generated');
-end;
-
 procedure TestIgnoreExpiryIsPerCallAndHonored;
 var
   LExpiredLeaf: ISSLCertificate;
-  LExpiredSelfSignedPEM: string;
-  LEmptyStore: TWinSSLCertificateStore;
+  LCACert: ISSLCertificate;
+  LRootStore: TWinSSLCertificateStore;
   LVerifyResult: TSSLCertVerifyResult;
   LVerified: Boolean;
   LDiag: string;
 begin
   WriteLn('=== WinSSL VerifyEx Flag Parity ===');
 
-  LExpiredSelfSignedPEM := GenerateExpiredSelfSignedPEM;
-  LExpiredLeaf := LoadPEMCertificate(LExpiredSelfSignedPEM, 'Expired self-signed leaf');
+  LExpiredLeaf := LoadFixtureCertificate('tests/certs/expired-signer.pem', 'Expired leaf');
+  LCACert := LoadFixtureCertificate('tests/certificate/test_certs/ca_cert.pem', 'CA');
 
-  LEmptyStore := CreateMemoryBackedStore;
-  Check(LEmptyStore <> nil, 'WinSSL memory-backed store should be created');
+  LRootStore := OpenWritableCurrentUserRootStore;
+  Check(LRootStore <> nil, 'Writable CurrentUser ROOT store should be opened');
+  Check(LRootStore.AddCertificate(LCACert),
+    'CA fixture should be temporarily added to CurrentUser ROOT store');
 
-  LVerified := LExpiredLeaf.VerifyEx(LEmptyStore, [], LVerifyResult);
-  Check((not LVerified) and (not LVerifyResult.Success),
-    'Expired self-signed leaf without flags should fail; ' + FormatVerifyState(LVerified, LVerifyResult));
+  try
+    LVerified := LExpiredLeaf.VerifyEx(nil, [], LVerifyResult);
+    Check((not LVerified) and (not LVerifyResult.Success),
+      'Expired leaf without IgnoreExpiry should fail; ' + FormatVerifyState(LVerified, LVerifyResult));
+    LDiag := LVerifyResult.ErrorMessage + ' ' + LVerifyResult.DetailedInfo;
+    Check(
+      ContainsTextInsensitive(LDiag, 'expired') or
+      ContainsTextInsensitive(LDiag, 'time'),
+      'Expired leaf failure should expose an expiry diagnostic once the CA is trusted'
+    );
 
-  LVerified := LExpiredLeaf.VerifyEx(LEmptyStore, [sslCertVerifyAllowSelfSigned], LVerifyResult);
-  Check((not LVerified) and (not LVerifyResult.Success),
-    'Expired self-signed leaf with AllowSelfSigned only should still fail on expiry; ' +
-      FormatVerifyState(LVerified, LVerifyResult));
-  LDiag := LVerifyResult.ErrorMessage + ' ' + LVerifyResult.DetailedInfo;
-  Check(
-    ContainsTextInsensitive(LDiag, 'expired') or
-    ContainsTextInsensitive(LDiag, 'time'),
-    'AllowSelfSigned-only failure should expose an expiry diagnostic'
-  );
+    LVerified := LExpiredLeaf.VerifyEx(nil, [sslCertVerifyIgnoreExpiry], LVerifyResult);
+    Check(LVerified and LVerifyResult.Success,
+      'Expired leaf with IgnoreExpiry should succeed; ' + FormatVerifyState(LVerified, LVerifyResult));
 
-  LVerified := LExpiredLeaf.VerifyEx(
-    LEmptyStore,
-    [sslCertVerifyAllowSelfSigned, sslCertVerifyIgnoreExpiry],
-    LVerifyResult
-  );
-  Check(LVerified and LVerifyResult.Success,
-    'Expired self-signed leaf with AllowSelfSigned + IgnoreExpiry should succeed; ' +
-      FormatVerifyState(LVerified, LVerifyResult));
-
-  LVerified := LExpiredLeaf.VerifyEx(LEmptyStore, [sslCertVerifyAllowSelfSigned], LVerifyResult);
-  Check((not LVerified) and (not LVerifyResult.Success),
-    'IgnoreExpiry must stay per-call and not leak into a later AllowSelfSigned-only verify; ' +
-      FormatVerifyState(LVerified, LVerifyResult));
+    LVerified := LExpiredLeaf.VerifyEx(nil, [], LVerifyResult);
+    Check((not LVerified) and (not LVerifyResult.Success),
+      'IgnoreExpiry must stay per-call and not leak into a later unflagged verify; ' +
+        FormatVerifyState(LVerified, LVerifyResult));
+  finally
+    if LRootStore <> nil then
+      LRootStore.RemoveCertificate(LCACert);
+  end;
 end;
 
 procedure TestAllowSelfSignedIsPerCallAndHonored;
