@@ -670,6 +670,17 @@ begin
     Exit;
   end;
 
+  if (not Result) and (sslCertVerifyAllowSelfSigned in AFlags) and IsSelfSigned then
+  begin
+    Result := True;
+    AResult.Success := True;
+    AResult.ErrorCode := 0;
+    AResult.ErrorMessage := '';
+    AResult.ChainStatus := 0;
+    AResult.DetailedInfo :=
+      'FreePascal certificate verification accepted a self-signed leaf because sslCertVerifyAllowSelfSigned was requested';
+  end;
+
   if Result and (sslCertVerifyStrictChain in AFlags) then
   begin
     LExtendedKeyUsage := GetExtendedKeyUsage;
@@ -706,6 +717,18 @@ begin
     AResult.ErrorMessage := 'Certificate revocation/CRL verification is unavailable';
     AResult.DetailedInfo :=
       'FreePascal VerifyEx has no revocation material for sslCertVerifyCheckRevocation/sslCertVerifyCheckCRL';
+    Exit;
+  end;
+
+  if Result and (sslCertVerifyCheckOCSP in AFlags) then
+  begin
+    Result := False;
+    AResult.Success := False;
+    AResult.ErrorCode := 6;
+    AResult.RevocationStatus := 2;
+    AResult.ErrorMessage := 'Certificate OCSP verification is unavailable';
+    AResult.DetailedInfo :=
+      'FreePascal VerifyEx has no certificate-level OCSP verification path for sslCertVerifyCheckOCSP';
     Exit;
   end;
 end;

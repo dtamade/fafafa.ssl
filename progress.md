@@ -17311,3 +17311,64 @@
   - result: PASS
   - summary:
     - no whitespace or patch-format issues remain after the OpenSSL store-flag isolation closeout
+
+### FreePascal VerifyEx AllowSelfSigned / OCSP Parity
+
+- `mcp__ace_tool__.search_context(...)`
+  - result: PASS
+  - summary:
+    - re-mapped the cert-level VerifyEx surfaces for FreePascal and WinSSL before narrowing this batch
+
+- static source/test review:
+  - `sed -n '624,740p' src/fafafa.ssl.freepascal.lib.pas`
+  - `sed -n '736,930p' src/fafafa.ssl.winssl.certificate.pas`
+  - `sed -n '1110,1210p' src/fafafa.ssl.winssl.connection.pas`
+  - `sed -n '440,760p' tests/test_freepascal_client_cert_verify_flags_runtime.pas`
+  - `sed -n '1,240p' tests/winssl/test_winssl_cert_verify_ex.pas`
+  - result: PASS
+  - summary:
+    - confirmed the FreePascal cert-level residuals were real and local:
+      - `AllowSelfSigned` had no cert-level branch
+      - `CheckOCSP` had no fail-closed branch
+    - confirmed the next WinSSL cert-level residual is still static:
+      - `IgnoreExpiry`
+      - `AllowSelfSigned`
+      - `StrictChain`
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_freepascal_verify_ex_flag_parity_contract_units -FEtmp/test_freepascal_verify_ex_flag_parity_contract_units -otmp/test_freepascal_verify_ex_flag_parity_contract_units/test_freepascal_verify_ex_flag_parity_contract tests/freepascal/test_freepascal_verify_ex_flag_parity_contract.pas`
+  - result: FAIL -> PASS
+  - summary:
+    - first compile attempt failed because the tmp output directory did not yet exist
+    - after creating the tmp directory, the focused contract compiled successfully
+
+- intermediate run before compile finished
+  - result: DISCARDED
+  - summary:
+    - an early parallel run hit the previously built binary before the fresh compile completed, so that output was not used as proof
+
+- `./tmp/test_freepascal_verify_ex_flag_parity_contract_units/test_freepascal_verify_ex_flag_parity_contract`
+  - result: FAIL -> PASS
+  - summary:
+    - the first real RED proved `AllowSelfSigned` was still a cert-level no-op:
+      - `Self-signed leaf with AllowSelfSigned should succeed`
+      - but the old implementation still failed with store-rejected chain
+    - after the narrow fix, the focused contract returned green for both:
+      - `AllowSelfSigned` works for self-signed leaf certificates
+      - `CheckOCSP` now fails closed with an explicit OCSP-unavailable diagnostic
+
+- update implementation/docs:
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `tests/freepascal/test_freepascal_verify_ex_flag_parity_contract.pas`
+  - `docs/plans/2026-05-20-freepascal-certificate-verifyex-selfsigned-ocsp-parity.md`
+  - `task_plan.md`
+  - `findings.md`
+  - `progress.md`
+  - change:
+    - added a narrow self-signed override to cert-level FreePascal `VerifyEx` when `sslCertVerifyAllowSelfSigned` is explicitly requested
+    - tightened cert-level `sslCertVerifyCheckOCSP` into an explicit fail-closed path
+    - recorded WinSSL cert-level flag residuals as the next default queue item
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remain after the FreePascal VerifyEx parity closeout

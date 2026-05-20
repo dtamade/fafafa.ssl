@@ -10,6 +10,82 @@
 
 ## Current Status
 
+- [completed] `freepascal certificate verifyex selfsigned/ocsp parity`
+  当前 focused 目标：
+  - 把
+    `FreePascal`
+    证书对象的
+    `ISSLCertificate.VerifyEx`
+    在两个已发布 flags 上的 live 语义收紧成与其它 backend 一致的 public truth：
+    - `sslCertVerifyAllowSelfSigned`
+    - `sslCertVerifyCheckOCSP`
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-freepascal-certificate-verifyex-selfsigned-ocsp-parity.md`
+  - 修改实现：
+    - `src/fafafa.ssl.freepascal.lib.pas`
+  - 新增 focused tests：
+    - `tests/freepascal/test_freepascal_verify_ex_flag_parity_contract.pas`
+  当前实施判断：
+  - `FreePascal certificate.VerifyEx`
+    这次最真实的 residual
+    不是
+    `IgnoreExpiry`
+    /
+    `StrictChain`
+    路径，
+    而是：
+    - `AllowSelfSigned`
+      被静默忽略
+    - `CheckOCSP`
+      没有 fail-closed
+      分支
+  - 最小正确修法
+    不是重写整个
+    `certchain`
+    公共层，
+    而是：
+    - 仅在
+      self-signed leaf
+      且显式请求
+      `AllowSelfSigned`
+      时，
+      对当前调用放行
+    - 对
+      `CheckOCSP`
+      比照其它 backend
+      明确 fail-closed
+  当前 focused proof：
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_freepascal_verify_ex_flag_parity_contract_units -FEtmp/test_freepascal_verify_ex_flag_parity_contract_units -otmp/test_freepascal_verify_ex_flag_parity_contract_units/test_freepascal_verify_ex_flag_parity_contract tests/freepascal/test_freepascal_verify_ex_flag_parity_contract.pas`
+    - PASS
+  - `./tmp/test_freepascal_verify_ex_flag_parity_contract_units/test_freepascal_verify_ex_flag_parity_contract`
+    - PASS
+    - 同时覆盖：
+      - `AllowSelfSigned`
+        真正生效
+      - `CheckOCSP`
+        明确 fail-closed
+  - `git diff --check`
+    - PASS
+  当前批收口后的默认下一步：
+  - 继续沿
+    `certificate.VerifyEx`
+    的 published-flag parity
+    审 residual gaps
+  - 优先看：
+    - `WinSSL certificate.VerifyEx`
+      当前静态 residual：
+      - `IgnoreExpiry`
+      - `AllowSelfSigned`
+      - `StrictChain`
+    - 其后再回看
+      `OpenSSL`
+      的
+      `CheckRevocation`
+      /
+      `CheckCRL`
+      per-call scope
+      残余风险
 - [completed] `openssl certificate verifyex store flag isolation`
   当前 focused 目标：
   - 把

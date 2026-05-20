@@ -133,6 +133,64 @@
   - `AllowSelfSigned`
     真能放行 self-signed leaf，
     且不污染后续调用
+- `FreePascal certificate.VerifyEx`
+  这次 focused RED
+  把两条之前容易被 runtime/connection 主线掩盖的
+  cert-level residual
+  明确打出来了：
+  - `sslCertVerifyAllowSelfSigned`
+    在 cert-level
+    `VerifyEx`
+    上原本完全没有兑现
+  - `sslCertVerifyCheckOCSP`
+    原本也没有
+    fail-closed
+    分支，
+    属于典型 round-trip
+
+- 这说明：
+  - `FreePascal connection`
+    runtime path
+    已经覆盖 hostname / revocation material
+    等行为，
+    不能反推
+    `ISSLCertificate.VerifyEx`
+    cert-level surface
+    也已经完整
+  - 同一个 backend
+    在
+    connection path
+    与
+    cert-level path
+    上
+    可能长期存在不同步的 published-flag truth
+
+- 所以这批最小正确修法是：
+  - 保留现有
+    store verification
+    /
+    expiry
+    /
+    strict-chain
+    路径
+  - 仅对
+    self-signed leaf
+    + `AllowSelfSigned`
+    做窄范围 success override
+  - 把
+    `CheckOCSP`
+    收紧成与其它 backend
+    一致的 fail-closed
+
+- 同一轮静态审查还确认了下一个高价值 residual：
+  `WinSSL certificate.VerifyEx`
+  当前 source
+  仍明显缺：
+  - `IgnoreExpiry`
+  - `AllowSelfSigned`
+  - `StrictChain`
+  的 cert-level 兑现分支；
+  这条线应作为下一批默认入口保留
 - `WolfSSL`
   当前
   `Verify`
