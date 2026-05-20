@@ -62,6 +62,77 @@
   - 否则对
     `sslCertVerifyStrictChain`
     fail-closed
+- `OpenSSL certificate.VerifyEx`
+  在
+  `sslCertVerifyIgnoreExpiry`
+  /
+  `sslCertVerifyAllowSelfSigned`
+  这条 lane 上，
+  当前真正的实现真相
+  被这次 focused contract 重新校正了：
+  - 先前把
+    `IgnoreExpiry`
+    从
+    `X509_STORE_set_flags`
+    挪到
+    `X509_STORE_CTX`
+    参数后，
+    在当前 Linux/OpenSSL 运行时上
+    已经足够阻止同一个 store
+    的后续调用被污染
+  - 所以“还需要继续深挖 OpenSSL X509 param binding 才能止血”
+    这个怀疑，
+    在这次重跑中被证伪
+
+- 这次新补的 companion RED
+  打出来的真 residual
+  其实是：
+  `sslCertVerifyAllowSelfSigned`
+  根本没有兑现 public truth
+  - 旧实现尝试用
+    `X509_V_FLAG_PARTIAL_CHAIN`
+    近似
+  - 但对
+    self-signed leaf + empty store
+    仍然失败
+
+- 因而这条 lane 的最小正确修法是：
+  - 保留
+    `IgnoreExpiry`
+    走 per-call verify-param
+  - 不再把
+    `AllowSelfSigned`
+    绑定到
+    `PARTIAL_CHAIN`
+    这种不精确 native 近似
+  - 仅在：
+    - leaf 证书确认 self-signed
+    - 且
+      `X509_verify_cert`
+      的失败属于
+      self-signed / trust failure
+      （如
+      `DEPTH_ZERO_SELF_SIGNED_CERT`
+      /
+      `SELF_SIGNED_CERT_IN_CHAIN`
+      /
+      `UNABLE_TO_GET_ISSUER_CERT_LOCALLY`
+      /
+      `UNABLE_TO_VERIFY_LEAF_SIGNATURE`）
+    时，
+    对当前调用做窄范围 success override
+
+- 这样收口后，
+  `OpenSSL certificate.VerifyEx`
+  在这两个 exception flags 上
+  终于与其它 backend
+  更接近同一条 public truth：
+  - `IgnoreExpiry`
+    真能放行过期证书，
+    且不污染后续调用
+  - `AllowSelfSigned`
+    真能放行 self-signed leaf，
+    且不污染后续调用
 - `WolfSSL`
   当前
   `Verify`

@@ -209,6 +209,15 @@ begin
   end;
 end;
 
+function IsAllowSelfSignedTrustFailure(AErrorCode: Integer): Boolean;
+begin
+  Result :=
+    (AErrorCode = X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT) or
+    (AErrorCode = X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN) or
+    (AErrorCode = X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY) or
+    (AErrorCode = X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE);
+end;
+
 constructor TOpenSSLCertificate.Create(AX509: PX509; AOwnsHandle: Boolean = True);
 begin
   inherited Create;
@@ -837,6 +846,8 @@ var
   Chain: PSTACK_OF_X509;
   LExtendedKeyUsage: TSSLStringArray;
   LExtendedKeyUsageText: string;
+  LPerCallVerifyFlags: Cardinal;
+  LSelfSignedOverride: Boolean;
 begin
   AResult.Success := False;
   AResult.ErrorCode := 0;
@@ -887,13 +898,6 @@ begin
     end;
   end;
   
-  // 处理与时间、自签名相关的标志（与旧实现保持一致）
-  if (sslCertVerifyIgnoreExpiry in AFlags) and Assigned(X509_STORE_set_flags) then
-    X509_STORE_set_flags(Store, X509_V_FLAG_NO_CHECK_TIME);
-  
-  if (sslCertVerifyAllowSelfSigned in AFlags) and Assigned(X509_STORE_set_flags) then
-    X509_STORE_set_flags(Store, X509_V_FLAG_PARTIAL_CHAIN);
-  
   Ctx := nil;
   try
     try
@@ -910,6 +914,18 @@ begin
 
     if X509_STORE_CTX_init(Ctx, Store, FX509, nil) = 1 then
     begin
+      if Assigned(X509_STORE_CTX_get0_param) and Assigned(X509_VERIFY_PARAM_set_flags) then
+      begin
+        LPerCallVerifyFlags := 0;
+        if sslCertVerifyIgnoreExpiry in AFlags then
+          LPerCallVerifyFlags := LPerCallVerifyFlags or X509_V_FLAG_NO_CHECK_TIME;
+        if LPerCallVerifyFlags <> 0 then
+          X509_VERIFY_PARAM_set_flags(
+            X509_STORE_CTX_get0_param(Ctx),
+            LPerCallVerifyFlags
+          );
+      end;
+
       // CRL吊销检查已在下方实现（使用X509_V_FLAG_CRL_CHECK标志）
       
       // 如果需要检查吊销状态，则在验证参数上启用 CRL 检查
@@ -925,6 +941,21 @@ begin
       end;
       
       Ret := X509_verify_cert(Ctx);
+      LSelfSignedOverride := False;
+
+      if Ret <> 1 then
+      begin
+        ErrorCode := X509_STORE_CTX_get_error(Ctx);
+        if (sslCertVerifyAllowSelfSigned in AFlags) and
+          IsSelfSigned and
+          IsAllowSelfSignedTrustFailure(ErrorCode) then
+        begin
+          LSelfSignedOverride := True;
+          Ret := 1;
+          if Assigned(X509_STORE_CTX_set_error) then
+            X509_STORE_CTX_set_error(Ctx, X509_V_OK);
+        end;
+      end;
       
       if Ret = 1 then
       begin
@@ -1058,7 +1089,11 @@ begin
         AResult.Success := True;
         AResult.ErrorCode := 0;
         AResult.ErrorMessage := 'Certificate verification successful';
-        AResult.DetailedInfo := 'OpenSSL verification passed';
+        if LSelfSignedOverride then
+          AResult.DetailedInfo :=
+            'OpenSSL verification passed with sslCertVerifyAllowSelfSigned override for a self-signed leaf certificate'
+        else
+          AResult.DetailedInfo := 'OpenSSL verification passed';
         AResult.RevocationStatus := 0;
         Result := True;
       end

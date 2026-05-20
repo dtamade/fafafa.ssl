@@ -17260,3 +17260,54 @@
   - result: PASS
   - summary:
     - no whitespace or patch-format issues remain after the raw-connection truth alignment batch
+
+### OpenSSL VerifyEx Store Flag Isolation
+
+- `mcp__ace_tool__.search_context(...)`
+  - result: PASS
+  - summary:
+    - re-mapped the current `OpenSSL VerifyEx` implementation, X509 flag path, and focused plan/test anchors before editing
+
+- `git status --short`
+  - result: PASS
+  - summary:
+    - confirmed this batch resumed from one modified implementation file plus one new plan file and one new focused test
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_openssl_verify_ex_store_flag_isolation_contract_units -FEtmp/test_openssl_verify_ex_store_flag_isolation_contract_units -otmp/test_openssl_verify_ex_store_flag_isolation_contract_units/test_openssl_verify_ex_store_flag_isolation_contract tests/openssl/test_openssl_verify_ex_store_flag_isolation_contract.pas`
+  - result: PASS
+  - summary:
+    - rebuilt the focused OpenSSL store-isolation contract against current sources
+
+- intermediate run before compile finished
+  - result: DISCARDED
+  - summary:
+    - an early parallel run hit the previously built binary before the fresh compile completed, so that output was not used as proof
+
+- `./tmp/test_openssl_verify_ex_store_flag_isolation_contract_units/test_openssl_verify_ex_store_flag_isolation_contract`
+  - result: FAIL -> PASS
+  - summary:
+    - after rerunning the freshly compiled binary, `IgnoreExpiry` was already proven non-leaking on the current runtime
+    - the new self-signed branch exposed the real residual:
+      - `Self-signed leaf with AllowSelfSigned should succeed`
+      - but the old `OpenSSL VerifyEx` still failed
+    - after narrowing the implementation to a self-signed-leaf trust-error override, the focused contract returned green for both:
+      - `IgnoreExpiry` works and does not leak
+      - `AllowSelfSigned` works and does not leak
+
+- update implementation/docs:
+  - `src/fafafa.ssl.openssl.certificate.pas`
+  - `tests/openssl/test_openssl_verify_ex_store_flag_isolation_contract.pas`
+  - `docs/plans/2026-05-20-openssl-certificate-verifyex-store-flag-isolation.md`
+  - `task_plan.md`
+  - `findings.md`
+  - `progress.md`
+  - change:
+    - kept `IgnoreExpiry` on the per-call context path instead of shared store mutation
+    - removed the ineffective `PARTIAL_CHAIN` approximation from the `AllowSelfSigned` path
+    - allowed only the narrow self-signed-leaf trust-failure cases to override the current call
+    - expanded the focused contract to cover both exception flags and their non-leak behavior
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remain after the OpenSSL store-flag isolation closeout

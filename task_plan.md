@@ -10,6 +10,85 @@
 
 ## Current Status
 
+- [completed] `openssl certificate verifyex store flag isolation`
+  当前 focused 目标：
+  - 把
+    `OpenSSL`
+    证书对象的
+    `ISSLCertificate.VerifyEx`
+    在两个按次 exception flags 上的 live 语义收紧成真正的 public truth：
+    - `sslCertVerifyIgnoreExpiry`
+    - `sslCertVerifyAllowSelfSigned`
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-openssl-certificate-verifyex-store-flag-isolation.md`
+  - 修改实现：
+    - `src/fafafa.ssl.openssl.certificate.pas`
+  - 新增 focused tests：
+    - `tests/openssl/test_openssl_verify_ex_store_flag_isolation_contract.pas`
+  当前实施判断：
+  - 重新跑当前未提交实现后，
+    先证实了：
+    `IgnoreExpiry`
+    通过
+    `X509_STORE_CTX`
+    参数路径
+    已经不再污染同一个 store
+    上的后续调用
+  - 真正的 residual
+    不是继续扩 OpenSSL binding，
+    而是：
+    `sslCertVerifyAllowSelfSigned`
+    虽然对外已发布，
+    但旧实现靠
+    `X509_V_FLAG_PARTIAL_CHAIN`
+    并没有真正放行 self-signed leaf
+  - 最小正确修法
+    不是继续把
+    `AllowSelfSigned`
+    塞进 shared/native verify flags，
+    而是：
+    - 先保留 native
+      `X509_verify_cert`
+      作为基础验证真相
+    - 仅在
+      leaf 确认 self-signed
+      且错误属于
+      self-signed / trust failure
+      时，
+      对当前调用做窄范围 override
+  当前 focused proof：
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_openssl_verify_ex_store_flag_isolation_contract_units -FEtmp/test_openssl_verify_ex_store_flag_isolation_contract_units -otmp/test_openssl_verify_ex_store_flag_isolation_contract_units/test_openssl_verify_ex_store_flag_isolation_contract tests/openssl/test_openssl_verify_ex_store_flag_isolation_contract.pas`
+    - PASS
+  - `./tmp/test_openssl_verify_ex_store_flag_isolation_contract_units/test_openssl_verify_ex_store_flag_isolation_contract`
+    - PASS
+    - 同时覆盖：
+      - `IgnoreExpiry` 不泄漏
+      - `AllowSelfSigned` 生效且不泄漏
+  - `git diff --check`
+    - PASS
+  当前批收口后的默认下一步：
+  - 继续沿
+    `certificate.VerifyEx`
+    的 published-flag parity
+    审 residual gaps
+  - 优先看：
+    - `FreePascal`
+      /
+      `WinSSL`
+      的
+      `certificate.VerifyEx`
+      是否仍有
+      已发布 flag
+      只做 round-trip
+    - `OpenSSL`
+      的
+      `CheckRevocation`
+      /
+      `CheckCRL`
+      是否还存在
+      同类 per-call scope
+      残余风险
 - [completed] `openssl certificate verifyex strict-chain parity`
   当前 focused 目标：
   - 把
