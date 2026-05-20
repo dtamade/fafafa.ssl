@@ -51,8 +51,8 @@ require_fixed "$migration_guide" "if Supports(LConn, ISSLClientConnection, LClie
   "MIGRATION_GUIDE must show current per-connection client-role access when using raw ISSLConnection"
 require_fixed "$migration_guide" "LClientConn.SetServerName('example.com');" \
   "MIGRATION_GUIDE must use current per-connection SNI setter"
-require_fixed "$migration_guide" '`TSSLConfig.ServerName` / `ISSLContext.SetServerName(...)` / `TSSLContextBuilder.WithSNI(...)` 当前都只应视为 compatibility-only 入口。' \
-  "MIGRATION_GUIDE must classify old context-level SNI surfaces as compatibility-only"
+require_fixed "$migration_guide" '旧的 context-level SNI 写入口当前都只应视为 compatibility-only 兼容面；具体仍保留哪些 literal API 名称，以 `docs/reference/API_REFERENCE.md` 为准。' \
+  "MIGRATION_GUIDE must classify old context-level SNI surfaces with generic compatibility wording"
 require_fixed "$migration_guide" '`TSSLEnterpriseConfig` 当前 helper 名称是 `IsFIPSEnabled`、`GetTrustedRoots`、`GetAllPolicies`。' \
   "MIGRATION_GUIDE must use current WinSSL enterprise helper names"
 require_fixed "$migration_guide" '`GetFriendlyErrorMessage(...)` / `GetOpenSSLErrorCategory(...)` 当前来自 `fafafa.ssl.openssl.api.err`，属于 OpenSSL-specific low-level helper，不是通用 public facade API。' \
@@ -76,5 +76,7 @@ require_absent "$migration_guide" "CreateOpenSSLLibrary;" \
   "MIGRATION_GUIDE must stop promoting backend-specific CreateOpenSSLLibrary in active migration examples"
 require_absent "$migration_guide" "LLib := TSSLFactory.GetLibrary(sslOpenSSL);" \
   "MIGRATION_GUIDE low-level helper example must stop using stale GetLibrary entrypoint"
+require_absent "$migration_guide" '`TSSLConfig.ServerName` / `ISSLContext.SetServerName(...)` / `TSSLContextBuilder.WithSNI(...)` 当前都只应视为 compatibility-only 入口。' \
+  "MIGRATION_GUIDE must stop listing frozen context-level SNI literal names outside API_REFERENCE"
 
 echo "[PASS] migration guide active truth contract passed"

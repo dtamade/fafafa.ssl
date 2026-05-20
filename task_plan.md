@@ -10,6 +10,76 @@
 
 ## Current Status
 
+- [completed] `migration guide raw connection truth alignment`
+  当前 focused 目标：
+  - 把
+    `MIGRATION_GUIDE`
+    在 raw
+    `ISSLConnection`
+    客户端示例上的 current truth
+    重新钉实：
+    - 用
+      `Supports(..., ISSLClientConnection, ...)`
+      进入 client-role surface
+    - 保持 generic
+      compatibility wording，
+      不再回退到
+      frozen surface
+      literal-name 列表
+  - 同步修掉
+    `test_migration_guide_active_truth_contract.sh`
+    自己仍要求旧 literal-name 真相
+    的 stale contract
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-migration-guide-raw-connection-truth-alignment.md`
+  - 修改文档：
+    - `docs/guides/MIGRATION_GUIDE.md`
+  - 修改 focused contract：
+    - `tests/scripts/test_migration_guide_active_truth_contract.sh`
+  当前实施判断：
+  - 这批不是新的
+    runtime/interface bug，
+    而是上一轮
+    `MIGRATION_GUIDE`
+    收紧之后，
+    raw-connection 示例
+    与旧 contract
+    之间形成了新的真相错位
+  - 正确收口方式是：
+    - guide 继续不点名 frozen surface literal 名称
+    - 但 raw
+      `ISSLConnection`
+      示例必须明确展示：
+      `Supports(..., ISSLClientConnection, ...)`
+      + per-connection SNI
+  当前 focused proof：
+  - `bash -n tests/scripts/test_migration_guide_active_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_migration_guide_active_truth_contract.sh`
+    - PASS
+  - `bash -n tests/scripts/test_tsslconfig_servername_surface_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_tsslconfig_servername_surface_truth_contract.sh`
+    - PASS
+  - `bash -n tests/scripts/test_withsni_surface_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_withsni_surface_truth_contract.sh`
+    - PASS
+  - `bash -n tests/scripts/test_direct_context_servername_surface_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_direct_context_servername_surface_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前批收口后的默认下一步：
+  - 继续审
+    `ISSLConnection`
+    / `TSSLConfig`
+    主线里
+    仍然存在的
+    active-guide / canonical-reference
+    残余 drift
 - [completed] `context servername migration guide drift closeout`
   当前 focused 目标：
   - 收掉

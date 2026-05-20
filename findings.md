@@ -8944,3 +8944,50 @@
     的 surface-truth contract
     补成和另外两条一样的
     literal-name guard
+
+- 紧接着继续回跑
+  `MIGRATION_GUIDE`
+  自己的 active-truth contract
+  后，又确认了一条
+  更细但同样真实的
+  workflow mismatch：
+  - 上一轮把 guide
+    从 literal-name 列表
+    收成了 generic wording
+  - 但
+    `test_migration_guide_active_truth_contract.sh`
+    仍要求旧的
+    literal-name 行
+
+- 这说明
+  `MIGRATION_GUIDE`
+  当前不只是“文案要收紧”，
+  还要把
+  raw `ISSLConnection`
+  客户端示例
+  的新真相
+  一起写实：
+  - 如果 guide 继续保留
+    direct connection
+    场景
+  - 它就应该明确展示：
+    - `Supports(LConn, ISSLClientConnection, LClientConn)`
+    - `LClientConn.SetServerName(...)`
+
+- 否则会出现一种很别扭的中间态：
+  - guide 顶部已经不再点名
+    frozen context-level SNI surface
+  - 但 raw connection 示例
+    仍没有显式展示
+    当前 shipped 的
+    client-role access path
+
+- 所以这批最小正确修法是：
+  - guide 示例改成
+    `Supports(..., ISSLClientConnection, ...)`
+  - contract 也同步改成：
+    - 要求 generic compatibility wording
+    - 禁止旧 literal-name 列表回流
+    - 继续要求 raw connection
+      场景显式走
+      per-connection SNI

@@ -91,10 +91,12 @@ end;
 ```pascal
 var
   LConn: ISSLConnection;
+  LClientConn: ISSLClientConnection;
   LResponse: string;
 begin
   LConn := LContext.CreateConnection(THandle(LSocket));
-  (LConn as ISSLClientConnection).SetServerName('example.com');
+  if Supports(LConn, ISSLClientConnection, LClientConn) then
+    LClientConn.SetServerName('example.com');
 
   if LConn.Connect then
   begin

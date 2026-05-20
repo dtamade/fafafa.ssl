@@ -16747,3 +16747,54 @@
   - result: PASS
   - summary:
     - no whitespace or patch-format issues remain after the migration-guide drift closeout
+
+### Migration Guide Raw Connection Truth Alignment
+
+- `bash -n tests/scripts/test_migration_guide_active_truth_contract.sh && bash tests/scripts/test_migration_guide_active_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first failed because the guide no longer matched the contract's old expectation:
+      - the contract still required the pre-tightening frozen-surface literal-name line
+      - the raw `ISSLConnection` snippet still used a direct cast instead of an explicit `Supports(..., ISSLClientConnection, ...)` path
+    - after aligning both guide and contract to the new truth, the focused contract returned green
+
+- update implementation/docs:
+  - `docs/guides/MIGRATION_GUIDE.md`
+  - `tests/scripts/test_migration_guide_active_truth_contract.sh`
+  - `docs/plans/2026-05-20-migration-guide-raw-connection-truth-alignment.md`
+  - change:
+    - raw `ISSLConnection` client example now explicitly uses `Supports(LConn, ISSLClientConnection, LClientConn)`
+    - the guide keeps generic compatibility wording instead of reintroducing frozen surface literal names
+    - the contract now requires the generic wording, forbids the old literal-name list, and still demands the per-connection client-role path
+
+- `bash -n tests/scripts/test_migration_guide_active_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_migration_guide_active_truth_contract.sh`
+  - result: PASS
+
+- `bash -n tests/scripts/test_tsslconfig_servername_surface_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_tsslconfig_servername_surface_truth_contract.sh`
+  - result: PASS
+
+- `bash -n tests/scripts/test_withsni_surface_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_withsni_surface_truth_contract.sh`
+  - result: PASS
+
+- `bash -n tests/scripts/test_direct_context_servername_surface_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_direct_context_servername_surface_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - migration-guide truth and the three frozen ServerName surface contracts are green together again
+    - no contract now requires the old literal-name line to come back
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remain after the raw-connection truth alignment batch
