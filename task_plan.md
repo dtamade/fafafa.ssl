@@ -11275,3 +11275,103 @@
        是否接受新的
        `FindBySerialNumber`
        memory-store contract
+123. `OpenSSL/WinSSL certificate store fingerprint query parity` 这批用于把 `FindByFingerprint` 在两个主 backend 上收紧到与 `FreePascal` 一致的 normalized hex truth：
+   - 新 plan：
+     - `docs/plans/2026-05-21-openssl-winssl-certificate-store-fingerprint-query-parity.md`
+   - 当前新发现：
+     - `TOpenSSLCertificateStore`
+       当前 fingerprint index/query
+       只去掉 `:`
+     - `TWinSSLCertificateStore`
+       当前 fingerprint compare
+       也只去掉 `:`
+     - 这意味着：
+       lower-case + `:`
+       可能已经能命中，
+       但
+       `AA-BB-CC`
+       /
+       首尾空白
+       这类展示格式
+       仍没有真正对齐
+       `FreePascal`
+       基线
+   - 当前源码真相：
+     - `FreePascal.NormalizeFingerprint(...)`
+       已统一去掉：
+       - `:`
+       - `-`
+       - 空格
+     - `OpenSSL`
+       /
+       `WinSSL`
+       还没有收回到 shared hex normalize helper
+   - 当前最小修法：
+     - `OpenSSL`
+       fingerprint index/query
+       改复用
+       `NormalizeCertificateStoreHex(...)`
+     - `WinSSL`
+       fingerprint compare
+       也改复用
+       `NormalizeCertificateStoreHex(...)`
+     - 在
+       `OpenSSL`
+       /
+       `WinSSL`
+       focused tests
+       都补
+       `-`
+       +
+       空白 variant
+   - 当前 focused proof：
+     - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_openssl_certstore_fingerprint_query_contract_units -FEtmp/test_openssl_certstore_fingerprint_query_contract_units -otmp/test_openssl_certstore_fingerprint_query_contract_units/test_openssl_certstore_fingerprint_query_contract tests/openssl/test_openssl_certstore_fingerprint_query_contract.pas`
+     - `./tmp/test_openssl_certstore_fingerprint_query_contract_units/test_openssl_certstore_fingerprint_query_contract`
+     - `git diff --check`
+     - `WinSSL`
+       runtime proof
+       继续看
+       GitHub Windows CI
+   - 当前最终收口证据：
+     - 首轮 RED：
+       - `FindByFingerprint supports normalized fingerprint query variant`
+     - 修复后：
+       - `OpenSSL` focused contract
+         `9 passed / 0 failed`
+       - `git diff --check`
+         通过
+   - 当前结论：
+     - 这批证明
+       `FindByFingerprint`
+       在两个主 backend
+       上仍有真实 query-normalization residual，
+       不是文档假设问题
+     - 当前本地
+       `OpenSSL`
+       已闭环；
+       `WinSSL`
+       runtime truth
+       继续由
+       Windows CI
+       最终确认
+   - 当前总路线图进度：
+     - `接口设计`
+       已从
+       “有这个方法”
+       推到
+       “查询语义跨 backend 真一致”
+     - `后端实现`
+       当前正在收最后几条
+       certstore query family
+       的主 backend residual
+     - `测试和文档`
+       继续跟着每条 focused contract
+       同步闭环
+   - 当前批收口后的默认下一步：
+     - 提交并推送本批
+     - 看
+       `Windows`
+       runtime suite
+       是否接受新的
+       fingerprint query
+       memory-store contract

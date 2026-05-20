@@ -244,7 +244,7 @@ begin
       FP := Cert.GetFingerprintSHA1;
     if FP <> '' then
     begin
-      FP := UpperCase(StringReplace(FP, ':', '', [rfReplaceAll]));
+      FP := NormalizeCertificateStoreHex(FP);
       FIndexByFingerprint.AddObject(FP, TObject(PtrInt(AIndex)));
     end;
 
@@ -724,8 +724,9 @@ begin
   if FIndexByFingerprint.Count = 0 then Exit;
 
   // Phase 2.5: O(log n) 索引查找替代 O(n) 线性搜索
-  // 规范化指纹格式：移除冒号，转大写
-  SearchFP := UpperCase(StringReplace(AFingerprint, ':', '', [rfReplaceAll]));
+  SearchFP := NormalizeCertificateStoreHex(AFingerprint);
+  if SearchFP = '' then
+    Exit;
 
   Idx := FIndexByFingerprint.IndexOf(SearchFP);
   if Idx >= 0 then

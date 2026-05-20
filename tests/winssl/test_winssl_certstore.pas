@@ -625,16 +625,61 @@ procedure TestFindByFingerprint;
 var
   LStore: TWinSSLCertificateStore;
   LCert: ISSLCertificate;
+  LFixturePath: string;
+  LFingerprintCompact: string;
+  LFingerprintVariant: string;
+  LCharIndex: Integer;
 begin
   WriteLn('【测试 10】按指纹查找证书');
   WriteLn('---');
 
   try
-    LStore := OpenConcreteSystemStore(SSL_STORE_ROOT);
+    LStore := CreateMemoryBackedStore;
+    Assert(LStore <> nil, '创建 memory-backed store 成功');
+    if LStore = nil then
+    begin
+      WriteLn;
+      Exit;
+    end;
 
-    // 查找不存在的指纹
-    LCert := LStore.FindByFingerprint('00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00');
-    Assert(LCert = nil, '查找不存在的指纹返回 nil');
+    LFixturePath := ResolveRepoFixturePath('tests/certificate/test_certs/signer_cert.pem');
+    Assert(LFixturePath <> '', '定位 fingerprint 查询夹具路径成功');
+    if LFixturePath = '' then
+    begin
+      LStore.Close;
+      WriteLn;
+      Exit;
+    end;
+
+    LCert := TWinSSLCertificate.Create(nil, False);
+    Assert(LCert <> nil, '创建 fingerprint 查询夹具证书成功');
+    if LCert = nil then
+    begin
+      LStore.Close;
+      WriteLn;
+      Exit;
+    end;
+
+    Assert(LCert.LoadFromFile(LFixturePath), '加载 fingerprint 查询夹具成功');
+    Assert(LStore.AddCertificate(LCert), 'fingerprint 查询夹具加入内存存储成功');
+
+    LFingerprintCompact := NormalizeHexish(LCert.GetFingerprintSHA256);
+    Assert(LFingerprintCompact <> '', 'fingerprint 查询夹具暴露非空指纹');
+    LFingerprintVariant := '';
+    for LCharIndex := 1 to Length(LFingerprintCompact) do
+    begin
+      if (LCharIndex > 1) and (((LCharIndex - 1) mod 2) = 0) then
+        LFingerprintVariant := LFingerprintVariant + '-';
+      LFingerprintVariant := LFingerprintVariant + LowerCase(LFingerprintCompact[LCharIndex]);
+    end;
+    LFingerprintVariant := '  ' + LFingerprintVariant + '  ';
+
+    Assert(LStore.FindByFingerprint(LFingerprintVariant) <> nil,
+      '按归一化指纹查找成功');
+    Assert(LStore.FindByFingerprint('00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00') = nil,
+      '查找不存在的指纹返回 nil');
+    Assert(LStore.FindByFingerprint('   --   ') = nil,
+      '空白型指纹查询返回 nil');
 
     LStore.Close;
 

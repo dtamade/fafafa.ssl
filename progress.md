@@ -17949,6 +17949,79 @@
       is intentionally deferred to
       GitHub Windows CI
 
+### OpenSSL And WinSSL Certificate Store Fingerprint Query Parity
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-openssl-winssl-certificate-store-fingerprint-query-parity.md`
+  - `tests/openssl/test_openssl_certstore_fingerprint_query_contract.pas`
+  - `tests/winssl/test_winssl_certstore.pas`
+  - change:
+    - recorded a bounded fingerprint-query parity batch for
+      `OpenSSL`
+      /
+      `WinSSL`
+    - added a focused
+      `OpenSSL`
+      contract for:
+      - non-empty fixture fingerprint truth
+      - normalized fingerprint query hit with
+        `-`
+        +
+        outer whitespace
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_openssl_certstore_fingerprint_query_contract_units -FEtmp/test_openssl_certstore_fingerprint_query_contract_units -otmp/test_openssl_certstore_fingerprint_query_contract_units/test_openssl_certstore_fingerprint_query_contract tests/openssl/test_openssl_certstore_fingerprint_query_contract.pas`
+- `./tmp/test_openssl_certstore_fingerprint_query_contract_units/test_openssl_certstore_fingerprint_query_contract`
+  - result: FAIL
+  - summary:
+    - captured the intended RED:
+      `FindByFingerprint supports normalized fingerprint query variant`
+    - this proved
+      `OpenSSL`
+      was still only handling a narrower
+      `:`
+      based normalization path
+
+- update implementation:
+  - `src/fafafa.ssl.openssl.certstore.pas`
+  - `src/fafafa.ssl.winssl.certstore.pas`
+  - change:
+    - `TOpenSSLCertificateStore`
+      now builds fingerprint index keys through
+      `NormalizeCertificateStoreHex(...)`
+    - `TOpenSSLCertificateStore.FindByFingerprint`
+      now normalizes query input through the same helper and fail-closes on empty normalized input
+    - `TWinSSLCertificateStore.FindByFingerprint`
+      now normalizes:
+      - query input
+      - candidate SHA256
+      - candidate SHA1
+      through
+      `NormalizeCertificateStoreHex(...)`
+
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_openssl_certstore_fingerprint_query_contract_units -FEtmp/test_openssl_certstore_fingerprint_query_contract_units -otmp/test_openssl_certstore_fingerprint_query_contract_units/test_openssl_certstore_fingerprint_query_contract tests/openssl/test_openssl_certstore_fingerprint_query_contract.pas`
+- `./tmp/test_openssl_certstore_fingerprint_query_contract_units/test_openssl_certstore_fingerprint_query_contract`
+  - result: PASS
+  - summary:
+    - final focused
+      `OpenSSL`
+      fingerprint-query contract is now green:
+      `9 passed / 0 failed`
+    - proves the query path now accepts
+      lower-case
+      +
+      `-`
+      +
+      outer whitespace
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains before commit
+    - remaining runtime proof for
+      `WinSSL`
+      is intentionally deferred to
+      GitHub Windows CI
+
 ## 2026-05-21
 
 ### Optional Backends Certificate Store Fingerprint Query Parity

@@ -716,14 +716,16 @@ var
   SearchFP: string;
 begin
   Result := nil;
-  SearchFP := UpperCase(StringReplace(AFingerprint, ':', '', [rfReplaceAll]));
+  SearchFP := NormalizeCertificateStoreHex(AFingerprint);
+  if SearchFP = '' then
+    Exit;
   
   for I := 0 to FCertificates.Count - 1 do
   begin
     Cert := ISSLCertificate(FCertificates[I]);
     
     // Try SHA256 fingerprint (constant-time comparison)
-    FP_SHA256 := UpperCase(StringReplace(Cert.GetFingerprintSHA256, ':', '', [rfReplaceAll]));
+    FP_SHA256 := NormalizeCertificateStoreHex(Cert.GetFingerprintSHA256);
     if (FP_SHA256 <> '') and SecureCompareStrings(FP_SHA256, SearchFP) then
     begin
       Result := Cert;
@@ -731,7 +733,7 @@ begin
     end;
     
     // Try SHA1 fingerprint (constant-time comparison)
-    FP_SHA1 := UpperCase(StringReplace(Cert.GetFingerprintSHA1, ':', '', [rfReplaceAll]));
+    FP_SHA1 := NormalizeCertificateStoreHex(Cert.GetFingerprintSHA1);
     if (FP_SHA1 <> '') and SecureCompareStrings(FP_SHA1, SearchFP) then
     begin
       Result := Cert;

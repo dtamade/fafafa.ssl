@@ -359,6 +359,88 @@
   由
   GitHub Windows CI
   最终确认
+
+- 紧接着往下扫时，
+  又抓到了一条同 family 的主 backend residual：
+  `OpenSSL`
+  /
+  `WinSSL`
+  的
+  `FindByFingerprint`
+  目前虽然不再是完全 raw compare，
+  但仍只去掉了 `:`
+
+- 这和当前仓库更稳的基线
+  已经不一致：
+  - `FreePascal.NormalizeFingerprint(...)`
+    会统一去掉：
+    - `:`
+    - `-`
+    - 空格
+  - optional backend
+    之前也已经围绕 normalized fingerprint truth
+    做过 focused contract
+
+- 所以这条线的真实问题
+  不是“有没有大小写归一化”，
+  而是：
+  `OpenSSL`
+  /
+  `WinSSL`
+  仍没把 fingerprint query
+  真正收回到 compact hex truth
+
+- 首轮
+  `OpenSSL`
+  focused RED
+  也非常干净：
+  - getter 正常
+  - add/store 正常
+  - 只在
+    `FindByFingerprint supports normalized fingerprint query variant`
+    失败
+  - 失败输入正是：
+    lower-case
+    +
+    `-`
+    +
+    首尾空白
+    的 variant
+
+- 因而这批最小正确修法
+  不是重构 store design，
+  而是直接把：
+  - `TOpenSSLCertificateStore`
+    的 fingerprint index/query
+  - `TWinSSLCertificateStore`
+    的 fingerprint compare
+  统一改成复用
+  `NormalizeCertificateStoreHex(...)`
+
+- 当前本地证据已经说明
+  这条修法方向成立：
+  - `OpenSSL`
+    focused contract
+    重新转绿：
+    `9 passed / 0 failed`
+  - 说明：
+    `FindByFingerprint`
+    现在已经能正确吃掉
+    `-`
+    /
+    空白
+    格式的 query variant
+
+- 因而当前路线图上
+  `ISSLCertificateStore`
+  query family
+  的主 backend residual
+  又少了一条：
+  现在还未最终 runtime 盖章的
+  主要只剩
+  `WinSSL`
+  push 后
+  的 Windows CI 结果
     都是绿色
   - 失败的是
     `Timing variance is acceptable`
