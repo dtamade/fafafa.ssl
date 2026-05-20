@@ -37,6 +37,12 @@ require_fixed "$api_doc" "**版本:** rolling" \
   "API_DOCUMENTATION must declare rolling doc version instead of stale 2.0.0 snapshot"
 require_fixed "$api_doc" ".WithSystemRoots;" \
   "API_DOCUMENTATION quick-start must use current builder system-roots method"
+require_fixed "$api_doc" '下面这段 `5 分钟上手` 展示的是 active API reference 的 direct `ISSLConnection` / owner-surface reference，不是普通新代码唯一推荐的 TLS bootstrap 入口。' \
+  "API_DOCUMENTATION quick-start must classify itself as a direct low-level reference path"
+require_fixed "$api_doc" '如果你只是普通客户端/服务端接入，优先回到 `docs/guides/GETTING_STARTED.md` 里的 `TSSLConnector` / `TSSLAcceptor` / `TSSLStream` 主路径。' \
+  "API_DOCUMENTATION quick-start must route ordinary bootstrap flows back to GETTING_STARTED main entry"
+require_fixed "$api_doc" '这里之所以仍直接展示 `CreateConnection(...)`，是因为本页后续还会继续展开挂在连接对象上的 owner surface，例如 `ISSLOCSPStapling` / `ISSLCertificateVerification`。' \
+  "API_DOCUMENTATION quick-start must explain why it intentionally stays on the connection owner path"
 require_fixed "$api_doc" "Connection := Context.CreateConnection(Socket);" \
   "API_DOCUMENTATION must create SSL connections from caller-owned socket/stream handles"
 require_fixed "$api_doc" "if Supports(Connection, ISSLClientConnection, ClientConn) then" \

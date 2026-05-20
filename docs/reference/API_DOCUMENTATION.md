@@ -22,6 +22,10 @@
 
 ### 5 分钟上手
 
+下面这段 `5 分钟上手` 展示的是 active API reference 的 direct `ISSLConnection` / owner-surface reference，不是普通新代码唯一推荐的 TLS bootstrap 入口。
+如果你只是普通客户端/服务端接入，优先回到 `docs/guides/GETTING_STARTED.md` 里的 `TSSLConnector` / `TSSLAcceptor` / `TSSLStream` 主路径。
+这里之所以仍直接展示 `CreateConnection(...)`，是因为本页后续还会继续展开挂在连接对象上的 owner surface，例如 `ISSLOCSPStapling` / `ISSLCertificateVerification`。
+
 ```pascal
 program QuickStart;
 

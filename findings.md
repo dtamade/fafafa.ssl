@@ -2,6 +2,58 @@
 
 ## 2026-05-21
 
+- `API_DOCUMENTATION`
+  顶部 quickstart
+  之前还有一层很容易被忽视的 live drift：
+  - 它已经不再写错
+    `Connect`
+    /
+    `CreateConnection`
+    形状
+  - 但因为没有主路径分类，
+    读者仍会自然把它读成：
+    “这就是当前默认 TLS bootstrap 入口”
+
+- 这类 drift
+  跟 section-level mirror drift
+  很像，
+  但位置更危险：
+  - 它不在某个 getter 条目里，
+    而是在整页最顶部的
+    `5 分钟上手`
+  - 所以只要不显式标注，
+    之前已经在
+    `README`
+    /
+    `GETTING_STARTED`
+    收住的主入口心智，
+    还是会被这页重新带偏
+
+- 这再次说明：
+  高入口文档的风险
+  不只在代码示例是否调用了正确 API，
+  还在于它有没有说清楚
+  “为什么这里故意走低层入口”
+
+- 这批收口后的 durable truth 是：
+  - `README`
+    /
+    `GETTING_STARTED`
+    继续负责 ordinary bootstrap path
+  - `API_DOCUMENTATION`
+    开头 quickstart
+    现在明确只是：
+    - active API reference
+    - direct `ISSLConnection`
+      / owner-surface reference
+  - 之所以仍直接使用
+    `CreateConnection(...)`
+    是因为本页后续要继续展开
+    `ISSLOCSPStapling`
+    /
+    `ISSLCertificateVerification`
+    等连接侧 owner surface
+
 - `docs/reference/API_DOCUMENTATION.md`
   在
   `ISSLConnection`

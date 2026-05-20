@@ -6,6 +6,75 @@
 
 ## 2026-05-21
 
+### API Documentation Quickstart Main-Entry Classification
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-api-documentation-quickstart-main-entry-classification.md`
+  - change:
+    - recorded a bounded
+      `API_DOCUMENTATION`
+      quickstart-route classification batch
+    - explicitly framed the problem as
+      `top-of-page bootstrap drift + missing low-level-reference labeling`
+
+- update focused contract first:
+  - `tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+  - change:
+    - required the
+      `5 分钟上手`
+      block to classify itself as a direct low-level
+      `ISSLConnection`
+      / owner-surface reference
+    - required ordinary bootstrap flows to route back to
+      `docs/guides/GETTING_STARTED.md`
+      and
+      `TSSLConnector`
+      /
+      `TSSLAcceptor`
+      /
+      `TSSLStream`
+    - required an explicit reason for still teaching
+      `CreateConnection(...)`
+      on this page
+
+- existing RED from this batch:
+  - `bash -n tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - first surfaced a script-only robustness issue caused by shell command substitution in backtick-bearing contract strings
+      - after tightening the contract quoting, captured the intended RED:
+        `API_DOCUMENTATION quick-start must classify itself as a direct low-level reference path`
+
+- update implementation:
+  - `docs/reference/API_DOCUMENTATION.md`
+  - change:
+    - added a top-of-quickstart note that this page is an active API reference
+      and the opening snippet is a direct
+      `ISSLConnection`
+      / owner-surface reference
+    - routed ordinary bootstrap flows back to
+      `GETTING_STARTED`
+      and the
+      `TSSLConnector`
+      /
+      `TSSLAcceptor`
+      /
+      `TSSLStream`
+      path
+    - explained that the page intentionally stays on
+      `CreateConnection(...)`
+      because later sections expand connection-side owner surfaces
+
+- `bash -n tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+- `bash tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - active connection API docs contract is now green with quickstart main-entry classification
+    - patch formatting is clean
+
 ### API Documentation ISSLConnection Slice And OCSP Mirror Classification
 
 - add focused batch inputs:

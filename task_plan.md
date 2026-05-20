@@ -10,6 +10,96 @@
 
 ## Current Status
 
+- [completed] `api documentation quickstart main-entry classification`
+  当前 focused 目标：
+  - 收掉
+    `docs/reference/API_DOCUMENTATION.md`
+    开头
+    `5 分钟上手`
+    仍像在发布当前默认主入口的问题：
+    - 示例直接走
+      `CreateConnection(...)`
+      /
+      `ISSLConnection`
+    - 但没像
+      `README`
+      /
+      `GETTING_STARTED`
+      那样明确这是低层 reference 路径
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-api-documentation-quickstart-main-entry-classification.md`
+  - 修改文档：
+    - `docs/reference/API_DOCUMENTATION.md`
+  - 修改 focused contract：
+    - `tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+  当前实施判断：
+  - 这批不是接口签名错误，
+    而是 active API docs
+    顶部入口仍可能把调用方带回
+    direct-core 心智
+  - 正确修法不是重写整个 quickstart，
+    而是：
+    - 先让 focused contract
+      要求它显式标注：
+      low-level reference
+      /
+      ordinary bootstrap 回跳
+      /
+      owner-surface reason
+    - 拿到 RED
+    - 再最小补说明
+  当前 focused proof：
+  - `bash -n tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+    - 首轮：
+      FAIL
+      - 预期 RED：
+        `API_DOCUMENTATION quick-start must classify itself as a direct low-level reference path`
+    - 修复后：
+      PASS
+  - `git diff --check`
+    - PASS
+  当前状态：
+  - `API_DOCUMENTATION`
+    开头
+    `5 分钟上手`
+    现已明确：
+    - 这是 active API reference 的
+      direct `ISSLConnection`
+      / owner-surface reference
+    - 普通 client/server 接入
+      应优先回到
+      `docs/guides/GETTING_STARTED.md`
+      里的
+      `TSSLConnector`
+      /
+      `TSSLAcceptor`
+      /
+      `TSSLStream`
+      主路径
+    - 这页继续直接展示
+      `CreateConnection(...)`
+      是因为后续还会展开
+      `ISSLOCSPStapling`
+      /
+      `ISSLCertificateVerification`
+      等连接侧 owner surface
+  当前总路线图进度：
+  - `接口设计`
+    已从
+    “接口签名别漂移”
+    推进到
+    “高入口文档也必须讲清主路径 vs low-level reference”
+  - `后端实现`
+    当前主线已明显收缩到更少数真正的 backend completeness residual，
+    不再被
+    active-doc 路线误导拖慢
+  - `测试和文档`
+    继续通过 focused contract
+    与台账同步闭环
+
 - [completed] `api documentation isslconnection slice and ocsp mirror classification`
   当前 focused 目标：
   - 收掉 `docs/reference/API_DOCUMENTATION.md`
