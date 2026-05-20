@@ -17821,3 +17821,44 @@
       - `sslCertVerifyIgnoreExpiry`
       - `sslCertVerifyAllowSelfSigned`
     - kept the existing strict-chain EKU gate on the success path
+
+### Capability Support-Level Serialization Precedence
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-20-capability-support-level-serialization-precedence.md`
+  - `tests/test_capability_serialization_support_level_truth.pas`
+  - change:
+    - recorded a bounded serializer-precedence batch around pure legacy-only round-trip drift
+    - added a focused regression that covers both:
+      - support-level-aware JSON/XML truth projection
+      - legacy-only JSON/XML round-trip preservation
+
+- update implementation:
+  - `src/fafafa.ssl.capability.serializer.pas`
+  - change:
+    - JSON/XML serializers now emit `*Support` fields only when the record is already in the support-level-aware lane
+    - pure legacy-only records no longer synthesize `sniSupport` / `ocspStaplingSupport` / `sessionTicketsSupport` / other `none` truth during export
+    - `JSONToCapabilities(...)` / `XMLToCapabilities(...)` now initialize `TSSLBackendCapabilities` with `Default(...)` instead of `FillChar(...)`, removing the serializer unit's two managed-record warnings
+
+- `fpc -B -Fu./src -Fu./tests -otmp/test_capability_serialization_support_level_truth tests/test_capability_serialization_support_level_truth.pas`
+- `./tmp/test_capability_serialization_support_level_truth`
+  - result: PASS
+  - summary:
+    - the new focused regression is green:
+      - support-level-aware JSON/XML still exports explicit `*Support` truth
+      - legacy-only JSON/XML no longer emits synthetic `*Support` fields
+      - round-trip preserves original legacy booleans
+    - after the `Default(...)` follow-up, the two serializer-local managed-result warnings disappeared from this compile
+
+- `mkdir -p tmp/cap_roundtrip`
+- `fpc -B -Fu./src -Fu./tests -FUtmp/cap_roundtrip -FEtmp/cap_roundtrip -otest_capability_deserialization_roundtrip tests/test_capability_deserialization_roundtrip.pas`
+- `./tmp/cap_roundtrip/test_capability_deserialization_roundtrip`
+  - result: PASS
+  - summary:
+    - existing JSON/XML deserialization round-trip coverage stayed green after the serializer precedence fix
+    - broader compile still reports existing repo-wide warnings outside this batch, but the serializer unit itself dropped from `2` focused warnings to `0`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains before commit

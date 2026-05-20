@@ -285,6 +285,7 @@ function CapabilitiesToJSON(const ACaps: TSSLBackendCapabilities;
                             const APretty: Boolean = True): string;
 var
   LCaps: TSSLBackendCapabilities;
+  LEmitSupportLevels: Boolean;
   Indent: string;
   NL: string;
 
@@ -309,6 +310,7 @@ var
 
 begin
   PrepareCapabilitiesForSerialization(ACaps, LCaps);
+  LEmitSupportLevels := HasAnySupportLevelTruth(LCaps);
 
   if APretty then
   begin
@@ -343,16 +345,19 @@ begin
   Result := Result + AddField('supportsDTLS', BoolToJSONStr(LCaps.SupportsDTLS));
 
   // 功能支持级别
-  Result := Result + AddField('sniSupport', FeatureSupportLevelToStr(LCaps.SNISupport));
-  Result := Result + AddField('alpnSupport', FeatureSupportLevelToStr(LCaps.ALPNSupport));
-  Result := Result + AddField('ocspStaplingSupport', FeatureSupportLevelToStr(LCaps.OCSPStaplingSupport));
-  Result := Result + AddField('certTransparencySupport', FeatureSupportLevelToStr(LCaps.CertTransparencySupport));
-  Result := Result + AddField('sessionTicketsSupport', FeatureSupportLevelToStr(LCaps.SessionTicketsSupport));
-  Result := Result + AddField('sessionCacheSupport', FeatureSupportLevelToStr(LCaps.SessionCacheSupport));
-  Result := Result + AddField('zeroRTTSupport', FeatureSupportLevelToStr(LCaps.ZeroRTTSupport));
-  Result := Result + AddField('earlyDataSupport', FeatureSupportLevelToStr(LCaps.EarlyDataSupport));
-  Result := Result + AddField('renegotiationSupport', FeatureSupportLevelToStr(LCaps.RenegotiationSupport));
-  Result := Result + AddField('postHandshakeAuthSupport', FeatureSupportLevelToStr(LCaps.PostHandshakeAuthSupport));
+  if LEmitSupportLevels then
+  begin
+    Result := Result + AddField('sniSupport', FeatureSupportLevelToStr(LCaps.SNISupport));
+    Result := Result + AddField('alpnSupport', FeatureSupportLevelToStr(LCaps.ALPNSupport));
+    Result := Result + AddField('ocspStaplingSupport', FeatureSupportLevelToStr(LCaps.OCSPStaplingSupport));
+    Result := Result + AddField('certTransparencySupport', FeatureSupportLevelToStr(LCaps.CertTransparencySupport));
+    Result := Result + AddField('sessionTicketsSupport', FeatureSupportLevelToStr(LCaps.SessionTicketsSupport));
+    Result := Result + AddField('sessionCacheSupport', FeatureSupportLevelToStr(LCaps.SessionCacheSupport));
+    Result := Result + AddField('zeroRTTSupport', FeatureSupportLevelToStr(LCaps.ZeroRTTSupport));
+    Result := Result + AddField('earlyDataSupport', FeatureSupportLevelToStr(LCaps.EarlyDataSupport));
+    Result := Result + AddField('renegotiationSupport', FeatureSupportLevelToStr(LCaps.RenegotiationSupport));
+    Result := Result + AddField('postHandshakeAuthSupport', FeatureSupportLevelToStr(LCaps.PostHandshakeAuthSupport));
+  end;
 
   // 算法支持
   Result := Result + AddField('supportedCiphers', '"' + EncodeCipherSet(LCaps.SupportedCiphers) + '"');
@@ -538,7 +543,7 @@ var
   end;
 
 begin
-  FillChar(Result, SizeOf(Result), 0);
+  Result := Default(TSSLBackendCapabilities);
   LHasSNISupport := False;
   LHasALPNSupport := False;
   LHasOCSPStaplingSupport := False;
@@ -691,6 +696,7 @@ function CapabilitiesToXML(const ACaps: TSSLBackendCapabilities;
                           const APretty: Boolean = True): string;
 var
   LCaps: TSSLBackendCapabilities;
+  LEmitSupportLevels: Boolean;
   Indent: string;
   NL: string;
 
@@ -736,6 +742,7 @@ var
 
 begin
   PrepareCapabilitiesForSerialization(ACaps, LCaps);
+  LEmitSupportLevels := HasAnySupportLevelTruth(LCaps);
 
   if APretty then
   begin
@@ -771,16 +778,19 @@ begin
   Result := Result + AddElement('supportsDTLS', BoolToStr(LCaps.SupportsDTLS, True));
 
   // 功能支持级别
-  Result := Result + AddElement('sniSupport', FeatureSupportLevelToStr(LCaps.SNISupport));
-  Result := Result + AddElement('alpnSupport', FeatureSupportLevelToStr(LCaps.ALPNSupport));
-  Result := Result + AddElement('ocspStaplingSupport', FeatureSupportLevelToStr(LCaps.OCSPStaplingSupport));
-  Result := Result + AddElement('certTransparencySupport', FeatureSupportLevelToStr(LCaps.CertTransparencySupport));
-  Result := Result + AddElement('sessionTicketsSupport', FeatureSupportLevelToStr(LCaps.SessionTicketsSupport));
-  Result := Result + AddElement('sessionCacheSupport', FeatureSupportLevelToStr(LCaps.SessionCacheSupport));
-  Result := Result + AddElement('zeroRTTSupport', FeatureSupportLevelToStr(LCaps.ZeroRTTSupport));
-  Result := Result + AddElement('earlyDataSupport', FeatureSupportLevelToStr(LCaps.EarlyDataSupport));
-  Result := Result + AddElement('renegotiationSupport', FeatureSupportLevelToStr(LCaps.RenegotiationSupport));
-  Result := Result + AddElement('postHandshakeAuthSupport', FeatureSupportLevelToStr(LCaps.PostHandshakeAuthSupport));
+  if LEmitSupportLevels then
+  begin
+    Result := Result + AddElement('sniSupport', FeatureSupportLevelToStr(LCaps.SNISupport));
+    Result := Result + AddElement('alpnSupport', FeatureSupportLevelToStr(LCaps.ALPNSupport));
+    Result := Result + AddElement('ocspStaplingSupport', FeatureSupportLevelToStr(LCaps.OCSPStaplingSupport));
+    Result := Result + AddElement('certTransparencySupport', FeatureSupportLevelToStr(LCaps.CertTransparencySupport));
+    Result := Result + AddElement('sessionTicketsSupport', FeatureSupportLevelToStr(LCaps.SessionTicketsSupport));
+    Result := Result + AddElement('sessionCacheSupport', FeatureSupportLevelToStr(LCaps.SessionCacheSupport));
+    Result := Result + AddElement('zeroRTTSupport', FeatureSupportLevelToStr(LCaps.ZeroRTTSupport));
+    Result := Result + AddElement('earlyDataSupport', FeatureSupportLevelToStr(LCaps.EarlyDataSupport));
+    Result := Result + AddElement('renegotiationSupport', FeatureSupportLevelToStr(LCaps.RenegotiationSupport));
+    Result := Result + AddElement('postHandshakeAuthSupport', FeatureSupportLevelToStr(LCaps.PostHandshakeAuthSupport));
+  end;
 
   // 算法支持
   Result := Result + AddElement('supportedCiphers', EncodeCipherSet(LCaps.SupportedCiphers));
@@ -909,7 +919,7 @@ var
   end;
 
 begin
-  FillChar(Result, SizeOf(Result), 0);
+  Result := Default(TSSLBackendCapabilities);
   LHasSNISupport := False;
   LHasALPNSupport := False;
   LHasOCSPStaplingSupport := False;

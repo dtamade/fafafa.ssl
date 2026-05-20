@@ -6659,6 +6659,14 @@
   - 新增 `tests/test_capability_serialization_truth_projection.pas`，直接检查 JSON/XML 输出字符串
   - serializer 现在会在 record 已携带 support-level truth 时，先回填 legacy boolean 再输出
   - 既有 JSON/XML round-trip 兼容保持绿色
+- [completed] legacy-only capability round-trip truth 也已补上 focused 收口：
+  - 新增 `docs/plans/2026-05-20-capability-support-level-serialization-precedence.md`
+  - 新增 `tests/test_capability_serialization_support_level_truth.pas`
+  - serializer 不再对 pure legacy-only record 凭空生成 `sniSupport` / `ocspStaplingSupport` / `sessionTicketsSupport` 这类 `none` truth
+  - JSON/XML round-trip 现在同时固定两条规则：
+    - support-level-aware record 继续显式输出 `*Support` 并以其为真相
+    - legacy-only record 保留旧 boolean truth，不再被 synthetic `*Support="none"` 反向抹掉
+  - 当前 live backend `GetCapabilities` producer 已统一发布完整 support-level 视图，所以这批不会削弱真实 runtime/export surface；手工混合 record 的彻底无歧义语义仍需未来 presence bits
 - [completed] `context-level ServerName` 迁移路线图与兼容锁点地图已固化：
   - 新增 `docs/plans/2026-05-18-context-servername-compatibility-migration-roadmap.md`
   - intentional compatibility tests 已统一纳入 `tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
@@ -9824,9 +9832,58 @@
        run `26130501368`
        已 `success`
    - 当前路线图进度判断：
-     - 当前主要 WinSSL 平台支持口径 drift 已收口
-     - 近期最高价值的 residual doc-truth 队列已进一步缩短
-     - 下一步默认应切回更大的 completeness 主线：
-       - `ISSLConnection`
-       - `TSSLConfig`
-       - `ISSLServerConnection`
+   - 当前主要 WinSSL 平台支持口径 drift 已收口
+   - 近期最高价值的 residual doc-truth 队列已进一步缩短
+   - 下一步默认应切回更大的 completeness 主线：
+     - `ISSLConnection`
+     - `TSSLConfig`
+     - `ISSLServerConnection`
+108. `capability support-level serialization precedence` 这批用于把 capability dual-truth 的最后一条 legacy-only round-trip 漂移口正式钉死：
+   - 新 plan：
+     - `docs/plans/2026-05-20-capability-support-level-serialization-precedence.md`
+   - 当前静态问题：
+     - `src/fafafa.ssl.capability.serializer.pas`
+       之前无条件导出：
+       - `sniSupport`
+       - `ocspStaplingSupport`
+       - `sessionTicketsSupport`
+       - 以及其它 `*Support`
+     - 这会让 pure legacy-only in-memory record
+       在 JSON/XML 输出时凭空带上
+       `none`
+       级别 truth，
+       随后在反序列化路径上把：
+       - `SupportsSNI=True`
+       - `SupportsOCSPStapling=True`
+       - `SupportsSessionTickets=False`
+       这类旧布尔真相反向覆盖掉
+   - 当前最小修法：
+     - serializer 先准备本地副本
+     - 只有 record 已携带 support-level truth 时，
+       才继续显式导出 `*Support` 视图
+     - pure legacy-only record
+       保持只导出 legacy boolean，
+       不再被 synthetic `none` 污染 round-trip
+   - 当前 focused proof：
+     - `fpc -B -Fu./src -Fu./tests -otmp/test_capability_serialization_support_level_truth tests/test_capability_serialization_support_level_truth.pas`
+     - `./tmp/test_capability_serialization_support_level_truth`
+     - `mkdir -p tmp/cap_roundtrip`
+     - `fpc -B -Fu./src -Fu./tests -FUtmp/cap_roundtrip -FEtmp/cap_roundtrip -otest_capability_deserialization_roundtrip tests/test_capability_deserialization_roundtrip.pas`
+     - `./tmp/cap_roundtrip/test_capability_deserialization_roundtrip`
+   - 当前结论：
+     - support-level-aware record
+       继续显式输出 `*Support`
+       并保持它是 round-trip 真相源
+     - legacy-only record
+       现在也能保持原有布尔真相
+     - 由于 live backend producer
+       已统一发布完整 support-level matrix，
+       这批收口不会打穿当前 runtime/export 面
+   - 当前批收口后的默认下一步：
+     - 回到
+       `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+       的剩余大项
+     - 优先继续：
+       - `ISSLConnection` slimming
+       - `TSSLConfig` scope splitting
+       - facade/export historical path classification

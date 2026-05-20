@@ -5258,6 +5258,81 @@
   - 仅当该 record 已携带任意 support-level truth 时，才用 `NormalizeLegacyCapabilityBooleans(...)` 回填 legacy boolean 输出视图
   - 这样可以修掉 v1.2-aware record 的外部输出漂移，同时不去瞎猜纯 legacy-only in-memory record 的 `none` 是否只是默认值
 
+- 继续顺着 serializer 线往下查，又补出了一条更具体的 legacy-only round-trip 漂移：
+  - `CapabilitiesToJSON(...)` / `CapabilitiesToXML(...)`
+    之前还会无条件导出：
+    - `sniSupport`
+    - `ocspStaplingSupport`
+    - `sessionTicketsSupport`
+    - 以及其它 `*Support`
+  - 对 pure legacy-only record 来说，
+    这些字段的 `none`
+    不是输入里真的存在的 truth，
+    只是 record 默认值
+  - 但一旦输出后，
+    反序列化 precedence
+    又会把它们当成显式 support-level truth，
+    反向覆盖掉原始 legacy boolean
+
+- 这说明 capability dual-truth 的 residual
+  不只存在于“support-level-aware record 导出自相矛盾”
+  这一种形态，
+  还存在于“serializer 凭空合成 `none` truth”
+  这条 legacy-only lane
+
+- 这批最小正确修法是：
+  - 对 pure legacy-only record，
+    serializer 不再导出 synthetic `*Support`
+  - 只有 record 已经进入 support-level-aware lane 时，
+    才继续显式导出 support-level 视图
+  - 这样：
+    - support-level-aware record
+      仍保持 `*Support` 为真相源
+    - legacy-only record
+      round-trip 后继续保留旧布尔真相
+
+- 之所以这个修法现在是安全的，
+  是因为 live backend `GetCapabilities`
+  producer 已经统一发布完整 support-level matrix：
+  - 当前 runtime/export 主路径天然属于 support-level-aware lane
+  - 这次收掉的是
+    public serializer
+    对 legacy-only / compatibility record
+    的 synthetic truth 漂移，
+    不是在削弱已建立的 runtime truth
+
+- 这条线剩下的真正结构性残口也更清楚了：
+  - 手工构造的 mixed in-memory record
+    如果一部分字段是 support-level-aware，
+    另一部分字段仍只靠 legacy boolean，
+    目前 record 模型仍没有 presence bits
+    区分：
+    - `none` 是默认未设置
+    - 还是显式不支持
+  - 这个问题不能继续靠 serializer 猜；
+    若未来要彻底消灭歧义，
+    需要 capability model 本身补 truth/presence 元信息
+
+- 这次 focused compile 还顺手暴露了同文件另一类值得立刻收掉的静态风险：
+  - `JSONToCapabilities(...)`
+    /
+    `XMLToCapabilities(...)`
+    之前对
+    `TSSLBackendCapabilities`
+    这种带 managed field 的 result record
+    直接做
+    `FillChar(Result, SizeOf(Result), 0);`
+  - 这正是 FPC 会给出
+    “managed type result variable does not seem to be initialized”
+    警告的那类写法
+  - 当前已改成
+    `Result := Default(TSSLBackendCapabilities);`
+    把初始化收回类型安全路径
+  - 这不是行为面大改，
+    但它消掉了本单元两条真实静态警告，
+    也避免以后再在 serializer/deserializer
+    上留下 managed-record 初始化隐患
+
 - 这也把剩余边界说得更清楚了：
   - 现在已经解决的是“v1.2-aware record 导出不应自相矛盾”
   - 尚未、也不能在本批假装解决的是“纯 legacy-only record 在缺少 presence bit 时，是否应该把 `none` 当作显式不支持”
