@@ -17863,6 +17863,70 @@
   - summary:
     - no whitespace or patch-format drift remains before commit
 
+### Managed Result Init Safety Wave 2
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-20-managed-result-init-safety-wave2.md`
+  - `tests/scripts/test_managed_result_init_safety_wave2_contract.sh`
+  - change:
+    - recorded the second managed-result-init batch around shared TLS13 wire helpers and FreePascal session helpers
+    - added a focused contract for:
+      - `BuildTLSPlaintext(...)`
+      - `ReadVector16(...)`
+      - `TFreePascalSession.Serialize(...)`
+
+- `bash -n tests/scripts/test_managed_result_init_safety_wave2_contract.sh`
+- `bash tests/scripts/test_managed_result_init_safety_wave2_contract.sh`
+  - result: RED -> GREEN
+  - summary:
+    - initial RED failed on
+      `BuildTLSPlaintext initializes empty TBytes result with nil before SetLength`
+    - after implementation and one contract robustness fix, the full wave2 contract turned green
+
+- update implementation:
+  - `src/fafafa.ssl.tls13.wire.pas`
+  - `src/fafafa.ssl.freepascal.session.pas`
+  - change:
+    - `BuildTLSPlaintext(...)` now initializes `Result := nil` before `SetLength(...)`
+    - `ReadVector16(...)` now initializes `Result := nil` before `SetLength(...)`
+    - `TFreePascalSession.Serialize(...)` now initializes its empty `TBytes` result with `Result := nil`
+
+- `mkdir -p tmp/tls13_foundation_units tmp/tls13_foundation_bin`
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/tls13_foundation_units -FEtmp/tls13_foundation_bin -otest_tls13_foundation tests/test_tls13_foundation.pas`
+- `./tmp/tls13_foundation_bin/test_tls13_foundation`
+  - result: PASS
+  - summary:
+    - TLS 1.3 foundation checks remained green after the wire-helper initialization fix
+
+- `mkdir -p tmp/fp_session_units tmp/fp_session_bin`
+- `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/fp_session_units -FEtmp/fp_session_bin -otest_freepascal_client_session_resumption tests/test_freepascal_client_session_resumption.pas`
+- `./tmp/fp_session_bin/test_freepascal_client_session_resumption`
+  - result: PASS
+  - summary:
+    - FreePascal client session resumption checks remained green after the session serialization initialization fix
+
+- `fpc ... tests/test_tls13_foundation.pas | rg "tls13\\.wire\\.pas|freepascal\\.session\\.pas|Warning: Function result variable of a managed type does not seem to be initialized"`
+  - result: PASS
+  - summary:
+    - compile grep still shows other TLS13 warning sources,
+      but `tls13.wire` itself no longer emits its previous managed-result warning
+    - `freepascal.session` also no longer emits its previous managed-result warnings in the broader compile
+
+- `gh run view 26162602230 --json status,conclusion,jobs,url`
+  - result: PARTIAL PASS
+  - summary:
+    - the previous pushed batch
+      `fix(core): use safe managed result initialization`
+      currently holds:
+      - `Code Quality (Light)` = success
+      - `Minimal Gate (Linux)` = success
+      - `FreePascal TLS 1.3 Completeness` = still running
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains before commit
+
 ### Managed Result Init Safety
 
 - add focused batch inputs:

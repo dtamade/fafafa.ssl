@@ -204,6 +204,7 @@ begin
   if AOffset + LLen > Length(AData) then
     raise Exception.Create('vector16 exceeds payload');
 
+  Result := nil;
   SetLength(Result, LLen);
   if LLen > 0 then
     Move(AData[AOffset], Result[0], LLen);
@@ -348,7 +349,7 @@ var
   LUnixTime: QWord;
   LCipherBytes: TBytes;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 
   AppendByte(Result, FREEPASCAL_SESSION_MAGIC[0]);
   AppendByte(Result, FREEPASCAL_SESSION_MAGIC[1]);

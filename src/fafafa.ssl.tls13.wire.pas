@@ -150,6 +150,7 @@ begin
   if LLen > High(Word) then
     RaiseInvalidParameter('TLSPlaintextPayloadLength');
 
+  Result := nil;
   SetLength(Result, 5 + LLen);
   Result[0] := AContentType;
   Result[1] := Byte(TLS_LEGACY_VERSION shr 8);

@@ -5381,6 +5381,46 @@
   - 所以这批收掉的是 shared public implementation 残口，
     不是把旧 warning 藏起来
 
+- 顺着这条 managed-result safety 线继续往下查后，又补出了第二组高复用实现残口：
+  - `BuildTLSPlaintext(...)`
+    是 FreePascal/TLS13/runtime tests
+    共用的 shared wire helper
+  - `ReadVector16(...)`
+    与
+    `TFreePascalSession.Serialize(...)`
+    是 FreePascal session resumption / early-data
+    基础路径的一部分
+  - 它们之前都在 `Result: TBytes`
+    未显式初始化时直接
+    `SetLength(...)`
+    或
+    `SetLength(Result, 0)`
+
+- 这说明 managed-result 问题并不只停留在 facade/base-class：
+  - shared transport/wire helper
+  - shared session persistence helper
+  也有同类历史写法
+
+- 当前修法继续保持最小：
+  - 不重写逻辑
+  - 不改 wire/session 语义
+  - 只把空 `TBytes`
+    初始化统一改成
+    `Result := nil`
+
+- focused proof 说明这是“真实 warning 消失 + 行为保持”的收口：
+  - `tests/test_tls13_foundation.pas`
+    继续通过，
+    说明 TLS record builder / parser 没被打穿
+  - `tests/test_freepascal_client_session_resumption.pas`
+    继续通过，
+    说明 FreePascal session serialize / resumption 语义保持不变
+  - compile grep 里，
+    `tls13.wire`
+    和
+    `freepascal.session`
+    已不再打出原来的 managed-result warning
+
 - 这也把剩余边界说得更清楚了：
   - 现在已经解决的是“v1.2-aware record 导出不应自相矛盾”
   - 尚未、也不能在本批假装解决的是“纯 legacy-only record 在缺少 presence bit 时，是否应该把 `none` 当作显式不支持”

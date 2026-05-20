@@ -6712,6 +6712,53 @@
     不是抽象层面的“接口看起来不优雅”
   - 同类 managed-result warning 在仓库其它单元仍有存量，
     但这条高可见 public surface 现已先收干净
+- [completed] `managed result init safety wave2`
+  当前 focused 目标：
+  - 把同类 managed `TBytes` result 初始化 warning
+    从 public facade / connection base
+    继续推进到 shared TLS13 / FreePascal session 实现层
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-managed-result-init-safety-wave2.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_managed_result_init_safety_wave2_contract.sh`
+  - 收口源码：
+    - `src/fafafa.ssl.tls13.wire.pas`
+    - `src/fafafa.ssl.freepascal.session.pas`
+  当前最终收口证据：
+  - `BuildTLSPlaintext(...)`
+    当前会先
+    `Result := nil`
+    再
+    `SetLength(...)`
+  - `ReadVector16(...)`
+    当前会先
+    `Result := nil`
+    再
+    `SetLength(...)`
+  - `TFreePascalSession.Serialize(...)`
+    当前以
+    `Result := nil`
+    初始化空 payload
+  - focused compile grep 已证明：
+    - `tls13.wire`
+      本身不再出现先前那条 managed-result warning
+    - `freepascal.session`
+      本身也不再出现先前两条 managed-result warning
+    - grep 输出只剩其它 TLS13 / session 相关单元的旧 warning
+  focused verification 已通过：
+  - `bash -n tests/scripts/test_managed_result_init_safety_wave2_contract.sh`
+  - `bash tests/scripts/test_managed_result_init_safety_wave2_contract.sh`
+  - `fpc -B ... tests/test_tls13_foundation.pas`
+  - `./tmp/tls13_foundation_bin/test_tls13_foundation`
+  - `fpc -B ... tests/test_freepascal_client_session_resumption.pas`
+  - `./tmp/fp_session_bin/test_freepascal_client_session_resumption`
+  - `git diff --check`
+  当前结论：
+  - 这批继续收掉的是 shared implementation 的真实 warning 残口，
+    不是去做“代码洁癖式”的机械替换
+  - TLS13 wire / FreePascal session 这两条高复用实现面
+    现在也已经从这类 managed-result 初始化坑里脱身
 - [completed] `context-level ServerName` 迁移路线图与兼容锁点地图已固化：
   - 新增 `docs/plans/2026-05-18-context-servername-compatibility-migration-roadmap.md`
   - intentional compatibility tests 已统一纳入 `tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
@@ -9974,3 +10021,46 @@
      - 回到更高层的接口路线：
        - `ISSLConnection` v1.x compatibility-core 剩余面是否还有未分类 generic 入口
        - 或继续盘点高可见 public 单元里其它 managed-result warning 是否也落在 shared/helper 路径上
+110. `managed result init safety wave2` 这批用于继续把同类 warning 从 shared TLS13 / session 基础件里收掉：
+   - 新 plan：
+     - `docs/plans/2026-05-20-managed-result-init-safety-wave2.md`
+   - 当前新发现：
+     - `src/fafafa.ssl.tls13.wire.pas`
+       的
+       `BuildTLSPlaintext(...)`
+       会在未显式初始化
+       `Result: TBytes`
+       前直接
+       `SetLength(...)`
+     - `src/fafafa.ssl.freepascal.session.pas`
+       的：
+       - `ReadVector16(...)`
+       - `TFreePascalSession.Serialize(...)`
+       也存在同类写法
+   - 当前最小修法：
+     - 这些 shared helper / session path
+       统一先
+       `Result := nil`
+       再进入长度分配或 append 逻辑
+   - 当前 focused proof：
+     - `bash tests/scripts/test_managed_result_init_safety_wave2_contract.sh`
+     - `fpc ... tests/test_tls13_foundation.pas`
+     - `./tmp/tls13_foundation_bin/test_tls13_foundation`
+     - `fpc ... tests/test_freepascal_client_session_resumption.pas`
+     - `./tmp/fp_session_bin/test_freepascal_client_session_resumption`
+   - 当前结论：
+     - `tls13.wire`
+       与
+       `freepascal.session`
+       这三条 managed-result warning 已收口
+     - 上一批 managed-result-init CI
+       `26162602230`
+       当前也至少保持：
+       - `Code Quality (Light)` success
+       - `Minimal Gate (Linux)` success
+       - `FreePascal TLS 1.3 Completeness` still running
+   - 当前批收口后的默认下一步：
+     - 继续优先清 shared/public implementation
+       里同类真实 warning 残口
+     - 若这条线收益开始下降，再切回
+       `ISSLConnection` remaining generic entry classification
