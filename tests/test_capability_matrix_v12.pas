@@ -16,6 +16,11 @@ var
   GContractChecks: Integer = 0;
   GContractFailures: Integer = 0;
 
+function FeatureLevelPresent(ALevel: TSSLFeatureSupportLevel): Boolean;
+begin
+  Result := ALevel <> sslSupportNone;
+end;
+
 function IsBackendUnavailableError(const AMessage: string): Boolean;
 var
   LMsg: string;
@@ -39,6 +44,124 @@ begin
       WriteLn('  [FAIL] ', AName, ' - ', AFailureDetail)
     else
       WriteLn('  [FAIL] ', AName);
+  end;
+end;
+
+procedure RecordProjectionContracts(const ABackendName: string;
+  const ACaps: TSSLBackendCapabilities; AExpectedBackend: TSSLLibraryType);
+begin
+  RecordContract(ABackendName + ' BackendType matches requested backend',
+    ACaps.BackendType = AExpectedBackend,
+    Format('Expected=%d Actual=%d',
+      [Ord(AExpectedBackend), Ord(ACaps.BackendType)]));
+
+  RecordContract(ABackendName + ' SupportsSNI matches SNISupport',
+    ACaps.SupportsSNI = FeatureLevelPresent(ACaps.SNISupport),
+    Format('SupportsSNI=%s SNISupport=%d',
+      [BoolToStr(ACaps.SupportsSNI, True), Ord(ACaps.SNISupport)]));
+
+  RecordContract(ABackendName + ' SupportsALPN matches ALPNSupport',
+    ACaps.SupportsALPN = FeatureLevelPresent(ACaps.ALPNSupport),
+    Format('SupportsALPN=%s ALPNSupport=%d',
+      [BoolToStr(ACaps.SupportsALPN, True), Ord(ACaps.ALPNSupport)]));
+
+  RecordContract(ABackendName + ' SupportsOCSPStapling matches OCSPStaplingSupport',
+    ACaps.SupportsOCSPStapling = FeatureLevelPresent(ACaps.OCSPStaplingSupport),
+    Format('SupportsOCSPStapling=%s OCSPStaplingSupport=%d',
+      [BoolToStr(ACaps.SupportsOCSPStapling, True), Ord(ACaps.OCSPStaplingSupport)]));
+
+  RecordContract(ABackendName + ' SupportsCertificateTransparency matches CertTransparencySupport',
+    ACaps.SupportsCertificateTransparency = FeatureLevelPresent(ACaps.CertTransparencySupport),
+    Format('SupportsCertificateTransparency=%s CertTransparencySupport=%d',
+      [BoolToStr(ACaps.SupportsCertificateTransparency, True), Ord(ACaps.CertTransparencySupport)]));
+
+  RecordContract(ABackendName + ' SupportsSessionTickets matches SessionTicketsSupport',
+    ACaps.SupportsSessionTickets = FeatureLevelPresent(ACaps.SessionTicketsSupport),
+    Format('SupportsSessionTickets=%s SessionTicketsSupport=%d',
+      [BoolToStr(ACaps.SupportsSessionTickets, True), Ord(ACaps.SessionTicketsSupport)]));
+end;
+
+procedure RecordBackendSpecificContracts(ABackend: TSSLLibraryType;
+  const ACaps: TSSLBackendCapabilities);
+begin
+  case ABackend of
+    sslOpenSSL:
+      begin
+        RecordContract('OpenSSL backend impl is C library',
+          ACaps.BackendImplType = sslImplCLibrary,
+          Format('BackendImplType=%d', [Ord(ACaps.BackendImplType)]));
+        RecordContract('OpenSSL requires external library',
+          ACaps.RequiresExternalLibrary,
+          Format('RequiresExternalLibrary=%s',
+            [BoolToStr(ACaps.RequiresExternalLibrary, True)]));
+        RecordContract('OpenSSL publishes TLS 1.3',
+          ACaps.SupportsTLS13,
+          'SupportsTLS13=False');
+        RecordContract('OpenSSL SNI support is stable',
+          ACaps.SNISupport = sslSupportStable,
+          Format('SNISupport=%d', [Ord(ACaps.SNISupport)]));
+        RecordContract('OpenSSL ALPN support is stable',
+          ACaps.ALPNSupport = sslSupportStable,
+          Format('ALPNSupport=%d', [Ord(ACaps.ALPNSupport)]));
+        RecordContract('OpenSSL OCSP stapling support is stable',
+          ACaps.OCSPStaplingSupport = sslSupportStable,
+          Format('OCSPStaplingSupport=%d', [Ord(ACaps.OCSPStaplingSupport)]));
+        RecordContract('OpenSSL CT support is unpublished',
+          ACaps.CertTransparencySupport = sslSupportNone,
+          Format('CertTransparencySupport=%d',
+            [Ord(ACaps.CertTransparencySupport)]));
+      end;
+
+    sslFreePascal:
+      begin
+        RecordContract('FreePascal backend impl is native',
+          ACaps.BackendImplType = sslImplNative,
+          Format('BackendImplType=%d', [Ord(ACaps.BackendImplType)]));
+        RecordContract('FreePascal does not require external library',
+          not ACaps.RequiresExternalLibrary,
+          Format('RequiresExternalLibrary=%s',
+            [BoolToStr(ACaps.RequiresExternalLibrary, True)]));
+        RecordContract('FreePascal publishes TLS 1.3',
+          ACaps.SupportsTLS13,
+          'SupportsTLS13=False');
+        RecordContract('FreePascal SNI support is experimental',
+          ACaps.SNISupport = sslSupportExperimental,
+          Format('SNISupport=%d', [Ord(ACaps.SNISupport)]));
+        RecordContract('FreePascal ALPN support is experimental',
+          ACaps.ALPNSupport = sslSupportExperimental,
+          Format('ALPNSupport=%d', [Ord(ACaps.ALPNSupport)]));
+        RecordContract('FreePascal OCSP stapling support is experimental',
+          ACaps.OCSPStaplingSupport = sslSupportExperimental,
+          Format('OCSPStaplingSupport=%d', [Ord(ACaps.OCSPStaplingSupport)]));
+        RecordContract('FreePascal CT support is experimental',
+          ACaps.CertTransparencySupport = sslSupportExperimental,
+          Format('CertTransparencySupport=%d',
+            [Ord(ACaps.CertTransparencySupport)]));
+        RecordContract('FreePascal session tickets support is experimental',
+          ACaps.SessionTicketsSupport = sslSupportExperimental,
+          Format('SessionTicketsSupport=%d',
+            [Ord(ACaps.SessionTicketsSupport)]));
+        RecordContract('FreePascal early-data support is experimental',
+          ACaps.EarlyDataSupport = sslSupportExperimental,
+          Format('EarlyDataSupport=%d', [Ord(ACaps.EarlyDataSupport)]));
+        RecordContract('FreePascal PKCS12 support is unpublished',
+          not ACaps.SupportsPKCS12,
+          Format('SupportsPKCS12=%s', [BoolToStr(ACaps.SupportsPKCS12, True)]));
+        RecordContract('FreePascal password-protected keys are unpublished',
+          not ACaps.SupportsPasswordProtectedKeys,
+          Format('SupportsPasswordProtectedKeys=%s',
+            [BoolToStr(ACaps.SupportsPasswordProtectedKeys, True)]));
+        RecordContract('FreePascal custom cipher suites are unpublished',
+          not ACaps.SupportsCustomCipherSuites,
+          Format('SupportsCustomCipherSuites=%s',
+            [BoolToStr(ACaps.SupportsCustomCipherSuites, True)]));
+        RecordContract('FreePascal callbacks are unpublished',
+          not ACaps.SupportsCallbacks,
+          Format('SupportsCallbacks=%s',
+            [BoolToStr(ACaps.SupportsCallbacks, True)]));
+      end;
+  else
+    ;
   end;
 end;
 
@@ -103,6 +226,11 @@ begin
     WriteLn('  OCSPStaplingSupport: ', Ord(Caps.OCSPStaplingSupport));
     WriteLn('  CertTransparencySupport: ', Ord(Caps.CertTransparencySupport));
     WriteLn('  SessionTicketsSupport: ', Ord(Caps.SessionTicketsSupport));
+    WriteLn;
+
+    WriteLn('[Capability Truth Contracts]');
+    RecordProjectionContracts(ABackendName, Caps, AType);
+    RecordBackendSpecificContracts(AType, Caps);
     WriteLn;
 
     WriteLn('[Algorithm Support]');

@@ -3,6 +3,64 @@
 ## 2026-05-21
 
 - `tests/test_capability_matrix_v12.pas`
+  现在又推进了一层：
+  它已经不再只是
+  capability snapshot printer，
+  而是对
+  `OpenSSL`
+  /
+  `FreePascal`
+  当前主线 truth
+  有明确硬断言的 shared regression
+
+- 这批 focused hardening
+  锁住了两类最关键的 shared truth：
+  1. paired support-level feature
+     的 legacy bool projection
+     必须一致：
+     - `SupportsSNI`
+     - `SupportsALPN`
+     - `SupportsOCSPStapling`
+     - `SupportsCertificateTransparency`
+     - `SupportsSessionTickets`
+  2. backend-specific capability publication truth：
+     - `OpenSSL`
+       - `sslImplCLibrary`
+       - `RequiresExternalLibrary=True`
+       - `TLS13 / SNI / ALPN / OCSP = stable`
+       - `CT = unpublished`
+     - `FreePascal`
+       - `sslImplNative`
+       - `RequiresExternalLibrary=False`
+       - `SNI / ALPN / OCSP / CT / SessionTickets / EarlyData = experimental`
+       - `PKCS12 / password-protected keys / custom cipher suites / callbacks = unpublished`
+
+- 运行结果继续说明：
+  当前 shared regression
+  并没有打出新的
+  `OpenSSL`
+  或
+  `FreePascal`
+  capability drift；
+  它补上的是真正的
+  “shared audit 能否第一时间报警”
+  这一层能力
+
+- 这意味着后面如果：
+  - `OpenSSL`
+    的 CT publication
+    又被错误抬高
+  - `FreePascal`
+    的 experimental / unpublished truth
+    被无意改写
+  - support-level / legacy bool projection
+    再次分叉
+  这条 shared regression
+  会更早直接 fail，
+  不需要等更窄的 contract
+  或人工读输出才发现
+
+- `tests/test_capability_matrix_v12.pas`
   当前刚补上一个
   明确的审查缺口：
   这条 shared

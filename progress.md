@@ -6,6 +6,86 @@
 
 ## 2026-05-21
 
+### Shared Capability Matrix Runtime Truth Hardening
+
+- inspect current shared capability regression truth:
+  - `tests/test_capability_matrix_v12.pas`
+  - `tests/contract/test_capabilities_contract.pas`
+  - `src/fafafa.ssl.openssl.backed.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - change:
+    - confirmed the shared capability-matrix regression still printed most fields without hard assertions
+    - narrowed the highest-value strengthening target to
+      `OpenSSL` and `FreePascal`,
+      because they are the most stable backends on the current Linux host
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-shared-capability-matrix-runtime-truth-hardening.md`
+  - `tests/scripts/test_capability_matrix_v12_runtime_truth_contract.sh`
+  - change:
+    - documented the batch as runtime-truth hardening for the shared capability regression
+    - added a static guard so the test cannot quietly regress back to print-only mode
+
+- harden shared capability regression:
+  - `tests/test_capability_matrix_v12.pas`
+  - change:
+    - added shared projection contracts for:
+      - `BackendType`
+      - `SupportsSNI`
+      - `SupportsALPN`
+      - `SupportsOCSPStapling`
+      - `SupportsCertificateTransparency`
+      - `SupportsSessionTickets`
+    - added backend-specific runtime truth contracts for:
+      - `OpenSSL`
+        - implementation type
+        - external-library requirement
+        - TLS 1.3 publication
+        - SNI / ALPN / OCSP stable truth
+        - CT unpublished truth
+      - `FreePascal`
+        - native implementation type
+        - zero external-library requirement
+        - TLS 1.3 publication
+        - SNI / ALPN / OCSP / CT / SessionTickets / EarlyData experimental truth
+        - PKCS12 / password-protected keys / custom cipher suites / callbacks unpublished truth
+    - added a defensive `else` arm to keep this helper from introducing a new case-coverage compile warning
+
+- verify static contract:
+  - `bash -n tests/scripts/test_capability_matrix_v12_runtime_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_capability_matrix_v12_runtime_truth_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed the shared regression still contains:
+        - projection contracts
+        - `OpenSSL` truth anchors
+        - `FreePascal` truth anchors
+
+- verify runtime regression:
+  - `mkdir -p tmp/test_capability_matrix_v12 && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_capability_matrix_v12 -FEtmp/test_capability_matrix_v12 -otmp/test_capability_matrix_v12/test_capability_matrix_v12 tests/test_capability_matrix_v12.pas && ./tmp/test_capability_matrix_v12/test_capability_matrix_v12`
+    - result: PASS
+    - summary:
+      - executed backends:
+        - `OpenSSL`
+        - `FreePascal`
+      - skipped backends:
+        - `WolfSSL` backend not enabled
+        - `MbedTLS` backend not enabled
+        - `WinSSL` backend not registered on Linux
+      - final counters:
+        - `Backends executed: 2`
+        - `Backends skipped: 3`
+        - `Contract checks: 38`
+        - `Contract failures: 0`
+      - important conclusion:
+        - the shared capability regression now hard-fails on key
+          `OpenSSL`
+          /
+          `FreePascal`
+          truth drift
+        - no fresh runtime capability drift was exposed in this batch
+
 ### Capability Matrix FreePascal Coverage Completeness
 
 - re-enter backend implementation-completeness queue:

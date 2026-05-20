@@ -10,6 +10,76 @@
 
 ## Current Status
 
+- [completed] `shared capability matrix runtime truth hardening`
+  当前 focused 目标：
+  - 把
+    `tests/test_capability_matrix_v12.pas`
+    从
+    “有覆盖”
+    再推进到
+    “关键 capability truth
+    会直接 fail 的 shared regression”
+  - 优先锁住当前 Linux host
+    最稳定可执行的：
+    - `OpenSSL`
+    - `FreePascal`
+      capability truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-shared-capability-matrix-runtime-truth-hardening.md`
+  - 新增 contract：
+    - `tests/scripts/test_capability_matrix_v12_runtime_truth_contract.sh`
+  - 更新：
+    - `tests/test_capability_matrix_v12.pas`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_capability_matrix_v12_runtime_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_capability_matrix_v12_runtime_truth_contract.sh`
+    - PASS
+  - `tests/test_capability_matrix_v12.pas`
+    - PASS
+  当前状态：
+  - shared capability regression
+    现在不再只是打印：
+    - `BackendType`
+    - paired support-level / legacy bool projection
+    - `OpenSSL`
+      stable/unpublished truth
+    - `FreePascal`
+      experimental/unpublished truth
+  - 当前 Linux host
+    继续执行：
+    - `OpenSSL`
+    - `FreePascal`
+  - summary:
+    - `Backends executed: 2`
+    - `Backends skipped: 3`
+    - `Contract checks: 38`
+    - `Contract failures: 0`
+  当前实施判断：
+  - 这批继续证明：
+    当前缺的不是
+    `OpenSSL`
+    /
+    `FreePascal`
+    fresh capability drift
+  - 真正缺的是
+    shared audit entrypoint
+    的硬报警能力；
+    现在这条缺口已经收紧
+  下一刀：
+  - 继续在
+    backend implementation-completeness
+    主线下找
+    下一条真正的 fresh RED，
+    优先考虑：
+    - shared capability regression
+      里仍未硬断言的 backend/runtime truth
+    - 或各 backend
+      已发布 surface
+      但 shared tests
+      仍未覆盖的 live gap
+
 - [completed] `capability matrix freepascal coverage completeness`
   当前 focused 目标：
   - 把
