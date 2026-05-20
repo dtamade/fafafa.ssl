@@ -85,7 +85,7 @@
 
 ## Execution Result
 
-- PASS (static alignment) / pending (Windows CI runtime proof)
+- PASS
 - `gh run view 26137704210 --job 76876360188 --log-failed`
   明确证明这不是
   `TWinSSLCertificateStore`
@@ -116,4 +116,9 @@
   - `git diff --check`
     - PASS
 - 最终 Windows compile/runtime truth：
-  - 交给 push 后的 GitHub Windows CI
+  - `26138267777`
+    workflow `CI`
+    - `success`
+  - `26138267809`
+    workflow `WinSSL Runtime Gate`
+    - `success`

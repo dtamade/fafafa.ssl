@@ -2,6 +2,56 @@
 
 ## 2026-05-20
 
+- generic
+  `TSSLCertificateChainVerifier`
+  这次暴露的是
+  更底层的一类 shared drift：
+  不是某个 backend
+  单独的 store query
+  没对齐，
+  而是 shared
+  chain verifier
+  自己对 trusted store
+  把 issuer lookup
+  走成了
+  `FindByIssuer`
+
+- 正确语义应该是：
+  - 拿当前证书的
+    `Issuer`
+  - 去找
+    “谁的 subject
+      等于这个 issuer”
+  所以 trusted store
+  这里应该走
+  `FindBySubject`
+
+- 这类 bug
+  很容易被
+  “root 自签名证书
+  issuer = subject”
+  掩盖，
+  因为到了 root
+  那一跳它恰好又能命中
+
+- 真正能把它戳穿的
+  focused contract
+  是：
+  - trusted store
+    只持有
+    non-self-signed
+    intermediate anchor
+  - 这时如果查错方向，
+    `BuildChain`
+    就会直接找不到 issuer
+
+- WinSSL certstore
+  那条 Windows lane
+  这次也已经通过远端 CI
+  完整证明：
+  真问题就是 test drift，
+  不是 runtime 实现缺方法
+
 - 这次
   `WinSSL Runtime Gate`
   的红灯

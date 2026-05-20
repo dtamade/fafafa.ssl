@@ -10,6 +10,71 @@
 
 ## Current Status
 
+- [completed] `certchain trusted store subject anchor contract`
+  当前 focused 目标：
+  - 修掉
+    generic
+    `TSSLCertificateChainVerifier`
+    在 trusted store
+    上把 issuer lookup
+    走错查询面的 bug
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-certchain-trusted-store-subject-anchor-contract.md`
+  - 修改实现：
+    - `src/fafafa.ssl.certchain.pas`
+  - 新增 focused test：
+    - `tests/test_certchain_trusted_store_subject_lookup_contract.pas`
+  当前预判：
+  - 当前 `FindIssuer`
+    对 trusted store
+    调用的是
+    `FindByIssuer`
+  - 这会让
+    trusted intermediate anchor
+    明明存在，
+    仍然构不出链
+  当前最终收口证据：
+  - 新 test
+    生成：
+    - root
+    - intermediate
+    - leaf
+  - 然后只把
+    `intermediate`
+    放进 trusted store
+  - 修复后：
+    - `BuildChain(leaf)`
+      能返回
+      `leaf -> intermediate`
+  focused verification：
+  - `tests/test_certchain_trusted_store_subject_lookup_contract.pas`
+    - PASS
+  当前结论：
+  - 这不是某个 backend
+    的局部字符串比较问题，
+    而是 shared
+    chain verifier
+    自己把 trusted-store
+    issuer lookup
+    指到了错误查询面
+  当前总路线图进度：
+  - `接口设计`
+    已经继续推进到
+    shared chain-building core
+  - `实现完整性`
+    不再只修 backend wrapper，
+    开始收 shared verifier
+    的真实 drift
+  当前下一条真实工作：
+  - 审查
+    `OpenSSL BuildCertificateChain`
+    继续把 entire store
+    当 trusted store
+    时，
+    是否还存在
+    trust-anchor / full-chain
+    终止语义分叉
 - [completed] `winssl certstore test api drift alignment`
   当前 focused 目标：
   - 把
@@ -63,15 +128,21 @@
   当前本地验证：
   - `git diff --check`
     - PASS
+  当前远端验证：
+  - `26138267777`
+    workflow `CI`
+    - `success`
+  - `26138267809`
+    workflow `WinSSL Runtime Gate`
+    - `success`
   当前结论：
   - 这条红灯
-    首先是 test drift，
+    最终证明确实首先是 test drift，
     不是 backend 缺方法
   - 下一步
-    需要看 push 后
-    Windows CI
-    是否继续暴露
-    真 runtime 问题
+    可以从 WinSSL certstore
+    这条 lane
+    转去下一条 shared contract
   当前总路线图进度：
   - `接口设计`
     已经从 shared public contract

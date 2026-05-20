@@ -4,6 +4,44 @@
 
 ## 2026-05-20
 
+### CertChain Trusted Store Subject Anchor Contract
+
+- `mcp__ace_tool__.search_context(...)`
+- `nl -ba src/fafafa.ssl.certchain.pas | sed -n '232,256p'`
+- `nl -ba src/fafafa.ssl.certchain.pas | sed -n '674,724p'`
+- `sed -n '1,220p' tests/test_cert_utils_verify_chain_contract.pas`
+- `nl -ba src/fafafa.ssl.cert.utils.pas | sed -n '1647,1801p'`
+  - result: PASS
+  - summary:
+    - confirmed the next shared chain-building drift sits in generic verifier logic, not only in backend wrappers
+    - confirmed `FindIssuer` incorrectly used `FindByIssuer` on the trusted store
+    - confirmed this bug is naturally masked by self-signed roots, but breaks when the trusted anchor is a non-self-signed intermediate
+
+- add focused plan/test:
+  - `docs/plans/2026-05-20-certchain-trusted-store-subject-anchor-contract.md`
+  - `tests/test_certchain_trusted_store_subject_lookup_contract.pas`
+  - change:
+    - added a focused generic-verifier contract for
+      `root -> intermediate -> leaf`
+      with the trusted store containing only the intermediate anchor
+
+- update implementation:
+  - `src/fafafa.ssl.certchain.pas`
+  - change:
+    - `TSSLCertificateChainVerifier.FindIssuer`
+      now uses
+      `FTrustedStore.FindBySubject(IssuerName)`
+      instead of the wrong issuer-side lookup
+
+- `mkdir -p tmp/test_certchain_trusted_store_subject_lookup_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_certchain_trusted_store_subject_lookup_contract_units -FEtmp/test_certchain_trusted_store_subject_lookup_contract_units -otmp/test_certchain_trusted_store_subject_lookup_contract_units/test_certchain_trusted_store_subject_lookup_contract tests/test_certchain_trusted_store_subject_lookup_contract.pas && ./tmp/test_certchain_trusted_store_subject_lookup_contract_units/test_certchain_trusted_store_subject_lookup_contract`
+  - result: PASS
+  - summary:
+    - `BuildChain` now succeeds when the trusted store contains the issuer certificate by subject
+    - final contract passes:
+      - trusted-store subject lookup succeeds
+      - chain length is `2`
+      - appended issuer fingerprint matches the trusted intermediate anchor
+
 ### WinSSL CertStore Test API Drift Alignment
 
 - `gh run view 26137704210 --json status,conclusion,jobs,url`
@@ -42,6 +80,14 @@
   - result: PASS
   - summary:
     - no whitespace or patch-format issues remain after the WinSSL certstore test-alignment batch
+
+- `gh run list --limit 6 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url`
+  - result: PASS
+  - summary:
+    - latest remote proof after `26e37ca`:
+      - `26138267777` workflow `CI` -> `success`
+      - `26138267809` workflow `WinSSL Runtime Gate` -> `success`
+    - the WinSSL certstore test-alignment batch is now closed by real Windows CI evidence
 
 ### Optional Backends BuildCertificateChain Issuer-Link Parity
 

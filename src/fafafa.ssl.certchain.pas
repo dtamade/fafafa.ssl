@@ -243,7 +243,7 @@ begin
   // 先在信任的根证书中查找
   if Assigned(FTrustedStore) then
   begin
-    Result := FTrustedStore.FindByIssuer(IssuerName);
+    Result := FTrustedStore.FindBySubject(IssuerName);
     if Result <> nil then
       Exit;
   end;
