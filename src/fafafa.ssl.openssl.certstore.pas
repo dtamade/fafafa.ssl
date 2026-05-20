@@ -724,18 +724,52 @@ begin
 end;
 
 function TOpenSSLCertificateStore.BuildCertificateChain(ACert: ISSLCertificate): TSSLCertificateArray;
+var
+  LVerifier: ISSLCertificateChainVerifier;
+  LTrustedStore: ISSLCertificateStore;
+  LIntermediateStore: ISSLCertificateStore;
+  LStoreCert: ISSLCertificate;
+  I: Integer;
 begin
   Result := nil;
   if ACert = nil then
     Exit;
-  
-  // 使用通用的证书链验证器来构建证书链
-  with TSSLCertificateChainVerifier.Create as ISSLCertificateChainVerifier do
+
+  LTrustedStore := nil;
+  LIntermediateStore := nil;
+  LVerifier := TSSLCertificateChainVerifier.Create;
+  LVerifier.SetOptions(LVerifier.GetOptions + [cvoAllowPartialChain]);
+
+  // 不要把整个 store 都当作 trusted store。
+  // 否则 shared verifier 会把 intermediate 也提前当成 trust anchor，
+  // 导致本该继续补到 self-signed root 的链在第二跳被截断。
+  for I := 0 to FCertificates.Count - 1 do
   begin
-    SetTrustedStore(Self);
-    if not BuildChain(ACert, Result) then
-      SetLength(Result, 0);
+    LStoreCert := GetCertificate(I);
+    if LStoreCert = nil then
+      Continue;
+
+    if LStoreCert.IsSelfSigned then
+    begin
+      if LTrustedStore = nil then
+        LTrustedStore := TOpenSSLCertificateStore.Create;
+      LTrustedStore.AddCertificate(LStoreCert);
+    end
+    else
+    begin
+      if LIntermediateStore = nil then
+        LIntermediateStore := TOpenSSLCertificateStore.Create;
+      LIntermediateStore.AddCertificate(LStoreCert);
+    end;
   end;
+
+  if LTrustedStore <> nil then
+    LVerifier.SetTrustedStore(LTrustedStore);
+  if LIntermediateStore <> nil then
+    LVerifier.SetIntermediateStore(LIntermediateStore);
+
+  if not LVerifier.BuildChain(ACert, Result) then
+    SetLength(Result, 0);
 end;
 
 function TOpenSSLCertificateStore.GetNativeHandle: Pointer;

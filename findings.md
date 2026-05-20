@@ -2,6 +2,95 @@
 
 ## 2026-05-20
 
+- `OpenSSL`
+  当前
+  `BuildCertificateChain`
+  不是单纯
+  “少查了一次 issuer”，
+  而是把
+  整个 store
+  都塞进了
+  shared verifier
+  的 trusted store
+
+- 这会和
+  `TSSLCertificateChainVerifier.IsRootCertificate`
+  当前语义直接冲突：
+  - 只要
+    `FTrustedStore.Contains(CurrentCert)`
+    为真，
+    就把它当成 root / trust anchor
+
+- 对 OpenSSL store 来说，
+  intermediate
+  也同样在
+  `Self`
+  里；
+  所以当链走到
+  intermediate
+  那一跳时，
+  即使 store
+  里还持有真正的
+  self-signed root，
+  也会被提前截断
+
+- 这类 drift
+  不会被
+  “store 只有 intermediate”
+  的最小链表象揭露，
+  因为那种情况下
+  `leaf -> intermediate`
+  恰好也是允许的结果；
+  真正能戳穿它的 contract
+  是：
+  - store 同时持有
+    `intermediate + root`
+  - 期望
+    `BuildCertificateChain`
+    返回
+    `leaf -> intermediate -> root`
+
+- 所以这批修复
+  不能只改
+  `FindIssuer`
+  或
+  `Contains`
+  的某个局部判断，
+  而要在
+  OpenSSL certstore
+  调用 shared verifier
+  之前，
+  先把
+  “谁是 trust anchor”
+  和
+  “谁只是 intermediate”
+  分层表达出来
+
+- 对 OpenSSL backend
+  更稳的接法不是
+  “把 native store
+  整体映射成 trusted store”，
+  而是：
+  - self-signed certs
+    充当 trust anchors
+  - non-self-signed certs
+    充当 intermediate pool
+  这样 shared verifier
+  的现有终止逻辑
+  才不会误把
+  intermediate
+  当作链终点
+
+- 这也补齐了一个更稳定的
+  public contract：
+  `BuildCertificateChain`
+  应尽量沿 issuer path
+  往上拼接到
+  self-signed root；
+  找不到下一跳时，
+  才退化为
+  partial chain
+
 - generic
   `TSSLCertificateChainVerifier`
   这次暴露的是

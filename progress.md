@@ -4,6 +4,67 @@
 
 ## 2026-05-20
 
+### OpenSSL CertStore Full-Chain Termination Contract
+
+- `gh run view 26138586148 --json status,conclusion,name,workflowName,headSha,url`
+  - result: PASS
+  - summary:
+    - confirmed the previous shared certchain batch was already green remotely
+    - unblocked the next OpenSSL certstore contract batch
+
+- `mcp__ace_tool__.search_context(...)`
+- `nl -ba src/fafafa.ssl.openssl.certstore.pas | sed -n '680,780p'`
+- `nl -ba src/fafafa.ssl.certchain.pas | sed -n '232,267p'`
+- `nl -ba src/fafafa.ssl.certchain.pas | sed -n '674,723p'`
+- `sed -n '1,240p' tests/openssl/test_openssl_chain_issuer_selection.pas`
+- `sed -n '1,220p' tests/test_certchain_trusted_store_subject_lookup_contract.pas`
+  - result: PASS
+  - summary:
+    - confirmed the real drift sits in
+      `TOpenSSLCertificateStore.BuildCertificateChain`
+      mapping the entire store onto the verifier's trusted-store surface
+    - confirmed this conflicts with shared verifier truth:
+      `IsRootCertificate`
+      stops as soon as
+      `FTrustedStore.Contains(CurrentCert)`
+    - confirmed the defect becomes visible when the store contains both
+      intermediate and self-signed root
+
+- add focused plan/test:
+  - `docs/plans/2026-05-20-openssl-certstore-full-chain-termination-contract.md`
+  - `tests/openssl/test_openssl_certstore_chain_contract.pas`
+  - change:
+    - recorded a bounded OpenSSL certstore chain batch
+    - added two contracts for:
+      - minimal chain with only intermediate present
+      - full chain with intermediate plus root present
+
+- `mkdir -p tmp/test_openssl_certstore_chain_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_openssl_certstore_chain_contract_units -FEtmp/test_openssl_certstore_chain_contract_units -otmp/test_openssl_certstore_chain_contract_units/test_openssl_certstore_chain_contract tests/openssl/test_openssl_certstore_chain_contract.pas && ./tmp/test_openssl_certstore_chain_contract_units/test_openssl_certstore_chain_contract`
+  - result: FAIL -> PASS
+  - summary:
+    - RED captured the exact defect:
+      - store with only intermediate returned length `2`
+      - store with intermediate + root still returned only length `2`
+    - after the OpenSSL fix:
+      - minimal-chain case still passes with length `2`
+      - full-chain case now passes with length `3`
+
+- update implementation:
+  - `src/fafafa.ssl.openssl.certstore.pas`
+  - change:
+    - `BuildCertificateChain`
+      now splits the current store into:
+      - self-signed trusted anchors
+      - non-self-signed intermediate certificates
+    - verifier options now explicitly include
+      `cvoAllowPartialChain`
+    - initialized new temporary interface vars to avoid local warning noise
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remain after the OpenSSL certstore chain batch
+
 ### CertChain Trusted Store Subject Anchor Contract
 
 - `mcp__ace_tool__.search_context(...)`

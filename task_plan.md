@@ -10,6 +10,119 @@
 
 ## Current Status
 
+- [completed] `openssl certstore full-chain termination contract`
+  当前 focused 目标：
+  - 修掉
+    `TOpenSSLCertificateStore.BuildCertificateChain`
+    把整个 store
+    直接当 trusted store
+    导致 intermediate
+    被过早当成 trust anchor
+    的终止语义错误
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-openssl-certstore-full-chain-termination-contract.md`
+  - 新增 focused test：
+    - `tests/openssl/test_openssl_certstore_chain_contract.pas`
+  - 预计修改实现：
+    - `src/fafafa.ssl.openssl.certstore.pas`
+  当前预判：
+  - 现在
+    `BuildCertificateChain`
+    直接：
+    - `SetTrustedStore(Self)`
+    - `BuildChain(ACert, Result)`
+  - 但 shared verifier
+    的
+    `IsRootCertificate`
+    只看：
+    - `FTrustedStore.Contains(CurrentCert)`
+  - 所以只要
+    intermediate
+    在 store 里，
+    它就会在第二跳
+    被提前当成 anchor，
+    链停在
+    `leaf -> intermediate`
+  当前实施策略：
+  - 先用 OpenSSL focused contract
+    锁两条语义：
+    - store 只有 intermediate
+      时返回最小链
+      `leaf -> intermediate`
+    - store 同时有
+      `intermediate + root`
+      时继续返回完整链
+      `leaf -> intermediate -> root`
+  - 最小修复：
+    - 在
+      `BuildCertificateChain`
+      内临时拆分 store：
+      - self-signed certs
+        -> trusted store
+      - non-self-signed certs
+        -> intermediate store
+    - 调 generic verifier
+      时显式加上
+      `cvoAllowPartialChain`
+  当前最终收口证据：
+  - RED 明确暴露：
+    - store 只有 intermediate
+      -> 长度 `2`
+    - store 有
+      `intermediate + root`
+      旧实现仍只返回
+      长度 `2`
+  - 修复后：
+    - partial-chain case
+      仍返回
+      `leaf -> intermediate`
+    - full-chain case
+      继续返回
+      `leaf -> intermediate -> root`
+  focused verification：
+  - `tests/openssl/test_openssl_certstore_chain_contract.pas`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前结论：
+  - 这条 OpenSSL drift
+    的根因不是
+    issuer lookup
+    少一步，
+    而是
+    trusted-anchor
+    与 intermediate
+    的建模边界被混在一个 store surface
+  - 修复后，
+    `BuildCertificateChain`
+    的 partial/full
+    两条 public 语义
+    已经都被 focused contract 锁住
+  当前总路线图进度：
+  - `接口设计`
+    继续从
+    shared verifier
+    往
+    OpenSSL certstore
+    的 trust-anchor
+    终止语义收口
+  - `后端实现`
+    正在补
+    `BuildCertificateChain`
+    对 full chain / partial chain
+    的真实 public contract
+  当前下一条真实工作：
+  - 继续顺着
+    certstore / verifier /
+    chain-building
+    这条 shared lane
+    看其它 backend
+    是否仍有
+    trust-anchor /
+    root-detection /
+    partial-chain
+    漂移
 - [completed] `certchain trusted store subject anchor contract`
   当前 focused 目标：
   - 修掉
