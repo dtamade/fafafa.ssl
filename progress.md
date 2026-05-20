@@ -17942,6 +17942,63 @@
   - summary:
     - no whitespace or patch-format drift remains after the stream/memory batch
 
+### WinSSL Store Active Docs Truth
+
+- `gh run view 26175426920 --json status,conclusion,jobs,url`
+  - result: PASS
+  - summary:
+    - the previous pushed batch
+      `fix(cert): align optional backend stream memory truth`
+      is now fully green in GitHub Actions:
+      - `Minimal Gate (Linux)` = success
+      - `Code Quality (Light)` = success
+      - `FreePascal TLS 1.3 Completeness` = success
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-winssl-store-active-docs-truth.md`
+  - `tests/scripts/test_winssl_store_active_docs_truth_contract.sh`
+  - change:
+    - recorded a bounded WinSSL active-docs truth batch around certificate-store examples
+    - targeted two live docs that still taught:
+      - concrete `Open(...)` on `ISSLCertificateStore`
+      - a nonexistent `TWinSSLCertStore` class name
+      - non-public `Certificates` / `Subject` access
+
+- update docs:
+  - `docs/guides/WINSSL_BEST_PRACTICES.md`
+  - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  - change:
+    - best-practices snippet now uses
+      `OpenSystemStore(SSL_STORE_MY)`
+      instead of calling
+      `Open(...)`
+      on an
+      `ISSLCertificateStore`
+      variable
+    - backend matrix system-store example now uses:
+      - `OpenSystemStore(SSL_STORE_MY)`
+      - `GetCount`
+      - `GetCertificate`
+      - `GetSubject`
+    - removed the bad active-doc assumptions:
+      - `TWinSSLCertStore`
+      - `Store.Certificates`
+      - `Cert.Subject`
+
+- `bash -n tests/scripts/test_winssl_store_active_docs_truth_contract.sh`
+- `bash tests/scripts/test_winssl_store_active_docs_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - the new focused contract confirms active WinSSL docs now stay on shipped helper/public-store truth
+    - store usage guide keeps the valid
+      `OpenSystemStore(...)`
+      helper path
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains after the WinSSL store docs batch
+
 ### Troubleshooting Store Public API Truth
 
 - add focused batch inputs:

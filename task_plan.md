@@ -10988,3 +10988,91 @@
        `ISSLCertificateStore`
        public / concrete
        混用残留
+120. `winssl store active docs truth` 这批用于把活跃 WinSSL 文档里的证书存储示例重新对齐到当前 helper/public/concrete 分层真相：
+   - 新 plan：
+     - `docs/plans/2026-05-21-winssl-store-active-docs-truth.md`
+   - 当前新发现：
+     - `docs/guides/WINSSL_BEST_PRACTICES.md`
+       仍在对
+       `ISSLCertificateStore`
+       变量调用：
+       - `LStore.Open(SSL_STORE_MY);`
+     - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+       仍在示例里使用：
+       - 不存在的类名
+         `TWinSSLCertStore`
+       - 非 public surface
+         `Store.Certificates`
+       - 非 public getter 形态
+         `Cert.Subject`
+   - 当前源码真相：
+     - `OpenSystemStore(...)`
+       helper
+       返回
+       `ISSLCertificateStore`
+     - public 枚举路径是：
+       - `GetCount`
+       - `GetCertificate`
+       - `GetSubject`
+     - `Open` / `Close` / `IsOpen` / `GetAllCertificates`
+       只属于
+       `TWinSSLCertificateStore`
+       concrete class
+   - 当前最小修法：
+     - `WINSSL_BEST_PRACTICES`
+       改成：
+       - `OpenSystemStore(SSL_STORE_MY)`
+     - `WINSSL_BACKEND_CAPABILITY_MATRIX`
+       改成：
+       - `OpenSystemStore(SSL_STORE_MY)`
+       - `GetCount`
+       - `GetCertificate`
+       - `GetSubject`
+     - 新增 focused contract：
+       - `tests/scripts/test_winssl_store_active_docs_truth_contract.sh`
+   - 当前 focused proof：
+     - `bash -n tests/scripts/test_winssl_store_active_docs_truth_contract.sh`
+     - `bash tests/scripts/test_winssl_store_active_docs_truth_contract.sh`
+     - `git diff --check`
+   - 当前最终收口证据：
+     - focused contract
+       PASS
+     - 两处 active WinSSL 文档示例
+       已不再教：
+       - `TWinSSLCertStore`
+       - `ISSLCertificateStore.Open(...)`
+       - `Store.Certificates`
+       - `Cert.Subject`
+   - 当前结论：
+     - 这批把
+       WinSSL helper
+       /
+       concrete class
+       /
+       public interface
+       三层边界重新写清楚，
+       避免用户继续按活跃文档抄出编译级错误
+   - 当前总路线图进度：
+     - `接口设计`
+       继续从
+       “签名存在”
+       推进到
+       “backend-specific helper
+       与 public interface
+       的边界也不再误教”
+     - `后端实现`
+       本批不改 runtime，
+       说明这次 residual
+       仍落在 active-doc truth sync
+     - `测试与文档`
+       新增：
+       - focused WinSSL store docs contract
+       - 两处活跃 WinSSL 文档 truth 修复
+   - 当前批收口后的默认下一步：
+     - 提交并推送本批
+     - 继续沿
+       `ISSLCertificate`
+       /
+       `ISSLCertificateStore`
+       public-surface completeness
+       查下一条活跃 doc/test/example residual

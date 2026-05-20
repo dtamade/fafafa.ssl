@@ -231,18 +231,27 @@ end.
 program winssl_certstore;
 
 uses
+  SysUtils,
+  fafafa.ssl.base,
   fafafa.ssl.winssl.certstore;
 
 var
   Store: ISSLCertificateStore;
   Cert: ISSLCertificate;
+  I: Integer;
 begin
   // 打开系统证书存储
-  Store := TWinSSLCertStore.Open('MY');  // 个人证书
+  Store := OpenSystemStore(SSL_STORE_MY);  // 个人证书
+  if Store = nil then
+    raise Exception.Create('打开 MY 证书存储失败');
 
   // 枚举证书
-  for Cert in Store.Certificates do
-    WriteLn(Cert.Subject);
+  for I := 0 to Store.GetCount - 1 do
+  begin
+    Cert := Store.GetCertificate(I);
+    if Cert <> nil then
+      WriteLn(Cert.GetSubject);
+  end;
 
   // 按主题查找
   Cert := Store.FindBySubject('CN=MyClient');

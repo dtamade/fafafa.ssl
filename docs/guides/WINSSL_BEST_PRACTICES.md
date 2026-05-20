@@ -109,8 +109,7 @@ LKey := '-----BEGIN PRIVATE KEY-----...';
 LContext.LoadPrivateKey('server.pfx', 'pfx-password');
 
 // 或使用 Windows 证书存储
-LStore := LLib.CreateCertificateStore;
-LStore.Open(SSL_STORE_MY);  // 个人证书存储
+LStore := OpenSystemStore(SSL_STORE_MY);  // WinSSL helper, returns ISSLCertificateStore
 LCert := LStore.FindBySubject('CN=example.com');
 ```
 

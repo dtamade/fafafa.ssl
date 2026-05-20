@@ -10890,3 +10890,74 @@
   - malformed PEM memory
     被稳定拒绝，
     且不再残留旧 cert state
+
+- 顺着
+  `ISSLCertificateStore`
+  public-surface truth
+  继续往下扫时，
+  又抓到两处活跃
+  `WinSSL`
+  文档示例仍会直接误导调用方写出编译级错误：
+  - `docs/guides/WINSSL_BEST_PRACTICES.md`
+    还在对
+    `ISSLCertificateStore`
+    变量调用
+    `Open(SSL_STORE_MY)`
+  - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+    还在使用不存在的
+    `TWinSSLCertStore`
+    类名，
+    并把：
+    - `Store.Certificates`
+    - `Cert.Subject`
+    这类非 public surface
+    写成可直接照抄的示例
+
+- 这条 drift
+  的问题不在
+  “WinSSL 不该有 backend-specific helper”，
+  而在于 active docs
+  把三层东西混成了一层：
+  - WinSSL helper
+    `OpenSystemStore(...)`
+  - concrete class
+    `TWinSSLCertificateStore`
+  - public
+    `ISSLCertificateStore`
+    /
+    `ISSLCertificate`
+    surface
+
+- 当前源码真相是：
+  - `OpenSystemStore(...)`
+    helper
+    返回
+    `ISSLCertificateStore`
+  - `ISSLCertificateStore`
+    公开枚举路径是：
+    - `GetCount`
+    - `GetCertificate`
+  - `ISSLCertificate`
+    公开读主题路径是：
+    - `GetSubject`
+  - `Open` / `Close` / `IsOpen` / `GetAllCertificates`
+    只属于
+    `TWinSSLCertificateStore`
+    concrete class
+
+- 因而这批最小正确修法是：
+  - `WINSSL_BEST_PRACTICES`
+    改成
+    `OpenSystemStore(SSL_STORE_MY)`
+  - `WINSSL_BACKEND_CAPABILITY_MATRIX`
+    改成：
+    - `OpenSystemStore(SSL_STORE_MY)`
+    - `GetCount`
+    - `GetCertificate`
+    - `GetSubject`
+  - 同时新增 focused shell contract
+    守住：
+    - 错类名
+    - 错接口
+    - 错成员访问
+    不再回流
