@@ -33,6 +33,14 @@ begin
       Exit(True);
 end;
 
+function BuildLooseDNQueryVariant(const AValue: string): string;
+begin
+  Result := Trim(AValue);
+  Result := StringReplace(Result, ',', ' , ', [rfReplaceAll]);
+  Result := StringReplace(Result, '=', ' = ', [rfReplaceAll]);
+  Result := '  ' + LowerCase(Result) + '  ';
+end;
+
 var
   LAvailable: Boolean;
   LLib: ISSLLibrary;
@@ -71,6 +79,7 @@ var
   LServerStream: TMemoryStream;
   LVerifyText: string;
   LSubjectVariant: string;
+  LIssuerVariant: string;
   LSerialCompact: string;
   LSerialVariant: string;
   LCharIndex: Integer;
@@ -236,10 +245,17 @@ begin
   AssertTrue(LStore.FindByFingerprint(LCert.GetFingerprintSHA256) <> nil,
     'Certificate store should find certificate by fingerprint');
 
-  LSubjectVariant := UpperCase(StringReplace(StringReplace(LCert.GetSubject, ',', ' , ', [rfReplaceAll]),
-    '=', ' = ', [rfReplaceAll]));
+  LSubjectVariant := BuildLooseDNQueryVariant('CN=Test Signer,O=Test Org');
   AssertTrue(LStore.FindBySubject(LSubjectVariant) <> nil,
-    'Certificate store should find certificate by normalized subject query');
+    'Certificate store should find certificate by normalized subject fragment query');
+  AssertTrue(LStore.FindBySubject('') = nil,
+    'Certificate store should return nil for empty subject query');
+
+  LIssuerVariant := BuildLooseDNQueryVariant('CN=Test CA,O=Test CA');
+  AssertTrue(LStore.FindByIssuer(LIssuerVariant) <> nil,
+    'Certificate store should find certificate by normalized issuer fragment query');
+  AssertTrue(LStore.FindByIssuer('') = nil,
+    'Certificate store should return nil for empty issuer query');
 
   LSerialCompact := StringReplace(StringReplace(UpperCase(LCert.GetSerialNumber), ':', '', [rfReplaceAll]),
     ' ', '', [rfReplaceAll]);

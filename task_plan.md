@@ -10,6 +10,116 @@
 
 ## Current Status
 
+- [completed] `certificate store dn query canonical contract`
+  当前 focused 目标：
+  - 把
+    `ISSLCertificateStore`
+    的两条 DN 查询入口：
+    - `FindBySubject`
+    - `FindByIssuer`
+    在当前仍有明显分叉的
+    `FreePascal` /
+    `OpenSSL` /
+    `WinSSL`
+    三个后端上
+    收口到一条更一致的 shared contract
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-certificate-store-dn-query-canonical-contract.md`
+  - 修改实现：
+    - `src/fafafa.ssl.freepascal.lib.pas`
+    - `src/fafafa.ssl.openssl.certstore.pas`
+    - `src/fafafa.ssl.winssl.certstore.pas`
+  - 修改 focused tests / runtime suite：
+    - `tests/test_freepascal_backend_basic.pas`
+    - `tests/openssl/test_openssl_certstore_dn_query_contract.pas`
+    - `tests/winssl/test_winssl_certstore.pas`
+    - `tests/run_winssl_tests.ps1`
+  当前预判：
+  - optional backends
+    已经到达
+    normalized substring query truth
+  - 但主仓库另三组实现
+    还在分叉：
+    - `FreePascal`
+      偏 exact
+    - `OpenSSL`
+      偏 raw uppercase substring
+    - `WinSSL`
+      偏 native store substring
+  当前实现策略：
+  - 对外 contract
+    统一到：
+    - normalized DN query
+    - 支持 partial DN fragment lookup
+    - empty query -> `nil`
+  - 实现层
+    继续保留：
+    - exact-first
+    - substring fallback
+    这样 internal full-DN lookup
+    不会被我们自己放宽得过粗
+  当前最终收口证据：
+  - `FreePascal`
+    首轮 RED：
+    - `Certificate store should find certificate by normalized subject fragment query`
+  - `OpenSSL`
+    首轮 RED：
+    - `FindBySubject supports normalized partial DN fragment query`
+    - `FindByIssuer supports normalized partial DN fragment query`
+  - 修复后：
+    - `FreePascal`
+      subject / issuer
+      都支持 normalized partial DN fragment query
+    - `OpenSSL`
+      subject / issuer cache
+      现在缓存 normalized DN
+    - `WinSSL`
+      subject / issuer
+      改为基于 `FCertificates`
+      做 normalized lookup
+    - `tests/run_winssl_tests.ps1`
+      现在会编译并运行
+      `test_winssl_certstore.lpi`
+  focused verification 已通过：
+  - `tests/test_freepascal_backend_basic.pas`
+    - PASS
+  - `tests/openssl/test_openssl_certstore_dn_query_contract.pas`
+    - `12 passed / 0 failed`
+  - `git diff --check`
+    - PASS
+  当前结论：
+  - 这批收掉的是
+    `ISSLCertificateStore`
+    在 DN query family
+    上最真实的一层全局设计/实现分叉
+  - 不是文档漂移，
+    也不是 optional backends
+    的残余补洞
+  当前总路线图进度：
+  - `接口设计`
+    已经从 optional backend 局部补洞
+    上升到并收掉了
+    certstore DN query 的 shared contract 分叉
+  - `后端实现`
+    现在：
+    - optional backends
+      query family
+      已闭环
+    - `FreePascal` / `OpenSSL` / `WinSSL`
+      也在同一条 DN query truth
+      上收口
+  当前下一条真实工作：
+  - 继续沿着
+    `ISSLCertificateStore`
+    / `ISSLCertificate`
+    这条 shared public contract
+    往下找剩余 cross-backend drift
+  - 优先看：
+    - 还有没有
+      “public interface 已定义，
+      但 backend 行为仍不一致”
+      的高频 surface
 - [completed] `optional backends certificate store issuer query parity`
   当前 focused 目标：
   - 把

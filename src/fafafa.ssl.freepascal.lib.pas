@@ -1170,34 +1170,42 @@ begin
   end;
 end;
 
+function NormalizeCertificateStoreDN(const AValue: string): string;
+begin
+  Result := UpperCase(Trim(AValue));
+  Result := StringReplace(Result, ' , ', ',', [rfReplaceAll]);
+  Result := StringReplace(Result, ', ', ',', [rfReplaceAll]);
+  Result := StringReplace(Result, ' ,', ',', [rfReplaceAll]);
+  Result := StringReplace(Result, ' = ', '=', [rfReplaceAll]);
+  Result := StringReplace(Result, '= ', '=', [rfReplaceAll]);
+  Result := StringReplace(Result, ' =', '=', [rfReplaceAll]);
+end;
+
 function TFreePascalCertificateStore.FindBySubject(const ASubject: string): ISSLCertificate;
-  function NormalizeSubject(const AValue: string): string;
-  var
-    LResult: string;
-  begin
-    LResult := UpperCase(Trim(AValue));
-    LResult := StringReplace(LResult, ' , ', ',', [rfReplaceAll]);
-    LResult := StringReplace(LResult, ', ', ',', [rfReplaceAll]);
-    LResult := StringReplace(LResult, ' ,', ',', [rfReplaceAll]);
-    LResult := StringReplace(LResult, ' = ', '=', [rfReplaceAll]);
-    LResult := StringReplace(LResult, '= ', '=', [rfReplaceAll]);
-    LResult := StringReplace(LResult, ' =', '=', [rfReplaceAll]);
-    Result := LResult;
-  end;
 var
   I: Integer;
   LCert: ISSLCertificate;
   LTarget: string;
+  LCandidate: string;
 begin
   Result := nil;
-  LTarget := NormalizeSubject(ASubject);
+  LTarget := NormalizeCertificateStoreDN(ASubject);
   if LTarget = '' then
     Exit;
 
   for I := 0 to FCertificates.Count - 1 do
   begin
     LCert := FCertificates[I] as ISSLCertificate;
-    if NormalizeSubject(LCert.GetSubject) = LTarget then
+    LCandidate := NormalizeCertificateStoreDN(LCert.GetSubject);
+    if LCandidate = LTarget then
+      Exit(LCert);
+  end;
+
+  for I := 0 to FCertificates.Count - 1 do
+  begin
+    LCert := FCertificates[I] as ISSLCertificate;
+    LCandidate := NormalizeCertificateStoreDN(LCert.GetSubject);
+    if Pos(LTarget, LCandidate) > 0 then
       Exit(LCert);
   end;
 end;
@@ -1206,12 +1214,27 @@ function TFreePascalCertificateStore.FindByIssuer(const AIssuer: string): ISSLCe
 var
   I: Integer;
   LCert: ISSLCertificate;
+  LTarget: string;
+  LCandidate: string;
 begin
   Result := nil;
+  LTarget := NormalizeCertificateStoreDN(AIssuer);
+  if LTarget = '' then
+    Exit;
+
   for I := 0 to FCertificates.Count - 1 do
   begin
     LCert := FCertificates[I] as ISSLCertificate;
-    if SameText(LCert.GetIssuer, AIssuer) then
+    LCandidate := NormalizeCertificateStoreDN(LCert.GetIssuer);
+    if LCandidate = LTarget then
+      Exit(LCert);
+  end;
+
+  for I := 0 to FCertificates.Count - 1 do
+  begin
+    LCert := FCertificates[I] as ISSLCertificate;
+    LCandidate := NormalizeCertificateStoreDN(LCert.GetIssuer);
+    if Pos(LTarget, LCandidate) > 0 then
       Exit(LCert);
   end;
 end;

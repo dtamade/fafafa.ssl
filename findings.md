@@ -2,6 +2,88 @@
 
 ## 2026-05-20
 
+- 当我们把 optional backends
+  的 query family
+  收口完之后，
+  真正浮出来的
+  下一个 shared 设计债
+  不是更多 getter，
+  而是
+  `ISSLCertificateStore`
+  的 DN query contract
+
+- 当前仓库最稳的 public 语义
+  不是“只允许 full DN exact match”，
+  而是：
+  - normalized DN query
+  - partial DN fragment lookup
+  - empty query fail-closed
+  因为这才与：
+  - system-store 搜索习惯
+  - 现有 store smoke
+  - optional backends
+    已落地语义
+  更一致
+
+- 但实现层如果直接只做
+  substring，
+  会把内部
+  `FindBySubject(LCurrent.GetIssuer)`
+  这类 full-DN path
+  放宽得太粗；
+  所以
+  exact-first + substring fallback
+  是更稳的实现细节
+
+- `signer_cert.pem`
+  这批再次证明是对的夹具，
+  但也暴露出一个
+  很容易误判的问题：
+  当前各 backend
+  吐出的 DN 顺序
+  是
+  `CN -> O -> L -> ST -> C`，
+  不是一开始拍脑袋假设的
+  `O -> CN`
+  所以 query contract
+  必须强调
+  “支持 partial fragment”
+  而不是把测试写成
+  对某种 DN 序列化顺序的死绑定
+
+- `OpenSSL`
+  这批真正缺的
+  不是 substring 能力，
+  而是
+  subject / issuer cache
+  没有缓存 normalized DN truth
+  所以
+  query 只是 upper-case
+  仍然不够
+
+- `WinSSL`
+  这批也再次证明，
+  不能把 public contract
+  完全外包给
+  `CertFindCertificateInStore`
+  这种 backend-native 搜索语义；
+  共享接口层
+  需要自己对查询做归一化，
+  然后基于缓存对象
+  发布 repo 级一致结果
+
+- 这意味着
+  `ISSLCertificateStore`
+  的“完整实现”
+  不能只看：
+  - 能不能打开系统存储
+  - 能不能按 native API 查
+  还要看：
+  - shared interface
+    对同一类人类输入
+    是否在主要 backend 上
+    给出一致 truth
+
 - optional backends
   的 certificate store query family
   继续往下收口后，

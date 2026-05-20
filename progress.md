@@ -4,6 +4,83 @@
 
 ## 2026-05-20
 
+### Certificate Store DN Query Canonical Contract
+
+- `mcp__ace_tool__.search_context(...)`
+- `nl -ba src/fafafa.ssl.freepascal.lib.pas | sed -n '1160,1238p'`
+- `nl -ba src/fafafa.ssl.openssl.certstore.pas | sed -n '180,245p'`
+- `nl -ba src/fafafa.ssl.openssl.certstore.pas | sed -n '599,638p'`
+- `nl -ba src/fafafa.ssl.winssl.certstore.pas | sed -n '170,540p'`
+- `nl -ba src/fafafa.ssl.mbedtls.certificate.pas | sed -n '1490,1568p'`
+- `nl -ba src/fafafa.ssl.wolfssl.certificate.pas | sed -n '1398,1465p'`
+- `nl -ba tests/test_freepascal_backend_basic.pas | sed -n '220,280p'`
+- `nl -ba tests/certificate/test_certstore_unit.pas | sed -n '1,260p'`
+- `nl -ba tests/winssl/test_winssl_certstore.pas | sed -n '220,310p'`
+- `sed -n '1,260p' .github/workflows/winssl-tests.yml`
+- `sed -n '1,220p' tests/run_winssl_tests.ps1`
+  - result: PASS
+  - summary:
+    - confirmed the next shared design debt after optional-backend parity is certstore DN query semantics
+    - confirmed current repo drift:
+      - `FreePascal` leans exact
+      - `OpenSSL` leans uppercase substring
+      - `WinSSL` leans native substring
+      - optional backends already lean normalized substring
+    - confirmed current Windows CI path does not automatically run `test_winssl_certstore.lpi` unless we wire it into `tests/run_winssl_tests.ps1`
+
+- add focused plan/tests:
+  - `docs/plans/2026-05-20-certificate-store-dn-query-canonical-contract.md`
+  - `tests/test_freepascal_backend_basic.pas`
+  - `tests/openssl/test_openssl_certstore_dn_query_contract.pas`
+  - `tests/winssl/test_winssl_certstore.pas`
+  - `tests/run_winssl_tests.ps1`
+  - change:
+    - recorded a bounded DN-query batch
+    - added RED for:
+      - normalized partial subject query
+      - normalized partial issuer query
+      - empty query fail-closed
+    - wired WinSSL certstore test into the existing Windows runtime suite
+
+- `mkdir -p tmp/test_freepascal_backend_basic_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_freepascal_backend_basic_units -FEtmp/test_freepascal_backend_basic_units -otmp/test_freepascal_backend_basic_units/test_freepascal_backend_basic tests/test_freepascal_backend_basic.pas && ./tmp/test_freepascal_backend_basic_units/test_freepascal_backend_basic`
+  - result: FAIL -> PASS
+  - summary:
+    - first RED surfaced the live `FreePascal` drift:
+      - `Certificate store should find certificate by normalized subject fragment query`
+    - after aligning subject / issuer DN lookup to normalized exact-first + substring fallback:
+      - final result: `FreePascal backend basic checks passed`
+
+- `mkdir -p tmp/test_openssl_certstore_dn_query_contract tmp/test_openssl_certstore_dn_query_contract_units && fpc -B -Fu./src -Fu./src/openssl -Fu./tests -FEtmp/test_openssl_certstore_dn_query_contract -FUtmp/test_openssl_certstore_dn_query_contract_units -otmp/test_openssl_certstore_dn_query_contract/test_openssl_certstore_dn_query_contract tests/openssl/test_openssl_certstore_dn_query_contract.pas && ./tmp/test_openssl_certstore_dn_query_contract/test_openssl_certstore_dn_query_contract`
+  - result: FAIL -> PASS
+  - summary:
+    - first RED surfaced the live `OpenSSL` drift:
+      - `FindBySubject supports normalized partial DN fragment query`
+      - `FindByIssuer supports normalized partial DN fragment query`
+    - during RED investigation, adjusted the test fragment order to the fixture's real DN serialization order:
+      - `CN -> O -> L -> ST -> C`
+    - after caching normalized DN values and using normalized lookup:
+      - final result: `12 passed / 0 failed`
+
+- update implementation:
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.openssl.certstore.pas`
+  - `src/fafafa.ssl.winssl.certstore.pas`
+  - change:
+    - `FreePascal`
+      subject / issuer
+      now use normalized exact-first + substring fallback
+    - `OpenSSL`
+      subject / issuer caches
+      now store normalized DN truth
+    - `WinSSL`
+      subject / issuer
+      now search cached certificate objects instead of delegating public contract to `CertFindCertificateInStore`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remain after the DN-query contract batch
+
 ### Optional Backends Certificate Store Issuer Query Parity
 
 - `mcp__ace_tool__.search_context(...)`

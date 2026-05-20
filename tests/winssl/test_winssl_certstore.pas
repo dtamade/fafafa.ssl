@@ -36,6 +36,7 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.exceptions,
   fafafa.ssl.winssl.base,
+  fafafa.ssl.winssl.api,
   fafafa.ssl.winssl.certstore,
   fafafa.ssl.winssl.certificate;
 
@@ -55,6 +56,30 @@ begin
     Inc(GTestsFailed);
     WriteLn('  ✗ FAILED: ', AMessage);
   end;
+end;
+
+function BuildLooseDNQueryVariant(const AValue: string): string;
+begin
+  Result := Trim(AValue);
+  Result := StringReplace(Result, ',', ' , ', [rfReplaceAll]);
+  Result := StringReplace(Result, '=', ' = ', [rfReplaceAll]);
+  Result := '  ' + LowerCase(Result) + '  ';
+end;
+
+function CreateMemoryBackedStore: ISSLCertificateStore;
+var
+  LStoreHandle: HCERTSTORE;
+begin
+  Result := nil;
+  LStoreHandle := CertOpenStore(
+    CERT_STORE_PROV_MEMORY,
+    X509_ASN_ENCODING or PKCS_7_ASN_ENCODING,
+    0,
+    0,
+    nil
+  );
+  if LStoreHandle <> nil then
+    Result := TWinSSLCertificateStore.Create(LStoreHandle, True);
 end;
 
 procedure TestStoreCreation;
@@ -274,6 +299,47 @@ begin
     // 查找不存在的颁发者
     LCert := LStore.FindByIssuer('CN=NonExistentIssuer');
     Assert(LCert = nil, '查找不存在的颁发者返回 nil');
+
+    LStore.Close;
+
+  except
+    on E: Exception do
+      WriteLn('  注意: 测试需要 Windows 环境 - ', E.Message);
+  end;
+
+  WriteLn;
+end;
+
+procedure TestDeterministicDNQueryContract;
+var
+  LStore: ISSLCertificateStore;
+  LCert: ISSLCertificate;
+  LSubjectVariant: string;
+  LIssuerVariant: string;
+begin
+  WriteLn('【测试 8A】确定性 DN 查询契约');
+  WriteLn('---');
+
+  try
+    LStore := CreateMemoryBackedStore;
+    Assert(LStore <> nil, '创建内存证书存储成功');
+
+    LCert := TWinSSLCertificate.Create(nil, False);
+    Assert(LCert <> nil, '创建夹具证书对象成功');
+    Assert(LCert.LoadFromFile('tests/certificate/test_certs/signer_cert.pem'),
+      '加载 distinct-issuer fixture 成功');
+    Assert(LStore.AddCertificate(LCert), '夹具证书加入内存存储成功');
+
+    LSubjectVariant := BuildLooseDNQueryVariant('CN=Test Signer,O=Test Org');
+    Assert(LStore.FindBySubject(LSubjectVariant) <> nil,
+      '按归一化主题片段查找成功');
+    Assert(LStore.FindBySubject('') = nil, '空主题查询返回 nil');
+
+    LIssuerVariant := BuildLooseDNQueryVariant('CN=Test CA,O=Test CA');
+    Assert(LStore.FindByIssuer(LIssuerVariant) <> nil,
+      '按归一化颁发者片段查找成功');
+    Assert(LStore.FindByIssuer('') = nil, '空颁发者查询返回 nil');
+    Assert(LStore.GetCount = 1, '内存存储证书数量保持为 1');
 
     LStore.Close;
 
@@ -529,6 +595,7 @@ begin
     TestGetCertificateByIndex;
     TestFindBySubject;
     TestFindByIssuer;
+    TestDeterministicDNQueryContract;
     TestFindBySerialNumber;
     TestFindByFingerprint;
     TestContainsCertificate;

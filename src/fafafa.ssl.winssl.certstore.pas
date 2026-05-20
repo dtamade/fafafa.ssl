@@ -204,6 +204,17 @@ begin
   until CertContext = nil;
 end;
 
+function NormalizeCertificateStoreDN(const AValue: string): string;
+begin
+  Result := UpperCase(Trim(AValue));
+  Result := StringReplace(Result, ' , ', ',', [rfReplaceAll]);
+  Result := StringReplace(Result, ', ', ',', [rfReplaceAll]);
+  Result := StringReplace(Result, ' ,', ',', [rfReplaceAll]);
+  Result := StringReplace(Result, ' = ', '=', [rfReplaceAll]);
+  Result := StringReplace(Result, '= ', '=', [rfReplaceAll]);
+  Result := StringReplace(Result, ' =', '=', [rfReplaceAll]);
+end;
+
 // ============================================================================
 // ISSLCertificateStore - 存储管理
 // ============================================================================
@@ -478,54 +489,70 @@ end;
 
 function TWinSSLCertificateStore.FindBySubject(const ASubject: string): ISSLCertificate;
 var
-  CertContext: PCCERT_CONTEXT;
-  SubjectW: WideString;
+  I: Integer;
+  Cert: ISSLCertificate;
+  LTarget: string;
+  LCandidate: string;
 begin
   Result := nil;
 
-  if (FStoreHandle = nil) or (ASubject = '') then
+  if FStoreHandle = nil then
     Exit;
 
-  SubjectW := WideString(ASubject);
+  LTarget := NormalizeCertificateStoreDN(ASubject);
+  if LTarget = '' then
+    Exit;
 
-  // 搜索主题包含指定字符串的证书
-  CertContext := CertFindCertificateInStore(
-    FStoreHandle,
-    X509_ASN_ENCODING or PKCS_7_ASN_ENCODING,
-    0,
-    CERT_FIND_SUBJECT_STR_W,
-    PWideChar(SubjectW),
-    nil
-  );
+  // 基于缓存证书对象做归一化匹配，避免 WinSSL lane
+  // 继续停留在 backend-native 的未归一化字符串搜索语义上。
+  for I := 0 to FCertificates.Count - 1 do
+  begin
+    Cert := ISSLCertificate(FCertificates[I]);
+    LCandidate := NormalizeCertificateStoreDN(Cert.GetSubject);
+    if LCandidate = LTarget then
+      Exit(Cert);
+  end;
 
-  if CertContext <> nil then
-    Result := CreateWinSSLCertificateFromContext(CertContext, True);
+  for I := 0 to FCertificates.Count - 1 do
+  begin
+    Cert := ISSLCertificate(FCertificates[I]);
+    LCandidate := NormalizeCertificateStoreDN(Cert.GetSubject);
+    if Pos(LTarget, LCandidate) > 0 then
+      Exit(Cert);
+  end;
 end;
 
 function TWinSSLCertificateStore.FindByIssuer(const AIssuer: string): ISSLCertificate;
 var
-  CertContext: PCCERT_CONTEXT;
-  IssuerW: WideString;
+  I: Integer;
+  Cert: ISSLCertificate;
+  LTarget: string;
+  LCandidate: string;
 begin
   Result := nil;
 
-  if (FStoreHandle = nil) or (AIssuer = '') then
+  if FStoreHandle = nil then
     Exit;
 
-  IssuerW := WideString(AIssuer);
+  LTarget := NormalizeCertificateStoreDN(AIssuer);
+  if LTarget = '' then
+    Exit;
 
-  // 搜索颁发者包含指定字符串的证书
-  CertContext := CertFindCertificateInStore(
-    FStoreHandle,
-    X509_ASN_ENCODING or PKCS_7_ASN_ENCODING,
-    0,
-    CERT_FIND_ISSUER_STR_W,
-    PWideChar(IssuerW),
-    nil
-  );
+  for I := 0 to FCertificates.Count - 1 do
+  begin
+    Cert := ISSLCertificate(FCertificates[I]);
+    LCandidate := NormalizeCertificateStoreDN(Cert.GetIssuer);
+    if LCandidate = LTarget then
+      Exit(Cert);
+  end;
 
-  if CertContext <> nil then
-    Result := CreateWinSSLCertificateFromContext(CertContext, True);
+  for I := 0 to FCertificates.Count - 1 do
+  begin
+    Cert := ISSLCertificate(FCertificates[I]);
+    LCandidate := NormalizeCertificateStoreDN(Cert.GetIssuer);
+    if Pos(LTarget, LCandidate) > 0 then
+      Exit(Cert);
+  end;
 end;
 
 function TWinSSLCertificateStore.FindBySerialNumber(const ASerialNumber: string): ISSLCertificate;

@@ -40,6 +40,12 @@ $tests = @(
         Description = "多场景集成测试 - 80 个测试点"
     },
     @{
+        Name = "WinSSL CertStore DN Query Contract"
+        Lpi = "test_winssl_certstore.lpi"
+        Exe = "bin\test_winssl_certstore.exe"
+        Description = "系统 store + 确定性 memory-store DN query contract 测试"
+    },
+    @{
         Name = "WinSSL Peer Certificate Surface"
         Lpi = "test_winssl_peer_certificate_surface.lpi"
         Exe = "bin\test_winssl_peer_certificate_surface.exe"

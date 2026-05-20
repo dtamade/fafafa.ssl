@@ -129,6 +129,17 @@ begin
   end;
 end;
 
+function NormalizeCertificateStoreDN(const AValue: string): string;
+begin
+  Result := UpperCase(Trim(AValue));
+  Result := StringReplace(Result, ' , ', ',', [rfReplaceAll]);
+  Result := StringReplace(Result, ', ', ',', [rfReplaceAll]);
+  Result := StringReplace(Result, ' ,', ',', [rfReplaceAll]);
+  Result := StringReplace(Result, ' = ', '=', [rfReplaceAll]);
+  Result := StringReplace(Result, '= ', '=', [rfReplaceAll]);
+  Result := StringReplace(Result, ' =', '=', [rfReplaceAll]);
+end;
+
 constructor TOpenSSLCertificateStore.Create;
 begin
   inherited Create;
@@ -231,8 +242,8 @@ begin
     // 缓存 Subject 和 Issuer 用于部分匹配
     Subject := Cert.GetSubject;
     Issuer := Cert.GetIssuer;
-    FSubjectCache.Add(UpperCase(Subject));
-    FIssuerCache.Add(UpperCase(Issuer));
+    FSubjectCache.Add(NormalizeCertificateStoreDN(Subject));
+    FIssuerCache.Add(NormalizeCertificateStoreDN(Issuer));
   except
     // 索引构建失败不应阻止证书添加
     on E: Exception do
@@ -605,7 +616,19 @@ begin
   if FSubjectCache.Count = 0 then Exit;
 
   // Phase 2.5: 使用缓存的 Subject 值进行搜索，避免重复 X509 解析
-  SearchSubject := UpperCase(ASubject);
+  SearchSubject := NormalizeCertificateStoreDN(ASubject);
+  if SearchSubject = '' then
+    Exit;
+
+  for I := 0 to FSubjectCache.Count - 1 do
+  begin
+    if FSubjectCache[I] = SearchSubject then
+    begin
+      Result := GetCertificate(I);
+      Exit;
+    end;
+  end;
+
   for I := 0 to FSubjectCache.Count - 1 do
   begin
     // 部分匹配：检查 subject 中是否包含搜索字符串
@@ -626,7 +649,19 @@ begin
   if FIssuerCache.Count = 0 then Exit;
 
   // Phase 2.5: 使用缓存的 Issuer 值进行搜索，避免重复 X509 解析
-  SearchIssuer := UpperCase(AIssuer);
+  SearchIssuer := NormalizeCertificateStoreDN(AIssuer);
+  if SearchIssuer = '' then
+    Exit;
+
+  for I := 0 to FIssuerCache.Count - 1 do
+  begin
+    if FIssuerCache[I] = SearchIssuer then
+    begin
+      Result := GetCertificate(I);
+      Exit;
+    end;
+  end;
+
   for I := 0 to FIssuerCache.Count - 1 do
   begin
     // 部分匹配：检查 issuer 中是否包含搜索字符串
