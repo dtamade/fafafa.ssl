@@ -3,191 +3,216 @@ program test_winssl_cert_verify_ex;
 {$mode objfpc}{$H+}
 
 uses
-  SysUtils, Classes,
+  Windows,
+  SysUtils,
   fafafa.ssl.base,
-  fafafa.ssl.winssl.base;
+  fafafa.ssl.winssl.base,
+  fafafa.ssl.winssl.api,
+  fafafa.ssl.winssl.certstore,
+  fafafa.ssl.winssl.certificate;
 
-type
-  TTestResult = record
-    TestName: string;
-    Passed: Boolean;
-    Message: string;
-  end;
-
-var
-  GResults: array of TTestResult;
-  GTestCount: Integer = 0;
-  GPassCount: Integer = 0;
-
-procedure AddTestResult(const aTestName: string; aPassed: Boolean; const aMessage: string);
+procedure Check(ACondition: Boolean; const AMessage: string);
 begin
-  SetLength(GResults, Length(GResults) + 1);
-  with GResults[High(GResults)] do
+  if not ACondition then
   begin
-    TestName := aTestName;
-    Passed := aPassed;
-    Message := aMessage;
-  end;
-  Inc(GTestCount);
-  if aPassed then
-    Inc(GPassCount);
-end;
-
-procedure PrintResults;
-var
-  i: Integer;
-begin
-  WriteLn;
-  WriteLn('=' + StringOfChar('=', 78));
-  WriteLn('WinSSL Certificate VerifyEx Test Results');
-  WriteLn('=' + StringOfChar('=', 78));
-  WriteLn;
-  
-  for i := 0 to High(GResults) do
-  begin
-    if GResults[i].Passed then
-      Write('[PASS] ')
-    else
-      Write('[FAIL] ');
-    WriteLn(GResults[i].TestName);
-    if GResults[i].Message <> '' then
-      WriteLn('       ', GResults[i].Message);
-  end;
-  
-  WriteLn;
-  WriteLn('=' + StringOfChar('=', 78));
-  WriteLn(Format('Total: %d, Passed: %d, Failed: %d (%.1f%%)',
-    [GTestCount, GPassCount, GTestCount - GPassCount,
-     (GPassCount / GTestCount) * 100.0]));
-  WriteLn('=' + StringOfChar('=', 78));
-end;
-
-// Test 1: 验证标志类型定义
-procedure TestVerifyFlagTypes;
-var
-  LFlags: TSSLCertVerifyFlags;
-begin
-  try
-    // 测试标志组合
-    LFlags := [];
-    LFlags := [sslCertVerifyDefault];
-    LFlags := [sslCertVerifyCheckRevocation];
-    LFlags := [sslCertVerifyCheckOCSP];
-    LFlags := [sslCertVerifyCheckCRL];
-    LFlags := [sslCertVerifyCheckRevocation, sslCertVerifyCheckCRL];
-    
-    AddTestResult('Test 1: Verify Flag Types', True,
-      'All TSSLCertVerifyFlag types can be used correctly');
-  except
-    on E: Exception do
-      AddTestResult('Test 1: Verify Flag Types', False, 'Exception: ' + E.Message);
-  end;
-end;
-
-// Test 2: 验证标志枚举值
-procedure TestVerifyFlagValues;
-var
-  LTestPassed: Boolean;
-begin
-  try
-    // 测试所有枚举值
-    LTestPassed := (Ord(sslCertVerifyDefault) = 0) and
-                   (Ord(sslCertVerifyCheckRevocation) = 1) and
-                   (Ord(sslCertVerifyCheckOCSP) = 2) and
-                   (Ord(sslCertVerifyIgnoreExpiry) = 3) and
-                   (Ord(sslCertVerifyIgnoreHostname) = 4) and
-                   (Ord(sslCertVerifyAllowSelfSigned) = 5) and
-                   (Ord(sslCertVerifyStrictChain) = 6) and
-                   (Ord(sslCertVerifyCheckCRL) = 7);
-    
-    AddTestResult('Test 2: Verify Flag Values', LTestPassed,
-      'All 8 verify flags are properly defined');
-  except
-    on E: Exception do
-      AddTestResult('Test 2: Verify Flag Values', False, 'Exception: ' + E.Message);
-  end;
-end;
-
-// Test 3: 验证结果结构
-procedure TestVerifyResultStructure;
-var
-  LResult: TSSLCertVerifyResult;
-begin
-  try
-    // 测试结构初始化
-    FillChar(LResult, SizeOf(LResult), 0);
-    LResult.Success := True;
-    LResult.ErrorCode := 0;
-    LResult.ErrorMessage := 'Test message';
-    LResult.ChainStatus := 0;
-    LResult.RevocationStatus := 0;
-    LResult.DetailedInfo := 'Test detailed info';
-    
-    AddTestResult('Test 3: Verify Result Structure', True,
-      'Structure fields can be accessed correctly');
-  except
-    on E: Exception do
-      AddTestResult('Test 3: Verify Result Structure', False, 'Exception: ' + E.Message);
-  end;
-end;
-
-// Test 4: 错误消息映射
-procedure TestErrorMessageMapping;
-var
-  LTestPassed: Boolean;
-begin
-  try
-    // 测试错误码常量定义
-    LTestPassed := (CERT_E_EXPIRED <> 0) and
-                   (CERT_E_UNTRUSTEDROOT <> 0) and
-                   (CERT_E_REVOKED <> 0) and
-                   (CERT_E_REVOCATION_FAILURE <> 0) and
-                   (TRUST_E_CERT_SIGNATURE <> 0);
-    
-    AddTestResult('Test 4: Error Message Mapping', LTestPassed,
-      'Error code constants are properly defined');
-  except
-    on E: Exception do
-      AddTestResult('Test 4: Error Message Mapping', False, 'Exception: ' + E.Message);
-  end;
-end;
-
-// Test 5: 证书链检查标志常量
-procedure TestChainFlags;
-var
-  LTestPassed: Boolean;
-begin
-  try
-    // 测试链检查标志常量定义
-    LTestPassed := (CERT_CHAIN_REVOCATION_CHECK_END_CERT <> 0) and
-                   (CERT_CHAIN_REVOCATION_CHECK_CHAIN <> 0) and
-                   (CERT_CHAIN_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT <> 0);
-    
-    AddTestResult('Test 5: Chain Flags', LTestPassed,
-      Format('Revocation check flags: 0x%x, 0x%x, 0x%x',
-        [CERT_CHAIN_REVOCATION_CHECK_END_CERT,
-         CERT_CHAIN_REVOCATION_CHECK_CHAIN,
-         CERT_CHAIN_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT]));
-  except
-    on E: Exception do
-      AddTestResult('Test 5: Chain Flags', False, 'Exception: ' + E.Message);
-  end;
-end;
-
-begin
-  WriteLn('WinSSL Certificate VerifyEx Test Suite');
-  WriteLn('Testing enhanced certificate verification functionality...');
-  WriteLn;
-  
-  TestVerifyFlagTypes;
-  TestVerifyFlagValues;
-  TestVerifyResultStructure;
-  TestErrorMessageMapping;
-  TestChainFlags;
-  
-  PrintResults;
-  
-  if GPassCount < GTestCount then
+    WriteLn('[FAIL] ', AMessage);
     Halt(1);
-end.
+  end;
+  WriteLn('[PASS] ', AMessage);
+end;
 
+function ContainsTextInsensitive(const AText, ASubText: string): Boolean;
+begin
+  Result := Pos(LowerCase(ASubText), LowerCase(AText)) > 0;
+end;
+
+function ResolveRepoFixturePath(const ARepoRelativePath: string): string;
+const
+  CandidatePrefixes: array[0..3] of string = (
+    '',
+    '../',
+    '../../',
+    '../../../'
+  );
+var
+  I: Integer;
+  LCandidate: string;
+begin
+  Result := '';
+  for I := Low(CandidatePrefixes) to High(CandidatePrefixes) do
+  begin
+    LCandidate := ExpandFileName(CandidatePrefixes[I] + ARepoRelativePath);
+    if FileExists(LCandidate) then
+    begin
+      Result := LCandidate;
+      Exit;
+    end;
+  end;
+end;
+
+function FormatVerifyState(AVerified: Boolean; const AResult: TSSLCertVerifyResult): string;
+begin
+  Result := Format(
+    'actual verified=%s success=%s error=%d msg=%s details=%s',
+    [
+      BoolToStr(AVerified, True),
+      BoolToStr(AResult.Success, True),
+      AResult.ErrorCode,
+      AResult.ErrorMessage,
+      AResult.DetailedInfo
+    ]
+  );
+end;
+
+function CreateMemoryBackedStore: TWinSSLCertificateStore;
+var
+  LStoreHandle: HCERTSTORE;
+begin
+  Result := nil;
+  LStoreHandle := CertOpenStore(
+    CERT_STORE_PROV_MEMORY,
+    X509_ASN_ENCODING or PKCS_7_ASN_ENCODING,
+    0,
+    0,
+    nil
+  );
+  if LStoreHandle <> nil then
+    Result := TWinSSLCertificateStore.Create(LStoreHandle, True);
+end;
+
+function CreateWinSSLCertificate: ISSLCertificate;
+begin
+  Result := TWinSSLCertificate.Create(nil, False);
+  Check(Result <> nil, 'WinSSL certificate object should be created');
+end;
+
+function LoadFixtureCertificate(const ARepoRelativePath, ALabel: string): ISSLCertificate;
+var
+  LFixturePath: string;
+begin
+  Result := CreateWinSSLCertificate;
+  LFixturePath := ResolveRepoFixturePath(ARepoRelativePath);
+  Check(LFixturePath <> '', ALabel + ' fixture path should resolve');
+  Check(Result.LoadFromFile(LFixturePath), ALabel + ' fixture should load');
+end;
+
+procedure TestIgnoreExpiryIsPerCallAndHonored;
+var
+  LExpiredLeaf: ISSLCertificate;
+  LCACert: ISSLCertificate;
+  LStore: TWinSSLCertificateStore;
+  LVerifyResult: TSSLCertVerifyResult;
+  LVerified: Boolean;
+  LDiag: string;
+begin
+  WriteLn('=== WinSSL VerifyEx Flag Parity ===');
+
+  LExpiredLeaf := LoadFixtureCertificate('tests/certs/expired-signer.pem', 'Expired leaf');
+  LCACert := LoadFixtureCertificate('tests/certificate/test_certs/ca_cert.pem', 'CA');
+
+  LStore := CreateMemoryBackedStore;
+  Check(LStore <> nil, 'WinSSL memory-backed store should be created');
+  Check(LStore.AddCertificate(LCACert), 'CA fixture should be added to memory-backed store');
+
+  LVerified := LExpiredLeaf.VerifyEx(LStore, [], LVerifyResult);
+  Check((not LVerified) and (not LVerifyResult.Success),
+    'Expired leaf without IgnoreExpiry should fail; ' + FormatVerifyState(LVerified, LVerifyResult));
+  LDiag := LVerifyResult.ErrorMessage + ' ' + LVerifyResult.DetailedInfo;
+  Check(
+    ContainsTextInsensitive(LDiag, 'expired') or
+    ContainsTextInsensitive(LDiag, 'time'),
+    'Expired leaf failure should expose an expiry diagnostic'
+  );
+
+  LVerified := LExpiredLeaf.VerifyEx(LStore, [sslCertVerifyIgnoreExpiry], LVerifyResult);
+  Check(LVerified and LVerifyResult.Success,
+    'Expired leaf with IgnoreExpiry should succeed; ' + FormatVerifyState(LVerified, LVerifyResult));
+
+  LVerified := LExpiredLeaf.VerifyEx(LStore, [], LVerifyResult);
+  Check((not LVerified) and (not LVerifyResult.Success),
+    'IgnoreExpiry must stay per-call and not leak into a later unflagged verify; ' +
+      FormatVerifyState(LVerified, LVerifyResult));
+end;
+
+procedure TestAllowSelfSignedIsPerCallAndHonored;
+var
+  LSelfSignedLeaf: ISSLCertificate;
+  LEmptyStore: TWinSSLCertificateStore;
+  LVerifyResult: TSSLCertVerifyResult;
+  LVerified: Boolean;
+  LDiag: string;
+begin
+  LSelfSignedLeaf := LoadFixtureCertificate('tests/certs/version1-cert.pem', 'Self-signed leaf');
+
+  LEmptyStore := CreateMemoryBackedStore;
+  Check(LEmptyStore <> nil, 'Empty WinSSL memory-backed store should be created');
+
+  LVerified := LSelfSignedLeaf.VerifyEx(LEmptyStore, [], LVerifyResult);
+  Check((not LVerified) and (not LVerifyResult.Success),
+    'Self-signed leaf without AllowSelfSigned should fail; ' + FormatVerifyState(LVerified, LVerifyResult));
+  LDiag := LVerifyResult.ErrorMessage + ' ' + LVerifyResult.DetailedInfo;
+  Check(
+    ContainsTextInsensitive(LDiag, 'untrusted') or
+    ContainsTextInsensitive(LDiag, 'trusted') or
+    ContainsTextInsensitive(LDiag, 'root'),
+    'Self-signed failure should expose a trust diagnostic'
+  );
+
+  LVerified := LSelfSignedLeaf.VerifyEx(LEmptyStore, [sslCertVerifyAllowSelfSigned], LVerifyResult);
+  Check(LVerified and LVerifyResult.Success,
+    'Self-signed leaf with AllowSelfSigned should succeed; ' + FormatVerifyState(LVerified, LVerifyResult));
+
+  LVerified := LSelfSignedLeaf.VerifyEx(LEmptyStore, [], LVerifyResult);
+  Check((not LVerified) and (not LVerifyResult.Success),
+    'AllowSelfSigned must stay per-call and not leak into a later unflagged verify; ' +
+      FormatVerifyState(LVerified, LVerifyResult));
+end;
+
+procedure TestStrictChainRequiresServerAuthUsage;
+var
+  LLeafCert: ISSLCertificate;
+  LCACert: ISSLCertificate;
+  LStore: TWinSSLCertificateStore;
+  LVerifyResult: TSSLCertVerifyResult;
+  LVerified: Boolean;
+  LDiag: string;
+begin
+  LLeafCert := LoadFixtureCertificate('tests/certificate/test_certs/signer_cert.pem', 'CA-signed leaf');
+  LCACert := LoadFixtureCertificate('tests/certificate/test_certs/ca_cert.pem', 'CA');
+
+  LStore := CreateMemoryBackedStore;
+  Check(LStore <> nil, 'Strict-chain memory-backed store should be created');
+  Check(LStore.AddCertificate(LCACert), 'Strict-chain CA fixture should be added to store');
+
+  LVerified := LLeafCert.VerifyEx(LStore, [], LVerifyResult);
+  Check(LVerified and LVerifyResult.Success,
+    'CA-signed leaf without strict-chain should succeed; ' + FormatVerifyState(LVerified, LVerifyResult));
+
+  LVerified := LLeafCert.VerifyEx(LStore, [sslCertVerifyStrictChain], LVerifyResult);
+  Check((not LVerified) and (not LVerifyResult.Success),
+    'Strict-chain should fail when the leaf certificate lacks serverAuth EKU; ' +
+      FormatVerifyState(LVerified, LVerifyResult));
+  LDiag := LVerifyResult.ErrorMessage + ' ' + LVerifyResult.DetailedInfo;
+  Check(
+    ContainsTextInsensitive(LDiag, 'strict') or
+    ContainsTextInsensitive(LDiag, 'serverauth') or
+    ContainsTextInsensitive(LDiag, 'extended key usage'),
+    'Strict-chain failure should mention strict-chain or serverAuth extended key usage'
+  );
+end;
+
+begin
+  try
+    TestIgnoreExpiryIsPerCallAndHonored;
+    TestAllowSelfSignedIsPerCallAndHonored;
+    TestStrictChainRequiresServerAuthUsage;
+    WriteLn;
+    WriteLn('[PASS] WinSSL VerifyEx ignore-expiry / allow-self-signed / strict-chain parity contract is satisfied.');
+  except
+    on E: Exception do
+    begin
+      WriteLn('[FAIL] Unhandled exception: ', E.ClassName, ': ', E.Message);
+      Halt(1);
+    end;
+  end;
+end.

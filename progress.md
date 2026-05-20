@@ -17372,3 +17372,59 @@
   - result: PASS
   - summary:
     - no whitespace or patch-format issues remain after the FreePascal VerifyEx parity closeout
+
+### WinSSL VerifyEx Flag Parity
+
+- `mcp__ace_tool__.search_context(...)`
+  - result: PASS
+  - summary:
+    - re-mapped the exact WinSSL certificate-level `VerifyEx` gap, the current runtime suite coverage hole, the memory-store helper, and the policy-flag constants before editing
+
+- static source / workflow review:
+  - `sed -n '736,900p' src/fafafa.ssl.winssl.certificate.pas`
+  - `sed -n '1080,1235p' src/fafafa.ssl.winssl.connection.pas`
+  - `sed -n '1,220p' tests/run_winssl_tests.ps1`
+  - `sed -n '1,260p' tests/winssl/test_winssl_cert_verify_ex.pas`
+  - `sed -n '1,240p' tests/winssl/test_winssl_certstore.pas`
+  - result: PASS
+  - summary:
+    - confirmed the cert-level residuals were real and local:
+      - `sslCertVerifyIgnoreExpiry`
+      - `sslCertVerifyAllowSelfSigned`
+      - `sslCertVerifyStrictChain`
+    - confirmed the connection path already had richer policy handling, so it could not be used as proof for certificate-level completeness
+    - confirmed the old `test_winssl_cert_verify_ex` was only a constant smoke test and was not part of the Windows runtime suite
+
+- update implementation/docs:
+  - `docs/plans/2026-05-20-winssl-certificate-verifyex-flag-parity.md`
+  - `src/fafafa.ssl.winssl.certificate.pas`
+  - `tests/winssl/test_winssl_cert_verify_ex.pas`
+  - `tests/winssl/test_winssl_cert_verify_ex.lpi`
+  - `tests/run_winssl_tests.ps1`
+  - `task_plan.md`
+  - `findings.md`
+  - `progress.md`
+  - change:
+    - upgraded `test_winssl_cert_verify_ex.pas` into a real WinSSL runtime contract using deterministic fixtures and a memory-backed store
+    - added per-call leak guards for `IgnoreExpiry` and `AllowSelfSigned` in the focused test
+    - aligned `test_winssl_cert_verify_ex.lpi` with the active WinSSL project-file target shape by removing the stale `TargetOS=linux` pin
+    - added the focused VerifyEx test to `tests/run_winssl_tests.ps1`
+    - taught `TWinSSLCertificate.VerifyEx` to honor:
+      - `sslCertVerifyIgnoreExpiry`
+      - self-signed-leaf `sslCertVerifyAllowSelfSigned`
+      - `sslCertVerifyStrictChain` fail-closed on missing `serverAuth` EKU
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remain after the WinSSL VerifyEx parity batch
+
+- `xmllint --noout tests/winssl/test_winssl_cert_verify_ex.lpi`
+  - result: PASS
+  - summary:
+    - the updated focused WinSSL project file remains well-formed XML after removing the stale fixed Linux target
+
+- `command -v pwsh`
+  - result: FAIL (expected local limitation)
+  - summary:
+    - this Linux environment has no local PowerShell parser/runtime, so script parsing and real WinSSL compile/runtime proof must come from the post-push Windows workflow instead of a local rerun

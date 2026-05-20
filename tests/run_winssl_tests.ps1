@@ -46,6 +46,12 @@ $tests = @(
         Description = "系统 store + memory-store DN query / partial-full chain contract 测试"
     },
     @{
+        Name = "WinSSL Certificate VerifyEx Flag Parity"
+        Lpi = "test_winssl_cert_verify_ex.lpi"
+        Exe = "bin\test_winssl_cert_verify_ex.exe"
+        Description = "证书级 VerifyEx ignore-expiry / allow-self-signed / strict-chain 运行时契约测试"
+    },
+    @{
         Name = "WinSSL Peer Certificate Surface"
         Lpi = "test_winssl_peer_certificate_surface.lpi"
         Exe = "bin\test_winssl_peer_certificate_surface.exe"

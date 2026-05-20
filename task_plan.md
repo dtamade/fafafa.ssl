@@ -10,6 +10,88 @@
 
 ## Current Status
 
+- [completed] `winssl certificate verifyex flag parity`
+  当前 focused 目标：
+  - 把
+    `WinSSL`
+    证书对象的
+    `ISSLCertificate.VerifyEx`
+    在三条已发布 flags 上的 live 语义收紧成与其它 backend 一致的 public truth：
+    - `sslCertVerifyIgnoreExpiry`
+    - `sslCertVerifyAllowSelfSigned`
+    - `sslCertVerifyStrictChain`
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-20-winssl-certificate-verifyex-flag-parity.md`
+  - 修改实现：
+    - `src/fafafa.ssl.winssl.certificate.pas`
+  - 修改 focused tests / runtime suite：
+    - `tests/winssl/test_winssl_cert_verify_ex.pas`
+    - `tests/winssl/test_winssl_cert_verify_ex.lpi`
+    - `tests/run_winssl_tests.ps1`
+  当前实施判断：
+  - 这次真实 residual
+    不在
+    `WinSSL connection`
+    路径，
+    而是在证书级
+    `VerifyEx`
+    自己：
+    - `IgnoreExpiry`
+      之前没有映射到
+      `CERT_CHAIN_POLICY_IGNORE_NOT_TIME_VALID_FLAG`
+    - `AllowSelfSigned`
+      之前没有兑现到
+      cert-level
+      `VerifyEx`
+    - `StrictChain`
+      之前只是 API round-trip，
+      没有 leaf `serverAuth` EKU 的 fail-closed
+  - 同时还存在一个 workflow gap：
+    - `tests/winssl/test_winssl_cert_verify_ex.lpi`
+      还残留了
+      `TargetOS=linux`
+    - `tests/run_winssl_tests.ps1`
+      之前也没有真正执行这个 focused test
+  - 最小正确修法
+    不是重开连接层 hostname / SSL policy，
+    而是：
+    - 在 cert-level
+      `VerifyEx`
+      上补齐
+      per-call policy flags
+    - 对
+      `StrictChain`
+      明确要求
+      `serverAuth`
+      EKU
+    - 把 focused runtime contract
+      接回
+      Windows suite
+  当前 focused proof：
+  - `git diff --check`
+    - PASS
+  - `xmllint --noout tests/winssl/test_winssl_cert_verify_ex.lpi`
+    - PASS
+  - 本地限制：
+    - 当前 Linux 环境没有
+      `pwsh`
+      / Windows runtime，
+      所以真正的编译与运行证明
+      交给 push 后的
+      `WinSSL Runtime Gate`
+  当前批收口后的默认下一步：
+  - 看 push 后的
+    `WinSSL Runtime Gate`
+    是否一次性把这组 cert-level residual 关掉
+  - 若绿色，
+    再回到
+    `ISSLConnection`
+    /
+    `TSSLConfig`
+    /
+    `ISSLServerConnection`
+    这组三个更大的 public completeness 主线
 - [completed] `freepascal certificate verifyex selfsigned/ocsp parity`
   当前 focused 目标：
   - 把

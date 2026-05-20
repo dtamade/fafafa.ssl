@@ -183,6 +183,21 @@ begin
   Result := UTF8Encode(WideString(LBuffer));
 end;
 
+function HasServerAuthUsage(const AUsage: TSSLStringArray): Boolean;
+var
+  I: Integer;
+  LUsage: string;
+begin
+  Result := False;
+  for I := 0 to High(AUsage) do
+  begin
+    LUsage := Trim(AUsage[I]);
+    if SameText(LUsage, 'serverAuth') or
+      SameText(LUsage, '1.3.6.1.5.5.7.3.1') then
+      Exit(True);
+  end;
+end;
+
 function TWinSSLCertificate.BinaryToHexString(const AData: PByte; ASize: DWORD): string;
 var
   i: Integer;
@@ -742,6 +757,7 @@ var
   LPolicyStatus: CERT_CHAIN_POLICY_STATUS;
   LStoreHandle: HCERTSTORE;
   LChainFlags: DWORD;
+  LExtendedKeyUsage: TSSLStringArray;
 begin
   // 初始化返回值
   AResult.Success := False;
@@ -804,6 +820,12 @@ begin
     LPolicyPara.cbSize := SizeOf(LPolicyPara);
     LPolicyPara.dwFlags := 0;
 
+    if sslCertVerifyIgnoreExpiry in AFlags then
+      LPolicyPara.dwFlags := LPolicyPara.dwFlags or CERT_CHAIN_POLICY_IGNORE_NOT_TIME_VALID_FLAG;
+
+    if (sslCertVerifyAllowSelfSigned in AFlags) and IsSelfSigned then
+      LPolicyPara.dwFlags := LPolicyPara.dwFlags or CERT_CHAIN_POLICY_ALLOW_UNKNOWN_CA_FLAG;
+
     // 初始化策略状态
     FillChar(LPolicyStatus, SizeOf(LPolicyStatus), 0);
     LPolicyStatus.cbSize := SizeOf(LPolicyStatus);
@@ -822,6 +844,21 @@ begin
       // 检查验证结果
       if LPolicyStatus.dwError = 0 then
       begin
+        if sslCertVerifyStrictChain in AFlags then
+        begin
+          LExtendedKeyUsage := GetExtendedKeyUsage;
+          if not HasServerAuthUsage(LExtendedKeyUsage) then
+          begin
+            AResult.Success := False;
+            AResult.ErrorCode := CERT_E_WRONG_USAGE;
+            AResult.ChainStatus := CERT_E_WRONG_USAGE;
+            AResult.ErrorMessage := 'Strict chain verification requires serverAuth extended key usage';
+            AResult.DetailedInfo :=
+              'sslCertVerifyStrictChain requested but the leaf certificate is missing serverAuth extended key usage';
+            Exit;
+          end;
+        end;
+
         AResult.Success := True;
         AResult.ErrorMessage := 'Certificate verified successfully';
         Result := True;

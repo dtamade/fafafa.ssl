@@ -9555,3 +9555,109 @@
     - 继续要求 raw connection
       场景显式走
       per-connection SNI
+
+108. `WinSSL certificate.VerifyEx flag parity` 这批现在应作为证书级 `VerifyEx` published-flag 真空点的最新收口批次保留：
+   - 新 plan：
+     - `docs/plans/2026-05-20-winssl-certificate-verifyex-flag-parity.md`
+   - 当前 source truth：
+     - `src/fafafa.ssl.winssl.certificate.pas`
+       之前：
+       - 只把 revocation / CRL / OCSP
+         映射到
+         `CertGetCertificateChain`
+         flags
+       - 证书级 policy
+         仍固定走
+         `CERT_CHAIN_POLICY_BASE`
+         且
+         `dwFlags = 0`
+       - 没有 cert-level
+         `IgnoreExpiry`
+         /
+         `AllowSelfSigned`
+         /
+         `StrictChain`
+         兑现逻辑
+     - `src/fafafa.ssl.winssl.connection.pas`
+       同时又已经在连接层兑现了：
+       - `CERT_CHAIN_POLICY_IGNORE_NOT_TIME_VALID_FLAG`
+       - `CERT_CHAIN_POLICY_ALLOW_UNKNOWN_CA_FLAG`
+       - hostname policy
+     - 这说明：
+       - 连接层成功
+         不能当作
+         `ISSLCertificate.VerifyEx`
+         已完成的证据
+   - 当前 workflow truth：
+     - `tests/winssl/test_winssl_cert_verify_ex.pas`
+       之前只是常量/结构烟雾测试，
+       没有真实运行时夹具
+     - `tests/run_winssl_tests.ps1`
+       之前根本没执行这个测试
+     - `tests/winssl/test_winssl_cert_verify_ex.lpi`
+       还错误固定了
+       `TargetOS=linux`
+       如果直接接进 Windows suite，
+       会先把工程配置问题当成“代码失败”
+   - 当前最小修正：
+     - 把
+       `test_winssl_cert_verify_ex.pas`
+       升级成真实 runtime contract，
+       覆盖：
+       - `expired-signer.pem`
+         + `ca_cert.pem`
+         的
+         `IgnoreExpiry`
+         per-call 语义
+       - `version1-cert.pem`
+         + empty memory store
+         的
+         `AllowSelfSigned`
+         per-call 语义
+       - `signer_cert.pem`
+         + `ca_cert.pem`
+         的
+         `StrictChain`
+         fail-closed
+     - 把
+       `test_winssl_cert_verify_ex.lpi`
+       收回到和现有 active WinSSL 项目文件一致的目标配置
+     - 把这个 focused test
+       接入
+       `tests/run_winssl_tests.ps1`
+     - 在
+       `src/fafafa.ssl.winssl.certificate.pas`
+       上补齐：
+       - `sslCertVerifyIgnoreExpiry`
+         -> `CERT_CHAIN_POLICY_IGNORE_NOT_TIME_VALID_FLAG`
+       - `sslCertVerifyAllowSelfSigned`
+         -> self-signed leaf
+            时才加
+            `CERT_CHAIN_POLICY_ALLOW_UNKNOWN_CA_FLAG`
+       - `sslCertVerifyStrictChain`
+         -> leaf 缺少
+            `serverAuth`
+            / `1.3.6.1.5.5.7.3.1`
+            时明确 fail-closed
+   - 当前 focused proof：
+     - `git diff --check`
+       - PASS
+     - `xmllint --noout tests/winssl/test_winssl_cert_verify_ex.lpi`
+       - PASS
+     - 本地 Linux 环境没有
+       `pwsh`
+       与 Windows runtime，
+       所以真正的编译/运行证明应由
+       push 后的
+       `WinSSL Runtime Gate`
+       承接
+   - 当前批收口后的默认下一步：
+     - 观察
+       `WinSSL Runtime Gate`
+       是否一次性把 cert-level `VerifyEx`
+       这组三个 published flags 收口
+     - 若绿色，
+       默认切回更大的 public completeness 主线：
+       - `ISSLConnection`
+       - `TSSLConfig`
+       - `ISSLServerConnection`
