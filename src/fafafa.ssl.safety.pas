@@ -4,7 +4,7 @@ unit fafafa.ssl.safety;
 {$modeswitch advancedrecords}
 
 {**
- * Unit: fafafa.ssl.types.safe
+ * Unit: fafafa.ssl.safety
  * Purpose: Type-safe enumerations, generics, and unit types for SSL/TLS operations
  *
  * Phase 2.4 - Type Safety Improvements

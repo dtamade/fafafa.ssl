@@ -1,8 +1,13 @@
-# Phase 2.4 迁移指南 - 类型安全改进
+# Phase 2.4 迁移指南 - 类型安全改进（历史阶段说明）
 
 **版本**: 2.4.0
 **日期**: 2025-12-15
 **目标**: 帮助开发者将现有代码迁移到类型安全的 API
+
+> **说明**:
+> - 本页保留 `Phase 2.4` 类型安全主题的历史迁移背景。
+> - 当前 active public API / migration truth 以 `docs/guides/MIGRATION_GUIDE.md`、`src/fafafa.ssl.safety.pas`、`src/fafafa.ssl.base.pas`、`docs/reference/API_REFERENCE.md` 为准。
+> - 下面示例中的类型安全单元名已经按当前源码真相统一为 `fafafa.ssl.safety`。
 
 ---
 
@@ -41,7 +46,7 @@ SetupSSL(12); // 12 代表什么？
 ```pascal
 // ✅ 安全：强类型，IDE 提示，编译时检查
 uses
-  fafafa.ssl.types.safe;
+  fafafa.ssl.safety;
 
 procedure SetupSSL(AVersion: TSSLVersion);
 begin
@@ -58,7 +63,7 @@ SetupSSL(sslv_TLS12); // 清晰明确
 ```
 
 **迁移步骤**：
-1. 添加 `uses fafafa.ssl.types.safe;`
+1. 添加 `uses fafafa.ssl.safety;`
 2. 将参数类型从 `Integer` 改为 `TSSLVersion`
 3. 将所有魔法数字替换为枚举常量：
    - `10` → `sslv_TLS10`
@@ -99,7 +104,7 @@ GenerateKey('RSA', 2048);
 ```pascal
 // ✅ 类型安全
 uses
-  fafafa.ssl.types.safe;
+  fafafa.ssl.safety;
 
 function GenerateKey(AType: TKeyType; ASize: Integer): TBytes;
 begin
@@ -137,7 +142,7 @@ LoadCertificate('cert.pem', 'PEM');
 ```pascal
 // ✅ 类型安全
 uses
-  fafafa.ssl.types.safe;
+  fafafa.ssl.safety;
 
 function LoadCertificate(APath: string; AFormat: TCertificateFormat): TX509;
 begin
@@ -174,7 +179,7 @@ CreateECKey(415);
 ```pascal
 // ✅ 类型安全，自动转换 NID
 uses
-  fafafa.ssl.types.safe;
+  fafafa.ssl.safety;
 
 function CreateECKey(ACurve: TEllipticCurve): PEVP_PKEY;
 var
@@ -213,7 +218,7 @@ LKey := GenerateAESKey(256); // 期望 256 bits，实际创建 256 bytes
 ```pascal
 // ✅ 类型安全：明确单位
 uses
-  fafafa.ssl.types.safe;
+  fafafa.ssl.safety;
 
 function GenerateAESKey(ASize: TKeySize): TBytes;
 var
@@ -276,7 +281,7 @@ ConnectWithTimeout(5);    // 5 什么？
 ```pascal
 // ✅ 类型安全：明确单位
 uses
-  fafafa.ssl.types.safe;
+  fafafa.ssl.safety;
 
 procedure ConnectWithTimeout(ATimeout: TTimeoutDuration);
 var
@@ -334,7 +339,7 @@ AllocateBuffer(8);     // 8 bytes 还是 8 MB？
 ```pascal
 // ✅ 类型安全
 uses
-  fafafa.ssl.types.safe;
+  fafafa.ssl.safety;
 
 procedure AllocateBuffer(ASize: TBufferSize);
 var
@@ -382,7 +387,7 @@ end;
 ```pascal
 // ✅ 使用 TSecureData 明确表示
 uses
-  fafafa.ssl.types.safe;
+  fafafa.ssl.safety;
 
 type
   TUserSecureData = specialize TSecureData<TUser>;
@@ -479,7 +484,7 @@ end;
 ```pascal
 // ✅ 使用 TResult 明确表示成功/失败
 uses
-  fafafa.ssl.types.safe;
+  fafafa.ssl.safety;
 
 type
   TIntResult = specialize TResult<Integer, string>;
@@ -598,7 +603,7 @@ ConfigureSSLConnection(13, 30000, 8192, 1);
 **之后**：
 ```pascal
 uses
-  fafafa.ssl.types.safe;
+  fafafa.ssl.safety;
 
 procedure ConfigureSSLConnection(
   AVersion: TSSLVersion;               // ✅ 类型安全
@@ -654,7 +659,7 @@ LKey := GenerateKey('RSA', 2048); // 2048 bits 还是 bytes？
 **之后**：
 ```pascal
 uses
-  fafafa.ssl.types.safe;
+  fafafa.ssl.safety;
 
 function GenerateKey(AType: TKeyType; ASize: TKeySize): TBytes;
 begin
@@ -692,7 +697,7 @@ LKey := GenerateKey(kt_EC, TKeySize.Bits(256));   // P-256 曲线
 
 ```pascal
 uses
-  fafafa.ssl.types.safe;
+  fafafa.ssl.safety;
 ```
 
 ### 第 3 步：迁移枚举
@@ -804,7 +809,7 @@ end;
 
 - **Phase 2.4 完成报告**: `docs/PHASE_2.4_COMPLETION_REPORT.md`
 - **类型安全测试**: `tests/test_type_safety.pas`
-- **类型定义**: `src/fafafa.ssl.types.safe.pas`
+- **类型定义**: `src/fafafa.ssl.safety.pas`
 
 ---
 

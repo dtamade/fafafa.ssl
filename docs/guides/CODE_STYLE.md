@@ -272,9 +272,12 @@ end;
 ```pascal
 // 推荐：使用接口
 var
+  LContext: ISSLContext;
   LConnection: ISSLConnection;
 begin
-  LConnection := LContext.CreateConnection;
+  LContext := TSSLContextBuilder.Create.BuildClient;
+  LConnection := LContext.CreateConnection(YourConnectedSocket);
+  // 若是客户端，连接前再通过 ISSLClientConnection.SetServerName(...)
   // 自动释放
 end;
 
@@ -464,5 +467,4 @@ fpc -vh -vw your_file.pas
 ---
 
 遵循这些规范，保持代码清晰、一致、易维护！
-
 

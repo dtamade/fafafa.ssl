@@ -13950,3 +13950,49 @@
   - 收口后继续扫
     `docs/reference/*`
     里仍残留的旧 factory / connection surface drift
+
+### 2026-05-21 CODE_STYLE 与 Phase 2.4 safety 文档真相对齐
+
+- [completed] 当前新的 residual
+  已继续收窄到
+  一份活跃指南
+  +
+  一份历史阶段文档：
+  - `docs/guides/CODE_STYLE.md`
+    仍发布旧的无参
+    `LContext.CreateConnection;`
+  - `docs/guides/MIGRATION_GUIDE_PHASE_2.4.md`
+    仍反复引用已经换名的旧单元
+    `fafafa.ssl.types.safe`
+  - `src/fafafa.ssl.safety.pas`
+    顶部注释也还残留旧单元名
+- [completed] 最小正确修法已经落地：
+  - 新增
+    `docs/plans/2026-05-21-code-style-and-phase24-safety-doc-truth-alignment.md`
+  - 新增
+    `tests/scripts/test_code_style_and_phase24_safety_doc_truth_contract.sh`
+  - `CODE_STYLE`
+    已切回当前 transport-first truth：
+    `LContext.CreateConnection(YourConnectedSocket)`
+  - `MIGRATION_GUIDE_PHASE_2.4`
+    已明确标成历史阶段说明，
+    并把当前 active migration truth
+    指回
+    `MIGRATION_GUIDE.md`
+  - phase 文档与源码注释
+    已统一回当前单元名：
+    `fafafa.ssl.safety`
+- [completed] 当前批收口后的默认下一步：
+  - `bash -n tests/scripts/test_code_style_and_phase24_safety_doc_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_code_style_and_phase24_safety_doc_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  - 当前已具备
+    commit / push
+    条件
+  - 收口后继续扫
+    `docs/reference/*`
+    与其他活跃 guide
+    里残留的旧 connection / type-safety surface drift

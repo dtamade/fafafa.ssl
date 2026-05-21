@@ -19737,6 +19737,105 @@
   - summary:
     - no whitespace or patch-format drift remains before commit
 
+### CODE_STYLE And Phase 2.4 Safety Doc Truth Alignment
+
+- inspect current active-style and historical-phase drift:
+  - `docs/guides/CODE_STYLE.md`
+  - `docs/guides/MIGRATION_GUIDE_PHASE_2.4.md`
+  - `docs/guides/MIGRATION_GUIDE.md`
+  - `docs/guides/GETTING_STARTED.md`
+  - `docs/reference/API_REFERENCE.md`
+  - `src/fafafa.ssl.safety.pas`
+  - `tests/test_type_safety.pas`
+  - change:
+    - confirmed the current recommended TLS entry remains:
+      - `fafafa.ssl`
+      - `TSSLContextBuilder`
+      - `TSSLConnector`
+      - `TSSLStream`
+    - confirmed current direct connection truth remains:
+      - `CreateConnection(YourConnectedSocket)`
+      - `ISSLClientConnection.SetServerName(...)`
+      - `Connect`
+    - confirmed `Phase 2.4` type-safety content is still real,
+      but the actual current unit name is:
+      - `fafafa.ssl.safety`
+    - confirmed old `fafafa.ssl.types.safe`
+      only remained in the historical phase guide
+      and one source header comment
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-code-style-and-phase24-safety-doc-truth-alignment.md`
+  - `tests/scripts/test_code_style_and_phase24_safety_doc_truth_contract.sh`
+  - change:
+    - recorded the batch as a bounded
+      active-style + historical-phase truth repair
+    - added a static guard for:
+      - current transport-first connection wording
+      - current type-safety unit name
+      - historical-phase classification
+
+- verify pre-fix RED:
+  - `bash -n tests/scripts/test_code_style_and_phase24_safety_doc_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_code_style_and_phase24_safety_doc_truth_contract.sh`
+    - result: RED
+    - summary:
+      - initial failure was:
+        `missing pattern in docs/guides/CODE_STYLE.md: LContext.CreateConnection(YourConnectedSocket)`
+      - this confirmed the active style guide still published the stale no-arg connection form
+
+- repair active/historical doc truth:
+  - `docs/guides/CODE_STYLE.md`
+  - `docs/guides/MIGRATION_GUIDE_PHASE_2.4.md`
+  - `src/fafafa.ssl.safety.pas`
+  - change:
+    - `CODE_STYLE`
+      now uses:
+      - `LContext := TSSLContextBuilder.Create.BuildClient;`
+      - `LContext.CreateConnection(YourConnectedSocket)`
+    - `MIGRATION_GUIDE_PHASE_2.4`
+      is now explicitly labeled as
+      historical phase guidance
+      and points current migration truth back to:
+      - `MIGRATION_GUIDE.md`
+      - `src/fafafa.ssl.safety.pas`
+      - `src/fafafa.ssl.base.pas`
+      - `docs/reference/API_REFERENCE.md`
+    - all remaining
+      `fafafa.ssl.types.safe`
+      references in that phase guide
+      were replaced with:
+      - `fafafa.ssl.safety`
+    - source header comment in
+      `src/fafafa.ssl.safety.pas`
+      was aligned to the same current unit name
+
+- verify static truth alignment:
+  - `bash -n tests/scripts/test_code_style_and_phase24_safety_doc_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_code_style_and_phase24_safety_doc_truth_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed `CODE_STYLE`
+        keeps the current
+        `CreateConnection(YourConnectedSocket)`
+        wording
+      - confirmed `Phase 2.4`
+        guide now keeps:
+        - historical classification
+        - `MIGRATION_GUIDE.md`
+        - `fafafa.ssl.safety`
+        - `src/fafafa.ssl.safety.pas`
+      - confirmed stale names are absent:
+        - `fafafa.ssl.types.safe`
+        - `LContext.CreateConnection;`
+        - `Unit: fafafa.ssl.types.safe`
+  - `git diff --check`
+    - result: PASS
+    - summary:
+      - no whitespace or patch-format drift remains before commit
+
 ### Reference ARCHITECTURE Current Factory Surface Truth Alignment
 
 - inspect current reference-truth drift and continuation residual:

@@ -13286,3 +13286,51 @@
     `TSSLFactory.GetLibraryInstance(...)`
     /
     `TSSLFactory.CreateContext(...)`
+
+- `docs/guides/CODE_STYLE.md`
+  这轮暴露的是
+  “活跃风格文档也会误发接口设计”
+  的问题：
+  - 它表面上只是 style guide
+  - 但示例里如果继续写
+    `LContext.CreateConnection;`
+    就是在发布已经不存在的连接形态
+
+- 这类 drift
+  的危险性并不比入门文档低：
+  - 因为风格指南经常被新人直接复制
+  - 而且大家默认这里的示例
+    “至少语义是真实的”
+  - 一旦这里把 transport-first
+    关系写错，
+    后续代码就会围绕错误对象生命周期展开
+
+- `docs/guides/MIGRATION_GUIDE_PHASE_2.4.md`
+  当前更像一份
+  “仍有历史保留价值的阶段说明”，
+  不是当前 active migration guide；
+  但历史文档也不能继续发布死掉的单元名
+
+- 这轮核对后可以明确：
+  - `Phase 2.4`
+    类型安全主题本身仍然存在
+  - 当前源码和测试依然保留：
+    - `TSSLVersion`
+    - `TKeyType`
+    - `TCertificateFormat`
+    - `TSecureData<T>`
+    - `TResult<T, E>`
+  - 但当前真实单元名已经是：
+    `fafafa.ssl.safety`
+  - `fafafa.ssl.types.safe`
+    只剩历史文档与旧注释残留，
+    不能再被当成可用入口
+
+- 当前更准确的处理原则已经明确：
+  - 活跃文档：
+    必须直接对齐当前 public truth
+  - 历史阶段文档：
+    可以保留，
+    但必须明确历史定位，
+    且示例中的文件名 / 单元名
+    仍要与当前源码说真话
