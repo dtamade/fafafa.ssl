@@ -2,6 +2,65 @@
 
 ## 2026-05-21
 
+- active reference metadata truth alignment
+  这一刀确认的
+  不是
+  这三份文档
+  正文语义
+  需要重写，
+  而是
+  它们的 metadata
+  仍停留在
+  `1.0.0`
+  /
+  `1.0`
+  /
+  `2025-*`
+  这类旧快照，
+  会继续误导
+  “这是不是历史规范”
+
+- 当前更准确的收口是：
+  - `API_DESIGN_GUIDE`
+    是
+    设计原则参考，
+    不是
+    冻结在
+    `1.0.0`
+    的旧稿
+  - `ERROR_HANDLING_BEST_PRACTICES`
+    仍然是
+    active guide，
+    metadata
+    应跟随
+    当前仓库真相
+  - `CODING_STANDARDS`
+    仍然是
+    活跃仓库
+    规范入口之一，
+    不该继续挂
+    旧日期/旧版本
+
+- 这说明
+  当前文档残余
+  已经从
+  “正文真相是否漂移”
+  进一步收敛到
+  “元数据会不会继续制造旧文档错觉”
+
+- focused RED
+  首轮暴露的是：
+  - `API_DESIGN_GUIDE`
+    头部
+    仍在使用
+    `1.0.0`
+  - `ERROR_HANDLING_BEST_PRACTICES`
+    仍在使用
+    `1.0 / 2025-01-18`
+  - `CODING_STANDARDS`
+    仍在使用
+    `1.0.0 / 2025-11-26`
+
 - active doc metadata truth alignment
   这一刀确认的
   不是

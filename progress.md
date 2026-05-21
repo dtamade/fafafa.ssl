@@ -6,6 +6,133 @@
 
 ## 2026-05-21
 
+### Active Reference Metadata Truth Alignment
+
+- inspect active reference-metadata residuals before editing:
+  - `docs/reference/API_DESIGN_GUIDE.md`
+  - `docs/guides/ERROR_HANDLING_BEST_PRACTICES.md`
+  - `docs/guides/CODING_STANDARDS.md`
+  - `tests/scripts/test_error_handling_best_practices_url_driven_sni_guidance_contract.sh`
+  - `tests/scripts/test_high_frequency_guides_direct_path_reasoning_contract.sh`
+  - change:
+    - confirmed
+      `API_DESIGN_GUIDE`
+      is now better
+      treated as
+      a design-principles
+      reference,
+      not a
+      frozen `1.0.0`
+      snapshot
+    - confirmed
+      `ERROR_HANDLING_BEST_PRACTICES`
+      is still
+      an active guide,
+      but metadata
+      still carried
+      `1.0 / 2025-01-18`
+    - confirmed
+      `CODING_STANDARDS`
+      is still
+      an active
+      standards entry,
+      but metadata
+      still carried
+      `1.0.0 / 2025-11-26`
+    - confirmed
+      current drift
+      here is
+      metadata truth,
+      not the
+      guide semantics
+
+- add focused batch record and create a dedicated reference-metadata contract:
+  - `docs/plans/2026-05-21-active-reference-metadata-truth-alignment.md`
+  - `tests/scripts/test_active_reference_metadata_truth_contract.sh`
+  - change:
+    - froze:
+      - `API_DESIGN_GUIDE`
+        current version/date/scope
+      - `ERROR_HANDLING_BEST_PRACTICES`
+        current version/date/scope
+      - `CODING_STANDARDS`
+        current version/date/applicability
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_active_reference_metadata_truth_contract.sh`
+    - result: PASS
+  - `HEAD`
+    snapshot
+    run
+    via env-overridden
+    temp files
+    - result: FAIL
+    - summary:
+      - `API_DESIGN_GUIDE`
+        header
+        still used
+        stale
+        `1.0.0`
+      - `ERROR_HANDLING_BEST_PRACTICES`
+        metadata
+        still used
+        stale
+        `1.0 / 2025-01-18`
+      - `CODING_STANDARDS`
+        metadata
+        still used
+        stale
+        `1.0.0 / 2025-11-26`
+
+- repair active reference metadata truth:
+  - `docs/reference/API_DESIGN_GUIDE.md`
+  - `docs/guides/ERROR_HANDLING_BEST_PRACTICES.md`
+  - `docs/guides/CODING_STANDARDS.md`
+  - change:
+    - aligned
+      `API_DESIGN_GUIDE`
+      to
+      `v1.5.0 / 2026-05-21`
+      and
+      explicit
+      design-reference
+      scope
+    - aligned
+      `ERROR_HANDLING_BEST_PRACTICES`
+      to
+      `v1.5.0 / 2026-05-21`
+      and
+      explicit
+      active-guide
+      scope
+    - aligned
+      `CODING_STANDARDS`
+      to
+      `v1.5.0 / 2026-05-21`
+      and
+      current
+      applicability
+      scope
+    - removed
+      trailing whitespace
+      introduced
+      in
+      `CODING_STANDARDS`
+      header
+      so
+      `git diff --check`
+      stays green
+
+- verify focused closeout:
+  - `bash tests/scripts/test_active_reference_metadata_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_error_handling_best_practices_url_driven_sni_guidance_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_high_frequency_guides_direct_path_reasoning_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### Active Doc Metadata Truth Alignment
 
 - inspect active doc metadata residuals before editing:

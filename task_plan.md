@@ -10,6 +10,74 @@
 
 ## Current Status
 
+- [completed] `active reference metadata truth alignment`
+  当前 focused 目标：
+  - 收掉
+    `API_DESIGN_GUIDE`
+    /
+    `ERROR_HANDLING_BEST_PRACTICES`
+    /
+    `CODING_STANDARDS`
+    里
+    仍停留在
+    旧版本/旧日期
+    的 metadata
+    快照，
+    让这些 active
+    规范/参考文档
+    明确回到
+    当前 `v1.5.0`
+    口径
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-active-reference-metadata-truth-alignment.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_active_reference_metadata_truth_contract.sh`
+  - 更新：
+    - `docs/reference/API_DESIGN_GUIDE.md`
+    - `docs/guides/ERROR_HANDLING_BEST_PRACTICES.md`
+    - `docs/guides/CODING_STANDARDS.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_active_reference_metadata_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_active_reference_metadata_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_error_handling_best_practices_url_driven_sni_guidance_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_high_frequency_guides_direct_path_reasoning_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - `API_DESIGN_GUIDE`
+    应明确成：
+    - `v1.5.0`
+    - `2026-05-21`
+    - 设计原则参考
+  - `ERROR_HANDLING_BEST_PRACTICES`
+    应明确成：
+    - `v1.5.0`
+    - `2026-05-21`
+    - 当前 active
+      错误处理指南
+  - `CODING_STANDARDS`
+    应明确成：
+    - `v1.5.0`
+    - `2026-05-21`
+    - 当前仓库活跃代码/测试/文档示例适用
+  当前批收口后的默认下一步：
+  - 文档残余
+    继续优先处理：
+    - `RELEASE_NOTES.md`
+  - 文档残余收尾后，
+    切回
+    接口设计
+    /
+    backend 实现
+    /
+    测试 completeness
+    主战场
+
 - [completed] `active doc metadata truth alignment`
   当前 focused 目标：
   - 收掉

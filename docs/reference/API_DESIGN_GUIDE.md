@@ -1,7 +1,9 @@
 # fafafa.ssl 接口设计指南
 
-**版本**: 1.0.0  
-**目标**: 建立清晰、一致、易用的API接口
+> **版本**: v1.5.0
+> **最后更新**: 2026-05-21
+> **定位**: 设计原则参考；当前 shipped public surface 以 `src/fafafa.ssl.base.pas`、`src/fafafa.ssl.pas` 与 [API_REFERENCE.md](API_REFERENCE.md) 为准。
+> **目标**: 建立清晰、一致、易用的 API 接口
 
 ---
 
