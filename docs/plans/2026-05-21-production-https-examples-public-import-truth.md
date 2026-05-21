@@ -210,6 +210,23 @@ git diff --check
     - PASS
 - `git diff --check`
   - PASS
+- post-push proof:
+  - `gh run list --branch master --limit 4`
+    - PASS
+    - `CI`
+      run `26236674196`
+      for commit
+      `f795a62`
+      completed `success`
+  - workflow scope truth:
+    - this batch
+      did not trigger
+      a new
+      `WinSSL Runtime Gate`
+      run,
+      which matches
+      the current
+      workflow path truth
 - note:
   - compile logs still contain
     repo pre-existing

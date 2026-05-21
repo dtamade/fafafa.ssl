@@ -103,6 +103,21 @@
       - PASS
   - `git diff --check`
     - PASS
+  - post-push proof：
+    - `gh run list --branch master --limit 4`
+      - PASS
+      - `CI`
+        run `26236674196`
+        for commit
+        `f795a62`
+        completed `success`
+    - workflow scope truth：
+      - 本批未触发新的
+        `WinSSL Runtime Gate`
+        属于预期行为，
+        因为改动范围
+        不含
+        `examples/*winssl*.pas`
   - note:
     - compile logs
       still contain

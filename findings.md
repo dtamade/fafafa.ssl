@@ -95,6 +95,22 @@
     与活跃入口文档
     是否还在发布旧 unit truth
 
+- workflow scope
+  也再次被远端 run
+  验证：
+  - `examples/production/*`
+    这批 façade-first
+    import 收口
+    只触发通用
+    `CI`
+  - 没有新建
+    `WinSSL Runtime Gate`
+    run
+  - 这说明当前
+    GitHub Actions
+    路径真相
+    仍然成立
+
 - specialized / utility examples public import truth
   这一刀确认的
   不是
