@@ -109,6 +109,30 @@
     - result: PASS
   - `git diff --check`
     - result: PASS
+  - `git push`
+    - result: PASS
+    - commit:
+      - `83ab284`
+        `docs: classify repository entrypoint guidance`
+  - `gh run list --branch master --limit 3`
+    - result: PASS
+    - summary:
+      - `WinSSL Runtime Gate`
+        run `26240761894`
+        completed `success`
+      - `TLS13 Signer Gate`
+        run `26240761897`
+        completed `success`
+      - `CI`
+        run `26240761909`
+        completed `success`
+      - this batch
+        touched repo-guidance
+        paths that fan out
+        into broader workflow
+        coverage than
+        docs-only
+        public-import batches
 
 ### CODE_STYLE Public Import Truth Hardening
 
