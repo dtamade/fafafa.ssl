@@ -20,11 +20,18 @@
 **A:** 默认情况下，应该启用证书验证：
 
 ```pascal
-LContext := TSSLFactory.CreateContext(sslOpenSSL, sslCtxClient);
-LContext.SetVerifyMode([sslVerifyPeer]);  // 验证对方证书
+LContext := TSSLContextBuilder.Create
+  .WithTLS12And13
+  .WithVerifyPeer
+  .WithSystemRoots
+  .BuildClient;
 
-// 对于自定义CA，可以设置CA证书路径
-LContext.LoadCAFile('/path/to/ca-bundle.crt');
+// 对于自定义CA，可以改成：
+LContext := TSSLContextBuilder.Create
+  .WithTLS12And13
+  .WithVerifyPeer
+  .WithCAFile('/path/to/ca-bundle.crt')
+  .BuildClient;
 ```
 
 ### Q2: 如何处理自签名证书？
@@ -56,7 +63,9 @@ begin
   LStartTime := Now;
   
   try
-    LConnection.Connect(AHost, APort);
+    (LConnection as ISSLClientConnection).SetServerName(AHost);
+    if not LConnection.Connect then
+      raise Exception.Create('TLS 握手失败');
   except
     on E: Exception do
     begin
@@ -82,8 +91,9 @@ LContext.LoadPrivateKey('client.key');
 LContext.LoadPrivateKey('client.key', 'your-password');
 
 // 连接时会自动发送客户端证书
-LConnection := LContext.CreateConnection;
-LConnection.Connect(AHost, APort);
+LConnection := LContext.CreateConnection(AConnectedSocket);
+(LConnection as ISSLClientConnection).SetServerName(AHost);
+LConnection.Connect;
 ```
 
 参考完整示例：`examples/production/https_client_auth.pas`
@@ -161,10 +171,12 @@ LContext.LoadCAFile('/etc/ssl/certs/ca-certificates.crt');
 // 或者加载CA目录
 LContext.LoadCAPath('/etc/ssl/certs/');
 
-// Windows下使用系统证书存储
-{$IFDEF WINDOWS}
-LContext.LoadSystemCertificates;
-{$ENDIF}
+// 普通新代码如需直接使用系统根证书，优先走 builder：
+LContext := TSSLContextBuilder.Create
+  .WithTLS12And13
+  .WithVerifyPeer
+  .WithSystemRoots
+  .BuildClient;
 ```
 
 ### Q9: 如何检查证书是否即将过期？
@@ -242,8 +254,9 @@ LContext.SetSessionTimeout(300);  // 5分钟
 // 复用同一上下文创建多个连接
 for i := 1 to 10 do
 begin
-  LConnection := LContext.CreateConnection;  // 复用会话
-  LConnection.Connect(AHost, APort);
+  LConnection := LContext.CreateConnection(AConnectedSocket);  // 这里传入新的已连接 TCP socket
+  (LConnection as ISSLClientConnection).SetServerName(AHost);
+  LConnection.Connect;
   // ... 使用连接
 end;
 ```
@@ -299,7 +312,7 @@ type
   private
     FContext: ISSLContext;  // 共享上下文
     FHost: string;
-    FPort: Word;
+    FSocket: THandle;       // 线程私有、已连接好的 TCP socket
   protected
     procedure Execute; override;
   end;
@@ -309,8 +322,9 @@ var
   LConnection: ISSLConnection;
 begin
   try
-    LConnection := FContext.CreateConnection;
-    LConnection.Connect(FHost, FPort);
+    LConnection := FContext.CreateConnection(FSocket);
+    (LConnection as ISSLClientConnection).SetServerName(FHost);
+    LConnection.Connect;
     // 处理请求...
   except
     // 错误处理
@@ -322,11 +336,16 @@ var
   LContext: ISSLContext;
   LThreads: array[1..100] of TWorkerThread;
 begin
-  LContext := TSSLFactory.CreateContext(sslOpenSSL, sslCtxClient);
+  LContext := TSSLContextBuilder.Create
+    .WithBackend(sslOpenSSL)
+    .WithTLS12And13
+    .WithVerifyPeer
+    .WithSystemRoots
+    .BuildClient;
   
   for i := 1 to 100 do
   begin
-    LThreads[i] := TWorkerThread.Create(LContext, 'example.com', 443);
+    LThreads[i] := TWorkerThread.Create(LContext, 'example.com', ConnectedSockets[i]);
     LThreads[i].Start;
   end;
 end;
@@ -343,7 +362,7 @@ procedure DoRequest;
 var
   LConnection: ISSLConnection;
 begin
-  LConnection := LContext.CreateConnection;
+  LConnection := LContext.CreateConnection(AConnectedSocket);
   // 使用连接...
 end;  // 自动释放
 ```
@@ -412,6 +431,7 @@ end;
 ```pascal
 function ConnectWithRetry(
   AContext: ISSLContext;
+  AConnectedSocket: THandle;
   const AHost: string;
   APort: Word;
   AMaxRetries: Integer = 3
@@ -427,8 +447,9 @@ begin
   begin
     try
       WriteLn('连接尝试 ', LRetry, '/', AMaxRetries);
-      Result := AContext.CreateConnection;
-      Result.Connect(AHost, APort);
+      Result := AContext.CreateConnection(AConnectedSocket);
+      (Result as ISSLClientConnection).SetServerName(AHost);
+      Result.Connect;
       WriteLn('连接成功！');
       Exit;  // 成功
     except
@@ -468,7 +489,11 @@ end;
 
 ```pascal
 {$IFDEF WINDOWS}
-  LContext.LoadSystemCertificates;
+  LContext := TSSLContextBuilder.Create
+    .WithTLS12And13
+    .WithVerifyPeer
+    .WithSystemRoots
+    .BuildClient;
 {$ELSE}
   LContext.LoadCAFile('/etc/ssl/certs/ca-certificates.crt');
 {$ENDIF}
@@ -480,10 +505,20 @@ end;
 
 ```pascal
 // 强制使用OpenSSL
-LContext := TSSLFactory.CreateContext(sslOpenSSL, sslCtxClient);
+LContext := TSSLContextBuilder.Create
+  .WithBackend(sslOpenSSL)
+  .WithTLS12And13
+  .WithVerifyPeer
+  .WithSystemRoots
+  .BuildClient;
 
 // 而不是
-LContext := TSSLFactory.CreateContext(sslWinSSL, sslCtxClient);
+LContext := TSSLContextBuilder.Create
+  .WithBackend(sslWinSSL)
+  .WithTLS12And13
+  .WithVerifyPeer
+  .WithSystemRoots
+  .BuildClient;
 ```
 
 确保已安装OpenSSL for Windows。
@@ -586,4 +621,3 @@ fpc handshake_benchmark.pas
 ---
 
 **上一篇**：[← 安装配置](安装配置.md) | **返回首页**：[快速入门](快速入门.md)
-

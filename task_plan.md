@@ -13840,3 +13840,58 @@
     commit / push
     条件
   - 收口后继续扫下一份高入口活跃文档里的旧 public entrypoint / backend / helper truth drift
+
+### 2026-05-21 中文高入口文档 current public truth 对齐
+
+- [completed] 当前新的 residual
+  已继续收窄到
+  `docs/zh`
+  里的高入口文档族：
+  - `FAQ.md`
+  - `快速入门.md`
+  - `安装配置.md`
+  - `使用指南/客户端开发.md`
+  - `API参考/概述.md`
+  这批页面同时残留：
+  - 旧工厂参数顺序
+    `TSSLFactory.CreateContext(sslOpenSSL, sslCtxClient)`
+  - 旧连接形态
+    `CreateConnection;`
+    /
+    `Connect(AHost, APort)`
+  - 旧系统根证书加载心智
+    `LoadSystemCertificates`
+- [completed] 最小正确修法已经落地：
+  - 新增
+    `docs/plans/2026-05-21-zh-entry-docs-current-public-truth-alignment.md`
+  - 新增
+    `tests/scripts/test_zh_entry_docs_current_public_truth_contract.sh`
+  - 这组中文入口页
+    已切回：
+    - 普通入口：
+      `TSSLContextBuilder`
+      /
+      `TSSLConnector`
+    - fixed-backend / backend 检查：
+      `TSSLFactory.GetLibraryInstance(...)`
+      或
+      `TSSLContextBuilder.WithBackend(...)`
+    - 低层 direct-connection：
+      `CreateConnection(YourConnectedSocket)`
+      +
+      `ISSLClientConnection.SetServerName(...)`
+      +
+      `Connect`
+    - 系统根证书：
+      `WithSystemRoots`
+- [completed] 当前批收口后的默认下一步：
+  - `bash -n tests/scripts/test_zh_entry_docs_current_public_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_zh_entry_docs_current_public_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  - 当前已具备
+    commit / push
+    条件
+  - 收口后继续扫下一份仍残留旧连接形态 / 旧 public truth 的高入口文档

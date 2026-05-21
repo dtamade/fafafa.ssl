@@ -20369,6 +20369,122 @@
       sync
     - confirmed the active worktree delta is scoped to this batch only
 
+### Chinese Entry Docs Current Public Truth Alignment
+
+- `mcp__ace_tool__.search_context`
+  - query:
+    - locate current truth for
+      `docs/zh`
+      entry docs around
+      `TSSLFactory.CreateContext` parameter order,
+      current standard entrypoint,
+      current fixed-backend path,
+      and old connection-shape drift
+  - result: PASS
+  - summary:
+    - confirmed the
+      `docs/zh`
+      high-entry docs still published:
+      - old `CreateContext` parameter order
+      - old parameterless `CreateConnection`
+      - old `Connect(host, port)` shape
+      - old `LoadSystemCertificates` guidance
+
+- inspect current source/public truth:
+  - `src/fafafa.ssl.factory.pas`
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.context.builder.pas`
+  - `src/fafafa.ssl.tls.pas`
+  - `README.md`
+  - `docs/guides/FAQ.md`
+  - `docs/guides/GETTING_STARTED.md`
+  - result: PASS
+  - summary:
+    - confirmed current standard entrypoint truth is
+      `TSSLContextBuilder`
+      /
+      `TSSLConnector`
+    - confirmed direct-connection truth is
+      `CreateConnection(ConnectedSocket)`
+      +
+      `ISSLClientConnection.SetServerName(...)`
+      +
+      `Connect`
+    - confirmed explicit backend selection can use
+      `GetLibraryInstance(...)`
+      or
+      `WithBackend(...)`
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-zh-entry-docs-current-public-truth-alignment.md`
+  - `tests/scripts/test_zh_entry_docs_current_public_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - documented the batch as zh-entry-doc current-truth repair
+    - added a static guard for old signature / old connection-shape drift
+
+- `bash -n tests/scripts/test_zh_entry_docs_current_public_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - shell syntax for the new zh-entry-doc contract is clean
+
+- `bash tests/scripts/test_zh_entry_docs_current_public_truth_contract.sh`
+  - result: RED
+  - summary:
+    - first run failed immediately on old
+      `TSSLFactory.CreateContext(sslOpenSSL, sslCtxClient)`
+    - confirmed this batch was hitting a real grouped drift,
+      not isolated wording noise
+
+- update docs:
+  - `docs/zh/FAQ.md`
+  - `docs/zh/快速入门.md`
+  - `docs/zh/安装配置.md`
+  - `docs/zh/使用指南/客户端开发.md`
+  - `docs/zh/API参考/概述.md`
+  - result: PASS
+  - summary:
+    - switched standard examples to
+      `TSSLContextBuilder`
+      /
+      `TSSLConnector`
+    - switched explicit backend verification to
+      `TSSLFactory.GetLibraryInstance(...)`
+    - switched low-level connection examples to
+      `CreateConnection(ConnectedSocket)`
+      +
+      `ISSLClientConnection.SetServerName(...)`
+      +
+      `Connect`
+    - removed
+      `LoadSystemCertificates`
+      from these high-entry zh docs
+
+- `bash tests/scripts/test_zh_entry_docs_current_public_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - confirmed the zh entry docs now keep:
+      - current standard entrypoint truth
+      - current fixed-backend truth
+      - current low-level connection-shape truth
+
+- final recheck after planning-file sync:
+  - `bash tests/scripts/test_zh_entry_docs_current_public_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+  - `git status --short`
+    - result: PASS
+  - summary:
+    - confirmed the zh-entry-doc batch stayed green after later
+      `task_plan.md`
+      /
+      `findings.md`
+      /
+      `progress.md`
+      sync
+    - confirmed the active worktree delta is scoped to this batch only
+
 ### Main Backends Ed25519 Certificate Algorithm Truth
 
 - add focused batch inputs:

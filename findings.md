@@ -13203,3 +13203,40 @@
     capability parity
     和 runtime proof，
     不是再把它写回“未来才有”
+
+- `docs/zh`
+  这轮暴露出来的是“中文入口文档族整组停留在旧连接形态”的问题：
+  - 它不只是旧工厂参数顺序，
+    还叠加了：
+    - `CreateConnection;`
+    - `Connect(AHost, APort)`
+    - `LoadSystemCertificates`
+
+- 这类 drift
+  的危险点在于：
+  - 中文入口页往往就是很多读者的第一站
+  - 如果这里继续发布不存在的连接形态，
+    调用方拿去 copy 之后
+    不是“稍微老一点的建议”，
+    而是直接进入错误签名 / 错误对象生命周期模型
+
+- 当前更准确的中文入口文档真相应明确保留：
+  - 普通新代码：
+    `TSSLContextBuilder`
+    /
+    `TSSLConnector`
+  - fixed-backend 场景：
+    `TSSLFactory.GetLibraryInstance(...)`
+    或
+    `TSSLContextBuilder.WithBackend(...)`
+  - 低层 direct connection
+    继续要求：
+    - `CreateConnection(YourConnectedSocket)`
+    - `ISSLClientConnection.SetServerName(...)`
+    - `Connect`
+  - 系统根证书
+    对高入口文档
+    应优先讲：
+    `WithSystemRoots`
+    而不是继续讲不存在的
+    `LoadSystemCertificates`
