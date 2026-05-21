@@ -10,6 +10,77 @@
 
 ## Current Status
 
+- [completed] `early-data guide current public import truth`
+  当前 focused 目标：
+  - 修复
+    `docs/guides/EARLY_DATA_GUIDE.md`
+    里两个 active
+    early-data
+    示例
+    仍在使用的
+    `fafafa.ssl.base`
+    /
+    `fafafa.ssl.factory`
+    split import，
+    让这份 guide
+    继续保留
+    `ISSLEarlyDataContext`
+    /
+    `ISSLEarlyDataConnection`
+    owner-surface
+    直连理由，
+    但不再偏离
+    当前 façade
+    已公开的 import truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-early-data-guide-current-public-import-truth.md`
+  - 更新 focused contract：
+    - `tests/scripts/test_early_data_owner_surface_reasoning_contract.sh`
+  - 更新：
+    - `docs/guides/EARLY_DATA_GUIDE.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_early_data_owner_surface_reasoning_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_early_data_owner_surface_reasoning_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - `EARLY_DATA_GUIDE`
+    当前 active
+    early-data
+    示例
+    应统一回到：
+    - `uses fafafa.ssl;`
+  - `TSSLFactory.GetLibraryInstance(...)`
+    继续保留为
+    current public
+    library-entrypoint
+  - `ISSLEarlyDataContext`
+    /
+    `ISSLEarlyDataConnection`
+    owner-surface
+    理由
+    继续保留，
+    不改成
+    builder-only
+    叙事
+  当前批收口后的默认下一步：
+  - `EARLY_DATA_GUIDE`
+    不再继续传播
+    `fafafa.ssl.base`
+    /
+    `fafafa.ssl.factory`
+    这组旧 split import
+  - 下一条 residual
+    继续优先挑
+    仍在传播
+    旧 import
+    或
+    stale header
+    的活跃 guide/reference
+
 - [completed] `capability matrix guide facade backend-name truth`
   当前 focused 目标：
   - 修复

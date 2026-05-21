@@ -2,6 +2,79 @@
 
 ## 2026-05-21
 
+- early-data guide current public import truth
+  这一刀确认的
+  不是
+  `EARLY_DATA_GUIDE`
+  不该继续保留
+  owner-surface
+  直连理由，
+  而是
+  它在
+  `CreateConnection(...)`
+  设计理由已经讲清楚的前提下，
+  两段 active
+  early-data
+  示例
+  仍继续教学：
+  - `fafafa.ssl.base`
+  - `fafafa.ssl.factory`
+  这组旧 split import
+
+- 当前更准确的收口是：
+  - `ISSLLibrary`
+    /
+    `ISSLContext`
+    /
+    `ISSLConnection`
+    /
+    `ISSLEarlyDataContext`
+    /
+    `ISSLEarlyDataConnection`
+    /
+    `TSSLFactory`
+    当前都可以直接来自
+    `fafafa.ssl`
+  - `TSSLFactory.GetLibraryInstance(...)`
+    继续是
+    current public
+    library-entrypoint
+  - early-data
+    guide
+    需要保留的重点
+    是
+    owner-surface
+    挂载边界，
+    不是
+    把调用方
+    带回
+    split import
+
+- 这说明
+  当前“specialized guide 真相”
+  这条线里，
+  不只是
+  要把
+  owner-surface
+  理由写清楚，
+  还要继续收紧：
+  active 示例
+  是否还在偷偷
+  把读者
+  带回
+  `fafafa.ssl.base`
+  /
+  `fafafa.ssl.factory`
+
+- focused RED
+  首轮暴露的是：
+  - `EARLY_DATA_GUIDE`
+    两段 active
+    early-data
+    示例
+    都还在使用
+    旧 split import
+
 - capability matrix guide facade backend-name truth
   这一刀确认的
   不是

@@ -6,6 +6,149 @@
 
 ## 2026-05-21
 
+### EARLY_DATA_GUIDE Current Public Import Truth
+
+- inspect active early-data guide import drift before editing:
+  - `docs/guides/EARLY_DATA_GUIDE.md`
+  - `src/fafafa.ssl.pas`
+  - `tests/scripts/test_early_data_owner_surface_reasoning_contract.sh`
+  - `docs/plans/2026-05-20-early-data-owner-surface-reasoning.md`
+  - change:
+    - confirmed
+      the guide
+      already explains
+      why
+      `CreateConnection(...)`
+      is intentional
+      for
+      `ISSLEarlyDataContext`
+      /
+      `ISSLEarlyDataConnection`
+      owner surfaces
+    - confirmed
+      current drift
+      is now the
+      active example
+      import surface,
+      not the
+      early-data
+      owner-surface
+      reasoning itself
+    - confirmed
+      `ISSLLibrary`
+      /
+      `ISSLContext`
+      /
+      `ISSLConnection`
+      /
+      `ISSLEarlyDataContext`
+      /
+      `ISSLEarlyDataConnection`
+      /
+      `TSSLFactory`
+      are already
+      available from
+      `fafafa.ssl`
+    - confirmed
+      both active
+      early-data
+      examples
+      still used:
+      - `fafafa.ssl.base`
+      - `fafafa.ssl.factory`
+
+- add focused batch record and tighten the existing early-data contract:
+  - `docs/plans/2026-05-21-early-data-guide-current-public-import-truth.md`
+  - `tests/scripts/test_early_data_owner_surface_reasoning_contract.sh`
+  - change:
+    - froze:
+      - owner-surface
+        reasoning
+        must stay
+      - both active
+        early-data
+        examples
+        must use
+        `uses fafafa.ssl;`
+      - active examples
+        must stop using
+        `fafafa.ssl.base`
+        /
+        `fafafa.ssl.factory`
+      - high-entry
+        library-entrypoint
+        must remain
+        `TSSLFactory.GetLibraryInstance(...)`
+      - added
+        `EARLY_DATA_GUIDE_DOC`
+        override support
+        so the same
+        focused contract
+        can prove RED
+        against a
+        pre-fix
+        guide snapshot
+    - hardened:
+      - facade-import
+        counting
+        now uses
+        `wc -l`
+        over
+        `rg`
+        output,
+        so 0-hit
+        RED cases
+        report a
+        readable count
+        instead of
+        exiting
+        silently
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_early_data_owner_surface_reasoning_contract.sh`
+    - result: PASS
+  - `EARLY_DATA_GUIDE_DOC=/tmp/fafafa_ssl_early_data_guide_head.md bash tests/scripts/test_early_data_owner_surface_reasoning_contract.sh`
+    - result: FAIL
+    - summary:
+      - `EARLY_DATA_GUIDE`
+        `HEAD`
+        snapshot
+        still used
+        split imports
+        in both
+        active
+        early-data
+        examples
+      - focused contract
+        reported
+        `expected 2 facade import lines, found: 0`
+
+- repair EARLY_DATA_GUIDE current public import truth:
+  - `docs/guides/EARLY_DATA_GUIDE.md`
+  - change:
+    - rewrote
+      the client
+      and server
+      active examples
+      from
+      split imports
+      to
+      `uses fafafa.ssl;`
+    - preserved
+      the guide's
+      owner-surface
+      reasoning,
+      backend boundary,
+      and
+      `CreateConnection(...)`
+      entry pattern
+
+- verify focused closeout:
+  - `bash tests/scripts/test_early_data_owner_surface_reasoning_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### CAPABILITY_MATRIX_GUIDE Facade Backend-Name Truth
 
 - inspect residual backend-name drift in the capability guide:

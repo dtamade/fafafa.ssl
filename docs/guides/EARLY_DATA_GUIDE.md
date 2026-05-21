@@ -44,9 +44,7 @@ TLS 1.3 Early Data（0-RTT）允许客户端在 TLS 握手完成前发送应用�
 ### 客户端 Early Data
 
 ```pascal
-uses
-  fafafa.ssl.base,
-  fafafa.ssl.factory;
+uses fafafa.ssl;
 
 var
   Lib: ISSLLibrary;
@@ -100,9 +98,7 @@ end;
 ### 服务端 Early Data
 
 ```pascal
-uses
-  fafafa.ssl.base,
-  fafafa.ssl.factory;
+uses fafafa.ssl;
 
 var
   Lib: ISSLLibrary;
