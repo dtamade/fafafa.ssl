@@ -6,6 +6,118 @@
 
 ## 2026-05-21
 
+### Active Builder Guidance Truth Alignment
+
+- inspect current session-cache / builder truth before editing:
+  - `src/fafafa.ssl.context.builder.pas`
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.safety.pas`
+  - `docs/guides/PERFORMANCE_PROFILING_GUIDE.md`
+  - `docs/guides/security-best-practices.md`
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - confirmed current builder public surface still only exports:
+      - `WithSessionCache(AEnabled: Boolean)`
+      - `WithVerifyPeer`
+      - `WithVerifyNone`
+      - `WithVerifyDepth`
+    - confirmed session cache sizing still lives on:
+      - `ISSLContext.SetSessionCacheSize(ASize: Integer)`
+    - confirmed active docs were still teaching fake builder methods:
+      - `WithSessionCache(1000)`
+      - `WithStrongCipherSuites`
+      - `WithPerfectForwardSecrecy`
+      - `WithSessionTickets`
+      - `WithoutVerifyPeer`
+      - `WithSSL3`
+      - `WithTLS10`
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-active-builder-guidance-truth-alignment.md`
+  - `tests/scripts/test_active_builder_guides_truth_contract.sh`
+  - change:
+    - documented the batch as active builder guidance truth alignment
+    - added a focused shell contract
+      to guard:
+      - current Boolean-only `WithSessionCache` truth
+      - current context-level session-cache-size truth
+      - absence of nonexistent builder methods in active guides
+      - current replacement guidance for strong defaults / tickets / verify-disable / weak-protocol anti-example
+
+- establish focused RED before doc repair:
+  - `bash -n tests/scripts/test_active_builder_guides_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_active_builder_guides_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - failed at:
+        `performance profiling guide must stop teaching a fake builder size overload for session cache`
+      - important conclusion:
+        - the active-doc drift was real
+        - it was not just a speculative wording cleanup
+
+- repair active builder guidance truth:
+  - `docs/guides/PERFORMANCE_PROFILING_GUIDE.md`
+  - `docs/guides/security-best-practices.md`
+  - change:
+    - changed the profiling guide from
+      `.WithSessionCache(1000)`
+      to:
+      - `.WithSessionCache(True)`
+      - `Ctx.SetSessionCacheSize(1000);`
+    - added an explicit note that
+      builder currently only controls the session-cache on/off switch,
+      while sizing still goes through
+      `ISSLContext.SetSessionCacheSize(...)`
+    - replaced nonexistent
+      `WithStrongCipherSuites`
+      /
+      `WithPerfectForwardSecrecy`
+      guidance
+      with current
+      `WithSafeDefaults`
+      truth
+    - replaced nonexistent
+      `WithSessionTickets`
+      guidance
+      with current
+      `WithOption(ssoEnableSessionTickets)`
+      truth
+    - replaced nonexistent
+      `WithoutVerifyPeer`
+      anti-example
+      with current
+      `WithVerifyNone`
+      truth
+    - replaced nonexistent
+      `WithSSL3`
+      /
+      `WithTLS10`
+      anti-example
+      with current
+      `WithProtocols([sslProtocolSSL3, sslProtocolTLS10])`
+      truth
+    - added the resumption boundary note that
+      enabling cache / tickets
+      does not by itself prove observed resumed handshake,
+      and explicit candidate save/load still belongs to
+      `ISSLSessionResumption`
+
+- verify focused active-doc truth:
+  - `bash -n tests/scripts/test_active_builder_guides_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_active_builder_guides_truth_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed the profiling guide now teaches the current Boolean session-cache builder entrypoint
+      - confirmed session-cache sizing is redirected to
+        `ISSLContext.SetSessionCacheSize(...)`
+      - confirmed the security best practices guide no longer teaches the nonexistent builder methods
+      - confirmed the guide now points tickets / modern defaults / insecure verify-disable / weak protocols
+        back to current shipped source truth
+  - `git diff --check`
+    - result: PASS
+
 ### Migration Guide Phase 2.4 TBufferSize Truth Alignment
 
 - re-check whether `TBufferSize` was a real implementation-adoption target:

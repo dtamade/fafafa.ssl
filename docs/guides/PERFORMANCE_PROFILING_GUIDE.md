@@ -82,12 +82,14 @@ gprof your_program gmon.out > profile.txt
 ```pascal
 // 启用 Session 复用
 var
+  Ctx: ISSLContext;
   Session: ISSLSession;
   Resumption1, Resumption2: ISSLSessionResumption;
 
 Ctx := TSSLContextBuilder.Create
-  .WithSessionCache(1000)  // 缓存 1000 个 session
+  .WithSessionCache(True)  // 当前 builder 只控制是否启用 session cache
   .BuildClient;
+Ctx.SetSessionCacheSize(1000);  // 如需限制缓存条目数，当前走 context API
 
 // 复用 session
 if Supports(Conn1, ISSLSessionResumption, Resumption1) then
@@ -99,6 +101,8 @@ if Assigned(Session) and Supports(Conn2, ISSLSessionResumption, Resumption2) the
 当前 WinSSL session public surface 仍应按 `observed_reuse=false` / `session_configured=true` 的实验性 public truth 理解；如果没有 dedicated Windows / target-specific validation，不要把这段示例直接读成已稳定命中的通用性能收益。
 
 当前 MbedTLS session public surface 已能保存/注入 session candidate，但 local source/header truth 仍缺少与 `SSL_session_reused` / `wolfSSL_session_reused` 对称的 public reused getter；因此 profiling 时不要把 `SetSession(...)` 本身当成已稳定命中的 resumed-handshake 证据。
+
+这里要特别区分两层职责：`TSSLContextBuilder.WithSessionCache(True/False)` 当前只负责启用/关闭 session cache；如果你要调缓存条目数，仍应在 build 后通过 `ISSLContext.SetSessionCacheSize(...)` 配置。
 
 ### 2. 证书验证
 

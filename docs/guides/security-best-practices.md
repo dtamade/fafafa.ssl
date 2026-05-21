@@ -399,6 +399,7 @@ end;
 
 ```pascal
 uses
+  fafafa.ssl,
   fafafa.ssl.context.builder;
 
 var
@@ -406,11 +407,12 @@ var
 begin
   Ctx := TSSLContextBuilder.Create
     .WithTLS12And13              // 只使用 TLS 1.2 和 1.3
-    .WithStrongCipherSuites      // 使用强加密套件
-    .WithPerfectForwardSecrecy   // 启用完美前向保密
+    .WithSafeDefaults             // 当前高入口：收紧 cipher/profile baseline
     .BuildClient;
 end;
 ```
+
+当前 builder 并没有单独的 `WithStrongCipherSuites` / `WithPerfectForwardSecrecy` fluent method；活跃 public truth 是收紧协议版本后，优先走 `WithSafeDefaults`（需要更细粒度时再补 `WithCipherList(...)` / `WithTLS13Ciphersuites(...)`）。
 
 ### 2. 启用证书验证
 
@@ -485,17 +487,21 @@ end;
 
 ```pascal
 uses
+  fafafa.ssl,
   fafafa.ssl.context.builder;
 
 var
   Ctx: ISSLContext;
 begin
   Ctx := TSSLContextBuilder.Create
-    .WithSessionCache            // 启用会话缓存
-    .WithSessionTickets          // 启用会话票据
+    .WithSessionCache(True)               // builder 只负责开关
+    .WithOption(ssoEnableSessionTickets)  // ticket 当前走 option seam
     .BuildClient;
+  Ctx.SetSessionCacheSize(1024);          // 如需限制缓存条目数，走 context API
 end;
 ```
+
+如果你需要显式保存并重新注入 session candidate，继续走 `ISSLSessionResumption.GetSession / SetSession`；仅仅启用 cache / tickets 并不自动等于已经观测到 resumed handshake。
 
 ---
 
@@ -506,7 +512,7 @@ end;
 ```pascal
 // 错误示例 - 永远不要这样做！
 Ctx := TSSLContextBuilder.Create
-  .WithoutVerifyPeer             // 危险！
+  .WithVerifyNone               // 危险！
   .BuildClient;
 ```
 
@@ -517,8 +523,7 @@ Ctx := TSSLContextBuilder.Create
 ```pascal
 // 错误示例 - 不要使用弱加密
 Ctx := TSSLContextBuilder.Create
-  .WithSSL3                      // SSL 3.0 已被废弃
-  .WithTLS10                     // TLS 1.0 已被废弃
+  .WithProtocols([sslProtocolSSL3, sslProtocolTLS10])
   .BuildClient;
 ```
 

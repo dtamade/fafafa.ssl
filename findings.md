@@ -2,6 +2,87 @@
 
 ## 2026-05-21
 
+- `TSSLContextBuilder`
+  这条线当前又确认出一类
+  很值得优先消灭的路线偏移：
+  不是实现缺口，
+  而是活跃文档还在教学
+  一批源码里并不存在的
+  builder fluent method
+
+- 当前 source truth
+  已经很明确：
+  - `WithSessionCache`
+    只有
+    `Boolean`
+    开关入口
+  - session cache size
+    的公开入口
+    仍是
+    `ISSLContext.SetSessionCacheSize(...)`
+  - builder 并不存在：
+    - `WithStrongCipherSuites`
+    - `WithPerfectForwardSecrecy`
+    - `WithSessionTickets`
+    - `WithoutVerifyPeer`
+    - `WithSSL3`
+    - `WithTLS10`
+
+- 当前真实问题
+  不是要立刻补这些 fluent API，
+  而是两份 active guide
+  仍在把它们讲成
+  “好像现在就能用”的 public surface：
+  - `docs/guides/PERFORMANCE_PROFILING_GUIDE.md`
+    把
+    `WithSessionCache`
+    写成了
+    size/count overload
+  - `docs/guides/security-best-practices.md`
+    继续教学多条
+    builder 假接口
+
+- 这类 drift
+  的风险比普通笔误更高，
+  因为它会直接误导我们后续的
+  interface-design / type-safety
+  路线判断：
+  看起来像是
+  “只差补一个 overload”，
+  实际上 current source
+  根本没有那条高入口 seam
+
+- 修复后，
+  active builder guidance
+  已重新收敛成当前 shipped truth：
+  - modern cipher/profile baseline
+    优先走
+    `WithSafeDefaults`
+  - session tickets
+    当前走
+    `WithOption(ssoEnableSessionTickets)`
+  - 禁用验证的危险示例
+    当前应写成
+    `WithVerifyNone`
+  - 弱协议反例
+    当前应通过
+    `WithProtocols([...])`
+    表达
+
+- 这批也补清楚了一条
+  很重要的语义边界：
+  启用 session cache / tickets
+  只是准备上下文能力；
+  如果调用方需要显式保存或注入
+  session candidate，
+  仍应走
+  `ISSLSessionResumption.GetSession / SetSession`
+ ；
+  不能把
+  “开了 cache”
+  自动等同于
+  “已经观测到 resumed handshake”
+
 - `TBufferSize`
   这条线经过 current source truth
   复核后，

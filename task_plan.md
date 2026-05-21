@@ -10,6 +10,97 @@
 
 ## Current Status
 
+- [completed] `active builder guidance truth alignment`
+  当前 focused 目标：
+  - 收紧当前活跃 guide
+    对
+    `TSSLContextBuilder`
+    的 public guidance，
+    修复几处
+    “文档里像现有 API，
+    源码里其实不存在”
+    的 builder 假接口教学
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-active-builder-guidance-truth-alignment.md`
+  - 新增 contract：
+    - `tests/scripts/test_active_builder_guides_truth_contract.sh`
+  - 更新：
+    - `docs/guides/PERFORMANCE_PROFILING_GUIDE.md`
+    - `docs/guides/security-best-practices.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_active_builder_guides_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_active_builder_guides_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前状态：
+  - 重新核对后已确认，
+    当前 builder session-cache 高入口
+    只有：
+    - `WithSessionCache(AEnabled: Boolean)`
+  - session cache size
+    当前真实公开入口
+    仍在：
+    - `ISSLContext.SetSessionCacheSize(ASize: Integer)`
+  - 活跃文档之前还残留一组
+    会把路线带偏的假接口：
+    - `WithSessionCache(1000)`
+    - `WithStrongCipherSuites`
+    - `WithPerfectForwardSecrecy`
+    - `WithSessionTickets`
+    - `WithoutVerifyPeer`
+    - `WithSSL3`
+    - `WithTLS10`
+  - 这些问题的危险
+    不只是示例写错，
+    而是会继续诱导后续把
+    `type-safety`
+    或 builder 扩展
+    往不存在的 seam 上推进
+  修复后：
+  - profiling guide
+    现在明确回到：
+    - `.WithSessionCache(True)`
+    - `Ctx.SetSessionCacheSize(...)`
+  - security best practices
+    现在明确回到：
+    - `.WithSafeDefaults`
+    - `.WithOption(ssoEnableSessionTickets)`
+    - `.WithVerifyNone`
+    - `.WithProtocols([...])`
+  - 同时补了一条
+    很关键的边界：
+    - 启用 cache / tickets
+      不自动等于
+      已观测到 resumed handshake，
+      真正的 candidate save/load
+      仍要通过
+      `ISSLSessionResumption`
+  当前实施判断：
+  - 这批价值仍然是
+    truth alignment，
+    不是盲目扩 surface
+  - 它进一步把总路线
+    收紧成：
+    先消灭 active docs
+    对不存在 public seam
+    的教学，
+    再决定哪些 safety type
+    值得真的接入高入口
+  下一刀：
+  - 继续检查
+    其余 active docs
+    是否还把
+    `TVerificationMode`
+    /
+    `TSessionCacheMode`
+    当成当前内建 builder seam，
+    但只有在 current source
+    真存在高入口缺口时
+    才补实现
+
 - [completed] `migration guide phase 2.4 TBufferSize truth alignment`
   当前 focused 目标：
   - 复核
