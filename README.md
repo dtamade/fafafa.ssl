@@ -325,7 +325,6 @@ AESKey := TCryptoUtils.GenerateKey(256);
 uses fafafa.ssl;
 
 Ctx := TSSLFactory.CreateContext(sslCtxClient);
-Ctx.SetCipherList('TLS_AES_256_GCM_SHA384');  // 可选
 
 Conn := Ctx.CreateConnection(Socket);
 (Conn as ISSLClientConnection).SetServerName('api.example.com');
@@ -335,6 +334,8 @@ Conn.Connect;
 Conn.Write(Data^, Length(Data));
 BytesRead := Conn.Read(Buffer^, BufferSize);
 ```
+
+如果你明确锁定的是支持 custom cipher override 的 backend（当前主要是 OpenSSL），再在 capability check 之后调用 `SetCipherList(...)` / `SetCipherSuites(...)`。
 
 ### 证书操作
 

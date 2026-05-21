@@ -2,6 +2,63 @@
 
 ## 2026-05-21
 
+- active custom-cipher guidance truth alignment
+  这一刀确认的
+  不是 runtime capability 又错了，
+  而是
+  runtime truth
+  已经收平之后，
+  generic active docs
+  仍然把
+  custom cipher override
+  教成了
+  跨后端通用推荐
+
+- 当前真正要分开的
+  是两条路径：
+  - ordinary cross-backend baseline
+    - `WithSafeDefaults`
+    - shipped baseline defaults
+  - backend-gated advanced tuning
+    - `SetCipherList(...)`
+    - `SetCipherSuites(...)`
+    - `WithCipherList(...)`
+    - `WithTLS13Ciphersuites(...)`
+
+- 这说明
+  正确修法
+  不是删掉
+  custom cipher
+  示例本身，
+  而是把它们收成
+  capability-aware
+  教学：
+  - 只有
+    `SupportsCustomCipherSuites=True`
+    的 backend
+    才继续展示这类高级调优
+  - generic 入口
+    优先回到
+    shipped baseline
+    /
+    `WithSafeDefaults`
+
+- 这批收口后，
+  当前活跃 generic 文档入口
+  对 custom cipher 的口径
+  已统一成：
+  - `README`
+  - `USER_GUIDE`
+  - `TROUBLESHOOTING`
+  - `SECURITY_GUIDE`
+  - `API_DOCUMENTATION`
+  - `security-best-practices`
+  - `SECURITY_AUDIT`
+  都不再把
+  custom override
+  当成
+  普适默认推荐
+
 - winssl capath unsupported truth alignment
   这一刀确认的
   不是新的 runtime bug，

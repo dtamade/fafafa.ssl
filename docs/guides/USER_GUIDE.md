@@ -416,13 +416,22 @@ LContext.SetVerifyMode([]); // 当前 direct-context no-verify 入口；builder 
 
 ### 3. 密码套件配置
 
+普通跨后端新代码优先使用 builder / default-context 的 shipped baseline；只有在 `SupportsCustomCipherSuites=True` 的 backend（当前主要是 OpenSSL）上，才传入 custom non-default cipher override。
+
 **推荐**:
 ```pascal
-// 使用强密码套件
-LContext.SetCipherSuites('TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256');
+// 普通跨后端路径优先使用 shipped baseline
+LContext := TSSLContextBuilder.Create
+  .WithTLS12And13
+  .WithSafeDefaults
+  .BuildClient;
 
-// 或使用 Mozilla 推荐配置
-LContext.SetCipherList('ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNULL:!MD5:!DSS');
+// 只有 capability 明确允许时，才做 backend-specific custom override
+if LLib.GetCapabilities.SupportsCustomCipherSuites then
+begin
+  LContext.SetCipherSuites('TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256');
+  LContext.SetCipherList('ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNULL:!MD5:!DSS');
+end;
 ```
 
 ### 4. 错误处理
@@ -536,11 +545,15 @@ end;
 ### 4. 选择高效密码套件
 
 ```pascal
-// 优先使用 AES-NI 加速的套件
-LContext.SetCipherSuites('TLS_AES_128_GCM_SHA256'); // 硬件加速
+// 普通跨后端路径优先保留 shipped baseline defaults
+LContext := TSSLContextBuilder.Create
+  .WithTLS12And13
+  .WithSafeDefaults
+  .BuildClient;
 
-// 避免使用慢速算法
-// 不推荐: 'TLS_RSA_WITH_3DES_EDE_CBC_SHA'
+// 如果 capability 明确允许，再做 backend-specific custom tuning
+if LLib.GetCapabilities.SupportsCustomCipherSuites then
+  LContext.SetCipherSuites('TLS_AES_128_GCM_SHA256');
 ```
 
 ---

@@ -159,6 +159,7 @@
 - 同一条 direct-library path 现在也已对齐 deprecated `ServerName` compatibility 语义：
   - client default-config = warning + ignore
   - server default-config = reject
+- custom non-default `CipherList` / `CipherSuites` 仍是 backend-gated surface；对 `SupportsCustomCipherSuites=False` 的 backend 会 fail-fast reject。
 - `HandshakeTimeout` / `BufferSize` 仍保持 connection-scoped；如果 default-config 给它们写了自定义值，`CreateContext(AType)` 会 fail-fast reject，并把调用方导向 connector/connection timeout 或外围 transport/IO 配置。
 - replay-store 仍保持 server-only 约束；若 backend 不实现 installer seam，则 direct-library server path 会 fail-fast。
 

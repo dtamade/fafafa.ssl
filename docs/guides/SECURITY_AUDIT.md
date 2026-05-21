@@ -74,8 +74,11 @@ SSL_CTX_set_min_proto_version(FSSLCtx, TLS1_2_VERSION);
 
 **Recommended Configuration**:
 ```pascal
+// 只有在你明确锁定 OpenSSL backend 且 capability truth 为 True 时，才做 custom cipher allowlist
 Ctx.SetCipherlist('TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:ECDHE-RSA-AES256-GCM-SHA384');
 ```
+
+如果你明确锁定的是 `OpenSSL` 这类支持 custom cipher override 的 backend，才考虑这类 allowlist。
 
 ### 2.3 Certificate Validation
 - [ ] Peer certificates verified by default ✅

@@ -6,6 +6,97 @@
 
 ## 2026-05-21
 
+### Active Custom-Cipher Guidance Truth Alignment
+
+- inspect active generic custom-cipher guidance before editing:
+  - `README.md`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/API_DOCUMENTATION.md`
+  - `docs/guides/USER_GUIDE.md`
+  - `docs/guides/TROUBLESHOOTING.md`
+  - `docs/guides/SECURITY_GUIDE.md`
+  - `docs/guides/security-best-practices.md`
+  - `docs/guides/SECURITY_AUDIT.md`
+  - `docs/BACKEND_CAPABILITY_MATRIX.md`
+  - change:
+    - confirmed runtime/capability truth for
+      `SupportsCustomCipherSuites`
+      had already been narrowed earlier
+    - confirmed several generic active docs still taught
+      `SetCipherList(...)`
+      /
+      `SetCipherSuites(...)`
+      as if they were cross-backend default recommendations
+    - confirmed the drift was now at the guidance layer,
+      not the runtime layer
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-active-custom-cipher-guidance-truth-alignment.md`
+  - `tests/scripts/test_active_custom_cipher_guidance_truth_contract.sh`
+  - change:
+    - documented the batch as active custom-cipher guidance truth alignment
+    - added a focused contract to freeze:
+      - generic docs must prefer shipped baseline / `WithSafeDefaults`
+      - custom cipher examples must be capability-gated
+      - API reference must record direct-library custom-cipher backend gating
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_active_custom_cipher_guidance_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_active_custom_cipher_guidance_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - failed at:
+        `User guide must not present TLS 1.3 custom cipher suites as a generic cross-backend recommendation`
+      - important conclusion:
+        - the drift was real current active guidance
+        - runtime code did not need a new fix
+
+- repair active generic custom-cipher guidance:
+  - `README.md`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/API_DOCUMENTATION.md`
+  - `docs/guides/USER_GUIDE.md`
+  - `docs/guides/TROUBLESHOOTING.md`
+  - `docs/guides/SECURITY_GUIDE.md`
+  - `docs/guides/security-best-practices.md`
+  - `docs/guides/SECURITY_AUDIT.md`
+  - change:
+    - removed generic low-level
+      `SetCipherList(...)`
+      optional-tuning wording from
+      `README`
+    - changed builder/server example guidance to default to
+      `WithSafeDefaults`
+      and only mention custom cipher as backend-gated advanced tuning
+    - rewrote generic user/troubleshooting/security guidance to separate:
+      - cross-backend shipped baseline
+      - capability-aware custom override
+    - added direct-library custom-cipher backend-gated caveat to
+      `API_REFERENCE.md`
+
+- repair focused contract quoting bug:
+  - `tests/scripts/test_active_custom_cipher_guidance_truth_contract.sh`
+  - change:
+    - converted backtick-bearing literal expectations to shell-safe quoting
+    - upgraded user-guide assertions from naive string-forbid to
+      capability-gated regex proof
+    - important conclusion:
+      - the earlier post-edit failure was a contract quoting bug,
+        not a docs regression
+
+- verify focused closeout:
+  - `bash -n tests/scripts/test_active_custom_cipher_guidance_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_active_custom_cipher_guidance_truth_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed generic active docs now distinguish
+        cross-backend baseline guidance
+        from backend-gated custom-cipher tuning
+  - `git diff --check`
+    - result: PASS
+
 ### WinSSL CAPath Unsupported Truth Alignment
 
 - inspect current WinSSL `CAPath` truth before editing:

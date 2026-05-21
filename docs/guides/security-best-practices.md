@@ -412,7 +412,7 @@ begin
 end;
 ```
 
-当前 builder 并没有单独的 `WithStrongCipherSuites` / `WithPerfectForwardSecrecy` fluent method；活跃 public truth 是收紧协议版本后，优先走 `WithSafeDefaults`（需要更细粒度时再补 `WithCipherList(...)` / `WithTLS13Ciphersuites(...)`）。
+当前 builder 并没有单独的 `WithStrongCipherSuites` / `WithPerfectForwardSecrecy` fluent method；活跃 public truth 是收紧协议版本后，优先走 `WithSafeDefaults`。只有在 `ISSLLibrary.GetCapabilities.SupportsCustomCipherSuites=True` 的 backend（当前主要是 OpenSSL）上，才追加 `WithCipherList(...)` / `WithTLS13Ciphersuites(...)`。
 
 ### 2. 启用证书验证
 

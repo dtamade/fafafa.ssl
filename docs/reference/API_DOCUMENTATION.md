@@ -851,17 +851,19 @@ Context := Builder.BuildClient;
 ```pascal
 Builder := TSSLContextBuilder.Create;
 Builder
+  .WithBackend(sslOpenSSL)
   .WithCertificate('server.crt')
   .WithPrivateKey('server.key')
   .WithTLS12And13
+  .WithSafeDefaults
   .WithOCSPStapling(True)
-  .WithServerOCSPStapledResponseFile('fixtures/ocsp/server_leaf.ocsp.der')
-  .WithCipherList('HIGH:!aNULL:!MD5'); // 强密码套件
+  .WithServerOCSPStapledResponseFile('fixtures/ocsp/server_leaf.ocsp.der');
 
 Context := Builder.BuildServer;
 ```
 
 如果这个 server context 只是普通单向 TLS，请在 builder 上显式加 `.WithVerifyNone`；如果要做 mTLS，请改成 `.WithMutualTLS(...)`。
+如需 custom cipher allowlist，请只在 `SupportsCustomCipherSuites=True` 的 backend（当前主要是 OpenSSL）上追加这类 builder 配置。
 
 ### 3. 错误处理
 

@@ -503,13 +503,13 @@ LContext.SetSessionCacheMode(True);
 LContext.SetSessionCacheSize(1024);
 LContext.SetSessionTimeout(300);
 
-// 2. 使用更快的密码套件
-LContext.SetCipherSuites('TLS_AES_128_GCM_SHA256');  // 硬件加速
+// 2. 普通跨后端路径优先保留 shipped baseline defaults
+LContext := TSSLContextBuilder.Create
+  .WithTLS12And13
+  .WithSafeDefaults
+  .BuildClient;
 
-// 3. 使用 ECDHE 而非 RSA
-LContext.SetCipherList('ECDHE+AESGCM');
-
-// 4. 检查是否复用会话
+// 3. 检查是否复用会话
 var
   LSessionResumption: ISSLSessionResumption;
 begin
@@ -518,6 +518,8 @@ begin
     WriteLn('Session reused - handshake faster!');
 end;
 ```
+
+如果你明确锁定的是 `SupportsCustomCipherSuites=True` 的 backend（当前主要是 OpenSSL），才继续调 custom cipher；否则优先保留 shipped baseline defaults。
 
 ### 问题: 数据传输慢
 

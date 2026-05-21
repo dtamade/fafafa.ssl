@@ -65,26 +65,18 @@ LContext.SetProtocolVersions([
 
 ### 密码套件配置
 
-**Mozilla 现代配置**（推荐）:
+普通跨后端路径优先收紧 TLS 版本并使用 `WithSafeDefaults`；custom cipher allowlist / denylist 只应在 `SupportsCustomCipherSuites=True` 的 backend 上配置。
+
+**跨后端默认推荐**:
 
 ```pascal
-// 仅支持 TLS 1.3 密码套件
-LContext.SetCipherSuites(
-  'TLS_AES_256_GCM_SHA384:' +
-  'TLS_AES_128_GCM_SHA256:' +
-  'TLS_CHACHA20_POLY1305_SHA256'
-);
-
-// TLS 1.2 向后兼容
-LContext.SetCipherList(
-  'ECDHE-ECDSA-AES256-GCM-SHA384:' +
-  'ECDHE-RSA-AES256-GCM-SHA384:' +
-  'ECDHE-ECDSA-CHACHA20-POLY1305:' +
-  'ECDHE-RSA-CHACHA20-POLY1305:' +
-  'ECDHE-ECDSA-AES128-GCM-SHA256:' +
-  'ECDHE-RSA-AES128-GCM-SHA256'
-);
+LContext := TSSLContextBuilder.Create
+  .WithTLS12And13
+  .WithSafeDefaults
+  .BuildClient;
 ```
+
+如果你明确锁定的是支持 custom cipher override 的 backend（当前主要是 OpenSSL），再在 capability check 之后配置 custom cipher allowlist。
 
 **禁用的密码套件**:
 
@@ -101,11 +93,11 @@ LContext.SetCipherList(
 ### 完美前向保密 (PFS)
 
 ```pascal
-// 使用 ECDHE 或 DHE 密码套件
-LContext.SetCipherList('ECDHE+AESGCM:DHE+AESGCM:!RSA');
-
-// 配置 DH 参数（如果使用 DHE）
-LContext.LoadDHParams('dhparam.pem');  // 至少 2048 位
+// 跨后端路径：优先 TLS 1.2+ / TLS 1.3 与 safe defaults
+LContext := TSSLContextBuilder.Create
+  .WithTLS12And13
+  .WithSafeDefaults
+  .BuildClient;
 ```
 
 ### HSTS (HTTP Strict Transport Security)
@@ -503,10 +495,7 @@ end;
 ### BEAST 攻击防护
 
 ```pascal
-// 禁用 CBC 模式密码套件（TLS 1.0）
-LContext.SetCipherList('!CBC');
-
-// 或仅使用 TLS 1.2+
+// 优先直接禁用 TLS 1.0 / TLS 1.1
 LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
 ```
 

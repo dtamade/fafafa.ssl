@@ -10,6 +10,59 @@
 
 ## Current Status
 
+- [completed] `active custom-cipher guidance truth alignment`
+  当前 focused 目标：
+  - 把 generic active docs 里
+    `SetCipherList`
+    /
+    `SetCipherSuites`
+    被当成跨后端普适推荐的 drift 收平
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-active-custom-cipher-guidance-truth-alignment.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_active_custom_cipher_guidance_truth_contract.sh`
+  - 目标更新：
+    - `README.md`
+    - `docs/reference/API_REFERENCE.md`
+    - `docs/reference/API_DOCUMENTATION.md`
+    - `docs/guides/USER_GUIDE.md`
+    - `docs/guides/TROUBLESHOOTING.md`
+    - `docs/guides/SECURITY_GUIDE.md`
+    - `docs/guides/security-best-practices.md`
+    - `docs/guides/SECURITY_AUDIT.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_active_custom_cipher_guidance_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_active_custom_cipher_guidance_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - 普通跨后端路径
+    优先
+    shipped baseline defaults
+    /
+    `WithSafeDefaults`
+  - custom cipher override
+    只应在
+    `SupportsCustomCipherSuites=True`
+    的 backend 上作为 advanced tuning 使用
+  当前批收口后的默认下一步：
+  - generic 文档入口里，
+    “字段存在”
+    不再会被直接误教成
+    “所有 backend 都推荐这样调”
+  - 下一条更值得继续追的
+    residual
+    会更靠近
+    public API 形状本身，
+    尤其是：
+    `TSSLConfig` mixed-scope bucket
+    /
+    `ISSLConnection` core-too-fat
+    这类设计债
+
 - [completed] `winssl capath unsupported truth alignment`
   当前 focused 目标：
   - 把
