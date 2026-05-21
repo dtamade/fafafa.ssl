@@ -137,6 +137,7 @@ type
   ISSLContext = fafafa.ssl.base.ISSLContext;
   ISSLConnection = fafafa.ssl.base.ISSLConnection;
   ISSLClientConnection = fafafa.ssl.base.ISSLClientConnection;
+  ISSLConnectionControl = fafafa.ssl.base.ISSLConnectionControl;
   ISSLNativeHandleAccess = fafafa.ssl.base.ISSLNativeHandleAccess;
   ISSLConnectionInfo = fafafa.ssl.base.ISSLConnectionInfo;
   ISSLDiagnostics = fafafa.ssl.base.ISSLDiagnostics;

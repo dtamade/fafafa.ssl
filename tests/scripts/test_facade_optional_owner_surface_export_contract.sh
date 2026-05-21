@@ -28,6 +28,7 @@ require_fixed() {
 }
 
 facade="src/fafafa.ssl.pas"
+api_ref="docs/reference/API_REFERENCE.md"
 contract_src="tests/contract/test_facade_optional_owner_surface_entry.pas"
 build_root="tmp/test_facade_optional_owner_surface_entry"
 units_dir="$build_root/units"
@@ -36,6 +37,8 @@ binary="$bin_dir/test_facade_optional_owner_surface_entry"
 
 printf '[TEST] facade optional owner surface export contract\n'
 
+require_fixed "$facade" "ISSLConnectionControl = fafafa.ssl.base.ISSLConnectionControl;" \
+  "main facade re-exports ISSLConnectionControl"
 require_fixed "$facade" "TSSLHealthStatus = fafafa.ssl.base.TSSLHealthStatus;" \
   "main facade re-exports TSSLHealthStatus"
 require_fixed "$facade" "TSSLPerformanceMetrics = fafafa.ssl.base.TSSLPerformanceMetrics;" \
@@ -58,6 +61,8 @@ require_fixed "$facade" "ISSLCertificateTransparency = fafafa.ssl.base.ISSLCerti
   "main facade re-exports ISSLCertificateTransparency"
 require_fixed "$facade" "ISSLCertificateTransparencyValidation = fafafa.ssl.base.ISSLCertificateTransparencyValidation;" \
   "main facade re-exports ISSLCertificateTransparencyValidation"
+require_fixed "$api_ref" '主门面 `fafafa.ssl` 当前也 re-export `ISSLConnectionControl` / `ISSLConnectionInfo` / `ISSLDiagnostics` 等 connection-side owner interfaces；普通调用方不需要回退 `fafafa.ssl.base`。' \
+  "API reference records main-facade owner-interface re-export truth"
 
 mkdir -p "$units_dir" "$bin_dir"
 fpc -B -Fu./src -Fu./tests -FU"$units_dir" -FE"$bin_dir" -o"$binary" "$contract_src" >/dev/null

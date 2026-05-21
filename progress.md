@@ -6,6 +6,78 @@
 
 ## 2026-05-21
 
+### Facade Connection-Control Owner Export Closure
+
+- inspect current migration/facade truth before editing:
+  - `src/fafafa.ssl.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/plans/2026-05-20-facade-optional-owner-surface-export-alignment.md`
+  - `tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+  - `tests/contract/test_facade_optional_owner_surface_entry.pas`
+  - change:
+    - confirmed
+      `API_REFERENCE`
+      had already promoted
+      `ISSLConnectionControl`
+      as the timeout/blocking runtime owner path
+    - confirmed
+      `src/fafafa.ssl.pas`
+      still did not re-export
+      `ISSLConnectionControl`
+    - important conclusion:
+      - this was a real facade-only compile gap on the active migration path,
+        not a runtime owner-path bug
+
+- add focused batch inputs and extend the facade contract:
+  - `docs/plans/2026-05-21-facade-connection-control-owner-export-closure.md`
+  - `tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+  - `tests/contract/test_facade_optional_owner_surface_entry.pas`
+  - change:
+    - extended the existing optional-owner facade contract to also require:
+      - `ISSLConnectionControl`
+      - an API-reference note about facade owner-interface re-export truth
+    - extended the facade-only compile probe so it now names
+      `ISSLConnectionControl`
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+    - result: FAIL
+    - summary:
+      - failed at:
+        `main facade re-exports ISSLConnectionControl`
+      - important conclusion:
+        - the missing alias in
+          `src/fafafa.ssl.pas`
+          was the real blocker
+
+- repair facade completeness and doc truth:
+  - `src/fafafa.ssl.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - added
+      `ISSLConnectionControl = fafafa.ssl.base.ISSLConnectionControl;`
+      to the main facade
+    - recorded in
+      `API_REFERENCE`
+      that
+      `fafafa.ssl`
+      also re-exports connection-side owner interfaces,
+      so ordinary callers do not need to fall back to
+      `fafafa.ssl.base`
+
+- verify focused closeout:
+  - `bash tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+    - result: PASS
+    - summary:
+      - facade source truth
+      - API-reference truth
+      - facade-only compile proof
+        all passed
+  - `git diff --check`
+    - result: PASS
+
 ### TSSLLibraryDefaults Additive Surface Adoption
 
 - inspect current helper/doc/facade seam before final closeout:

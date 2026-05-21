@@ -538,6 +538,7 @@ end;
 - 对会话保存 / 注入 / 复用命中状态，新代码优先通过 `ISSLSessionResumption` 获取。
 - 对证书链和验证结果，新代码优先通过 `ISSLCertificateVerification` 获取。
 - 对 OCSP stapling runtime state，新代码优先通过 `ISSLOCSPStapling` 获取。
+- 主门面 `fafafa.ssl` 当前也 re-export `ISSLConnectionControl` / `ISSLConnectionInfo` / `ISSLDiagnostics` 等 connection-side owner interfaces；普通调用方不需要回退 `fafafa.ssl.base`。
 
 ---
 

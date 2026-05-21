@@ -8,6 +8,7 @@ uses
 type
   TFacadeOptionalOwnerSurfacePack = record
     Connection: ISSLConnection;
+    ConnectionControl: ISSLConnectionControl;
     ConnectionInfo: ISSLConnectionInfo;
     Diagnostics: ISSLDiagnostics;
     SessionResumption: ISSLSessionResumption;

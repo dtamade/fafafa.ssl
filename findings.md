@@ -2,6 +2,61 @@
 
 ## 2026-05-21
 
+- facade connection-control owner export closure
+  这一刀确认的
+  不是
+  timeout / blocking
+  owner-path
+  还没建好，
+  而是
+  owner-path
+  已经在
+  source / docs / migration map
+  里成立之后，
+  主门面
+  仍然漏掉了
+  `ISSLConnectionControl`
+  这个对外入口
+
+- 当前更准确的收口是：
+  - `ISSLConnectionControl`
+    不只是
+    `fafafa.ssl.base`
+    里的 owner interface
+  - `fafafa.ssl`
+    主门面现在也显式 re-export：
+    - `ISSLConnectionControl`
+  - `uses fafafa.ssl`
+    的 facade-only caller
+    现在可以直接：
+    - `Supports(Conn, ISSLConnectionControl, LControl)`
+    - `LControl.SetTimeout(...)`
+
+- 这说明
+  timeout 迁移主线
+  剩下的风险
+  已经不是
+  runtime 语义不稳定，
+  而是
+  facade completeness
+  这类
+  发布层细缝
+
+- focused RED
+  首轮暴露的就是
+  真实 facade gap：
+  - `tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+    直接失败在
+    `ISSLConnectionControl = fafafa.ssl.base.ISSLConnectionControl;`
+    缺失
+  这也说明
+  之前 optional-owner export 批次
+  虽然把多数 owner interfaces 补齐了，
+  但在
+  `ISSLConnectionControl`
+  这条后来形成的迁移主线上
+  还留了一个 compile seam
+
 - tssllibrarydefaults additive surface adoption
   这一刀确认的
   不是 backend runtime

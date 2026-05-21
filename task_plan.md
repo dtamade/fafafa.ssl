@@ -10,6 +10,65 @@
 
 ## Current Status
 
+- [completed] `facade connection-control owner export closure`
+  当前 focused 目标：
+  - 把 timeout/blocking
+    迁移主线里的
+    `ISSLConnectionControl`
+    真正补齐到
+    `fafafa.ssl`
+    主门面入口，
+    避免
+    `uses fafafa.ssl`
+    调用方
+    还得退回
+    `fafafa.ssl.base`
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-facade-connection-control-owner-export-closure.md`
+  - 更新 focused contract：
+    - `tests/contract/test_facade_optional_owner_surface_entry.pas`
+    - `tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+  - 目标更新：
+    - `src/fafafa.ssl.pas`
+    - `docs/reference/API_REFERENCE.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - `fafafa.ssl`
+    主门面当前已完整 re-export：
+    - `ISSLConnectionControl`
+    - `ISSLConnectionInfo`
+    - `ISSLDiagnostics`
+    - `ISSLSessionResumption`
+    - 邻接的 supporting types / owner interfaces
+  - `API_REFERENCE`
+    当前也明确记录：
+    - facade-only caller
+      不需要再为了
+      connection-side owner interfaces
+      退回
+      `fafafa.ssl.base`
+  当前批收口后的默认下一步：
+  - timeout / blocking
+    这条迁移主线
+    已不再存在
+    facade compile gap
+  - 下一条更值得继续压的 residual
+    会更集中在：
+    `TSSLConfig`
+    其余
+    non-request-local
+    字段的 additive extraction
+    /
+    `ISSLConnection`
+    其余 convenience-core seam
+
 - [completed] `tssllibrarydefaults additive surface adoption`
   当前 focused 目标：
   - 继续压缩
