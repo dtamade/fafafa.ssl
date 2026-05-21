@@ -17,7 +17,8 @@ interface
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.base;
+  fafafa.ssl.base,
+  fafafa.ssl.safety;
 
 type
   { Forward declarations }
@@ -160,8 +161,10 @@ type
     function ValidUntil(AEnd: TDateTime): ICertificateBuilder;
     
     // Key configuration
-    function WithRSAKey(ABits: Integer = 2048): ICertificateBuilder;
-    function WithECDSAKey(const ACurve: string = 'prime256v1'): ICertificateBuilder;
+    function WithRSAKey(ABits: Integer = 2048): ICertificateBuilder; overload;
+    function WithRSAKey(const ASize: TKeySize): ICertificateBuilder; overload;
+    function WithECDSAKey(const ACurve: string = 'prime256v1'): ICertificateBuilder; overload;
+    function WithECDSAKey(ACurve: TEllipticCurve): ICertificateBuilder; overload;
     function WithEd25519Key: ICertificateBuilder;
     
     // Extensions

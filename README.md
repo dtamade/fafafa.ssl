@@ -333,7 +333,9 @@ BytesRead := Conn.Read(Buffer^, BufferSize);
 ### 证书操作
 
 ```pascal
-uses fafafa.ssl.cert.builder;
+uses
+  fafafa.ssl,
+  fafafa.ssl.cert.builder;
 
 var
   KeyPair: IKeyPairWithCertificate;
@@ -342,7 +344,7 @@ begin
     .WithCommonName('localhost')
     .WithOrganization('My Company')
     .ValidFor(365)
-    .WithRSAKey(2048)
+    .WithRSAKey(TKeySize.Bits(2048))
     .AsServerCert
     .AddSubjectAltName('DNS:localhost')
     .SelfSigned;

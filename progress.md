@@ -6,6 +6,111 @@
 
 ## 2026-05-21
 
+### Certificate Builder Safety Key Config Adoption
+
+- inspect current builder / safety / high-level cert path truth:
+  - `src/fafafa.ssl.cert.builder.pas`
+  - `src/fafafa.ssl.cert.builder.impl.pas`
+  - `src/fafafa.ssl.cert.utils.pas`
+  - `src/fafafa.ssl.cert.pas`
+  - `src/fafafa.ssl.quick.pas`
+  - `src/fafafa.ssl.safety.pas`
+  - `README.md`
+  - change:
+    - confirmed the public builder still only exposed
+      `Integer/string`
+      key config
+    - confirmed the real minimal-value seam was:
+      builder overload bridge
+      plus high-level path adoption
+    - confirmed
+      `EllipticCurveToString(...)`
+      could not be reused because it returns display names,
+      not OpenSSL curve tokens
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-certificate-builder-safety-key-config-adoption.md`
+  - `tests/contract/test_certificate_builder_safety_key_config_entry.pas`
+  - `tests/scripts/test_certificate_builder_safety_key_config_contract.sh`
+  - change:
+    - documented the batch as
+      real implementation adoption
+      for certificate builder key config
+    - added a focused compile/runtime contract
+      to guard:
+      - builder overload surface
+      - high-level adoption
+      - invalid ECDSA curve boundary
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_certificate_builder_safety_key_config_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_certificate_builder_safety_key_config_contract.sh`
+    - result: FAIL
+    - summary:
+      - failed at:
+        `builder interface must export TKeySize overload`
+      - important conclusion:
+        - the missing builder safety entrypoint
+          was a real current public gap,
+          not only a speculative cleanup idea
+
+- implement builder safety-key adoption:
+  - `src/fafafa.ssl.cert.builder.pas`
+  - `src/fafafa.ssl.cert.builder.impl.pas`
+  - `src/fafafa.ssl.cert.pas`
+  - `src/fafafa.ssl.quick.pas`
+  - `README.md`
+  - change:
+    - added
+      `ICertificateBuilder`
+      overloads for:
+      - `WithRSAKey(const ASize: TKeySize)`
+      - `WithECDSAKey(ACurve: TEllipticCurve)`
+    - kept the old
+      `Integer/string`
+      overloads unchanged for compatibility
+    - added explicit
+      `TEllipticCurve -> OpenSSL curve token`
+      mapping in builder impl
+    - added explicit reject path for:
+      - `ec_X25519`
+      - `ec_X448`
+    - updated
+      `TCertificate`
+      /
+      `TSSLQuick`
+      real call paths
+      to adopt
+      `TKeySize.Bits(...)`
+      /
+      `ec_P256`
+    - updated the README certificate example
+      to import
+      `fafafa.ssl`
+      and show
+      `TKeySize.Bits(2048)`
+
+- verify focused static/runtime truth:
+  - `bash -n tests/scripts/test_certificate_builder_safety_key_config_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_certificate_builder_safety_key_config_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed the builder public surface now exports the typed overloads
+      - confirmed high-level
+        `TCertificate`
+        /
+        `TSSLQuick`
+        paths adopted the new overloads
+      - confirmed the focused probe compiles and runs:
+        - RSA self-signed via `TKeySize.Bits(2048)`
+        - ECDSA self-signed via `ec_P256`
+        - invalid `ec_X25519` rejected with
+          `ESSLInvalidArgument`
+  - `git diff --check`
+    - result: PASS
+
 ### API Reference TSSLErrorCode Truth Alignment
 
 - inspect active docs truth drift:

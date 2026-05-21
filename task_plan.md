@@ -10,6 +10,101 @@
 
 ## Current Status
 
+- [completed] `certificate builder safety key config adoption`
+  当前 focused 目标：
+  - 把
+    `type-safety`
+    从
+    facade/doc/test
+    继续推进到
+    真实证书 builder
+    与高层证书创建路径，
+    让
+    `TKeySize`
+    /
+    `TEllipticCurve`
+    不再只停留在旁路入口
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-certificate-builder-safety-key-config-adoption.md`
+  - 新增 contract：
+    - `tests/contract/test_certificate_builder_safety_key_config_entry.pas`
+    - `tests/scripts/test_certificate_builder_safety_key_config_contract.sh`
+  - 更新：
+    - `src/fafafa.ssl.cert.builder.pas`
+    - `src/fafafa.ssl.cert.builder.impl.pas`
+    - `src/fafafa.ssl.cert.pas`
+    - `src/fafafa.ssl.quick.pas`
+    - `README.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_certificate_builder_safety_key_config_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_certificate_builder_safety_key_config_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前状态：
+  - `ICertificateBuilder`
+    现在新增并保留兼容：
+    - `WithRSAKey(ABits: Integer = 2048);`
+    - `WithRSAKey(const ASize: TKeySize);`
+    - `WithECDSAKey(const ACurve: string = 'prime256v1');`
+    - `WithECDSAKey(ACurve: TEllipticCurve);`
+  - builder 实现现在显式 bridge：
+    - `TKeySize -> ToBits`
+    - `TEllipticCurve -> OpenSSL curve token`
+  - 当前 ECDSA cert key path
+    明确 reject：
+    - `ec_X25519`
+    - `ec_X448`
+  - 高层真实调用路径
+    已开始采用 type-safe key config：
+    - `TCertificate.CreateSelfSigned`
+    - `TCertificate.CreateServerCert`
+    - `TCertificate.CreateClientCert`
+    - `TSSLQuick.GenerateSelfSigned`
+    - `TSSLQuick.GenerateServerCert`
+    - `TSSLQuick.GenerateCACert`
+  - focused runtime probe
+    已真实证明：
+    - `WithRSAKey(TKeySize.Bits(2048)).SelfSigned`
+    - `WithECDSAKey(ec_P256).SelfSigned`
+    - `WithECDSAKey(ec_X25519)`
+      会抛
+      `ESSLInvalidArgument`
+  当前实施判断：
+  - 这批不是
+    “再写一层 facade/doc truth”，
+    而是把已存在的 safety surface
+    真正接入到
+    用户会经过的证书 builder/public path
+  - 同时保持了
+    `TCertGenOptions`
+    内部
+    `Integer/string`
+    存储结构不动，
+    范围受控，
+    风险可归因
+  当前路线图进度判断：
+  - 总主线继续不变：
+    - interface/implementation truth alignment
+    - backend implementation-completeness
+    - tests/docs completeness
+  - 但这一刀明显把
+    interface truth
+    往
+    real implementation adoption
+    又推进了一层
+  下一刀：
+  - 继续找
+    这种
+    “safety type 已 shipped，
+    但真实高层 helper / builder / public path
+    仍在发布裸 primitive”
+    的接缝，
+    优先补同样能用 focused contract
+    低成本守住的点
+
 - [completed] `api reference tsslerrorcode truth alignment`
   当前 focused 目标：
   - 修复

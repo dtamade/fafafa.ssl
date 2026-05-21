@@ -18,6 +18,7 @@ interface
 uses
   SysUtils, Classes,
   fafafa.ssl.base,
+  fafafa.ssl.safety,
   fafafa.ssl.exceptions,
   fafafa.ssl.cert.builder,
   fafafa.ssl.cert.utils,
@@ -119,8 +120,10 @@ type
     function ValidUntil(AEnd: TDateTime): ICertificateBuilder;
     
     // Keys
-    function WithRSAKey(ABits: Integer = 2048): ICertificateBuilder;
-    function WithECDSAKey(const ACurve: string = 'prime256v1'): ICertificateBuilder;
+    function WithRSAKey(ABits: Integer = 2048): ICertificateBuilder; overload;
+    function WithRSAKey(const ASize: TKeySize): ICertificateBuilder; overload;
+    function WithECDSAKey(const ACurve: string = 'prime256v1'): ICertificateBuilder; overload;
+    function WithECDSAKey(ACurve: TEllipticCurve): ICertificateBuilder; overload;
     function WithEd25519Key: ICertificateBuilder;
     
     // Extensions
@@ -138,6 +141,28 @@ type
   end;
 
 implementation
+
+function CertificateECDSACurveToToken(ACurve: TEllipticCurve): string;
+begin
+  case ACurve of
+    ec_P256: Result := 'prime256v1';
+    ec_P384: Result := 'secp384r1';
+    ec_P521: Result := 'secp521r1';
+    ec_BrainpoolP256: Result := 'brainpoolP256r1';
+    ec_BrainpoolP384: Result := 'brainpoolP384r1';
+    ec_BrainpoolP512: Result := 'brainpoolP512r1';
+    ec_X25519, ec_X448:
+      raise ESSLInvalidArgument.Create(
+        'ECDSA certificate keys do not support X25519/X448 curves',
+        sslErrInvalidParam
+      );
+  else
+    raise ESSLInvalidArgument.Create(
+      'Unsupported ECDSA certificate curve',
+      sslErrInvalidParam
+    );
+  end;
+end;
 
 procedure RequireCertificatePEMLoadHelpers;
 begin
@@ -546,11 +571,21 @@ begin
   Result := Self;
 end;
 
+function TCertificateBuilderImpl.WithRSAKey(const ASize: TKeySize): ICertificateBuilder;
+begin
+  Result := WithRSAKey(ASize.ToBits);
+end;
+
 function TCertificateBuilderImpl.WithECDSAKey(const ACurve: string): ICertificateBuilder;
 begin
   FOptions.KeyType := ktECDSA;
   FOptions.ECCurve := ACurve;
   Result := Self;
+end;
+
+function TCertificateBuilderImpl.WithECDSAKey(ACurve: TEllipticCurve): ICertificateBuilder;
+begin
+  Result := WithECDSAKey(CertificateECDSACurveToToken(ACurve));
 end;
 
 function TCertificateBuilderImpl.WithEd25519Key: ICertificateBuilder;

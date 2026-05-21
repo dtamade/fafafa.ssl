@@ -2,6 +2,93 @@
 
 ## 2026-05-21
 
+- `type-safety`
+  目前还有一条很真实的 adoption gap：
+  虽然
+  `fafafa.ssl`
+  主门面已经 re-export 了
+  `TKeySize`
+  /
+  `TEllipticCurve`
+  等 non-generic safety surface，
+  但
+  `src/fafafa.ssl.cert.builder.pas`
+  之前仍只公开：
+  - `WithRSAKey(ABits: Integer = 2048)`
+  - `WithECDSAKey(const ACurve: string = 'prime256v1')`
+
+- 这意味着：
+  safety surface
+  还没有真正进入
+  用户最容易直接调用的
+  证书生成路径；
+  它更多仍停留在：
+  - safety unit
+  - facade truth
+  - 单独测试
+
+- 当前最稳的最小修法
+  不是立刻大改
+  `TCertGenOptions`
+  的内部表示，
+  而是先在 builder 上做 bridge：
+  - `WithRSAKey(const ASize: TKeySize)`
+  - `WithECDSAKey(ACurve: TEllipticCurve)`
+  同时保留旧 overload
+  以维持兼容
+
+- `src/fafafa.ssl.cert.utils.pas`
+  的当前实现真相也确认了：
+  `GenerateECKey(const ACurve: string)`
+  吃的是
+  OpenSSL curve token，
+  例如：
+  - `prime256v1`
+  - `secp384r1`
+  - `secp521r1`
+  - `brainpoolP256r1`
+
+- 因此不能把
+  `EllipticCurveToString(...)`
+  直接复用进 builder bridge，
+  因为它返回的是展示名：
+  - `P-256`
+  - `P-384`
+  - `P-521`
+  - `X25519`
+  - `Brainpool P-256`
+
+- 当前 ECDSA cert key path
+  还必须明确 reject：
+  - `ec_X25519`
+  - `ec_X448`
+  因为它们是 ECDH-only curve，
+  不是当前 certificate builder
+  的 signing curve truth
+
+- 修复后，
+  builder public surface
+  已经真实补上：
+  - `WithRSAKey(const ASize: TKeySize)`
+  - `WithECDSAKey(ACurve: TEllipticCurve)`
+  并且高层真实路径
+  `TCertificate`
+  /
+  `TSSLQuick`
+  也开始采用这组 overload
+
+- focused contract
+  现在已经同时证明三件事：
+  - typed RSA self-signed path
+    可编译、可运行
+  - typed ECDSA self-signed path
+    可编译、可运行
+  - `WithECDSAKey(ec_X25519)`
+    会以
+    `ESSLInvalidArgument`
+    明确 fail，
+    不再把错误曲线伪装成可用配置
+
 - `docs/reference/API_REFERENCE.md`
   里的
   `TSSLErrorCode`

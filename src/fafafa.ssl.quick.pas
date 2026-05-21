@@ -63,6 +63,9 @@ type
 
 implementation
 
+uses
+  fafafa.ssl.safety;
+
 { TSSLQuick }
 
 class function TSSLQuick.GenerateSelfSigned(const ACommonName: string;
@@ -71,7 +74,7 @@ begin
   Result := TCertificateBuilder.Create
     .WithCommonName(ACommonName)
     .ValidFor(AValidDays)
-    .WithRSAKey(2048)
+    .WithRSAKey(TKeySize.Bits(2048))
     .SelfSigned;
 end;
 
@@ -84,7 +87,7 @@ begin
   LBuilder := TCertificateBuilder.Create
     .WithCommonName(ACommonName)
     .ValidFor(AValidDays)
-    .WithRSAKey(2048)
+    .WithRSAKey(TKeySize.Bits(2048))
     .AsServerCert;
   
   for I := Low(ADomains) to High(ADomains) do
@@ -100,7 +103,7 @@ begin
     .WithCommonName(ACommonName)
     .WithOrganization(AOrgName)
     .ValidFor(AValidDays)
-    .WithRSAKey(4096)
+    .WithRSAKey(TKeySize.Bits(4096))
     .AsCA
     .SelfSigned;
 end;

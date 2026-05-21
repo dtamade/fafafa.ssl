@@ -40,7 +40,8 @@ implementation
 
 uses
   fafafa.ssl.cert.utils,
-  fafafa.ssl.cert.builder.impl;
+  fafafa.ssl.cert.builder.impl,
+  fafafa.ssl.safety;
 
 { TCertificate }
 
@@ -54,7 +55,7 @@ begin
   Result := CreateBuilder
     .WithCommonName(ACommonName)
     .ValidFor(365)
-    .WithRSAKey(2048)
+    .WithRSAKey(TKeySize.Bits(2048))
     .SelfSigned;
 end;
 
@@ -73,7 +74,7 @@ begin
     LBuilder := LBuilder.AddSubjectAltName(ASANs[I]);
     
   Result := LBuilder
-    .WithECDSAKey('prime256v1')  // Fast & modern
+    .WithECDSAKey(ec_P256)  // Fast & modern
     .SelfSigned;
 end;
 
@@ -82,7 +83,7 @@ begin
   Result := CreateBuilder
     .WithCommonName(ACommonName)
     .ValidFor(365)
-    .WithRSAKey(2048)
+    .WithRSAKey(TKeySize.Bits(2048))
     .SelfSigned;
 end;
 
