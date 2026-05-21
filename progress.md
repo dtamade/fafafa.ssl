@@ -19737,6 +19737,85 @@
   - summary:
     - no whitespace or patch-format drift remains before commit
 
+### Reference ARCHITECTURE Current Factory Surface Truth Alignment
+
+- inspect current reference-truth drift and continuation residual:
+  - `docs/reference/ARCHITECTURE.md`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/ARCHITECTURE.md`
+  - `README.md`
+  - `docs/guides/GETTING_STARTED.md`
+  - `docs/guides/FAQ.md`
+  - `src/fafafa.ssl.factory.pas`
+  - change:
+    - confirmed the current public truth still centers on:
+      - `fafafa.ssl`
+      - `TSSLContextBuilder`
+      - `TSSLConnector`
+      - `TSSLFactory.GetLibraryInstance(...)`
+      - `CreateContext(AContextType, ALibType)`
+      - `GetAvailableLibraries: TSSLLibraryTypes`
+    - confirmed batch continuity:
+      - first RED had already exposed missing
+        `TSSLContextBuilder`
+        /
+        `TSSLConnector`
+        entry guidance
+      - current continuation still had deeper old-module residuals:
+        - `fafafa.ssl.types`
+        - `fafafa.ssl.intf`
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-reference-architecture-current-factory-surface-truth-alignment.md`
+  - `tests/scripts/test_reference_architecture_current_factory_surface_truth_contract.sh`
+  - change:
+    - recorded the batch as a bounded
+      reference-architecture truth repair
+    - added a static guard for:
+      - current builder / connector entrypoint wording
+      - current factory signatures
+      - current base-unit naming
+
+- repair remaining reference drift:
+  - `docs/reference/ARCHITECTURE.md`
+  - change:
+    - earlier in the batch,
+      the main reference sections were already pulled back to:
+      - `TSSLContextBuilder`
+      - `TSSLConnector`
+      - `TSSLFactory.GetLibraryInstance(...)`
+      - `CreateContext(AContextType, ALibType)`
+      - `TSSLLibraryTypes`
+    - in this continuation step,
+      replaced the remaining milestone-stage old unit names:
+      - `fafafa.ssl.types`
+      - `fafafa.ssl.intf`
+      with:
+      - `fafafa.ssl.base`
+
+- verify static truth alignment:
+  - `bash -n tests/scripts/test_reference_architecture_current_factory_surface_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_reference_architecture_current_factory_surface_truth_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed the reference architecture page now keeps:
+        - `fafafa.ssl.base`
+        - `TSSLContextBuilder`
+        - `TSSLConnector`
+        - `TSSLFactory.GetLibraryInstance`
+        - `CreateContext(AContextType: TSSLContextType; ...)`
+        - `GetAvailableLibraries: TSSLLibraryTypes`
+      - confirmed stale terms are absent:
+        - `fafafa.ssl.types`
+        - `fafafa.ssl.intf`
+        - `TSSLLibraryTypeSet`
+        - old `CreateContext(ALibType, ...)`
+  - `git diff --check`
+    - result: PASS
+    - summary:
+      - no whitespace or patch-format drift remains before commit
+
 - `git status --short --branch`
   - result: PASS
   - summary:

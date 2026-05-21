@@ -13895,3 +13895,58 @@
     commit / push
     条件
   - 收口后继续扫下一份仍残留旧连接形态 / 旧 public truth 的高入口文档
+
+### 2026-05-21 reference/ARCHITECTURE 当前 factory surface 真相对齐
+
+- [completed] 当前新的 residual
+  已继续收窄到
+  `docs/reference/ARCHITECTURE.md`
+  这份 reference 架构页：
+  - 主说明段之前缺
+    `TSSLContextBuilder`
+    /
+    `TSSLConnector`
+    当前入口说明
+  - 工厂段之前还在发布旧 truth：
+    - 旧参数顺序
+      `CreateContext(ALibType, AContextType)`
+    - 旧集合类型名
+      `TSSLLibraryTypeSet`
+  - 当前 continuation
+    又确认里程碑区仍残留旧模块名：
+    - `fafafa.ssl.types`
+    - `fafafa.ssl.intf`
+- [completed] 最小正确修法已经落地：
+  - 新增
+    `docs/plans/2026-05-21-reference-architecture-current-factory-surface-truth-alignment.md`
+  - 新增
+    `tests/scripts/test_reference_architecture_current_factory_surface_truth_contract.sh`
+  - `docs/reference/ARCHITECTURE.md`
+    已切回当前 truth：
+    - 普通新代码：
+      `fafafa.ssl`
+      +
+      `TSSLContextBuilder`
+      /
+      `TSSLConnector`
+    - fixed-backend / core factory：
+      `TSSLFactory.GetLibraryInstance(...)`
+      /
+      `TSSLFactory.CreateContext(...)`
+    - 当前模块归属：
+      `fafafa.ssl.base`
+    - 当前可用库集合类型：
+      `TSSLLibraryTypes`
+- [completed] 当前批收口后的默认下一步：
+  - `bash -n tests/scripts/test_reference_architecture_current_factory_surface_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_reference_architecture_current_factory_surface_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  - 当前已具备
+    commit / push
+    条件
+  - 收口后继续扫
+    `docs/reference/*`
+    里仍残留的旧 factory / connection surface drift

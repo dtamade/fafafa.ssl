@@ -13240,3 +13240,49 @@
     `WithSystemRoots`
     而不是继续讲不存在的
     `LoadSystemCertificates`
+
+- `docs/reference/ARCHITECTURE.md`
+  这轮暴露的是另一种更隐蔽的
+  reference drift：
+  - 主说明段可能已经对了，
+    但后面的里程碑 / 路线文字
+    仍然会继续发布旧模块名
+  - 这次实际残留的是：
+    - `fafafa.ssl.types`
+    - `fafafa.ssl.intf`
+
+- 这类残留之所以危险，
+  是因为它不会出现在最上面的
+  “当前入口说明” 里，
+  却会继续污染：
+  - 设计讨论时对模块边界的认知
+  - 后续文档作者对核心单元的引用
+  - focused contract
+    对旧术语的容忍度
+
+- 当前这一页的 batch continuity
+  已经明确显示出两个层次的 RED：
+  - 第一层：
+    reference 架构页缺少
+    `TSSLContextBuilder`
+    /
+    `TSSLConnector`
+    与当前 factory surface 说明
+  - 第二层：
+    在主说明段修正后，
+    static contract
+    继续抓出了更深处的旧模块名残留
+
+- 当前更准确的 reference 架构页真相应明确保留：
+  - 核心 base 单元：
+    `fafafa.ssl.base`
+  - 普通新代码入口：
+    `fafafa.ssl`
+    +
+    `TSSLContextBuilder`
+    /
+    `TSSLConnector`
+  - fixed-backend / core factory：
+    `TSSLFactory.GetLibraryInstance(...)`
+    /
+    `TSSLFactory.CreateContext(...)`

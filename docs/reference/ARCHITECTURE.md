@@ -2,6 +2,12 @@
 
 > 当前路线图: [当前路线图](../ROADMAP.md)
 > 说明: 本页保留架构与抽象层设计说明；当前执行顺序和阶段判断以 `docs/ROADMAP.md` 为准。
+> 当前入口说明:
+> - 普通新代码优先使用 `uses fafafa.ssl;` + `TSSLContextBuilder` / `TSSLConnector`
+> - 需要 fixed-backend / core factory surface 时，再使用
+>   `TSSLFactory.GetLibraryInstance(...)`
+>   或
+>   `TSSLFactory.CreateContext(...)`
 
 ## 1. 项目概览
 
@@ -34,7 +40,7 @@
 
 ## 3. 核心模块设计
 
-### 3.1 基础类型模块 (`fafafa.ssl.types`)
+### 3.1 基础类型模块 (`fafafa.ssl.base`)
 
 **职责**：定义所有通用数据类型、枚举、常量、异常类
 
@@ -48,7 +54,7 @@
 - `TSSLCertificateInfo`: 证书信息结构
 - `TSSLConnectionInfo`: 连接信息结构
 
-### 3.2 核心接口模块 (`fafafa.ssl.intf`)
+### 3.2 核心接口模块 (`fafafa.ssl.base`)
 
 **职责**：定义所有抽象接口
 
@@ -84,12 +90,24 @@ end;
 
 ```pascal
 TSSLFactory = class
-  class function CreateContext(ALibType: TSSLLibraryType;
-    AContextType: TSSLContextType): ISSLContext;
-  class function GetAvailableLibraries: TSSLLibraryTypeSet;
+  class function GetLibraryInstance(
+    ALibType: TSSLLibraryType = sslAutoDetect
+  ): ISSLLibrary;
+  class function CreateContext(AContextType: TSSLContextType;
+    ALibType: TSSLLibraryType = sslAutoDetect): ISSLContext;
+  class function GetAvailableLibraries: TSSLLibraryTypes;
   class function IsLibraryAvailable(ALibType: TSSLLibraryType): Boolean;
 end;
 ```
+
+> 注：
+> - 上面保留 `CreateContext(...)` 是为了说明 current core/factory surface；
+>   但普通新代码仍优先走 `TSSLContextBuilder` / `TSSLConnector`
+> - reference 语境下，如果你要显式固定 backend，
+>   当前更推荐先取库：
+>   `Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);`
+>   再走
+>   `Lib.CreateContext(sslCtxClient);`
 
 ### 3.4 后端实现模块
 
@@ -362,8 +380,8 @@ fafafa.ssl/
 
 ### 阶段1：基础架构 (Week 1-2)
 
-- [ ] 创建类型定义 (`fafafa.ssl.types`)
-- [ ] 设计核心接口 (`fafafa.ssl.intf`)
+- [ ] 创建类型定义 (`fafafa.ssl.base`)
+- [ ] 设计核心接口 (`fafafa.ssl.base`)
 - [ ] 实现工厂模式 (`fafafa.ssl.factory`)
 - [ ] 建立测试框架
 
