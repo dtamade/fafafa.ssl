@@ -196,6 +196,7 @@ end;
 - builder 上如果要禁用验证，请显式使用 `.WithVerifyNone`；
 - config/direct-context 当前 public no-verify 语义是 `[]`；
 - 这两条都会落成 no-verify runtime truth，但生产环境仍应优先启用验证。
+- `ValidateClient` 会继续把未启用 `sslVerifyPeer` 视为 no-verify 并给出生产风险 warning；但 `ValidateServer` 不会再把显式 `.WithVerifyNone` / `VerifyMode := []` 的普通单向 TLS server 误报成这条 client-only 警告。
 
 ### Use builder opt-ins for server contexts
 

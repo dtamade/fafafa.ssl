@@ -6,6 +6,104 @@
 
 ## 2026-05-21
 
+### Server Validation VerifyMode Classification
+
+- inspect server/client verify validation truth before editing:
+  - `src/fafafa.ssl.context.builder.pas`
+  - `tests/contract/test_builder_empty_verifymode_validation_entry.pas`
+  - `tests/scripts/test_builder_empty_verifymode_validation_contract.sh`
+  - `tests/config/test_config_validation.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/guides/ERROR_HANDLING_BEST_PRACTICES.md`
+  - change:
+    - confirmed
+      `ValidateCommonBuilderSettings(...)`
+      still used one shared warning path:
+      - `Certificate verification is disabled - insecure for production`
+    - confirmed the warning was now correct for client
+      no-verify
+      but semantically wrong for ordinary one-way TLS server
+    - confirmed existing active docs had already normalized:
+      - ordinary server:
+        `.WithVerifyNone`
+      - mTLS:
+        `.WithMutualTLS(...)`
+    - confirmed the deeper unresolved seam was still present:
+      - default server verify baseline remains `[sslVerifyPeer]`
+
+- inspect current validation runtime evidence before implementation:
+  - `mkdir -p tmp/config_validation && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/config_validation -FEtmp/config_validation -otmp/config_validation/test_config_validation tests/config/test_config_validation.pas && ./tmp/config_validation/test_config_validation`
+  - result: PASS
+  - summary:
+    - existing validation suite stayed green
+    - `BuildWithValidation Success`
+      still reported:
+      - `Note: 1 warning(s) present`
+    - important conclusion:
+      - current suite did not yet classify ordinary one-way server no-verify separately
+      - the server-default verify baseline question remained visible after this batch
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-server-validation-verifymode-classification.md`
+  - `tests/contract/test_server_validation_verifymode_classification_entry.pas`
+  - `tests/scripts/test_server_validation_verifymode_classification_contract.sh`
+  - change:
+    - documented the batch as server validation verify-mode classification
+    - added a focused contract
+      to guard:
+      - client no-verify warning remains intact
+      - server `.WithVerifyNone`
+        must stop inheriting the client-style insecure warning
+      - server `sslVerifyPeer`
+        without CA
+        still keeps the current server-specific warning
+      - API reference records the split validation truth
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_server_validation_verifymode_classification_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_server_validation_verifymode_classification_contract.sh`
+    - result: FAIL
+    - summary:
+      - failed at:
+        `client-style no-verify warning must be gated away from server validation`
+      - important conclusion:
+        - the validation drift was real current source truth
+        - this was not only a docs inconsistency
+
+- repair server/client verify warning classification:
+  - `src/fafafa.ssl.context.builder.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - gated the
+      `Certificate verification is disabled - insecure for production`
+      warning to
+      client validation only
+    - documented in API reference that
+      `ValidateClient`
+      and
+      `ValidateServer`
+      now deliberately classify explicit no-verify server intent differently
+
+- verify focused classification truth:
+  - `bash -n tests/scripts/test_server_validation_verifymode_classification_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_server_validation_verifymode_classification_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed client no-verify warning still exists
+      - confirmed ordinary one-way TLS server no longer inherits that warning
+      - confirmed server verify-peer-without-CA warning still remains observable
+  - `mkdir -p tmp/config_validation && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/config_validation -FEtmp/config_validation -otmp/config_validation/test_config_validation tests/config/test_config_validation.pas && ./tmp/config_validation/test_config_validation`
+    - result: PASS
+    - summary:
+      - existing validation suite still passes after the split
+      - `BuildWithValidation Success`
+        still reports one warning,
+        which keeps the deeper server-default verify seam visible for the next batch
+  - `git diff --check`
+    - result: PASS
+
 ### Active Server Example Verify Intent Truth
 
 - inspect active server example verify-intent truth before closing the batch:

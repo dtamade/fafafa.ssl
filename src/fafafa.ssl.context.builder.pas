@@ -1534,7 +1534,7 @@ begin
     Result.AddWarning('TLS 1.1 is deprecated and should be avoided');
 
   // Check verification settings
-  if not (sslVerifyPeer in ABuilder.FVerifyMode) then
+  if (not AForServer) and (not (sslVerifyPeer in ABuilder.FVerifyMode)) then
     Result.AddWarning('Certificate verification is disabled - insecure for production');
 
   // Check CA configuration when verification is enabled

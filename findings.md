@@ -2,6 +2,85 @@
 
 ## 2026-05-21
 
+- server validation verifymode classification
+  这一刀确认的
+  不是新的 runtime bug，
+  而是
+  `ValidateCommonBuilderSettings(...)`
+  一直把
+  client
+  与
+  server
+  在
+  verify warning
+  上混成一条口径
+
+- 当前 drift 的核心是：
+  - 对 client 来说，
+    未启用
+    `sslVerifyPeer`
+    的确等价于
+    no-verify
+    生产风险
+  - 但对普通单向 TLS server 来说，
+    不校验客户端证书
+    本来就是正常模式，
+    不该继承同一条
+    `Certificate verification is disabled - insecure for production`
+    warning
+
+- 这条 validation drift
+  会直接冲掉最近几批刚建立起来的
+  active docs truth：
+  - 文档已经明确：
+    普通单向 TLS server
+    应显式写
+    `.WithVerifyNone`
+  - 但 validation
+    却还把这条显式意图
+    报成
+    client-style insecure 配置
+
+- 修复后，
+  当前 builder validation
+  已经分成两套更正确的语义：
+  - `ValidateClient`
+    继续把
+    missing `sslVerifyPeer`
+    视为
+    no-verify 风险
+  - `ValidateServer`
+    不再把显式
+    `.WithVerifyNone`
+    /
+    `VerifyMode := []`
+    的普通单向 TLS server
+    误报成这条风险
+
+- 同时这批也保留了
+  server 侧真正还需要提示的风险：
+  - 如果显式启用了
+    `sslVerifyPeer`
+    但没有配置 CA，
+    仍会提示：
+    `Client verification enabled but no CA certificates configured`
+
+- 这使得路线图进一步收敛出
+  下一层真正需要决策的问题：
+  - 既然普通 server
+    no-verify
+    不再被视为 validation 风险，
+  - 那么
+    `CreateDefaultConfig(sslCtxServer)`
+    /
+    builder `BuildServer`
+    当前默认仍是
+    `[sslVerifyPeer]`
+    是否还应该继续保留，
+    已经从“文档/提示问题”
+    升级成
+    真正的接口设计问题
+
 - active server example verify intent truth
   这一刀确认的
   不是新的 runtime bug，

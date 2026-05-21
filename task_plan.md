@@ -10,6 +10,76 @@
 
 ## Current Status
 
+- [completed] `server validation verifymode classification`
+  当前 focused 目标：
+  - 把
+    `ValidateClient`
+    /
+    `ValidateServer`
+    在
+    `VerifyMode`
+    上的 warning 口径拆开，
+    避免普通单向 TLS server
+    继续继承
+    client-only 的
+    insecure warning
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-server-validation-verifymode-classification.md`
+  - 新增 contract：
+    - `tests/contract/test_server_validation_verifymode_classification_entry.pas`
+    - `tests/scripts/test_server_validation_verifymode_classification_contract.sh`
+  - 更新：
+    - `src/fafafa.ssl.context.builder.pas`
+    - `docs/reference/API_REFERENCE.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_server_validation_verifymode_classification_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_server_validation_verifymode_classification_contract.sh`
+    - PASS
+  - `mkdir -p tmp/config_validation && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/config_validation -FEtmp/config_validation -otmp/config_validation/test_config_validation tests/config/test_config_validation.pas && ./tmp/config_validation/test_config_validation`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前 truth：
+  - client
+    缺少
+    `sslVerifyPeer`
+    仍应被视为
+    no-verify
+    风险
+  - server
+    普通单向 TLS
+    不校验客户端证书
+    不是同一类风险
+  - 但当前
+    `ValidateCommonBuilderSettings(...)`
+    仍在共用一条
+    `Certificate verification is disabled - insecure for production`
+    warning
+  当前状态：
+  - `ValidateClient`
+    仍会对
+    no-verify
+    给出生产风险 warning
+  - `ValidateServer`
+    不再把普通单向 TLS server
+    误报成
+    client-style insecure 配置
+  - server 侧真正保留的 warning
+    继续是：
+    - 显式开启
+      client verification
+      但未配置 CA
+  这批收口后暴露出的下一层路线：
+  - `BuildServer`
+    /
+    `CreateDefaultConfig(sslCtxServer)`
+    当前默认
+    `[sslVerifyPeer]`
+    是否仍合理，
+    已成为下一条更深的接口设计 seam
+
 - [completed] `active server example verify intent truth`
   当前 focused 目标：
   - 把活跃文档里
