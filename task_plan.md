@@ -10,6 +10,69 @@
 
 ## Current Status
 
+- [completed] `active guide convenience-helper truth alignment`
+  当前 focused 目标：
+  - 收掉
+    `docs/guides/USER_GUIDE.md`
+    里
+    `ReadString` / `WriteString`
+    仍未完全对齐
+    focused contract
+    的
+    active-guide wording drift，
+    明确：
+    - 文本示例可继续用
+      convenience helper
+    - 框架 / 事件循环 / 分帧协议
+      集成优先走
+      `Read` / `Write`
+      或
+      `TSSLStream`
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-active-guide-convenience-helper-truth-alignment.md`
+  - 复用 focused contract：
+    - `tests/scripts/test_active_guide_convenience_surface_classification_contract.sh`
+  - 更新：
+    - `docs/guides/USER_GUIDE.md`
+  当前 focused proof：
+  - `bash tests/scripts/test_active_guide_convenience_surface_classification_contract.sh`
+    - RED -> PASS
+  - `bash tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_readstring_active_example_signature_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - `USER_GUIDE`
+    必须明确：
+    - `ReadString` / `WriteString`
+      仍是
+      `v1.x`
+      convenience-core
+      文本 helper
+    - 框架 / transport /
+      分帧协议集成
+      优先使用
+      `Read` / `Write`
+      或
+      `TSSLStream`
+  当前批收口后的默认下一步：
+  - 继续沿
+    `ISSLConnection`
+    主残口
+    往前压
+  - 优先寻找
+    仍活着的
+    active guide
+    /
+    implementation-facing
+    residual，
+    而不是
+    重开已关闭
+    contract lane
+
 - [completed] `active reference metadata truth alignment`
   当前 focused 目标：
   - 收掉

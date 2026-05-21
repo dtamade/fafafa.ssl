@@ -16588,3 +16588,100 @@
     用法顺序说歪
   - 或哪些 backend/runtime 面
     仍缺真正实现 / contract 完整性
+
+- 顺着这条判断继续核对现有 focused contracts 后，
+  这轮抓到的 live residual
+  不是新实现 bug，
+  而是
+  `USER_GUIDE`
+  的
+  active convenience-helper wording
+  还没完全对齐
+  已冻结的 contract truth：
+  - `test_isslconnection_convenience_surface_classification_contract`
+    已经 PASS，
+    说明
+    source / canonical classification
+    本身没再漂
+  - `test_readstring_active_example_signature_truth_contract`
+    也 PASS，
+    说明
+    `ReadString(out AStr: string)`
+    这条示例签名真相
+    已稳
+  - 真正 RED 的是
+    `test_active_guide_convenience_surface_classification_contract`
+    ：
+    `USER_GUIDE`
+    仍把
+    `TSSLStream`
+    写成
+    “直接把它交给上层协议”
+    /
+    “直接使用它”
+    这样的自由表述，
+    没完全回到
+    focused contract
+    冻住的
+    `Read` / `Write` 或 `TSSLStream`
+    口径
+
+- 这条 drift 的价值不在于它是大 bug，
+  而在于它验证了当前 workflow 已经真的收窄到了
+  “活跃实现/指南 residual”，
+  不再是
+  旧 plan / 旧 proof
+  反复拉起：
+  - 同一条
+    convenience-surface
+    主合同
+    继续 GREEN
+  - 只剩
+    活跃 `USER_GUIDE`
+    wording
+    没有完全跟上
+
+- 因而这批的正确修法继续保持很窄：
+  - 不动
+    `ISSLConnection`
+    source
+  - 不动
+    `API_REFERENCE`
+    /
+    `INTERFACE_DESIGN_V2`
+    /
+    `ARCHITECTURE`
+  - 只把
+    `USER_GUIDE`
+    里的两句说明
+    收回到
+    已冻结的
+    active-guide truth：
+    - 文本示例
+      可以继续用
+      `ReadString` / `WriteString`
+    - 框架 / 事件循环 /
+      分帧协议集成
+      优先走
+      `Read` / `Write`
+      或
+      `TSSLStream`
+
+- 这批收口后，
+  `ISSLConnection`
+  这条线的最新判断更可信了一层：
+  - 当前确实不该
+    重开
+    convenience-surface
+    classification
+    本身
+  - 更值得继续做的是：
+    - 查剩余 active guides
+      是否还残留
+      这种 implementation-facing
+      wording drift
+    - 或切回
+      `TSSLConfig`
+      /
+      façade
+      这类更大的 live debt

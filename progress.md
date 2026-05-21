@@ -26968,3 +26968,81 @@
     - result: PASS
   - `git diff --check`
     - result: PASS
+
+### Active Guide Convenience-Helper Truth Alignment
+
+- re-check the current `ISSLConnection` convenience-surface lane before reopening anything:
+  - `docs/plans/2026-05-19-isslconnection-convenience-surface-classification.md`
+  - `tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+  - `tests/scripts/test_active_guide_convenience_surface_classification_contract.sh`
+  - `tests/scripts/test_readstring_active_example_signature_truth_contract.sh`
+  - change:
+    - confirmed
+      convenience-surface
+      source / canonical
+      classification
+      is already
+      closed
+    - confirmed
+      active `ReadString`
+      example signature truth
+      is already
+      closed
+    - isolated
+      the live residual
+      down to
+      `USER_GUIDE`
+      convenience-helper wording
+
+- add a focused batch record for the active-guide residual:
+  - `docs/plans/2026-05-21-active-guide-convenience-helper-truth-alignment.md`
+  - change:
+    - recorded
+      that this is
+      an active guide
+      wording drift,
+      not a new
+      interface / runtime
+      gap
+
+- establish focused RED before editing the guide:
+  - `bash tests/scripts/test_active_guide_convenience_surface_classification_contract.sh`
+    - result: FAIL
+    - summary:
+      - `USER_GUIDE`
+        still failed
+        the locked
+        convenience-helper wording
+        requirement
+  - `bash tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_readstring_active_example_signature_truth_contract.sh`
+    - result: PASS
+
+- repair the active guide wording drift:
+  - `docs/guides/USER_GUIDE.md`
+  - change:
+    - aligned
+      the client-side
+      convenience-helper note
+      back to
+      `Read` / `Write`
+      or
+      `TSSLStream`
+    - aligned
+      the server-side
+      convenience-helper note
+      back to
+      the same
+      focused contract
+      truth
+
+- verify the focused closeout:
+  - `bash tests/scripts/test_active_guide_convenience_surface_classification_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_readstring_active_example_signature_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
