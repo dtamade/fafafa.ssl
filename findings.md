@@ -2,6 +2,74 @@
 
 ## 2026-05-21
 
+- active root entry metadata and install guidance truth
+  这一刀确认的
+  已经不只是
+  示例源码里的
+  import drift，
+  还包括最外层入口
+  本身的两类残差：
+  - `examples/`
+    根目录
+    仍保留
+    指向缺失主文件的
+    失效 `.lpi`
+  - 普通安装 / 编译入口
+    仍在教学
+    `uses fafafa.ssl, fafafa.ssl.base`
+
+- 当前更准确的收口是：
+  - `examples/test_winssl.lpi`
+    /
+    `examples/test_openssl.lpi`
+    属于 stale root metadata，
+    不是当前
+    canonical test project
+  - 真正存在的
+    canonical test project
+    位于：
+    - `tests/examples/test_winssl.lpi`
+    - `tests/examples/test_openssl.lpi`
+  - `README.md`
+    应把
+    `fafafa.ssl.pas`
+    作为普通入口
+    摆到最前，
+    而不是继续把
+    `factory/base`
+    放成最显眼入口
+  - `docs/zh/安装配置.md`
+    /
+    `docs/zh/编译指南.md`
+    对普通调用方
+    应只教学
+    `fafafa.ssl`
+
+- 这说明
+  当前 public-entry truth
+  主线已经从
+  example source
+  继续推进到
+  root metadata
+  与安装入口文档；
+  “高可见入口是否还在误导”
+  这条线
+  又往闭环推进了一步
+
+- 同时也确认了一条
+  范围边界：
+  - `examples/TEST_SESSION_SUMMARY.txt`
+    /
+    `docs/testing/TEST_RESULTS.md`
+    当前更像历史报告，
+    这批不重写它们
+  - 后续若要清
+    historical drift，
+    应单开
+    report-archive batch，
+    不和 active entry
+    truth 混在一起
+
 - production HTTPS examples public import truth
   这一刀确认的
   不是

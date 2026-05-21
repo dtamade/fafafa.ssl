@@ -6,6 +6,94 @@
 
 ## 2026-05-21
 
+### Active Root Entry Metadata And Install Guidance Truth
+
+- inspect root-entry residuals before scoping the next batch:
+  - `examples/test_winssl.lpi`
+  - `examples/test_openssl.lpi`
+  - `README.md`
+  - `docs/zh/安装配置.md`
+  - `docs/zh/编译指南.md`
+  - `tests/examples/test_winssl.lpi`
+  - `tests/examples/test_openssl.lpi`
+  - change:
+    - confirmed
+      `examples/test_winssl.lpi`
+      and
+      `examples/test_openssl.lpi`
+      point to
+      missing root
+      main units
+    - confirmed
+      canonical test
+      project copies
+      already live under
+      `tests/examples/`
+    - confirmed
+      root install/compile docs
+      still taught
+      split import
+      `fafafa.ssl`
+      +
+      `fafafa.ssl.base`
+
+- add focused batch record and create a dedicated root-entry truth contract:
+  - `docs/plans/2026-05-21-active-root-entry-metadata-and-install-guidance-truth.md`
+  - `tests/scripts/test_active_root_entry_metadata_and_install_guidance_truth_contract.sh`
+  - change:
+    - froze
+      stale root metadata
+      retirement
+      and ordinary
+      install-guidance
+      truth
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_active_root_entry_metadata_and_install_guidance_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_active_root_entry_metadata_and_install_guidance_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - `examples/test_winssl.lpi`
+        still existed
+        as stale root
+        example metadata
+
+- repair active root-entry metadata and install guidance truth:
+  - deleted:
+    - `examples/test_winssl.lpi`
+    - `examples/test_openssl.lpi`
+  - updated:
+    - `README.md`
+    - `docs/zh/安装配置.md`
+    - `docs/zh/编译指南.md`
+  - change:
+    - retired
+      stale root
+      `.lpi`
+      entries
+      that pointed
+      to missing
+      main units
+    - promoted
+      `fafafa.ssl.pas`
+      as the current
+      ordinary entry
+      in `README.md`
+    - removed
+      ordinary
+      split-import guidance
+      from zh install
+      and compile docs
+
+- verify focused closeout:
+  - `bash -n tests/scripts/test_active_root_entry_metadata_and_install_guidance_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_active_root_entry_metadata_and_install_guidance_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### Production HTTPS Examples Public Import Truth
 
 - inspect production HTTPS example residuals before closeout:

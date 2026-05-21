@@ -10,6 +10,81 @@
 
 ## Current Status
 
+- [completed] `active root entry metadata and install guidance truth`
+  当前 focused 目标：
+  - 收口
+    `examples/`
+    根目录里
+    两个已经失效的
+    `.lpi`
+    入口，
+    并修正
+    `README.md`
+    /
+    `docs/zh/安装配置.md`
+    /
+    `docs/zh/编译指南.md`
+    还在教学的
+    `fafafa.ssl.base`
+    普通拆分导入
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-active-root-entry-metadata-and-install-guidance-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_active_root_entry_metadata_and_install_guidance_truth_contract.sh`
+  - 删除：
+    - `examples/test_winssl.lpi`
+    - `examples/test_openssl.lpi`
+  - 更新：
+    - `README.md`
+    - `docs/zh/安装配置.md`
+    - `docs/zh/编译指南.md`
+  当前预期 truth：
+  - `examples/`
+    根目录不应继续保留
+    指向缺失主文件的
+    失效 `.lpi`
+  - `fafafa.ssl.pas`
+    应继续作为
+    当前普通 public entry
+  - `fafafa.ssl.context.builder.pas`
+    应继续作为
+    推荐 builder entry
+  - `fafafa.ssl.base`
+    是 source truth /
+    supporting-type owner，
+    不是普通安装示例
+    的默认导入
+  当前 focused proof：
+  - `bash -n tests/scripts/test_active_root_entry_metadata_and_install_guidance_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_active_root_entry_metadata_and_install_guidance_truth_contract.sh`
+    - FAIL -> PASS
+    - RED summary:
+      - `examples/test_winssl.lpi`
+        still existed
+        as stale root metadata
+  - `git diff --check`
+    - PASS
+  当前批收口后的默认下一步：
+  - examples/docs
+    的最外层入口 truth
+    已继续收窄；
+    下一刀更自然的是：
+    - 继续扫
+      仍然活跃但
+      尚未证明无误导的
+      quickstart / guide
+      source-tree snippet
+    - 或切回
+      更大的主线：
+      `ISSL*`
+      接口完整性
+      与各 backend
+      capability /
+      implementation
+      完整度静态审查
+
 - [completed] `production https examples public import truth`
   当前 focused 目标：
   - 收口

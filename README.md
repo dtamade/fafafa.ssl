@@ -459,8 +459,10 @@ bash scripts/summarize_wave_c_local_guard_history.sh --strict
 ```
 fafafa.ssl/
 ├── src/                      # 核心源代码 (160 文件)
-│   ├── fafafa.ssl.factory.pas   # 工厂模式入口
-│   ├── fafafa.ssl.base.pas      # 基础接口定义
+│   ├── fafafa.ssl.pas           # 主门面 / 当前普通入口
+│   ├── fafafa.ssl.context.builder.pas # 推荐 context builder 入口
+│   ├── fafafa.ssl.factory.pas   # core factory surface / direct-library helper
+│   ├── fafafa.ssl.base.pas      # 底层 source truth / supporting types
 │   ├── fafafa.ssl.openssl/      # OpenSSL 后端
 │   ├── fafafa.ssl.winssl/       # WinSSL 后端
 │   ├── fafafa.ssl.pkcs11/       # PKCS#11 支持
