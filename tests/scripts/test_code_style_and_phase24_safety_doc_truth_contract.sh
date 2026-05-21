@@ -25,6 +25,9 @@ require_absent_in() {
 
 require_contains_in "$STYLE_DOC" 'LContext.CreateConnection(YourConnectedSocket)'
 require_absent_in "$STYLE_DOC" 'LContext.CreateConnection;'
+require_contains_in "$STYLE_DOC" '  fafafa.ssl,'
+require_contains_in "$STYLE_DOC" '  fafafa.ssl.context.builder;'
+require_absent_in "$STYLE_DOC" 'fafafa.ssl.base;'
 
 require_contains_in "$PHASE_DOC" '历史阶段说明'
 require_contains_in "$PHASE_DOC" 'MIGRATION_GUIDE.md'

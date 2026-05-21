@@ -1,5 +1,65 @@
 # Findings - Interface Design And Backend Implementation Verification
 
+## 2026-05-22
+
+- code style public import truth hardening
+  这一刀再次暴露了一个
+  典型的 partial-closeout
+  问题：
+  - `CODE_STYLE`
+    上一轮已经收掉了
+    `CreateConnection(...)`
+    连接语义 drift
+  - 但同一份活跃文档里
+    `uses`
+    示例仍保留
+    `fafafa.ssl.base`
+
+- 这说明：
+  - style guide
+    虽然不是
+    quickstart / API
+    参考页，
+    但示例代码块同样属于
+    active public import guidance
+  - 如果 focused contract
+    只盯“行为形态”
+    不盯“导入入口”，
+    就很容易把局部修复
+    误判成完整收口
+
+- 当前更准确的收口是：
+  - `CODE_STYLE`
+    单元结构示例
+    应使用：
+    - `fafafa.ssl`
+    - `fafafa.ssl.context.builder`
+  - `fafafa.ssl.base`
+    在这种活跃 style 示例里
+    不应再作为默认项目单元入口出现
+
+- 这也帮我们把
+  quickstart / AGENTS
+  那组 residual
+  区分得更清楚：
+  - `WINSSL_QUICKSTART`
+    /
+    `LINUX_QUICKSTART`
+    当前残留的 tree snippet
+    更接近 source-owner /
+    repo-structure 描述
+  - `docs/AGENTS.md`
+    当前那句
+    “公共抽象在 `fafafa.ssl.base`”
+    更像 repo 结构说明，
+    不是普通调用方
+    import 教学
+  - 真正会直接误导调用方
+    回退旧入口的，
+    当前更明确的是
+    `CODE_STYLE`
+    这类可复制代码块
+
 ## 2026-05-21
 
 - backend capability matrix active import truth and contract hardening

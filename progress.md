@@ -4,6 +4,107 @@
 
 ## 2026-05-20
 
+## 2026-05-22
+
+### CODE_STYLE Public Import Truth Hardening
+
+- inspect remaining high-entry docs residuals before opening the next batch:
+  - `docs/guides/CODE_STYLE.md`
+  - `docs/guides/WINSSL_QUICKSTART.md`
+  - `docs/guides/LINUX_QUICKSTART.md`
+  - `docs/AGENTS.md`
+  - `tests/scripts/test_code_style_and_phase24_safety_doc_truth_contract.sh`
+  - change:
+    - confirmed
+      `CODE_STYLE`
+      still taught
+      `fafafa.ssl.base`
+      in an active
+      unit-structure
+      code block
+    - confirmed
+      existing
+      code-style contract
+      only froze
+      `CreateConnection(...)`
+      truth
+      and did not cover
+      public import guidance
+    - classified
+      current
+      `WINSSL_QUICKSTART`
+      /
+      `LINUX_QUICKSTART`
+      tree snippets
+      and `docs/AGENTS.md`
+      line
+      as the next
+      static-audit lane,
+      not the current
+      direct import-fix lane
+
+- add a focused batch record for style-guide import truth hardening:
+  - `docs/plans/2026-05-22-code-style-public-import-truth-hardening.md`
+  - change:
+    - scoped
+      the batch
+      to
+      `CODE_STYLE`
+      public import drift
+      plus contract hardening
+
+- tighten the existing code-style contract before changing docs:
+  - `tests/scripts/test_code_style_and_phase24_safety_doc_truth_contract.sh`
+  - change:
+    - added
+      current-entry
+      requirements for
+      `fafafa.ssl`
+      and
+      `fafafa.ssl.context.builder`
+    - added
+      an explicit ban on
+      `fafafa.ssl.base;`
+
+- establish RED on current HEAD:
+  - `bash -n tests/scripts/test_code_style_and_phase24_safety_doc_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_code_style_and_phase24_safety_doc_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - `CODE_STYLE.md`
+        still lacked
+        current
+        `fafafa.ssl`
+        import truth
+
+- repair active style-guide import truth:
+  - `docs/guides/CODE_STYLE.md`
+  - `docs/plans/2026-05-21-code-style-and-phase24-safety-doc-truth-alignment.md`
+  - change:
+    - replaced
+      stale
+      `fafafa.ssl.base`
+      with
+      `fafafa.ssl`
+      +
+      `fafafa.ssl.context.builder`
+      in the
+      unit-structure example
+    - recorded
+      a post-closeout correction
+      in the previous
+      2026-05-21
+      plan
+
+- verify focused closeout:
+  - `bash -n tests/scripts/test_code_style_and_phase24_safety_doc_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_code_style_and_phase24_safety_doc_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ## 2026-05-21
 
 ### Backend Capability Matrix Active Import Truth And Contract Hardening

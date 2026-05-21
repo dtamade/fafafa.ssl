@@ -10,6 +10,71 @@
 
 ## Current Status
 
+- [completed] `code style public import truth hardening`
+  当前 focused 目标：
+  - 修复
+    `docs/guides/CODE_STYLE.md`
+    在单元结构示例里
+    继续教学
+    `fafafa.ssl.base`
+    的 active import drift
+  - 同时补上
+    `test_code_style_and_phase24_safety_doc_truth_contract.sh`
+    对这类 drift
+    的漏检，
+    避免再次出现
+    “连接形态已修，
+    但入口导入仍旧，
+    contract 却继续 PASS”
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-22-code-style-public-import-truth-hardening.md`
+  - 更新：
+    - `docs/guides/CODE_STYLE.md`
+    - `tests/scripts/test_code_style_and_phase24_safety_doc_truth_contract.sh`
+    - `docs/plans/2026-05-21-code-style-and-phase24-safety-doc-truth-alignment.md`
+  当前预期 truth：
+  - `CODE_STYLE`
+    的单元结构示例
+    当前应回到：
+    - `fafafa.ssl`
+    - `fafafa.ssl.context.builder`
+  - style guide
+    不应继续使用：
+    - `fafafa.ssl.base`
+  - focused contract
+    不应只冻结
+    `CreateConnection(...)`
+    语义，
+    也必须冻结
+    active public import
+    truth
+  当前 focused proof：
+  - `bash -n tests/scripts/test_code_style_and_phase24_safety_doc_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_code_style_and_phase24_safety_doc_truth_contract.sh`
+    - FAIL -> PASS
+    - RED summary:
+      - `CODE_STYLE.md`
+        still lacked
+        current
+        `fafafa.ssl`
+        import truth
+  - `git diff --check`
+    - PASS
+  当前批收口后的默认下一步：
+  - 继续静态分类
+    quickstart / repo-structure
+    residual：
+    - `docs/guides/WINSSL_QUICKSTART.md`
+    - `docs/guides/LINUX_QUICKSTART.md`
+    - `docs/AGENTS.md`
+  - 然后回到
+    更大的主线：
+    interface / backend
+    completeness
+    静态审查
+
 - [completed] `backend capability matrix active import truth and contract hardening`
   当前 focused 目标：
   - 修复

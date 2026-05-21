@@ -98,7 +98,8 @@ interface
 
 uses
   SysUtils, Classes,  // 标准单元
-  fafafa.ssl.base;    // 项目单元
+  fafafa.ssl,                 // 主门面 / 常用 public surface
+  fafafa.ssl.context.builder; // 使用 TSSLContextBuilder 时引入
 
 type
   // 类型定义
@@ -467,4 +468,3 @@ fpc -vh -vw your_file.pas
 ---
 
 遵循这些规范，保持代码清晰、一致、易维护！
-

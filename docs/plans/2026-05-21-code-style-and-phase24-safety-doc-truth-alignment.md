@@ -88,3 +88,21 @@ git diff --check
   但不再假装自己是当前 active API truth
 - type-safety 相关单元名
   在源码注释和文档里都回到同一套当前命名
+
+## Post-Closeout Correction
+
+- later static audit found that
+  this batch only froze
+  `CreateConnection(...)`
+  transport-first truth,
+  but did not freeze
+  the active public import
+  snippet in `CODE_STYLE.md`
+- `docs/guides/CODE_STYLE.md`
+  still retained:
+  - `fafafa.ssl.base`
+- the actual closeout for
+  `CODE_STYLE`
+  public import truth
+  is therefore continued in:
+  - `docs/plans/2026-05-22-code-style-public-import-truth-hardening.md`
