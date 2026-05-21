@@ -10,6 +10,83 @@
 
 ## Current Status
 
+- [completed] `api documentation current public import truth`
+  当前 focused 目标：
+  - 修复
+    `docs/reference/API_DOCUMENTATION.md`
+    里仍保留的
+    `fafafa.ssl.base`
+    /
+    `fafafa.ssl.factory`
+    拆分导入示例，
+    让这份高入口 API 参考页
+    继续保留
+    direct `ISSLConnection`
+    /
+    owner-surface
+    叙事，
+    但不再偏离
+    当前 public import truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-api-documentation-current-public-import-truth.md`
+  - 更新 focused contract：
+    - `tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+  - 更新：
+    - `docs/reference/API_DOCUMENTATION.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - `API_DOCUMENTATION`
+    仍然是
+    direct connection /
+    owner-surface
+    高入口参考页，
+    不是普通 TLS
+    bootstrap
+    第一入口页
+  - 但它的活跃示例导入面
+    当前应收回到：
+    - `fafafa.ssl`
+    - `fafafa.ssl.context.builder`
+  - `ISSLContextBuilder`
+    仍来自
+    `fafafa.ssl.context.builder`
+    单元；
+    `ISSLContext`
+    /
+    `ISSLConnection`
+    /
+    `ISSLClientConnection`
+    /
+    `ISSLCertificateVerification`
+    /
+    `ISSLCertificateTransparency`
+    /
+    `ISSLCertificateTransparencyValidation`
+    等
+    则继续由
+    `fafafa.ssl`
+    主门面提供
+  当前批收口后的默认下一步：
+  - `API_DOCUMENTATION`
+    不再继续教学
+    `fafafa.ssl.base`
+    /
+    `fafafa.ssl.factory`
+    这组拆分入口
+  - 下一条 residual
+    继续优先挑
+    还在传播
+    旧 import /
+    旧版本头信息
+    的活跃 guide
+
 - [completed] `backend selection guide current public import truth`
   当前 focused 目标：
   - 收掉

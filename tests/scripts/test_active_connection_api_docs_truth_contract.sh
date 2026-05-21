@@ -35,6 +35,10 @@ echo "[TEST] active connection API docs truth contract"
 
 require_fixed "$api_doc" "**版本:** rolling" \
   "API_DOCUMENTATION must declare rolling doc version instead of stale 2.0.0 snapshot"
+require_fixed "$api_doc" "  fafafa.ssl," \
+  "API_DOCUMENTATION must use the current public facade import in active examples"
+require_fixed "$api_doc" "  fafafa.ssl.context.builder;" \
+  "API_DOCUMENTATION must keep the builder unit import where ISSLContextBuilder is referenced"
 require_fixed "$api_doc" ".WithSystemRoots;" \
   "API_DOCUMENTATION quick-start must use current builder system-roots method"
 require_fixed "$api_doc" '下面这段 `5 分钟上手` 展示的是 active API reference 的 direct `ISSLConnection` / owner-surface reference，不是普通新代码唯一推荐的 TLS bootstrap 入口。' \
@@ -81,6 +85,10 @@ require_fixed "$api_doc" "WriteLn('证书验证失败: ', CertVerify.GetVerifyRe
   "API_DOCUMENTATION troubleshooting must use current verify-result owner path"
 require_absent "$api_doc" "**版本:** 2.0.0" \
   "API_DOCUMENTATION must stop advertising stale 2.0.0 version"
+require_absent "$api_doc" "fafafa.ssl.base," \
+  "API_DOCUMENTATION must stop teaching split base-unit imports in active examples"
+require_absent "$api_doc" "fafafa.ssl.factory," \
+  "API_DOCUMENTATION must stop teaching split factory-unit imports in active examples"
 require_absent "$api_doc" "WithSystemRootCerts" \
   "API_DOCUMENTATION must stop using stale WithSystemRootCerts builder name"
 require_absent "$api_doc" "CreateConnection(443)" \

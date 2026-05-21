@@ -6,6 +6,104 @@
 
 ## 2026-05-21
 
+### API_DOCUMENTATION Current Public Import Truth
+
+- inspect active API-documentation import drift before editing:
+  - `docs/reference/API_DOCUMENTATION.md`
+  - `src/fafafa.ssl.pas`
+  - `tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+  - `docs/plans/2026-05-21-api-documentation-current-public-import-truth.md`
+  - change:
+    - confirmed
+      this page
+      is still a
+      direct connection /
+      owner-surface
+      high-entry reference,
+      not the ordinary TLS bootstrap landing page
+    - confirmed
+      `fafafa.ssl`
+      already re-exports
+      `ISSLContext`
+      /
+      `ISSLConnection`
+      /
+      `ISSLClientConnection`
+      /
+      `ISSLCertificateVerification`
+      /
+      `ISSLCertificateTransparency`
+      /
+      `ISSLCertificateTransparencyValidation`
+    - confirmed
+      `ISSLContextBuilder`
+      still belongs to
+      `fafafa.ssl.context.builder`
+    - confirmed
+      stale split imports
+      remained in:
+      - quick-start
+      - CT runtime configuration
+
+- add focused batch record and tighten the existing API-doc contract:
+  - `docs/plans/2026-05-21-api-documentation-current-public-import-truth.md`
+  - `tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+  - change:
+    - froze:
+      - required
+        `fafafa.ssl`
+        facade import
+      - required
+        `fafafa.ssl.context.builder`
+        import
+      - absence of
+        `fafafa.ssl.base`
+        /
+        `fafafa.ssl.factory`
+        in active API_DOCUMENTATION examples
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - `API_DOCUMENTATION`
+        still taught
+        stale split imports
+        in active examples
+
+- repair API_DOCUMENTATION current public import truth:
+  - `docs/reference/API_DOCUMENTATION.md`
+  - change:
+    - refreshed
+      active update date
+      to
+      `2026-05-21`
+    - rewrote
+      quick-start imports
+      to
+      `fafafa.ssl`
+      +
+      `fafafa.ssl.context.builder`
+    - rewrote
+      CT runtime configuration imports
+      to
+      `fafafa.ssl`
+      +
+      `fafafa.ssl.context.builder`
+    - kept
+      the page's
+      owner-surface /
+      direct-connection
+      positioning intact
+
+- verify focused closeout:
+  - `bash tests/scripts/test_active_connection_api_docs_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### BACKEND_SELECTION_GUIDE Current Public Import Truth
 
 - inspect backend-selection guide import/entrypoint drift before editing:

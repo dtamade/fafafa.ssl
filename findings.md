@@ -2,6 +2,81 @@
 
 ## 2026-05-21
 
+- api documentation current public import truth
+  这一刀确认的
+  不是
+  `API_DOCUMENTATION`
+  不该继续展示
+  direct `ISSLConnection`
+  /
+  owner-surface
+  路径，
+  而是
+  它在保留这层页面定位时
+  仍继续教学：
+  - `fafafa.ssl.base`
+  - `fafafa.ssl.factory`
+  这组旧 split import
+
+- 当前更准确的收口是：
+  - 这页的定位
+    仍然是：
+    - direct connection
+    - owner-surface
+    - 高入口 API reference
+  - 它不是普通 TLS
+    bootstrap
+    第一入口页
+  - 但它的活跃示例
+    当前 import truth
+    应该是：
+    - `fafafa.ssl`
+    - `fafafa.ssl.context.builder`
+  - `ISSLContextBuilder`
+    仍然只来自
+    `fafafa.ssl.context.builder`
+  - `ISSLContext`
+    /
+    `ISSLConnection`
+    /
+    `ISSLClientConnection`
+    /
+    `ISSLCertificateVerification`
+    /
+    `ISSLCertificateTransparency`
+    /
+    `ISSLCertificateTransparencyValidation`
+    等
+    当前都已经由
+    `fafafa.ssl`
+    re-export
+
+- 这说明
+  当前“接口设计/文档路线没问题”
+  这条主线里，
+  不能只盯
+  方法签名
+  和
+  owner interface
+  是否对齐，
+  还要持续收紧：
+  高入口页面
+  到底在教学哪一组
+  public imports
+
+- focused RED
+  首轮暴露的是：
+  - `API_DOCUMENTATION`
+    的 quick-start
+    仍在使用
+    `fafafa.ssl.base`
+    +
+    `fafafa.ssl.factory`
+  - CT runtime
+    配置段
+    也仍在使用
+    `fafafa.ssl.base`
+
 - backend selection guide current public import truth
   这一刀确认的
   不是

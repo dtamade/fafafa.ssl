@@ -1,7 +1,7 @@
 # fafafa.ssl API 文档
 
 **版本:** rolling
-**更新日期:** 2026-05-19
+**更新日期:** 2026-05-21
 
 ---
 
@@ -31,8 +31,7 @@ program QuickStart;
 
 uses
   SysUtils,
-  fafafa.ssl.base,
-  fafafa.ssl.factory,
+  fafafa.ssl,
   fafafa.ssl.context.builder;
 
 var
@@ -612,7 +611,7 @@ end;
 
 ```pascal
 uses
-  fafafa.ssl.base,
+  fafafa.ssl,
   fafafa.ssl.context.builder;
 
 var
