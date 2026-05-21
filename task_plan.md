@@ -10,6 +10,64 @@
 
 ## Current Status
 
+- [completed] `winssl runtime gate example trigger coverage`
+  当前 focused 目标：
+  - 收口
+    `WinSSL Runtime Gate`
+    对
+    活跃 WinSSL 示例源码
+    的 path-trigger omission，
+    让改动
+    `examples/*winssl*.pas`
+    时，
+    Windows runtime lane
+    也会自动建单
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-winssl-runtime-gate-example-trigger-coverage.md`
+  - 更新：
+    - `.github/workflows/winssl-tests.yml`
+    - `.github/workflows/winssl-tests.yml.disabled`
+    - `tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+    - `.github/README.md`
+  当前预期 truth：
+  - WinSSL 自动 gate
+    既覆盖
+    WinSSL backend
+    /
+    shared-core
+    /
+    runtime scripts，
+    也覆盖
+    当前活跃的
+    WinSSL 示例源码
+  当前 focused proof：
+  - `HEAD` snapshot
+    run
+    `tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+    - FAIL
+    - summary:
+      - `winssl-tests.yml`
+        still missed
+        `examples/*winssl*.pas`
+  - `bash -n tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  - post-push
+    expected proof：
+    - `gh run list --workflow "WinSSL Runtime Gate" --branch master --limit 3`
+      should show
+      a fresh run
+  当前批收口后的默认下一步：
+  - 若这条 trigger coverage
+    拉绿，
+    再回到
+    examples/docs/facade completeness
+    主线 residual
+
 - [completed] `active examples public import truth alignment`
   当前 focused 目标：
   - 收口

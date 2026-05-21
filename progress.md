@@ -113,6 +113,86 @@
       but no new failure
       from this import-truth batch
 
+### WinSSL Runtime Gate Example Trigger Coverage
+
+- inspect post-push workflow truth before editing:
+  - `gh run list --branch master --limit 10`
+  - `gh run list --workflow "WinSSL Runtime Gate" --branch master --limit 3`
+  - `.github/workflows/winssl-tests.yml`
+  - `.github/workflows/winssl-tests.yml.disabled`
+  - `tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+  - `.github/README.md`
+  - change:
+    - confirmed
+      commit
+      `examples: align active public imports`
+      had already changed
+      `examples/winssl_health_checker.pas`
+      and
+      `examples/winssl_rest_client.pas`
+    - confirmed
+      only
+      `CI`
+      auto-run
+      appeared
+    - confirmed
+      `WinSSL Runtime Gate`
+      did not auto-trigger
+      because
+      workflow path filters
+      still omitted
+      WinSSL example source paths
+
+- add focused batch record and extend workflow contract truth:
+  - `docs/plans/2026-05-21-winssl-runtime-gate-example-trigger-coverage.md`
+  - `tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+  - change:
+    - froze
+      `examples/*winssl*.pas`
+      as part of the
+      truthful WinSSL auto-gate
+      trigger surface
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+    - result: PASS
+  - `HEAD` snapshot
+    temp-tree
+    run
+    `tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - `winssl-tests.yml`
+        missing
+        `examples/*winssl*.pas`
+
+- repair WinSSL example trigger coverage truth:
+  - `.github/workflows/winssl-tests.yml`
+  - `.github/workflows/winssl-tests.yml.disabled`
+  - `.github/README.md`
+  - change:
+    - added
+      `examples/*winssl*.pas`
+      to push / PR path coverage
+      for both
+      active and disabled
+      WinSSL workflow files
+    - aligned
+      workflow README wording
+      so it now explicitly includes
+      active WinSSL example source
+
+- verify focused closeout:
+  - `bash tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+  - next expected remote proof:
+    - after push,
+      `gh run list --workflow "WinSSL Runtime Gate" --branch master --limit 3`
+      should show
+      a fresh run
+
 ### Active Reference Metadata Truth Alignment
 
 - inspect active reference-metadata residuals before editing:

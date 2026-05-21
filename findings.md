@@ -79,6 +79,67 @@
     连带留下
     的噪音
 
+- winssl runtime gate example trigger coverage
+  这一刀确认的
+  不是
+  `WinSSL Runtime Gate`
+  偶发没刷出来，
+  而是
+  当前 path filter
+  的确没有覆盖
+  活跃 WinSSL 示例源码
+
+- 当前更准确的收口是：
+  - shared/core
+    trigger coverage
+    之前已经补过，
+    但
+    `examples/*winssl*.pas`
+    仍是一个
+    独立遗漏面
+  - 所以当我们修改
+    `examples/winssl_health_checker.pas`
+    /
+    `examples/winssl_rest_client.pas`
+    时，
+    只有通用 `CI`
+    自动建单，
+    `WinSSL Runtime Gate`
+    不会跟上
+
+- 这说明
+  当前 workflow 审查
+  不能只盯
+  `src/`
+  /
+  `tests/winssl/`
+  /
+  scripts，
+  还要把
+  当前真实对外展示的
+  Windows-facing examples
+  算进
+  自动证明边界
+
+- focused RED
+  首轮暴露的是：
+  - `HEAD` 快照下
+    workflow truth contract
+    缺少：
+    - `examples/*winssl*.pas`
+
+- 这批还确认：
+  - 把路径写成
+    `examples/*winssl*.pas`
+    就能覆盖当前：
+    - `winssl_health_checker.pas`
+    - `winssl_rest_client.pas`
+    - `winssl_https_downloader.pas`
+    - `09_winssl_fips.pas`
+  - 同时不会把
+    所有 examples
+    都拉进
+    Windows 自动 gate
 - active reference metadata truth alignment
   这一刀确认的
   不是

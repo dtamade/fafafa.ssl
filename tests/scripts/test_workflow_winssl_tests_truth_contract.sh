@@ -34,6 +34,7 @@ required_fragments = [
     "src/fafafa.ssl.x509.pas",
     "src/fafafa.ssl.pas",
     "src/fafafa.ssl.context.builder.pas",
+    "examples/*winssl*.pas",
     "tests/winssl/**",
     "scripts/run_wave_b_windows_gate.ps1",
     "choco install -y freepascal lazarus",
