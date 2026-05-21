@@ -74,6 +74,19 @@
         `uses fafafa.ssl.base;`
   - `git diff --check`
     - PASS
+  - post-push proof：
+    - `git push`
+      - PASS
+      - commit:
+        - `0cc74f6`
+          `docs: harden backend matrix import truth contracts`
+    - `gh run view 26238919928 --json ...`
+      - PASS
+      - `CI`
+        run `26238919928`
+        for commit
+        `0cc74f6`
+        completed `success`
   当前批收口后的默认下一步：
   - 继续清
     剩余 active docs residual：
