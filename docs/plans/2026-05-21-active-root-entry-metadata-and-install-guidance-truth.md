@@ -196,3 +196,21 @@ git diff --check
     `fafafa.ssl`
 - `git diff --check`
   - PASS
+- post-push proof:
+  - `gh run list --branch master --limit 4`
+    - PASS
+    - `CI`
+      run `26237643613`
+      for commit
+      `735dd56`
+      completed `success`
+  - workflow scope truth:
+    - this batch
+      only triggered
+      the general
+      `CI`
+      workflow
+    - no new
+      `WinSSL Runtime Gate`
+      run
+      was created

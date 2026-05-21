@@ -66,6 +66,21 @@
         as stale root metadata
   - `git diff --check`
     - PASS
+  - post-push proof：
+    - `gh run list --branch master --limit 4`
+      - PASS
+      - `CI`
+        run `26237643613`
+        for commit
+        `735dd56`
+        completed `success`
+    - workflow scope truth：
+      - 本批只触发了
+        通用
+        `CI`
+      - 没有新建
+        `WinSSL Runtime Gate`
+        run
   当前批收口后的默认下一步：
   - examples/docs
     的最外层入口 truth

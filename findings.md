@@ -70,6 +70,23 @@
     不和 active entry
     truth 混在一起
 
+- workflow scope
+  也再次被远端 run
+  验证：
+  - 根入口 metadata
+    与安装文档
+    这类收口
+    当前只触发通用
+    `CI`
+  - 没有新建
+    `WinSSL Runtime Gate`
+    run
+  - 这说明
+    当前 workflow path
+    对“入口层文档/metadata”
+    的 scope truth
+    仍然成立
+
 - production HTTPS examples public import truth
   这一刀确认的
   不是
