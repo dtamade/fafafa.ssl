@@ -11,7 +11,7 @@ program example_streaming_operations;
 
 uses
   SysUtils,
-  fafafa.ssl.base,
+  fafafa.ssl,
   fafafa.ssl.crypto.utils,
   fafafa.ssl.encoding;
 

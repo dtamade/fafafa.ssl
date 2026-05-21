@@ -13,7 +13,7 @@ program example_error_handling;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.base,
+  fafafa.ssl,
   fafafa.ssl.crypto.utils,
   fafafa.ssl.cert.utils,
   fafafa.ssl.context.builder,

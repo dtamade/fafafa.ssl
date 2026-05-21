@@ -2,6 +2,103 @@
 
 ## 2026-05-21
 
+- specialized / utility examples public import truth
+  这一刀确认的
+  不是
+  这组 utility /
+  result /
+  raw OpenSSL /
+  WinSSL guidance
+  示例
+  真的还依赖
+  `fafafa.ssl.base`
+  /
+  `fafafa.ssl.factory`
+  才能成立，
+  而是
+  façade 已经公开了
+  它们真正需要的
+  通用类型 / 常量 / 接口，
+  示例还在保留
+  历史入口
+
+- 当前更准确的收口是：
+  - `example_cert_pinning`
+    只需要
+    façade +
+    `fafafa.ssl.context.builder`
+    +
+    `fafafa.ssl.cert.pinning`
+  - `example_error_handling`
+    /
+    `example_result_type`
+    所需的
+    `TSSLOperationResult`
+    /
+    `TSSLDataResult`
+    /
+    `TSSLStringResult`
+    /
+    `sslErr*`
+    /
+    `ISSLContext`
+    已可直接来自
+    `fafafa.ssl`
+  - `example_streaming_operations`
+    唯一还需要
+    façade 的点
+    是
+    `TBytesView`
+    ；crypto /
+    encoding
+    仍属于各自 owner unit
+  - `test_ssl_context`
+    除了 façade 化
+    `ISSLLibrary`
+    /
+    `ISSLContext`
+    /
+    `sslCtxServer`
+    之外，
+    还暴露出一个
+    与本批无关但正好位于同文件里的
+    stale
+    `fafafa.ssl.openssl.types`
+    旧 unit 引用
+  - `09_winssl_fips`
+    真正错误的
+    不是实现代码，
+    而是打印出来的
+    sample snippet
+    还在教学
+    `factory + base`
+
+- 这说明
+  当前 public-entry truth
+  主线已经从
+  高可见普通示例
+  继续推进到
+  utility / specialized
+  示例层；
+  当前非-production
+  example source-level
+  残余
+  已基本收空
+
+- follow-up sweep
+  还确认：
+  - `rg -n "fafafa\\.ssl\\.(base|factory)" examples --glob '!examples/production/**'`
+    当前剩下的
+    已不是
+    非-production
+    example source，
+    而只剩
+    `test_winssl.lpi`
+    /
+    `test_openssl.lpi`
+    这类 project metadata
+    引用
+
 - helper-linked https examples public import truth
   这一刀确认的
   不是

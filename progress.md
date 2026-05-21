@@ -6,6 +6,176 @@
 
 ## 2026-05-21
 
+### Specialized / Utility Examples Public Import Truth
+
+- confirm current repo truth before opening the next residual example batch:
+  - `gh run list --branch master --limit 2`
+  - change:
+    - confirmed
+      `docs: record helper-linked https ci closeout`
+      `CI`
+      run `26235114505`
+      completed `success`
+    - confirmed
+      previous helper-linked
+      code batch
+      `CI`
+      run `26234557500`
+      completed `success`
+
+- inspect specialized / utility residual examples before editing:
+  - `src/fafafa.ssl.pas`
+  - `examples/example_cert_pinning.pas`
+  - `examples/example_error_handling.pas`
+  - `examples/example_result_type.pas`
+  - `examples/example_streaming_operations.pas`
+  - `examples/test_ssl_context.lpr`
+  - `examples/02_generate_certificate.pas`
+  - `examples/09_winssl_fips.pas`
+  - change:
+    - confirmed
+      façade already re-exports
+      `ISSLContext`
+      /
+      `ISSLLibrary`
+      /
+      `ISSLCertificate`
+      /
+      `TSSLOperationResult`
+      /
+      `TSSLDataResult`
+      /
+      `TSSLStringResult`
+      /
+      `TBytesView`
+      /
+      `sslCtxServer`
+      /
+      `sslWinSSL`
+      /
+      `sslErr*`
+    - confirmed
+      owner units that must stay:
+      - `fafafa.ssl.context.builder`
+      - `fafafa.ssl.cert.pinning`
+      - `fafafa.ssl.cert.utils`
+      - `fafafa.ssl.crypto.utils`
+      - `fafafa.ssl.encoding`
+      - `fafafa.ssl.openssl.backed`
+      - `fafafa.ssl.openssl.api.*`
+      - `fafafa.ssl.exceptions`
+    - confirmed
+      `09_winssl_fips`
+      drift is printed guidance,
+      not runtime logic
+
+- add focused batch record and create a dedicated specialized / utility example contract:
+  - `docs/plans/2026-05-21-specialized-utility-examples-public-import-truth.md`
+  - `tests/scripts/test_specialized_utility_examples_public_import_truth_contract.sh`
+  - change:
+    - froze
+      the current
+      specialized / utility
+      example import truth
+      around
+      façade exports
+      +
+      specialized owner units
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_specialized_utility_examples_public_import_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_specialized_utility_examples_public_import_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - `examples/example_error_handling.pas`
+        still lacked
+        façade import truth
+
+- repair specialized / utility example public import truth:
+  - `examples/example_cert_pinning.pas`
+  - `examples/example_error_handling.pas`
+  - `examples/example_result_type.pas`
+  - `examples/example_streaming_operations.pas`
+  - `examples/test_ssl_context.lpr`
+  - `examples/02_generate_certificate.pas`
+  - `examples/09_winssl_fips.pas`
+  - change:
+    - removed
+      obsolete
+      `fafafa.ssl.base`
+      imports
+      from
+      pinning / result / error / streaming /
+      raw OpenSSL
+      examples
+    - switched
+      `09_winssl_fips`
+      printed snippet
+      from
+      `factory + base`
+      to
+      `fafafa.ssl`
+    - removed
+      stale
+      `fafafa.ssl.openssl.types`
+      unit import
+      from
+      `test_ssl_context.lpr`
+      after compile proof showed
+      the unit no longer exists
+      in current source tree
+
+- verify focused closeout:
+  - `bash -n tests/scripts/test_specialized_utility_examples_public_import_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_specialized_utility_examples_public_import_truth_contract.sh`
+    - result: PASS
+  - `fpc -B -Fu./src ... examples/example_cert_pinning.pas`
+    - result: PASS
+  - `fpc -B -Fu./src ... examples/example_error_handling.pas`
+    - result: PASS
+  - `fpc -B -Fu./src ... examples/example_result_type.pas`
+    - result: PASS
+  - `fpc -B -Fu./src ... examples/example_streaming_operations.pas`
+    - result: PASS
+  - first
+    `fpc -B -Fu./src ... examples/test_ssl_context.lpr`
+    - result: FAIL
+    - summary:
+      - stale
+        `fafafa.ssl.openssl.types`
+        unit
+        no longer exists
+  - repair
+    `examples/test_ssl_context.lpr`
+    - result:
+      - removed unused stale unit
+  - rerun
+    `fpc -B -Fu./src ... examples/test_ssl_context.lpr`
+    - result: PASS
+  - `fpc -B -Fu./src ... examples/02_generate_certificate.pas`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+  - follow-up sweep:
+    - `rg -n "fafafa\\.ssl\\.(base|factory)" examples --glob '!examples/production/**'`
+      - result:
+        - no remaining
+          non-production
+          example source hits
+        - only
+          `.lpi`
+          project metadata
+          references remain
+  - note:
+    - compile logs
+      still contain
+      repo pre-existing
+      warnings/notes,
+      but no new failure
+      from this batch
+
 ### Helper-Linked HTTPS Examples Public Import Truth
 
 - inspect helper-linked HTTPS example import residuals before editing:

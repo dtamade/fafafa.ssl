@@ -17,7 +17,7 @@ program example_result_type;
 
 uses
   SysUtils,
-  fafafa.ssl.base,
+  fafafa.ssl,
   fafafa.ssl.crypto.utils,
   fafafa.ssl.exceptions;
 

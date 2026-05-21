@@ -10,6 +10,125 @@
 
 ## Current Status
 
+- [completed] `specialized / utility examples public import truth`
+  当前 focused 目标：
+  - 收口
+    一组不属于 production
+    但仍然活跃可见的
+    specialized / utility examples
+    里残留的
+    `fafafa.ssl.base`
+    /
+    `fafafa.ssl.factory`
+    入口漂移，
+    让 façade 已公开的
+    通用类型 / 常量
+    回到
+    `fafafa.ssl`
+    ，同时保留
+    builder / crypto / cert / OpenSSL raw API
+    等真实 owner unit
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-specialized-utility-examples-public-import-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_specialized_utility_examples_public_import_truth_contract.sh`
+  - 更新：
+    - `examples/example_cert_pinning.pas`
+    - `examples/example_error_handling.pas`
+    - `examples/example_result_type.pas`
+    - `examples/example_streaming_operations.pas`
+    - `examples/test_ssl_context.lpr`
+    - `examples/02_generate_certificate.pas`
+    - `examples/09_winssl_fips.pas`
+  当前预期 truth：
+  - façade 已公开的
+    `ISSLContext`
+    /
+    `ISSLLibrary`
+    /
+    `ISSLCertificate`
+    /
+    `TSSLOperationResult`
+    /
+    `TSSLDataResult`
+    /
+    `TSSLStringResult`
+    /
+    `TBytesView`
+    /
+    `sslCtxServer`
+    /
+    `sslWinSSL`
+    /
+    `sslErr*`
+    应优先来自
+    `fafafa.ssl`
+  - `fafafa.ssl.context.builder`
+    /
+    `fafafa.ssl.cert.pinning`
+    /
+    `fafafa.ssl.cert.utils`
+    /
+    `fafafa.ssl.crypto.utils`
+    /
+    `fafafa.ssl.encoding`
+    /
+    `fafafa.ssl.openssl.backed`
+    /
+    `fafafa.ssl.openssl.api.*`
+    /
+    `fafafa.ssl.exceptions`
+    应继续保留
+    owner-path
+  - `09_winssl_fips`
+    打印出来的
+    guidance snippet
+    不应再继续教学
+    `factory + base`
+    split import
+  当前 focused proof：
+  - `bash -n tests/scripts/test_specialized_utility_examples_public_import_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_specialized_utility_examples_public_import_truth_contract.sh`
+    - FAIL -> PASS
+    - RED summary:
+      - `examples/example_error_handling.pas`
+        still lacked
+        façade import truth
+  - focused compile proof：
+    - `examples/example_cert_pinning.pas`
+      - PASS
+    - `examples/example_error_handling.pas`
+      - PASS
+    - `examples/example_result_type.pas`
+      - PASS
+    - `examples/example_streaming_operations.pas`
+      - PASS
+    - `examples/test_ssl_context.lpr`
+      - PASS
+      - note:
+        - removed
+          stale
+          `fafafa.ssl.openssl.types`
+          old unit reference
+    - `examples/02_generate_certificate.pas`
+      - PASS
+  - `git diff --check`
+    - PASS
+  当前批收口后的默认下一步：
+  - 非-production example
+    source-level
+    `base/factory`
+    residual
+    已基本清空；
+    下一刀更自然的是：
+    - `examples/production/*`
+      public import truth
+    - 或
+      `.lpi` / active root docs
+      的 source-truth metadata drift
+
 - [completed] `helper-linked https examples public import truth`
   当前 focused 目标：
   - 收口

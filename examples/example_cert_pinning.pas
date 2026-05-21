@@ -6,7 +6,6 @@ uses
   SysUtils,
   fafafa.ssl,
   fafafa.ssl.context.builder,
-  fafafa.ssl.base,
   fafafa.ssl.cert.pinning;
 
 var

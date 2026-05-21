@@ -250,8 +250,7 @@ begin
   WriteLn('💡 在 fafafa.ssl 中使用 WinSSL + FIPS：');
   WriteLn;
   WriteLn('  uses');
-  WriteLn('    fafafa.ssl.factory,');
-  WriteLn('    fafafa.ssl.base;');
+  WriteLn('    fafafa.ssl;');
   WriteLn;
   WriteLn('  var');
   WriteLn('    LLib: ISSLLibrary;');
@@ -360,4 +359,3 @@ begin
     end;
   end;
 end.
-

@@ -14,6 +14,7 @@ program generate_certificate;
 
 uses
   SysUtils, DateUtils,
+  fafafa.ssl,
   fafafa.ssl.openssl.backed,
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.rsa,
@@ -22,8 +23,7 @@ uses
   fafafa.ssl.openssl.api.pem,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.asn1,
-  fafafa.ssl.openssl.api.bn,
-  fafafa.ssl.base;
+  fafafa.ssl.openssl.api.bn;
 
 const
   KEY_SIZE = 2048;
