@@ -52,12 +52,12 @@ forbid_multiline \
 
 require_multiline \
   "$source_base" \
-  'TBaseSSLConnection = class\(TInterfacedObject,\s*ISSLConnection,\s*ISSLConnectionControl,\s*ISSLDiagnostics,\s*ISSLSessionResumption,\s*ISSLCertificateVerification,\s*ISSLConnectionInfo\)' \
+  'TBaseSSLConnection = class\(TInterfacedObject,\s*ISSLConnection,\s*ISSLConnectionTextIO,\s*ISSLConnectionControl,\s*ISSLDiagnostics,\s*ISSLSessionResumption,\s*ISSLCertificateVerification,\s*ISSLConnectionInfo\)' \
   "source base-connection declaration no longer matches the expected shared owner/mirror interface set"
 
 require_multiline \
   "$doc_file" \
-  'TBaseSSLConnection = class\(TInterfacedObject,\s*ISSLConnection,\s*ISSLConnectionControl,\s*ISSLDiagnostics,\s*ISSLSessionResumption,\s*ISSLCertificateVerification,\s*ISSLConnectionInfo\)' \
+  'TBaseSSLConnection = class\(TInterfacedObject,\s*ISSLConnection,\s*ISSLConnectionTextIO,\s*ISSLConnectionControl,\s*ISSLDiagnostics,\s*ISSLSessionResumption,\s*ISSLCertificateVerification,\s*ISSLConnectionInfo\)' \
   "INTERFACE_DESIGN_V2 no longer mirrors the current TBaseSSLConnection shared owner/mirror interface set"
 
 declare -a required_patterns=(

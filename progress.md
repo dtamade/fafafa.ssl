@@ -29106,3 +29106,68 @@
     - result: PASS
   - `git diff --check`
     - result: PASS
+
+### ISSLConnection Contract Truth Refresh
+
+- re-baseline the next interface-debt route with a light focused suite:
+  - `bash tests/scripts/test_isslconnection_surface_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+    - result: FAIL
+    - summary:
+      - stale contract still expected
+        `TBaseSSLConnection`
+        without
+        `ISSLConnectionTextIO`
+  - `bash tests/scripts/test_issldiagnostics_compiler_deprecated_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_isslsessionresumption_compiler_deprecated_contract.sh`
+    - result: FAIL
+    - summary:
+      - stale contract still expected the older
+        `backend-specific runtime residuals`
+        wording
+  - `bash tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_isslocspstapling_compiler_deprecated_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_facade_main_entry_truth_contract.sh`
+    - result: PASS
+  - change:
+    - confirmed the new RED is inside
+      focused contracts,
+      not a fresh
+      `TSSLConfig`
+      or facade/source regression
+
+- inspect the two failing focused contracts against current source/doc truth:
+  - `tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+  - `tests/scripts/test_isslsessionresumption_compiler_deprecated_contract.sh`
+  - `src/fafafa.ssl.connection.base.pas`
+  - change:
+    - confirmed
+      `TBaseSSLConnection`
+      currently still implements
+      `ISSLConnectionTextIO`
+      and that this already matches
+      `INTERFACE_DESIGN_V2`
+    - confirmed session-resumption residual wording
+      was intentionally tightened earlier to
+      `backend-specific semantic truth proofs`
+
+- refresh the stale contracts to current truth:
+  - `docs/plans/2026-05-22-isslconnection-contract-truth-refresh.md`
+  - `tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+  - `tests/scripts/test_isslsessionresumption_compiler_deprecated_contract.sh`
+  - change:
+    - updated the shared owner/mirror regex
+      to include
+      `ISSLConnectionTextIO`
+    - updated the session-resumption residual note
+      expectation
+      from
+      `backend-specific runtime residuals`
+      to
+      `backend-specific semantic truth proofs`

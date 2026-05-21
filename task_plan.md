@@ -19227,3 +19227,91 @@
     已收口的 owner-path lane；
     只有出现新的 compile/runtime RED
     再开新批
+
+### 2026-05-22 ISSLConnection contract truth refresh
+
+- [completed] 当前新的 focused RED
+  不是 backend implementation 缺口，
+  而是两条 stale contract：
+  - `tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+    仍把
+    `TBaseSSLConnection`
+    的 shared owner/mirror interface set
+    写成不含
+    `ISSLConnectionTextIO`
+  - `tests/scripts/test_isslsessionresumption_compiler_deprecated_contract.sh`
+    仍盯着旧的 residual wording：
+    - `backend-specific runtime residuals`
+  - 但当前 source/doc truth
+    实际已经是：
+    - `ISSLConnectionTextIO`
+      属于
+      `TBaseSSLConnection`
+      shared owner/mirror interface set
+    - session-resumption residual
+      已收紧成
+      `backend-specific semantic truth proofs`
+
+- [completed] 最小正确修法
+  不该误升级成
+  production surgery，
+  而是把 focused contracts
+  拉回当前真相：
+  - 新增
+    `docs/plans/2026-05-22-isslconnection-contract-truth-refresh.md`
+  - 更新：
+    - `tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+    - `tests/scripts/test_isslsessionresumption_compiler_deprecated_contract.sh`
+  - 其中：
+    - `ISSLConnectionInfo`
+      migration contract
+      改为明确接受
+      `ISSLConnectionTextIO`
+      已在
+      `TBaseSSLConnection`
+      上落地的当前 truth
+    - session-resumption compiler contract
+      改为接受
+      `backend-specific semantic truth proofs`
+      这套更新后的 residual 分类措辞
+
+- [completed] 当前 focused proof：
+  - `bash tests/scripts/test_isslconnection_surface_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_issldiagnostics_compiler_deprecated_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_isslsessionresumption_compiler_deprecated_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_isslocspstapling_compiler_deprecated_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_facade_main_entry_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+
+- [completed] 当前批收口后的默认下一步：
+  - 当前 `ISSLConnection`
+    这条线
+    新暴露出来的 live RED
+    已证实只是 stale contract，
+    不是新的生产实现缺口
+  - 因而后续继续“深度审查接口设计和各后端实现”时，
+    应继续坚持：
+    - 先用 focused contract 找 live RED
+    - 只有 source/doc/runtime 真的漂了
+      才开新批
+  - 下一条更值得继续推进的
+    仍然是：
+    - 真正的 broader interface debt
+      例如
+      `ISSLConnection` compatibility baggage
+      或
+      `TSSLConfig` mixed-scope
+      的下一条 live 切片，
+      而不是再回头修这组 stale contract

@@ -18040,3 +18040,47 @@
     - 再补 focused contract
     - 不要为了“看起来更完整”
       去泛化导出所有内部辅助类型
+
+- ISSLConnection contract truth refresh
+  这次新跑出来的 2 个 focused RED
+  进一步说明了当前继续深审时
+  一个很重要的 workflow 结论：
+  - `ISSLConnection`
+    主线的很多 source/doc truth
+    已经被前几批逐层收紧
+  - 但如果 focused contract
+    没同步跟上最新 truth，
+    就会制造新的 false-red
+
+- 这次两个失败都属于
+  “合同滞后”
+  而不是
+  “生产实现退化”：
+  - `test_isslconnectioninfo_migration_targets_contract.sh`
+    漏掉了
+    已经落地的
+    `ISSLConnectionTextIO`
+  - `test_isslsessionresumption_compiler_deprecated_contract.sh`
+    还在盯旧措辞
+    `backend-specific runtime residuals`
+
+- 当前更准确的真相是：
+  - `TBaseSSLConnection`
+    的 shared owner/mirror interface set
+    当前确实包含
+    `ISSLConnectionTextIO`
+  - session-resumption residual
+    当前也不该再被写成
+    “runtime residuals”
+    来暗示还没迁完；
+    更准确的是
+    `backend-specific semantic truth proofs`
+
+- 这类 stale contract
+  如果不及时收口，
+  后续每次继续 interface audit
+  都会把同一组 false-red
+  重新当成 live source drift 拉起来；
+  所以修 focused contract 本身
+  也是当前这个 goal
+  的一部分

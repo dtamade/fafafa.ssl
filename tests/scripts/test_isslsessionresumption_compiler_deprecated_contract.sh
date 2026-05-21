@@ -72,7 +72,7 @@ done
 declare -a required_conn_base_patterns=(
   '`GetSession` / `SetSession` / `IsSessionReused`'
   'ordinary docs/tests 已转向 `ISSLSessionResumption` owner path'
-  'direct core session-resumption 当前只剩 contract mirror proof 和 backend-specific runtime residuals'
+  'direct core session-resumption 当前只剩 contract mirror proof 和 backend-specific semantic truth proofs'
 )
 
 for pattern in "${required_conn_base_patterns[@]}"; do
