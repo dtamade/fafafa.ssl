@@ -246,7 +246,7 @@ LContext.SetCipherSuites(
 
 ```pascal
 // 启用会话缓存
-LContext.SetSessionCacheMode(sslSessCacheClient);
+LContext.SetSessionCacheMode(True);
 
 // 设置会话超时（秒）
 LContext.SetSessionTimeout(300);  // 5分钟
@@ -260,6 +260,8 @@ begin
   // ... 使用连接
 end;
 ```
+
+当前 `ISSLContext.SetSessionCacheMode(...)` 的参数仍是 `Boolean`；`TSessionCacheMode` / `scm_*` 更适合作为你自己的 policy wrapper，而不是当前直接传给 context 的参数类型。
 
 参考示例：`examples/production/https_client_session.pas`
 

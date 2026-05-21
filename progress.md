@@ -6,6 +6,80 @@
 
 ## 2026-05-21
 
+### zh FAQ Session Cache Mode Truth Alignment
+
+- inspect current session-cache mode truth before editing:
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.safety.pas`
+  - `src/fafafa.ssl.pas`
+  - `docs/zh/FAQ.md`
+  - `examples/production/https_client_session.pas`
+  - change:
+    - confirmed current shipped source truth still keeps:
+      - `ISSLContext.SetSessionCacheMode(AEnabled: Boolean)`
+    - confirmed `TSessionCacheMode` /
+      `scm_Off / scm_Client / scm_Server / scm_Both`
+      are still facade re-exports,
+      but are not bridged into the current context seam
+    - confirmed the production session example still uses:
+      - `LContext.SetSessionCacheMode(True);`
+    - confirmed the active Chinese FAQ still taught:
+      - `LContext.SetSessionCacheMode(sslSessCacheClient);`
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-zh-faq-session-cache-mode-truth-alignment.md`
+  - `tests/scripts/test_zh_faq_session_cache_mode_truth_contract.sh`
+  - change:
+    - documented the batch as Chinese FAQ session-cache-mode truth alignment
+    - added a focused shell contract
+      to guard:
+      - removal of the obsolete `sslSessCacheClient`-style argument
+      - current Boolean seam truth
+      - explicit note that `TSessionCacheMode` / `scm_*` are not the current direct context parameter type
+
+- establish focused RED before doc repair:
+  - `bash -n tests/scripts/test_zh_faq_session_cache_mode_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_zh_faq_session_cache_mode_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - failed at:
+        `zh FAQ must stop teaching the removed sslSessCacheClient-style session-cache mode argument`
+      - important conclusion:
+        - the Chinese entry-doc drift was real
+        - this was not just a stale note hidden in archive docs
+
+- repair Chinese FAQ session-cache truth:
+  - `docs/zh/FAQ.md`
+  - change:
+    - changed Q12 from
+      `LContext.SetSessionCacheMode(sslSessCacheClient);`
+      to:
+      - `LContext.SetSessionCacheMode(True);`
+    - added an explicit note that
+      current `ISSLContext.SetSessionCacheMode(...)`
+      still takes `Boolean`
+    - documented that
+      `TSessionCacheMode` / `scm_*`
+      are better treated as caller-owned policy-wrapper types,
+      not the current direct context parameter type
+
+- verify focused Chinese FAQ truth:
+  - `bash -n tests/scripts/test_zh_faq_session_cache_mode_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_zh_faq_session_cache_mode_truth_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed the FAQ no longer teaches the obsolete `sslSessCacheClient` value
+      - confirmed the FAQ now teaches the current Boolean context seam
+      - confirmed the FAQ now documents the wrapper-level role of `TSessionCacheMode` / `scm_*`
+  - `bash tests/scripts/test_zh_entry_docs_current_public_truth_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed the FAQ repair did not regress the broader Chinese entry-doc current-public-entrypoint contract
+  - `git diff --check`
+    - result: PASS
+
 ### Active Builder Guidance Truth Alignment
 
 - inspect current session-cache / builder truth before editing:

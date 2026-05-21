@@ -10,6 +10,82 @@
 
 ## Current Status
 
+- [completed] `zh FAQ session-cache mode truth alignment`
+  当前 focused 目标：
+  - 修复
+    `docs/zh/FAQ.md`
+    里关于会话复用/会话缓存模式的旧写法，
+    避免继续把
+    `sslSessCacheClient`
+    这类已不存在的参数值
+    教成当前 public API
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-zh-faq-session-cache-mode-truth-alignment.md`
+  - 新增 contract：
+    - `tests/scripts/test_zh_faq_session_cache_mode_truth_contract.sh`
+  - 更新：
+    - `docs/zh/FAQ.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_zh_faq_session_cache_mode_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_zh_faq_session_cache_mode_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前状态：
+  - 重新核对后已确认，
+    当前
+    `ISSLContext.SetSessionCacheMode(...)`
+    的 shipped source truth
+    仍是：
+    - `Boolean`
+  - 当前 repo
+    虽然仍由主门面 re-export：
+    - `TSessionCacheMode`
+    - `scm_Off / scm_Client / scm_Server / scm_Both`
+    但当前 source
+    并没有把它们桥接进
+    `ISSLContext.SetSessionCacheMode(...)`
+  - 中文 FAQ
+    之前的危险点在于，
+    它会让人误以为：
+    - `sslSessCacheClient`
+      还是当前可直接传给
+      context
+      的参数值
+  修复后：
+  - FAQ 的 Q12
+    现在明确回到：
+    - `LContext.SetSessionCacheMode(True);`
+  - 同时增加了一条边界说明：
+    - `TSessionCacheMode`
+      /
+      `scm_*`
+      当前更适合作为
+      调用方自己的
+      policy wrapper，
+      不是当前直接传给 context 的参数类型
+  当前实施判断：
+  - 这批继续证明，
+    对
+    safety type
+    的推进不能只看
+    facade re-export
+  - 还必须先过一遍：
+    当前 runtime / context / builder
+    是否真的存在那条
+    direct seam
+  下一刀：
+  - 继续检查
+    active docs
+    里是否还有这种
+    “历史参数值仍被写成当前 API”
+    的残留，
+    特别是
+    verify/session
+    相关中文入口材料
+
 - [completed] `active builder guidance truth alignment`
   当前 focused 目标：
   - 收紧当前活跃 guide

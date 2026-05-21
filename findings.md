@@ -2,6 +2,74 @@
 
 ## 2026-05-21
 
+- `TSessionCacheMode`
+  这条线经过 current source truth
+  复核后，
+  当前也不像
+  `TTimeoutDuration`
+  那样存在一条明显的
+  “高频 public path
+  只差 typed overload”
+  的 adoption seam
+
+- 当前 source truth
+  很清楚：
+  - `ISSLContext.SetSessionCacheMode(...)`
+    仍接收
+    `Boolean`
+  - `TSessionCacheMode`
+    /
+    `scm_*`
+    虽然仍被主门面 re-export，
+    但当前 source
+    没有把它们桥接到
+    context / builder
+    入口
+
+- 这意味着：
+  不能因为 facade
+  还导出了
+  `TSessionCacheMode`
+  就默认我们下一步该去补一个
+  builder/context typed seam；
+  它当前更像
+  safety/policy type
+  而不是当前直接 runtime 参数
+
+- 当前真实问题
+  不是实现缺口，
+  而是活跃中文 FAQ
+  还残留一条
+  会把人带偏的旧写法：
+  - `LContext.SetSessionCacheMode(sslSessCacheClient);`
+
+- 修复后，
+  中文 FAQ
+  已重新收敛成当前 public truth：
+  - `LContext.SetSessionCacheMode(True);`
+  - 并明确写出：
+    `TSessionCacheMode`
+    /
+    `scm_*`
+    当前更适合作为
+    调用方自己的
+    policy wrapper，
+    而不是当前直接传给
+    context
+    的参数类型
+
+- 这批再次强化了总路线：
+  对
+  `TVerificationMode`
+  /
+  `TSessionCacheMode`
+  这类 safety surface，
+  先做 source-truth 分型，
+  再决定是
+  active-doc truth alignment
+  还是
+  真正的 API adoption
+
 - `TSSLContextBuilder`
   这条线当前又确认出一类
   很值得优先消灭的路线偏移：
