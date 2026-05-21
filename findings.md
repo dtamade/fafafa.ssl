@@ -16881,3 +16881,71 @@
     - 已被 public API 直接引用的 supporting types
     - 而不是为了“看起来完整”
       去泛化导出所有 base 内部辅助类型
+
+- 当前 `WinSSL Runtime Gate`
+  的 live 问题
+  已经不是
+  “Windows lane 还没自动化”，
+  而是
+  自动 lane
+  的 path filter
+  还停在
+  `winssl*.pas`
+  /
+  `tests/winssl/**`
+  这一级；
+  这会让已经被多轮审查证实会影响 WinSSL runtime truth 的 shared/core 改动
+  静默绕过 Windows runner。
+
+- 这次 focused RED
+  先直接钉在：
+  - `tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+  - 首轮失败：
+    `winssl-tests.yml missing truthful winssl-tests fragment: src/fafafa.ssl.base.pas`
+  说明问题不是“想更谨慎一点”，
+  而是 auto proof 覆盖范围本身仍不闭合。
+
+- 当前更真实的 WinSSL auto-trigger 边界
+  应至少覆盖这组 shared/core units：
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.connection.base.pas`
+  - `src/fafafa.ssl.factory.pas`
+  - `src/fafafa.ssl.context.config.pas`
+  - `src/fafafa.ssl.asn1.pas`
+  - `src/fafafa.ssl.x509.pas`
+  - `src/fafafa.ssl.pas`
+  - `src/fafafa.ssl.context.builder.pas`
+  因为它们当前分别承载：
+  - shared public interface / config truth
+  - shared connection behavior
+  - WinSSL 测试直接使用的 factory path
+  - 证书 parser / metadata truth
+  - 当前 shipped 主门面 / builder entrypoint
+
+- 因而这批最小正确修法
+  不是把 Windows gate 扩成
+  “任意 `src/**` 改动都跑”，
+  而是把 active + disabled workflow
+  的 push / PR path filter
+  精确补到这组当前真实相关的 shared/core files。
+
+- 这条 workflow 修完后，
+  当前总路线也更稳了一层：
+  - 后续继续推进
+    `ISSLConnection`
+    /
+    `TSSLConfig`
+    /
+    facade
+    /
+    shared parser
+    这类 shared 主线时，
+    Windows runtime proof
+    不会再因为 path filter
+    被静默跳过
+  - 所以下一批更适合直接切回
+    `ISSLConnection`
+    broader slimming
+    /
+    recommendation truth，
+    而不是再重扫 workflow/Windows lane

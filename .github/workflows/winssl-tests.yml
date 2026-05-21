@@ -5,6 +5,14 @@ on:
     branches: [ master, main, develop ]
     paths:
       - 'src/fafafa.ssl.winssl*.pas'
+      - 'src/fafafa.ssl.base.pas'
+      - 'src/fafafa.ssl.connection.base.pas'
+      - 'src/fafafa.ssl.factory.pas'
+      - 'src/fafafa.ssl.context.config.pas'
+      - 'src/fafafa.ssl.asn1.pas'
+      - 'src/fafafa.ssl.x509.pas'
+      - 'src/fafafa.ssl.pas'
+      - 'src/fafafa.ssl.context.builder.pas'
       - 'tests/winssl/**'
       - 'tests/quick_winssl_validation.ps1'
       - 'tests/run_winssl_tests.ps1'
@@ -15,6 +23,14 @@ on:
     branches: [ master, main, develop ]
     paths:
       - 'src/fafafa.ssl.winssl*.pas'
+      - 'src/fafafa.ssl.base.pas'
+      - 'src/fafafa.ssl.connection.base.pas'
+      - 'src/fafafa.ssl.factory.pas'
+      - 'src/fafafa.ssl.context.config.pas'
+      - 'src/fafafa.ssl.asn1.pas'
+      - 'src/fafafa.ssl.x509.pas'
+      - 'src/fafafa.ssl.pas'
+      - 'src/fafafa.ssl.context.builder.pas'
       - 'tests/winssl/**'
       - 'tests/quick_winssl_validation.ps1'
       - 'tests/run_winssl_tests.ps1'
@@ -216,4 +232,3 @@ jobs:
             test-reports/validate_all_modules_compile_${{ env.WINSSL_RUN_ID }}.log
             test-reports/winssl_runtime_suite_${{ env.WINSSL_RUN_ID }}.log
           if-no-files-found: warn
-

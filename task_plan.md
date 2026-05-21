@@ -17866,3 +17866,80 @@
     调用方静态编译踩坑的
     supporting type / helper
     残口
+
+### 2026-05-21 WinSSL Runtime Gate shared/core trigger coverage
+
+- [completed] 当前新的 workflow residual
+  已不再是
+  “有没有自动 Windows lane”，
+  而是
+  `WinSSL Runtime Gate`
+  的 path filter
+  仍然只盯：
+  - `src/fafafa.ssl.winssl*.pas`
+  - `tests/winssl/**`
+  - Windows runtime scripts
+  这会让当前已经被证实会影响 WinSSL runtime proof 的 shared/core 改动
+  静默绕过 Windows runner：
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.connection.base.pas`
+  - `src/fafafa.ssl.factory.pas`
+  - `src/fafafa.ssl.context.config.pas`
+  - `src/fafafa.ssl.asn1.pas`
+  - `src/fafafa.ssl.x509.pas`
+  - `src/fafafa.ssl.pas`
+  - `src/fafafa.ssl.context.builder.pas`
+
+- [completed] focused RED
+  已通过收紧
+  `tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+  先压实：
+  - 首轮结果：
+    - FAIL
+      `winssl-tests.yml missing truthful winssl-tests fragment: src/fafafa.ssl.base.pas`
+  - 说明这不是
+    “想多跑一点 Windows”
+    的泛化优化，
+    而是当前 auto proof
+    的真实缺口
+
+- [completed] 最小正确修法已经落地：
+  - 新增
+    `docs/plans/2026-05-21-winssl-runtime-gate-shared-core-trigger-coverage.md`
+  - 更新：
+    - `tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+    - `.github/workflows/winssl-tests.yml`
+    - `.github/workflows/winssl-tests.yml.disabled`
+    - `.github/README.md`
+  - 当前 active + disabled workflow
+    已同时把上述 shared/core units
+    纳入 push / PR path filter
+  - `.github/README.md`
+    也已明确：
+    - auto WinSSL gate
+      不只盯 backend-specific 文件，
+      也覆盖当前会影响 WinSSL runtime proof 的 shared/core units
+
+- [completed] 当前 focused proof：
+  - `bash -n tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  - 当前已具备
+    review / commit / push
+    条件
+
+- [completed] 当前批收口后的默认下一步：
+  - 继续把
+    Windows auto proof
+    当作
+    shared/core 审查的固定护栏
+  - 下一刀优先切回
+    `ISSLConnection`
+    broader slimming
+    /
+    recommendation truth
+    主线，
+    而不是再回头做零碎 docs sweep

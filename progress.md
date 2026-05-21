@@ -27342,3 +27342,69 @@
     - result: PASS
   - `git diff --check`
     - result: PASS
+
+### WinSSL Runtime Gate Shared/Core Trigger Coverage
+
+- inspect the current auto Windows lane truth before opening a new batch:
+  - `gh run list --limit 12`
+    - confirmed the two latest facade batches already had green Linux `CI`
+    - confirmed the current live gap is not missing Linux verification
+  - `gh run list --workflow "WinSSL Runtime Gate" --limit 8`
+    - confirmed the recent WinSSL runtime lane is active and currently green again
+    - confirmed the old `fix(certificate): align metadata truth across main backends`
+      failure was historical and not the current branch state
+  - `gh run view 26185498809 --log-failed`
+    - confirmed that historical failure was a Windows compile break on
+      `Identifier not found "X509KeyUsageToStrings"`
+      rather than a still-live post-fix blocker
+  - `sed -n '1,40p' .github/workflows/winssl-tests.yml`
+  - `sed -n '15672,15690p' findings.md`
+    - confirmed the current path-filter hole is real:
+      the auto WinSSL workflow still only watched
+      `src/fafafa.ssl.winssl*.pas`
+      and `tests/winssl/**`
+    - confirmed this could miss shared/core edits that already proved relevant
+      to WinSSL runtime truth
+
+- add a focused plan and tighten the workflow contract first:
+  - `docs/plans/2026-05-21-winssl-runtime-gate-shared-core-trigger-coverage.md`
+  - `tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+  - change:
+    - locked a shared/core trigger truth for:
+      - `src/fafafa.ssl.base.pas`
+      - `src/fafafa.ssl.connection.base.pas`
+      - `src/fafafa.ssl.factory.pas`
+      - `src/fafafa.ssl.context.config.pas`
+      - `src/fafafa.ssl.asn1.pas`
+      - `src/fafafa.ssl.x509.pas`
+      - `src/fafafa.ssl.pas`
+      - `src/fafafa.ssl.context.builder.pas`
+
+- establish focused RED before repairing the workflow:
+  - `bash -n tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - `winssl-tests.yml`
+        missing truthful winssl-tests fragment:
+        `src/fafafa.ssl.base.pas`
+
+- repair the WinSSL auto-trigger coverage:
+  - `.github/workflows/winssl-tests.yml`
+  - `.github/workflows/winssl-tests.yml.disabled`
+  - `.github/README.md`
+  - change:
+    - added the current shared/core WinSSL-relevant files to
+      push / PR path filters in both workflow variants
+    - recorded in `.github/README.md` that the auto WinSSL lane now also
+      covers shared/core units that can affect WinSSL runtime proof,
+      not just backend-specific source files
+
+- verify the focused closeout:
+  - `bash -n tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS

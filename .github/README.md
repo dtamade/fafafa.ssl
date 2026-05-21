@@ -42,7 +42,7 @@ TLS 1.3 signer 专项门禁（按路径触发 + `workflow_dispatch`）
 
 WinSSL 自动 Windows runtime gate（push / PR 按路径触发 + `workflow_dispatch`）
 
-- 用途：当改动触及 `WinSSL` backend / `tests/winssl` / 相关 Windows runtime scripts 时，自动拉起 Windows runner
+- 用途：当改动触及 `WinSSL` backend、相关 Windows runtime scripts，或当前会影响 WinSSL runtime proof 的 shared/core units（如 `fafafa.ssl.base` / `fafafa.ssl.connection.base` / `fafafa.ssl.factory` / `fafafa.ssl.context.config` / `fafafa.ssl.asn1` / `fafafa.ssl.x509` / 主门面与 builder）时，自动拉起 Windows runner
 - 证据链：
   - `tests/quick_winssl_validation.ps1`
   - `scripts/run_wave_b_windows_gate.ps1`
