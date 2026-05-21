@@ -9,7 +9,7 @@
 > 这份文档描述的是 **v2 最小 core 目标**，不是 `v1.5.0` 当前 shipped source 的逐行镜像。
 > 当前 shipped source truth 以 `src/fafafa.ssl.base.pas` 与 `docs/reference/API_REFERENCE.md` 为准；
 > `ReadString` / `WriteString` / timeout / blocking 这组方法在 `v1.x` 仍保留为 convenience-core / connection-adjacent surface。
-> 其中 timeout / blocking 当前 source 已补上 `ISSLConnectionControl` owner path，core 侧继续保留 convenience mirror。
+> 其中 timeout / blocking 当前 source 已补上 `ISSLConnectionControl` owner path，text helpers 当前也已补上 `ISSLConnectionTextIO` owner path；core 侧继续保留 convenience mirror。
 
 ---
 
@@ -18,6 +18,7 @@
 ```
 ISSLConnection (v2 目标核心 - 17 个方法)
 ├── ISSLClientConnection (客户端扩展 - SNI)
+├── ISSLConnectionTextIO (文本 helper owner)
 ├── ISSLConnectionControl (timeout / blocking 控制)
 ├── ISSLNativeHandleAccess (原生句柄访问)
 ├── ISSLConnectionInfo (连接信息 mirrors)
@@ -108,6 +109,15 @@ ISSLConnectionControl = interface
 end;
 ```
 
+### ISSLConnectionTextIO (文本 helper)
+
+```pascal
+ISSLConnectionTextIO = interface
+  function ReadString(out AStr: string): Boolean;
+  function WriteString(const AStr: string): Boolean;
+end;
+```
+
 ### ISSLDiagnostics (诊断功能)
 
 ```pascal
@@ -193,6 +203,7 @@ if Supports(LConn, ISSLConnectionControl, LControl) then
 ```pascal
 TBaseSSLConnection = class(TInterfacedObject,
   ISSLConnection,
+  ISSLConnectionTextIO,
   ISSLConnectionControl,
   ISSLDiagnostics,
   ISSLSessionResumption,
@@ -270,7 +281,7 @@ if Supports(FSSLConn, ISSLSessionResumption, LSession) then
 | GetProtocolVersion, GetCipherName | ISSLConnection | 保留 |
 | GetPeerCertificate | ISSLConnection | 保留 |
 | GetNativeHandle | ISSLNativeHandleAccess | 不属于核心 ISSLConnection；通过可选 native-handle 接口访问 |
-| ReadString, WriteString | ISSLConnection | `v1.x` convenience-core 文本 helper；框架/transport 集成优先使用 `Read` / `Write` |
+| ReadString, WriteString | ISSLConnectionTextIO | 默认 owner 已切到 ISSLConnectionTextIO；core 侧继续作为 `v1.x` convenience mirror 保留 |
 | GetConnectionInfo | ISSLConnectionInfo | 默认 owner 已切到 ISSLConnectionInfo；core 侧仅兼容保留，源码声明已是编译期 deprecated |
 | GetStateString | ISSLConnectionInfo | 默认 owner 已切到 ISSLConnectionInfo；core 侧仅兼容保留，源码声明已是编译期 deprecated |
 | SetTimeout, GetTimeout | ISSLConnectionControl | 默认 owner 已切到 ISSLConnectionControl；core 侧继续作为 `v1.x` convenience mirror 保留 |

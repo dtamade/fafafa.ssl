@@ -27408,3 +27408,91 @@
     - result: PASS
   - `git diff --check`
     - result: PASS
+
+### ISSLConnection Text Owner-Path Adoption
+
+- inspect the next live `ISSLConnection` slice after the workflow closeout:
+  - `rg -n "deprecated 'Use|GetHealthStatus|IsHealthy|GetDiagnosticInfo|GetPerformanceMetrics|GetSession\\(|SetSession\\(|IsSessionReused|GetPeerCertificateChain|GetVerifyResult|GetVerifyResultString|GetConnectionInfo|GetContext\\(|GetStateString|GetOCSPStaplingEnabled|GetOCSPResponse|IsOCSPResponseVerified|GetOCSPResponseStatus" src/fafafa.ssl.base.pas`
+  - `sed -n '1180,1325p' src/fafafa.ssl.base.pas`
+  - `sed -n '1,140p' docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+  - result:
+    - confirmed the old mirror families already had owner paths and compiler deprecation
+    - confirmed the next owner-less convenience residual had narrowed to:
+      - `ReadString`
+      - `WriteString`
+
+- add a focused plan and source/compile proof for the text-helper owner path:
+  - `docs/plans/2026-05-21-isslconnection-text-owner-path-adoption.md`
+  - `tests/contract/test_isslconnection_text_owner_entry.pas`
+  - `tests/scripts/test_isslconnection_text_owner_path_contract.sh`
+  - update adjacent owner contracts:
+    - `tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+    - `tests/contract/test_facade_optional_owner_surface_entry.pas`
+    - `tests/scripts/test_architecture_optional_owner_surface_truth_contract.sh`
+  - change:
+    - locked a new owner path:
+      - `ISSLConnectionTextIO`
+    - locked a compile/run proof that:
+      - `TBaseSSLConnection` exposes the interface
+      - the owner-path methods mirror current core behavior
+
+- establish focused RED before changing source:
+  - `bash -n tests/scripts/test_isslconnection_text_owner_path_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_isslconnection_text_owner_path_contract.sh`
+    - result: FAIL
+    - summary:
+      - `base source must declare ISSLConnectionTextIO`
+  - `bash tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+    - result: FAIL
+    - summary:
+      - `main facade re-exports ISSLConnectionTextIO`
+  - `bash tests/scripts/test_architecture_optional_owner_surface_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - `ARCHITECTURE interface graph must include ISSLConnectionTextIO`
+
+- repair the text-helper owner path:
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.connection.base.pas`
+  - `src/fafafa.ssl.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/INTERFACE_DESIGN_V2.md`
+  - `docs/ARCHITECTURE.md`
+  - `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+  - change:
+    - added `ISSLConnectionTextIO`
+      as the formal owner interface for
+      `ReadString` / `WriteString`
+    - kept the core methods on `ISSLConnection`
+      as `v1.x` convenience mirrors
+    - made `TBaseSSLConnection`
+      explicitly implement `ISSLConnectionTextIO`
+    - re-exported the new owner interface from
+      `fafafa.ssl`
+    - synchronized canonical docs and adjacent owner-surface contracts
+
+- reconcile the adjacent convenience classification contract:
+  - `bash tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+    - initial result: FAIL
+    - summary:
+      - stale design-doc expectation still assumed:
+        `| ReadString, WriteString | ISSLConnection | ... |`
+  - update:
+    - `tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+    - change:
+      - aligned the expected design-doc row to the new
+        `ISSLConnectionTextIO`
+        owner truth
+
+- verify the focused closeout:
+  - `bash tests/scripts/test_isslconnection_text_owner_path_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_architecture_optional_owner_surface_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS

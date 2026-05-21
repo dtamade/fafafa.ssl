@@ -494,6 +494,11 @@ end;
 连接侧 owner surfaces 通过这几组可选接口暴露：
 
 ```pascal
+ISSLConnectionTextIO = interface
+  function ReadString(out AStr: string): Boolean;
+  function WriteString(const AStr: string): Boolean;
+end;
+
 ISSLConnectionControl = interface
   procedure SetTimeout(ATimeout: Integer);
   function GetTimeout: Integer;
@@ -535,6 +540,7 @@ ISSLOCSPStapling = interface
 end;
 ```
 
+- 对 `ReadString` / `WriteString` 这组文本 helper，新代码若在连接创建后仍要沿用这层文本语义，优先通过 `ISSLConnectionTextIO`。
 - 对 timeout / blocking 这组 runtime control state，新代码优先通过 `ISSLConnectionControl`。
 - 对 `GetConnectionInfo` / `GetContext` / `GetSelectedALPNProtocol` / `GetStateString` 这组连接信息 mirrors，新代码优先通过 `ISSLConnectionInfo` 获取。
 - 对健康、性能、诊断信息，新代码优先通过 `ISSLDiagnostics` 获取。
@@ -757,6 +763,7 @@ end;
 - `GetSelectedALPNProtocol` 在 `ISSLConnection` 上仅作为 `v1.x` compatibility-core mirror 保留；当前源码声明已经是编译期 `deprecated`，需要当前连接的协商 ALPN 结果时，新代码优先通过 `ISSLConnectionInfo.GetSelectedALPNProtocol`。
 - `GetStateString` 在 `ISSLConnection` 上仅作为 `v1.x` compatibility-core mirror 保留；当前源码声明已经是编译期 `deprecated`，需要后端相关状态描述时，新代码优先通过 `ISSLConnectionInfo.GetStateString`。
 - `ReadString` / `WriteString` 继续作为 `v1.x` convenience-core 文本 helper 保留；框架/transport 集成优先使用 `Read` / `Write`。
+- 若你在连接创建后仍要沿用文本 helper 这层语义，新代码优先通过 `ISSLConnectionTextIO`。
 - `SetTimeout` / `GetTimeout` 继续作为 `v1.x` connection-adjacent convenience surface 保留；新代码优先在构建阶段使用 `TSSLConnectionBuilder.WithTimeout(...)` / `TSSLConnector.WithTimeout(...)` / `TSSLAcceptor.WithTimeout(...)`。
 - 连接创建后若需要读取或覆盖 runtime control state，新代码优先通过 `ISSLConnectionControl`。
 - `SetBlocking` / `GetBlocking` 继续作为 `v1.x` connection-adjacent convenience surface 保留；新代码优先在构建阶段使用 `TSSLConnectionBuilder.WithBlocking(...)`。

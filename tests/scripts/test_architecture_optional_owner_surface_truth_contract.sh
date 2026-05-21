@@ -30,6 +30,9 @@ forbid_fixed() {
 require_fixed '├─ ISSLConnectionControl   (timeout / blocking owner)' \
   "$doc" \
   "ARCHITECTURE interface graph must include ISSLConnectionControl"
+require_fixed '├─ ISSLConnectionTextIO    (文本 helper owner)' \
+  "$doc" \
+  "ARCHITECTURE interface graph must include ISSLConnectionTextIO"
 require_fixed '├─ ISSLConnectionInfo      (连接信息 mirrors)' \
   "$doc" \
   "ARCHITECTURE interface graph must include ISSLConnectionInfo"
@@ -52,6 +55,9 @@ require_fixed 'connection-side owner surfaces 当前主要通过这些可选接�
 require_fixed '`ISSLConnectionControl`：timeout / blocking runtime control owner' \
   "$doc" \
   "ARCHITECTURE must classify ISSLConnectionControl as runtime owner"
+require_fixed '`ISSLConnectionTextIO`：text helper owner；框架/transport 集成仍优先使用 `Read` / `Write`' \
+  "$doc" \
+  "ARCHITECTURE must classify ISSLConnectionTextIO as text-helper owner"
 require_fixed '`ISSLConnectionInfo`：connection info / ALPN / context / state-string mirrors 的默认 owner' \
   "$doc" \
   "ARCHITECTURE must classify ISSLConnectionInfo as mirror owner"

@@ -50,7 +50,7 @@ done
 
 declare -a design_doc_patterns=(
   '这份文档描述的是 **v2 最小 core 目标**，不是 `v1.5.0` 当前 shipped source 的逐行镜像。'
-  '| ReadString, WriteString | ISSLConnection | `v1.x` convenience-core 文本 helper；框架/transport 集成优先使用 `Read` / `Write` |'
+  '| ReadString, WriteString | ISSLConnectionTextIO | 默认 owner 已切到 ISSLConnectionTextIO；core 侧继续作为 `v1.x` convenience mirror 保留 |'
   '| SetTimeout, GetTimeout | ISSLConnectionControl | 默认 owner 已切到 ISSLConnectionControl；core 侧继续作为 `v1.x` convenience mirror 保留 |'
   '| SetBlocking, GetBlocking | ISSLConnectionControl | 默认 owner 已切到 ISSLConnectionControl；core 侧继续作为 `v1.x` convenience mirror 保留 |'
 )

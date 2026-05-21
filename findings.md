@@ -16949,3 +16949,66 @@
     /
     recommendation truth，
     而不是再重扫 workflow/Windows lane
+
+- 当前 `ISSLConnection`
+  主线里最像 live residual 的 convenience slice
+  已经进一步收窄到：
+  - `ReadString`
+  - `WriteString`
+  它们此前仍是 shipped surface，
+  也仍被 active docs / tests 使用，
+  但还没有像
+  `ISSLConnectionControl`
+  那样的正式 owner path。
+
+- 这次 focused RED
+  直接把缺口钉在 source / facade / architecture 三层：
+  - `base source must declare ISSLConnectionTextIO`
+  - `main facade re-exports ISSLConnectionTextIO`
+  - `ARCHITECTURE interface graph must include ISSLConnectionTextIO`
+  所以这不是“再补一层解释文字”，
+  而是 owner surface
+  本身仍未长出来。
+
+- 因而这批最小正确修法
+  不是删除
+  `ReadString` / `WriteString`，
+  也不是立刻把它们做成 compiler-deprecated，
+  而是先像 timeout / blocking 一样，
+  给它们补出正式 owner path：
+  - `ISSLConnectionTextIO`
+  - `TBaseSSLConnection`
+    显式承接
+  - `ISSLConnection`
+    core 上的方法继续保留为
+    `v1.x`
+    convenience mirror
+
+- 这刀落完之后，
+  `ISSLConnection`
+  的路线判断又更清晰了一层：
+  - text helper
+    不再是 owner-less convenience methods
+  - 当前 core-too-fat
+    的剩余重点
+    更集中在：
+    - 已经有 owner path
+      但仍留在 core 上的 compatibility mirrors
+    - 以及更大的
+      `TSSLConfig`
+      mixed-scope public record
+      这条并行主债
+
+- 这也意味着当前项目总路线图的接口侧完成度又前进了一步：
+  - Windows auto proof
+    已能跟住 shared/core 改动
+  - `ISSLConnection`
+    convenience surface
+    已从
+    “分类真相”
+    继续推进到
+    “真实 owner path”
+  - 接下来更值得继续压的
+    不再是 owner-path 空洞，
+    而是 compatibility baggage
+    本身

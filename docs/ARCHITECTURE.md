@@ -161,6 +161,7 @@ IInterface (FreePascal 内置)
     ├─ ISSLConnection       (连接管理)
     │   ├─ ISSLClientConnection  (客户端扩展)
     │   ├─ ISSLConnectionControl   (timeout / blocking owner)
+    │   ├─ ISSLConnectionTextIO    (文本 helper owner)
     │   ├─ ISSLConnectionInfo      (连接信息 mirrors)
     │   ├─ ISSLDiagnostics         (诊断扩展)
     │   ├─ ISSLSessionResumption   (会话扩展)
@@ -177,6 +178,7 @@ IInterface (FreePascal 内置)
 >
 > `ISSLConnection` 的 connection-side owner surfaces 当前主要通过这些可选接口暴露：
 > - `ISSLConnectionControl`：timeout / blocking runtime control owner
+> - `ISSLConnectionTextIO`：text helper owner；框架/transport 集成仍优先使用 `Read` / `Write`
 > - `ISSLConnectionInfo`：connection info / ALPN / context / state-string mirrors 的默认 owner
 > - `ISSLDiagnostics` / `ISSLSessionResumption` / `ISSLCertificateVerification` / `ISSLOCSPStapling`：其余 connection-side optional owners
 
@@ -221,6 +223,7 @@ end;
 以下代码块是 **概念上的最小 core slice**，不是 `v1.5.0` 当前 shipped source 的完整逐行镜像。
 当前 shipped source 仍保留 `ReadString` / `WriteString` 与 timeout/blocking 这组 convenience-core / connection-adjacent 方法；权威 source-truth 视图请看 `docs/reference/API_REFERENCE.md`。
 当前 shipped source 对 timeout / blocking 这组 runtime control state 已补上 `ISSLConnectionControl` owner path；core 侧继续保留 convenience mirror。
+当前 shipped source 对 `ReadString` / `WriteString` 这组文本 helper 也已补上 `ISSLConnectionTextIO` owner path；core 侧继续保留 convenience mirror。
 
 ```pascal
 ISSLConnection = interface
@@ -255,6 +258,20 @@ ISSLConnectionControl = interface
   function GetTimeout: Integer;
   procedure SetBlocking(ABlocking: Boolean);
   function GetBlocking: Boolean;
+end;
+```
+
+### ISSLConnectionTextIO - 文本 helper (v1.5.0+)
+
+**设计目的**:
+- 为连接创建后的文本 helper 语义提供正式 owner path
+- 保持框架 / transport / framing 集成仍优先直接走 `Read` / `Write`
+- 让 `ISSLConnection` 上的 `ReadString` / `WriteString` 继续作为 `v1.x` convenience mirror 保留
+
+```pascal
+ISSLConnectionTextIO = interface
+  function ReadString(out AStr: string): Boolean;
+  function WriteString(const AStr: string): Boolean;
 end;
 ```
 

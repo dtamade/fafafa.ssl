@@ -17943,3 +17943,102 @@
     recommendation truth
     主线，
     而不是再回头做零碎 docs sweep
+
+### 2026-05-21 ISSLConnection text owner-path adoption
+
+- [completed] 当前新的 live residual
+  已从
+  `timeout / blocking`
+  owner-path 缺口
+  进一步收窄到
+  `ISSLConnection`
+  上最后一组仍然 owner-less 的
+  convenience text helpers：
+  - `ReadString`
+  - `WriteString`
+  - 它们当前仍是 shipped public surface，
+    也仍被 active docs / tests 使用
+  - 但此前没有像
+    `ISSLConnectionControl`
+    那样的正式 owner path
+
+- [completed] focused RED
+  已通过这组新/扩合同先压实：
+  - `tests/scripts/test_isslconnection_text_owner_path_contract.sh`
+    - 首轮 FAIL：
+      `base source must declare ISSLConnectionTextIO`
+  - `tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+    - 首轮 FAIL：
+      `main facade re-exports ISSLConnectionTextIO`
+  - `tests/scripts/test_architecture_optional_owner_surface_truth_contract.sh`
+    - 首轮 FAIL：
+      `ARCHITECTURE interface graph must include ISSLConnectionTextIO`
+  - 说明这不是 wording sweep，
+    而是当前 public/source truth
+    的真实残口
+
+- [completed] 最小正确修法已经落地：
+  - 新增
+    `docs/plans/2026-05-21-isslconnection-text-owner-path-adoption.md`
+  - 新增
+    `tests/contract/test_isslconnection_text_owner_entry.pas`
+  - 新增
+    `tests/scripts/test_isslconnection_text_owner_path_contract.sh`
+  - 更新：
+    - `src/fafafa.ssl.base.pas`
+    - `src/fafafa.ssl.connection.base.pas`
+    - `src/fafafa.ssl.pas`
+    - `docs/reference/API_REFERENCE.md`
+    - `docs/reference/INTERFACE_DESIGN_V2.md`
+    - `docs/ARCHITECTURE.md`
+    - `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+    - `tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+    - `tests/contract/test_facade_optional_owner_surface_entry.pas`
+    - `tests/scripts/test_architecture_optional_owner_surface_truth_contract.sh`
+    - `tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+  - 当前 source 已明确补齐：
+    - `ISSLConnectionTextIO`
+      owner interface
+    - `TBaseSSLConnection`
+      显式承接该 interface
+    - 主门面
+      `fafafa.ssl`
+      re-export
+      `ISSLConnectionTextIO`
+  - `ReadString` / `WriteString`
+    继续保留在
+    `ISSLConnection`
+    core 上，
+    但已不再是 owner-less convenience surface
+
+- [completed] 当前 focused proof：
+  - `bash -n tests/scripts/test_isslconnection_text_owner_path_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_isslconnection_text_owner_path_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_architecture_optional_owner_surface_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  - 当前已具备
+    review / commit / push
+    条件
+
+- [completed] 当前批收口后的默认下一步：
+  - `ISSLConnection`
+    主线的下一层真实残差
+    已不再是
+    owner-less convenience methods
+  - 后续若继续压缩
+    core-too-fat，
+    更适合转向：
+    - compatibility-core mirrors
+      的进一步 demotion 策略
+    - 或切回
+      `TSSLConfig`
+      mixed-scope public record
+      这条并行主债

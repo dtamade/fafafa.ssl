@@ -72,7 +72,8 @@
 - `GetStateString` / `GetContext` 这类已进入 compatibility-mirror 路线的方法，继续优先往 owner surface 收口。
 - 但对 `ReadString` / `WriteString` / `SetTimeout` / `SetBlocking` 这组 convenience 方法，当前更准确的 shipped truth 是：
   - `v1.5.0` source 仍正式保留它们，builder 与活跃 guides 也仍在使用
-  - timeout / blocking 当前已有 `ISSLConnectionControl` owner path；残余 core-too-fat 更集中在 `ReadString` / `WriteString` 等其余 convenience surface
+  - timeout / blocking 当前已有 `ISSLConnectionControl` owner path；text helper 当前也已补上 `ISSLConnectionTextIO` owner path；
+  - 残余 core-too-fat 更集中在其余 compatibility-core mirrors，而不是 owner-less convenience text surface
   - 当前应先完成 classification / recommendation truth 收口，而不是把它们误报成“源码已经移除”
   - 如果未来真的要把它们退出 core，应作为单独的 v2 API surgery 批次推进
 

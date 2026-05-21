@@ -89,6 +89,7 @@ type
  *}
   TBaseSSLConnection = class(TInterfacedObject,
     ISSLConnection,
+    ISSLConnectionTextIO,
     ISSLConnectionControl,
     ISSLDiagnostics,
     ISSLSessionResumption,

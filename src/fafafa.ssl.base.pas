@@ -618,6 +618,7 @@ type
   // 前向声明
   ISSLContext = interface;
   ISSLConnection = interface;
+  ISSLConnectionTextIO = interface;
   ISSLConnectionControl = interface;
   ISSLCertificate = interface;
   ISSLCertificateStore = interface;
@@ -1201,12 +1202,14 @@ type
     {** 读取字符串
         @param AStr 输出字符串
         @preferred-access 框架/transport 集成优先使用 Read/Write；ReadString/WriteString 继续作为 v1.x convenience-core 文本入口保留
+        @owner-note 当前默认 text-helper owner 为 ISSLConnectionTextIO.ReadString；此入口继续作为 v1.x convenience-core mirror 保留
         @returns True 如果读取成功 *}
     function ReadString(out AStr: string): Boolean;
 
     {** 写入字符串
         @param AStr 要发送的字符串
         @preferred-access 框架/transport 集成优先使用 Read/Write；ReadString/WriteString 继续作为 v1.x convenience-core 文本入口保留
+        @owner-note 当前默认 text-helper owner 为 ISSLConnectionTextIO.WriteString；此入口继续作为 v1.x convenience-core mirror 保留
         @returns True 如果写入成功 *}
     function WriteString(const AStr: string): Boolean;
 
@@ -1539,6 +1542,33 @@ type
 
     {** 获取当前连接可用的 max_early_data_size 限额 *}
     function GetEarlyDataLimit: Cardinal;
+  end;
+
+  {**
+   * ISSLConnectionTextIO - 文本 helper 扩展接口
+   *
+   * 承接 `ISSLConnection` 中这组 v1.x convenience-core text helpers：
+   * - ReadString
+   * - WriteString
+   *
+   * 框架 / transport / framing 集成
+   * 仍优先走 `Read` / `Write`；
+   * 但当连接已经创建、调用方仍要沿用文本 helper 这层语义时，
+   * 新代码优先通过这个 optional owner path 访问。
+   *
+   * @stable 1.0
+   * @since 2026-05-21
+   *}
+  ISSLConnectionTextIO = interface
+    ['{C548E7E8-1B8B-4C4D-9C6A-54C738746B4A}']
+
+    {** 读取字符串
+        @owner-note 当前默认 text-helper owner；ISSLConnection.ReadString 继续作为 v1.x convenience-core mirror 保留 *}
+    function ReadString(out AStr: string): Boolean;
+
+    {** 写入字符串
+        @owner-note 当前默认 text-helper owner；ISSLConnection.WriteString 继续作为 v1.x convenience-core mirror 保留 *}
+    function WriteString(const AStr: string): Boolean;
   end;
 
   {**

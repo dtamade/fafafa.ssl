@@ -9,6 +9,7 @@ type
   TFacadeOptionalOwnerSurfacePack = record
     Connection: ISSLConnection;
     ConnectionControl: ISSLConnectionControl;
+    ConnectionTextIO: ISSLConnectionTextIO;
     ConnectionInfo: ISSLConnectionInfo;
     Diagnostics: ISSLDiagnostics;
     SessionResumption: ISSLSessionResumption;

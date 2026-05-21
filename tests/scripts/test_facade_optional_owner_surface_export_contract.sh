@@ -39,6 +39,8 @@ printf '[TEST] facade optional owner surface export contract\n'
 
 require_fixed "$facade" "ISSLConnectionControl = fafafa.ssl.base.ISSLConnectionControl;" \
   "main facade re-exports ISSLConnectionControl"
+require_fixed "$facade" "ISSLConnectionTextIO = fafafa.ssl.base.ISSLConnectionTextIO;" \
+  "main facade re-exports ISSLConnectionTextIO"
 require_fixed "$facade" "TSSLHealthStatus = fafafa.ssl.base.TSSLHealthStatus;" \
   "main facade re-exports TSSLHealthStatus"
 require_fixed "$facade" "TSSLPerformanceMetrics = fafafa.ssl.base.TSSLPerformanceMetrics;" \
