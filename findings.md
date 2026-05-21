@@ -2,6 +2,69 @@
 
 ## 2026-05-21
 
+- linux quickstart current public truth alignment
+  这一刀确认的
+  不是
+  `LINUX_QUICKSTART`
+  只剩少量 metadata
+  漂移，
+  而是
+  这份活跃 Linux 入口页
+  仍混着：
+  - 旧 factory-only 导入
+  - 旧 helper 名称
+  - 已删除示例文件
+  - 不存在 backend 单元名
+  - 旧版本快照
+
+- 当前更准确的收口是：
+  - 新用户普通入口
+    应回到
+    `fafafa.ssl`
+    +
+    `TSSLFactory.GetLibraryInstance(...)`
+  - backend 名称展示
+    应走
+    `LibraryTypeToString(...)`
+  - 快速开始页
+    不该再继续发布
+    `v1.0.0-rc`
+    /
+    `yourusername`
+    这类明显过期入口信息
+
+- 这说明
+  当前 active docs
+  线里的残余，
+  不只是
+  import truth
+  或
+  owner-path truth，
+  还包括
+  “高可见入口页仍在整体发布旧项目快照”
+
+- focused RED
+  首轮暴露的是：
+  - `HEAD` 快照下
+    新 contract
+    第一条就因
+    示例 1
+    仍未使用
+    `fafafa.ssl`
+    而失败
+
+- 这批还确认：
+  - `examples/01_basic_ssl_client.pas`
+    已不存在，
+    当前真实入口示例是：
+    - `examples/01_tls_client.pas`
+  - `fafafa.ssl.openssl.pas`
+    当前并不是
+    有效的 active backend 单元名；
+    OpenSSL 对外实现路径
+    现在是
+    `fafafa.ssl.openssl.backed.pas`
+
 - active examples public import truth alignment
   这一刀确认的
   不是

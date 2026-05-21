@@ -10,6 +10,74 @@
 
 ## Current Status
 
+- [completed] `linux quickstart current public truth alignment`
+  当前 focused 目标：
+  - 收口
+    `docs/guides/LINUX_QUICKSTART.md`
+    里仍残留的
+    旧工厂导入
+    /
+    旧 helper 名称
+    /
+    不存在示例路径
+    /
+    旧版本元数据，
+    让 Linux 新用户入口
+    回到当前
+    facade/factory
+    public truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-linux-quickstart-current-public-truth-alignment.md`
+  - 新增 focused contract：
+    - `tests/contract/test_linux_quickstart_public_entry_probe.pas`
+    - `tests/scripts/test_linux_quickstart_current_public_truth_contract.sh`
+  - 更新：
+    - `docs/guides/LINUX_QUICKSTART.md`
+  当前预期 truth：
+  - Linux quickstart
+    当前普通入口
+    应回到
+    `fafafa.ssl`
+    +
+    `TSSLFactory.GetLibraryInstance(...)`
+  - 文档中
+    不应继续出现
+    已移除示例文件
+    /
+    不存在 backend 单元名
+    /
+    `v1.0.0-rc`
+    元数据
+  当前 focused proof：
+  - `HEAD` snapshot
+    run
+    `tests/scripts/test_linux_quickstart_current_public_truth_contract.sh`
+    - FAIL
+    - summary:
+      - 示例 1
+        still used
+        old factory-only
+        import truth
+  - `bash -n tests/scripts/test_linux_quickstart_current_public_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_linux_quickstart_current_public_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_active_docs_historical_reference_labels_contract.sh`
+    - PASS
+  - focused compile proof：
+    - `examples/01_tls_client.pas`
+      - PASS
+  - `git diff --check`
+    - PASS
+  当前批收口后的默认下一步：
+  - 若 Linux 入口页
+    拉绿，
+    再继续收口
+    其它高可见
+    active guide/example
+    residual
+
 - [completed] `winssl runtime gate example trigger coverage`
   当前 focused 目标：
   - 收口

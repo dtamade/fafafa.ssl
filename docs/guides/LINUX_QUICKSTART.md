@@ -50,7 +50,7 @@ sudo apt-get install -y \
     python3
 
 # 2. 克隆项目
-git clone https://github.com/yourusername/fafafa.ssl.git
+git clone https://github.com/dtamade/fafafa.ssl.git
 cd fafafa.ssl
 
 # 3. 运行默认编译门禁
@@ -75,7 +75,7 @@ sudo dnf install -y \
     python3
 
 # 2. 克隆和验证（同上）
-git clone https://github.com/yourusername/fafafa.ssl.git
+git clone https://github.com/dtamade/fafafa.ssl.git
 cd fafafa.ssl
 python3 scripts/compile_all_modules.py
 bash scripts/run_minimal_ci_gate.sh --fast-local
@@ -89,7 +89,7 @@ bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local
 sudo pacman -S --needed fpc openssl git python
 
 # 2. 克隆和验证（同上）
-git clone https://github.com/yourusername/fafafa.ssl.git
+git clone https://github.com/dtamade/fafafa.ssl.git
 cd fafafa.ssl
 python3 scripts/compile_all_modules.py
 bash scripts/run_minimal_ci_gate.sh --fast-local
@@ -136,18 +136,15 @@ program test_detect;
 
 uses
   SysUtils,
-  fafafa.ssl.factory;
+  fafafa.ssl;
 
 var
-  LibType: TSSLLibraryType;
   Lib: ISSLLibrary;
 begin
   // 自动检测最佳SSL库（Linux上是OpenSSL）
-  LibType := DetectBestLibrary;
-  WriteLn('检测到: ', GetLibraryTypeName(LibType));
-  
-  // 创建库实例
-  Lib := GetLibraryInstance(LibType);
+  Lib := TSSLFactory.GetLibraryInstance(sslAutoDetect);
+  WriteLn('检测到: ', LibraryTypeToString(Lib.GetLibraryType));
+
   if Lib.Initialize then
   begin
     WriteLn('版本: ', Lib.GetVersionString);
@@ -165,7 +162,7 @@ fpc -Fusrc test_detect.pas
 ./test_detect
 
 # 期望输出:
-# 检测到: sslOpenSSL
+# 检测到: OpenSSL
 # 版本: OpenSSL 3.0
 # ✓ SSL库初始化成功！
 ```
@@ -198,10 +195,7 @@ end.
 编译并运行：
 
 ```bash
-fpc -Fu$HOME/freePascal/fpc/units/x86_64-linux/rtl-objpas \
-    -Fu$HOME/freePascal/fpc/units/x86_64-linux/fcl-base \
-    -Fusrc \
-    test_hash.pas
+fpc -Fusrc test_hash.pas
     
 ./test_hash
 
@@ -212,18 +206,14 @@ fpc -Fu$HOME/freePascal/fpc/units/x86_64-linux/rtl-objpas \
 
 ### 示例3: SSL上下文创建
 
-参考 `examples/01_basic_ssl_client.pas`:
+参考 `examples/01_tls_client.pas`:
 
 ```bash
 # 编译示例
-fpc -Fu$HOME/freePascal/fpc/units/x86_64-linux/rtl-objpas \
-    -Fu$HOME/freePascal/fpc/units/x86_64-linux/fcl-base \
-    -Fu$HOME/freePascal/fpc/units/x86_64-linux/fcl-json \
-    -Fusrc \
-    examples/01_basic_ssl_client.pas
+fpc -Fu./src -Fu./examples examples/01_tls_client.pas
 
 # 运行
-./examples/01_basic_ssl_client
+./01_tls_client
 ```
 
 ---
@@ -254,7 +244,7 @@ lazarus-ide
 
 ## 常见问题
 
-### Q: 编译时报 "Can't find unit fafafa.ssl.factory"
+### Q: 编译时报 "Can't find unit fafafa.ssl"
 
 **A**: 未指定src路径
 
@@ -327,11 +317,13 @@ fpc -Fusrc your_program.pas
 ```
 fafafa.ssl/
 ├── src/                    # 核心源代码
-│   ├── fafafa.ssl.factory.pas    # 工厂模式（推荐入口）
-│   ├── fafafa.ssl.openssl.pas    # OpenSSL后端
+│   ├── fafafa.ssl.pas                # 主门面 / 当前普通入口
+│   ├── fafafa.ssl.context.builder.pas # 推荐 context builder 入口
+│   ├── fafafa.ssl.factory.pas        # core factory surface / direct-library helper
+│   ├── fafafa.ssl.openssl.backed.pas # OpenSSL ISSLLibrary 实现
 │   └── ...
 ├── examples/               # 示例程序
-│   ├── 01_basic_ssl_client.pas
+│   ├── 01_tls_client.pas
 │   ├── 02_certificate_validation.pas
 │   └── ...
 ├── scripts/                # 自动化脚本
@@ -384,12 +376,12 @@ fpc -O3 -CX -XX -Xs -Fusrc your_program.pas
 
 ## 获取帮助
 
-- **GitHub Issues**: https://github.com/yourusername/fafafa.ssl/issues
+- **GitHub Issues**: https://github.com/dtamade/fafafa.ssl/issues
 - **文档索引**: [DOCUMENTATION_INDEX.md](../DOCUMENTATION_INDEX.md)
 - **常见问题**: [FAQ.md](FAQ.md)
 
 ---
 
-**更新日期**: 2025-10-28  
-**适用版本**: fafafa.ssl v1.0.0-rc  
+**更新日期**: 2026-05-21
+**适用版本**: fafafa.ssl v1.5.0
 **维护者**: fafafa.ssl团队

@@ -6,6 +6,105 @@
 
 ## 2026-05-21
 
+### Linux Quickstart Current Public Truth Alignment
+
+- inspect active Linux quickstart residuals before editing:
+  - `docs/guides/LINUX_QUICKSTART.md`
+  - `docs/reference/API_REFERENCE.md`
+  - `examples/01_tls_client.pas`
+  - `tests/scripts/test_active_docs_historical_reference_labels_contract.sh`
+  - change:
+    - confirmed
+      `LINUX_QUICKSTART`
+      is still
+      a high-visibility
+      active entry doc
+    - confirmed
+      drift is broader than
+      one import line:
+      - old `fafafa.ssl.factory` sample
+      - stale helper names
+      - removed example path
+      - nonexistent backend unit name
+      - stale version / URL metadata
+
+- add focused batch record and create a dedicated Linux quickstart contract:
+  - `docs/plans/2026-05-21-linux-quickstart-current-public-truth-alignment.md`
+  - `tests/contract/test_linux_quickstart_public_entry_probe.pas`
+  - `tests/scripts/test_linux_quickstart_current_public_truth_contract.sh`
+  - change:
+    - froze
+      current Linux
+      entry-doc truth
+      around
+      `fafafa.ssl`
+      +
+      `TSSLFactory.GetLibraryInstance(...)`
+      +
+      `LibraryTypeToString(...)`
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_linux_quickstart_current_public_truth_contract.sh`
+    - result: PASS
+  - `HEAD` snapshot
+    temp-tree
+    run
+    `tests/scripts/test_linux_quickstart_current_public_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - 示例 1
+        still used
+        old factory-only
+        import truth
+
+- repair Linux quickstart current public truth:
+  - `docs/guides/LINUX_QUICKSTART.md`
+  - change:
+    - replaced
+      old factory-only
+      sample with
+      façade-first
+      sample
+    - switched
+      backend-name display
+      to
+      `LibraryTypeToString(...)`
+    - corrected
+      example path
+      to
+      `examples/01_tls_client.pas`
+    - corrected
+      project structure
+      to current
+      public/backend file truth
+    - updated
+      GitHub URL
+      and
+      current metadata
+    - removed
+      trailing whitespace
+      that briefly caused
+      `git diff --check`
+      to fail
+
+- verify focused closeout:
+  - `bash tests/scripts/test_linux_quickstart_current_public_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_active_docs_historical_reference_labels_contract.sh`
+    - result: PASS
+  - `fpc -B -Fu./src -Fu./examples ... examples/01_tls_client.pas`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+  - note:
+    - `01_tls_client`
+      compile log
+      still contains
+      repo pre-existing
+      warnings/notes,
+      but no new failure
+      from this doc-truth batch
+
 ### Active Examples Public Import Truth Alignment
 
 - inspect current example-import residuals before editing:
