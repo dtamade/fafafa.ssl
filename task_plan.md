@@ -13520,3 +13520,53 @@
   - 简短 review
   - commit / push
   - 继续扫下一层活跃文档里的旧入口 / backend drift
+
+### 2026-05-21 CAPABILITY_MATRIX_GUIDE 当前入口与 backend 真相对齐
+
+- [completed] 当前新的 residual
+  已进一步收窄到
+  `docs/CAPABILITY_MATRIX_GUIDE.md`
+  这份活跃 capability 指南：
+  - 头部仍停在
+    `v1.2.0`
+  - quickstart 仍拆回
+    `fafafa.ssl.base`
+    /
+    `fafafa.ssl.factory`
+  - 实战示例仍用硬编码 backend 列表，
+    漏掉已 shipped 的
+    `sslFreePascal`
+  - 兼容度 FAQ
+    也漏掉
+    `FreePascal`
+  - 支持入口仍残留
+    `your-org`
+    placeholder
+- [completed] 最小正确修法已经落地：
+  - 新增
+    `docs/plans/2026-05-21-capability-matrix-guide-current-entrypoint-and-backend-truth-alignment.md`
+  - 新增
+    `tests/scripts/test_capability_matrix_guide_current_truth_contract.sh`
+  - `CAPABILITY_MATRIX_GUIDE`
+    已切回：
+    - `v1.5.0`
+      doc truth
+    - `uses fafafa.ssl;`
+      的当前公开导入面
+    - `TSSLFactory.GetAvailableLibraries`
+      驱动的 backend 示例，
+      不再静态漏掉
+      `sslFreePascal`
+    - `CompatibilityLevel`
+      当前 shipped 值说明，
+      含
+      `FreePascal = 64`
+    - live issues URL
+      与当前更新时间
+- [completed] 当前批收口后的默认下一步：
+  - `bash -n tests/scripts/test_capability_matrix_guide_current_truth_contract.sh`
+  - `bash tests/scripts/test_capability_matrix_guide_current_truth_contract.sh`
+  - `git diff --check`
+  - 简短 review
+  - commit / push
+  - 继续扫下一份高入口活跃文档里的旧入口 / backend drift

@@ -19811,6 +19811,81 @@
   - summary:
     - no whitespace or patch-format drift remains after the docs batch
 
+- `mcp__ace_tool__.search_context`
+  - query:
+    - locate current release notes / capability matrix guide truth around
+      entrypoints,
+      backend set,
+      builder/factory/facade usage,
+      and backend completeness wording
+  - result: PASS
+  - summary:
+    - confirmed
+      `docs/CAPABILITY_MATRIX_GUIDE.md`
+      is the next high-value active-doc residual
+    - confirmed
+      `RELEASE_NOTES.md`
+      already marks itself as a historical snapshot,
+      while
+      `CAPABILITY_MATRIX_GUIDE`
+      still directly teaches current capability usage
+
+- `rg -n "GetLibraryInstance\\(|DetectBestLibrary|sslFreePascal|your-org|v1.2.0|TSSLContextBuilder|TSSLConnector" docs/RELEASE_NOTES.md docs/CAPABILITY_MATRIX_GUIDE.md`
+  - result: PASS
+  - summary:
+    - surfaced the concrete active-guide drift in
+      `CAPABILITY_MATRIX_GUIDE`
+    - key hits:
+      - stale `v1.2.0` header
+      - hardcoded backend arrays
+      - missing `sslFreePascal`
+      - placeholder support URL
+
+- `rg -n "CompatibilityLevel\\s*:=\\s*" src/fafafa.ssl.*.pas`
+  - result: PASS
+  - summary:
+    - confirmed current backend-published compatibility values:
+      - `OpenSSL = 100`
+      - `WinSSL = 90`
+      - `WolfSSL = 85`
+      - `MbedTLS = 75`
+      - `FreePascal = 64`
+    - this directly proved the active guide was still omitting
+      `FreePascal`
+
+- update docs:
+  - `docs/CAPABILITY_MATRIX_GUIDE.md`
+  - `docs/plans/2026-05-21-capability-matrix-guide-current-entrypoint-and-backend-truth-alignment.md`
+  - `tests/scripts/test_capability_matrix_guide_current_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - aligned the guide to
+      `v1.5.0`
+      current truth
+    - switched quickstart import guidance back to
+      `uses fafafa.ssl;`
+    - replaced hardcoded backend example arrays with
+      `TSSLFactory.GetAvailableLibraries`
+    - restored
+      `sslFreePascal`
+      to capability examples and compatibility FAQ
+    - fixed live support URL / footer version drift
+
+- `bash -n tests/scripts/test_capability_matrix_guide_current_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - shell syntax for the new capability guide contract is clean
+
+- `bash tests/scripts/test_capability_matrix_guide_current_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - active capability guide truth guard turned green after the doc repairs
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains after the capability guide batch
+
 ### Main Backends Ed25519 Certificate Algorithm Truth
 
 - add focused batch inputs:

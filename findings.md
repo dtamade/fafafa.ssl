@@ -12883,3 +12883,66 @@
     与错误文档链接
   - 如果不在这次一起修，
     后续入口审查还会反复被这些低级 drift 打断
+
+- 在继续从高入口活跃文档往下扫时，
+  `docs/CAPABILITY_MATRIX_GUIDE.md`
+  又暴露出另一类很典型的 capability 文档漂移：
+  - 它不是完全错误，
+    但仍停留在
+    `v1.2.0`
+    视角
+  - 所以会把“当前 capability 真相”与“能力矩阵最初引入时的历史语境”
+    混在一起
+
+- 这份 guide 当前最真实的问题主要有 5 类：
+  - 版本头仍停在
+    `v1.2.0`
+  - quickstart capability 查询仍拆成
+    `fafafa.ssl.base`
+    /
+    `fafafa.ssl.factory`
+    而不是当前更高入口的
+    `uses fafafa.ssl;`
+  - backend compare / runtime init 示例仍用硬编码 backend 列表
+  - 这会直接漏掉当前 shipped 的
+    `sslFreePascal`
+  - 支持入口仍残留
+    `your-org`
+    placeholder
+
+- 这类 guide drift
+  和 FAQ/COMMON_PITFALLS 的伤害不完全一样：
+  - FAQ 更容易把新用户带回旧 bootstrap 路径
+  - capability guide 则更容易把我们后续的 backend completeness 心智重新带偏，
+    让人误以为：
+    - shipped backend 集合仍只剩
+      `OpenSSL / WolfSSL / MbedTLS / WinSSL`
+    - `sslFreePascal`
+      还不是当前 capability 讨论中的一等成员
+
+- 当前更准确的 capability 文档真相应明确保留：
+  - `TSSLFactory.GetLibraryInstance(...)`
+    仍是当前 public library-entrypoint
+  - 但普通 capability / helper 查询
+    不必再拆回
+    `uses fafafa.ssl.base`
+    /
+    `fafafa.ssl.factory`
+  - backend 示例若想代表“当前 shipped 集合”，
+    最稳的写法应改成
+    `TSSLFactory.GetAvailableLibraries`
+    驱动，
+    而不是手写固定数组
+
+- `CompatibilityLevel`
+  这一栏也暴露出同类问题：
+  - 源码当前已经发布：
+    - `OpenSSL = 100`
+    - `WinSSL = 90`
+    - `WolfSSL = 85`
+    - `MbedTLS = 75`
+    - `FreePascal = 64`
+  - 但活跃 guide 仍只列前四个，
+    继续把
+    `FreePascal`
+    从 capability 讨论里静默漏掉

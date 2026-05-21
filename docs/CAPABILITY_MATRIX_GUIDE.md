@@ -1,7 +1,7 @@
 # 能力矩阵使用指南
 
-**版本**: v1.2.0
-**适用范围**: fafafa.ssl v1.2.0+
+**版本**: v1.5.0
+**适用范围**: fafafa.ssl v1.5.0+
 **目标读者**: 中高级开发者
 
 ---
@@ -20,7 +20,7 @@
 
 ## 简介
 
-能力矩阵（Capability Matrix）是 fafafa.ssl v1.2.0 引入的细粒度后端能力查询系统。它允许您：
+能力矩阵最早在 fafafa.ssl v1.2.0 引入；本文当前内容对齐 fafafa.ssl v1.5.0 shipped truth。它允许您：
 
 - 🔍 **查询后端特性**: TLS 版本、算法支持、协议支持等
 - 📊 **评估后端质量**: 安全评分、性能评分
@@ -120,12 +120,11 @@ type
 ### 获取能力矩阵
 
 ```pascal
-uses
-  fafafa.ssl.base,
-  fafafa.ssl.factory;
+uses fafafa.ssl;
 
 var
   Lib: ISSLLibrary;
+  Ctx: ISSLContext;
   Caps: TSSLBackendCapabilities;
 begin
   // 方式1: 通过工厂获取库
@@ -137,6 +136,8 @@ begin
   Caps := Ctx.GetLibrary.GetCapabilities;
 end;
 ```
+
+普通 capability / native-handle 查询不必再拆分回 `uses fafafa.ssl.base` / `fafafa.ssl.factory`；`fafafa.ssl` 已 re-export 当前所需的 capability helper surface。
 
 ### 基础查询
 
@@ -460,30 +461,31 @@ begin
     begin
       // Windows 桌面：优先使用 WinSSL（系统集成）
       Caps := TSSLFactory.GetLibraryInstance(sslWinSSL).GetCapabilities;
-      if Caps.SupportsSystemCertStore then
+      if Caps.SupportsSystemCertStore and (not Caps.RequiresExternalLibrary) then
         Exit(sslWinSSL);
     end;
 
-    'embedded':
+    'pascal-first':
     begin
-      // 嵌入式：优先使用 MbedTLS（小体积）
-      Caps := TSSLFactory.GetLibraryInstance(sslMbedTLS).GetCapabilities;
+      // Pascal-first / 零外部 SSL 动态库：优先使用 FreePascal backend
+      Caps := TSSLFactory.GetLibraryInstance(sslFreePascal).GetCapabilities;
       if not Caps.RequiresExternalLibrary then
-        Exit(sslMbedTLS);
+        Exit(sslFreePascal);
     end;
 
-    'high-performance':
+    'feature-complete':
     begin
-      // 高性能：优先使用 OpenSSL（性能最佳）
+      // 功能完整度优先：优先使用 OpenSSL
       Caps := TSSLFactory.GetLibraryInstance(sslOpenSSL).GetCapabilities;
-      if (GetPerformanceScore(Caps) >= 90) and
-         Caps.HasHardwareAcceleration then
+      if Caps.SupportsTLS13 and
+         IsFeatureStable(Caps.ALPNSupport) and
+         IsFeatureStable(Caps.SNISupport) then
         Exit(sslOpenSSL);
     end;
   end;
 
-  // 默认：OpenSSL
-  Result := sslOpenSSL;
+  // 默认：交回工厂按当前注册优先级与可用性选择
+  Result := TSSLFactory.DetectBestLibrary;
 end;
 ```
 
@@ -524,34 +526,37 @@ end;
 program backend_compare;
 
 uses
-  SysUtils, fafafa.ssl.base, fafafa.ssl.factory;
+  SysUtils, fafafa.ssl;
 
 procedure CompareBackends;
-const
-  Backends: array[0..3] of TSSLLibraryType =
-    (sslOpenSSL, sslWolfSSL, sslMbedTLS, sslWinSSL);
 var
-  I: Integer;
+  AvailableBackends: TSSLLibraryTypes;
+  Backend: TSSLLibraryType;
   Lib: ISSLLibrary;
   Caps: TSSLBackendCapabilities;
 begin
   WriteLn('Backend Comparison:');
   WriteLn('==========================================');
 
-  for I := Low(Backends) to High(Backends) do
+  AvailableBackends := TSSLFactory.GetAvailableLibraries;
+
+  for Backend := Low(TSSLLibraryType) to High(TSSLLibraryType) do
   begin
+    if not (Backend in AvailableBackends) then
+      Continue;
+
     try
-      Lib := TSSLFactory.GetLibraryInstance(Backends[I]);
+      Lib := TSSLFactory.GetLibraryInstance(Backend);
       if not Assigned(Lib) then
       begin
-        WriteLn(SSL_LIBRARY_NAMES[Backends[I]], ': Not available');
+        WriteLn(LibraryTypeToString(Backend), ': Not available');
         Continue;
       end;
 
       Caps := Lib.GetCapabilities;
 
       WriteLn;
-      WriteLn('Backend: ', SSL_LIBRARY_NAMES[Caps.BackendType]);
+      WriteLn('Backend: ', LibraryTypeToString(Caps.BackendType));
       WriteLn('Version: ', Caps.BackendVersion);
       WriteLn('Security Score: ', GetSecurityScore(Caps), '/100');
       WriteLn('Performance Score: ', GetPerformanceScore(Caps), '/100');
@@ -561,7 +566,7 @@ begin
       WriteLn('System Certs: ', Caps.SupportsSystemCertStore);
     except
       on E: Exception do
-        WriteLn(SSL_LIBRARY_NAMES[Backends[I]], ': Error - ', E.Message);
+        WriteLn(LibraryTypeToString(Backend), ': Error - ', E.Message);
     end;
   end;
 end;
@@ -638,25 +643,24 @@ end;
 function InitializeSSL(out ALib: ISSLLibrary;
                        out AContext: ISSLContext): Boolean;
 var
-  Backends: array of TSSLLibraryType;
-  I: Integer;
+  AvailableBackends: TSSLLibraryTypes;
+  Backend: TSSLLibraryType;
   Caps: TSSLBackendCapabilities;
 begin
   Result := False;
 
-  // 按优先级尝试后端
-  {$IFDEF WINDOWS}
-  Backends := [sslWinSSL, sslOpenSSL, sslWolfSSL];
-  {$ELSE}
-  Backends := [sslOpenSSL, sslWolfSSL, sslMbedTLS];
-  {$ENDIF}
+  // 读取当前真正可用的 backend 集合（会自动覆盖 sslFreePascal / optional backends）
+  AvailableBackends := TSSLFactory.GetAvailableLibraries;
 
-  for I := Low(Backends) to High(Backends) do
+  for Backend := Low(TSSLLibraryType) to High(TSSLLibraryType) do
   begin
-    try
-      WriteLn('Trying backend: ', SSL_LIBRARY_NAMES[Backends[I]]);
+    if not (Backend in AvailableBackends) then
+      Continue;
 
-      ALib := TSSLFactory.GetLibraryInstance(Backends[I]);
+    try
+      WriteLn('Trying backend: ', LibraryTypeToString(Backend));
+
+      ALib := TSSLFactory.GetLibraryInstance(Backend);
       if not Assigned(ALib) then
       begin
         WriteLn('  Not available');
@@ -745,11 +749,14 @@ end;
 
 ### Q4: 不同后端的 CompatibilityLevel 是如何计算的？
 
-**A**: CompatibilityLevel (0-100) 表示与 OpenSSL 的兼容程度：
+**A**: CompatibilityLevel (0-100) 表示当前 backend 相对 OpenSSL public surface 的兼容程度。当前 shipped 值示例：
 - **OpenSSL**: 100% (基准)
 - **WinSSL**: 90% (大部分功能兼容)
 - **WolfSSL**: 85% (部分功能需要配置)
 - **MbedTLS**: 75% (针对嵌入式，功能精简)
+- **FreePascal**: 64% (Pascal-first / pure TLS core path)
+
+真正做决策时，请优先读取运行时 `Caps.CompatibilityLevel`，不要把这些数字当成永远不变的固定 truth。
 
 ### Q5: 如何处理后端的 KnownIssues？
 
@@ -819,12 +826,12 @@ end;
 ## 反馈与支持
 
 如有问题或建议，请：
-- 提交 Issue: https://github.com/your-org/fafafa.ssl/issues
+- 提交 Issue: https://github.com/dtamade/fafafa.ssl/issues
 - 查看示例: `examples/` 目录
 - 查看测试: `tests/test_capability_matrix_*.pas`
 
 ---
 
-**文档版本**: 1.0
-**最后更新**: 2026-02-05
+**文档版本**: v1.5.0
+**最后更新**: 2026-05-21
 **作者**: fafafa.ssl 团队
