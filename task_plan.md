@@ -62,6 +62,19 @@
         import truth
   - `git diff --check`
     - PASS
+  - post-push proof：
+    - `git push`
+      - PASS
+      - commit:
+        - `9b92b6f`
+          `docs: harden code style import truth`
+    - `gh run view 26239845655 --json ...`
+      - PASS
+      - `CI`
+        run `26239845655`
+        for commit
+        `9b92b6f`
+        completed `success`
   当前批收口后的默认下一步：
   - 继续静态分类
     quickstart / repo-structure
