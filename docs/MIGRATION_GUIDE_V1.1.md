@@ -16,6 +16,11 @@ v1.1.0 引入了架构改进，将 `GetNativeHandle` 方法从核心接口移至
 
 **向后兼容性**: ✅ 对于标准用户代码，此变更完全向后兼容，无需任何修改。
 
+> 当前口径：
+> - 普通新代码优先使用 `uses fafafa.ssl;` + `TSSLContextBuilder` / `TSSLConnector`
+> - 只有在你明确固定 backend、或需要 native-handle 高级访问时，才使用
+>   `TSSLFactory.GetLibraryInstance(...)` + `Lib.CreateContext(...)`
+
 ---
 
 ## 谁会受到影响？
@@ -25,16 +30,24 @@ v1.1.0 引入了架构改进，将 `GetNativeHandle` 方法从核心接口移至
 如果您的代码仅使用以下方式：
 
 ```pascal
-// 标准用法 - 完全不受影响
-Lib := TSSLFactory.CreateLibrary(sslOpenSSL);
-Ctx := Lib.CreateContext(sslCtxClient);
-Conn := Ctx.CreateConnection(Socket);
-Cert := Lib.CreateCertificate;
+uses
+  fafafa.ssl,
+  fafafa.ssl.context.builder;
 
-// 使用接口方法 - 完全不受影响
-Ctx.SetProtocolVersions(sslProtocolTLS12, sslProtocolTLS13);
-Conn.Connect;
-Cert.LoadFromFile('cert.pem');
+var
+  Ctx: ISSLContext;
+  TLS: TSSLConnector;
+  Stream: TSSLStream;
+begin
+  Ctx := TSSLContextBuilder.Create
+    .WithTLS12And13
+    .WithVerifyPeer
+    .BuildClient;
+
+  TLS := TSSLConnector.FromContext(Ctx);
+  Stream := TLS.ConnectSocket(Socket, 'example.com');
+  Stream.Free;
+end;
 ```
 
 **您无需任何修改！** 继续使用即可。
@@ -68,7 +81,8 @@ ISSLConnection = interface
 end;
 
 // 使用方式
-Ctx := Factory.CreateContext(...);
+Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
+Ctx := Lib.CreateContext(sslCtxClient);
 SSL_CTX := PSSL_CTX(Ctx.GetNativeHandle);  // 直接调用
 ```
 
@@ -90,7 +104,8 @@ ISSLNativeHandleAccess = interface
 end;
 
 // 使用方式 - 需要接口查询
-Ctx := Factory.CreateContext(...);
+Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
+Ctx := Lib.CreateContext(sslCtxClient);
 if Supports(Ctx, ISSLNativeHandleAccess, NativeAccess) then
   SSL_CTX := PSSL_CTX(NativeAccess.GetNativeHandle);
 ```
@@ -113,14 +128,16 @@ if Supports(Ctx, ISSLNativeHandleAccess, NativeAccess) then
 
 ```pascal
 uses
-  fafafa.ssl.base,
+  fafafa.ssl,
   fafafa.ssl.openssl.api.ssl;
 
 var
+  Lib: ISSLLibrary;
   Ctx: ISSLContext;
   SSL_CTX: PSSL_CTX;
 begin
-  Ctx := Factory.CreateContext(sslCtxClient, sslOpenSSL);
+  Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
+  Ctx := Lib.CreateContext(sslCtxClient);
   SSL_CTX := PSSL_CTX(Ctx.GetNativeHandle);  // 旧方式
   // 使用 SSL_CTX
 end;
@@ -130,21 +147,23 @@ end;
 
 ```pascal
 uses
-  fafafa.ssl.base,
+  fafafa.ssl,
   fafafa.ssl.openssl.api.ssl,
-  fafafa.ssl.openssl.native_handle;  // 新增
+  fafafa.ssl.native_handle;  // 当前统一 helper
 
 var
+  Lib: ISSLLibrary;
   Ctx: ISSLContext;
   SSL_CTX: PSSL_CTX;
 begin
-  Ctx := Factory.CreateContext(sslCtxClient, sslOpenSSL);
+  Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
+  Ctx := Lib.CreateContext(sslCtxClient);
 
   // 方式 1: 使用辅助函数（推荐）
   SSL_CTX := PSSL_CTX(GetNativeHandleSafe(Ctx, 'MyCode.DoSomething'));
 
-  // 方式 2: 可选检查
-  if TryGetNativeHandle(Ctx, Pointer(SSL_CTX)) then
+  // 方式 2: 类型安全的 Try 版本
+  if specialize TryGetNativeHandleAs<PSSL_CTX>(Ctx, SSL_CTX) and (SSL_CTX <> nil) then
     // 使用 SSL_CTX
   else
     WriteLn('This backend does not provide native handles');
@@ -157,14 +176,16 @@ end;
 
 ```pascal
 uses
-  fafafa.ssl.base;
+  fafafa.ssl;
 
 var
+  Lib: ISSLLibrary;
   Ctx: ISSLContext;
   NativeAccess: ISSLNativeHandleAccess;
   SSL_CTX: PSSL_CTX;
 begin
-  Ctx := Factory.CreateContext(sslCtxClient, sslOpenSSL);
+  Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
+  Ctx := Lib.CreateContext(sslCtxClient);
 
   // 检查是否支持原生句柄访问
   if not Supports(Ctx, ISSLNativeHandleAccess, NativeAccess) then
@@ -246,7 +267,10 @@ type
 
 ## 辅助函数参考
 
-每个后端提供了两个辅助函数用于安全访问原生句柄：
+当前推荐使用统一辅助单元 `fafafa.ssl.native_handle`；
+如需保持 backend-specific helper，现有单元也仍可用。
+
+统一 helper 暴露的核心函数如下：
 
 ### GetNativeHandleSafe
 
@@ -254,7 +278,7 @@ type
 
 ```pascal
 function GetNativeHandleSafe(const AObject: IInterface;
-                              const AContextMsg: string): Pointer;
+                              const AContext: string = ''): Pointer;
 ```
 
 **说明**:
@@ -262,12 +286,12 @@ function GetNativeHandleSafe(const AObject: IInterface;
 - 安全获取原生句柄
 - 如果对象不支持 `ISSLNativeHandleAccess`，抛出异常
 - 如果句柄为 `nil`，抛出异常
-- `AContextMsg` 用于提供错误上下文（如 `'MyClass.MyMethod'`）
+- `AContext` 用于提供错误上下文（如 `'MyClass.MyMethod'`）
 
 **示例**:
 
 ```pascal
-uses fafafa.ssl.openssl.native_handle;
+uses fafafa.ssl.native_handle;
 
 SSL_CTX := PSSL_CTX(GetNativeHandleSafe(Ctx, 'TMyApp.Initialize'));
 ```
@@ -284,26 +308,32 @@ function TryGetNativeHandle(const AObject: IInterface;
 **说明**:
 
 - 尝试获取原生句柄
-- 返回 `True` 如果成功，`False` 如果对象不支持或句柄为 `nil`
+- 返回 `True` 如果对象支持原生句柄接口，`False` 如果不支持
+- 输出句柄可能仍为 `nil`，这通常表示对象尚未完成初始化
 - 不抛出异常
 
 **示例**:
 
 ```pascal
-uses fafafa.ssl.openssl.native_handle;
+uses fafafa.ssl.native_handle;
 
-if TryGetNativeHandle(Ctx, Pointer(SSL_CTX)) then
-  // 使用 SSL_CTX
-else
-  WriteLn('Native handle not available');
+var
+  Handle: Pointer;
+begin
+  if TryGetNativeHandle(Ctx, Handle) and (Handle <> nil) then
+    SSL_CTX := PSSL_CTX(Handle)
+  else
+    WriteLn('Native handle not available');
+end;
 ```
 
 ### 可用的辅助单元
 
-| 后端    | 辅助单元                           |
-| ------- | ---------------------------------- |
+| 场景 | 辅助单元 |
+|------|----------|
+| 通用（推荐） | `fafafa.ssl.native_handle` |
 | OpenSSL | `fafafa.ssl.openssl.native_handle` |
-| WinSSL  | `fafafa.ssl.winssl.native_handle`  |
+| WinSSL | `fafafa.ssl.winssl.native_handle` |
 | MbedTLS | `fafafa.ssl.mbedtls.native_handle` |
 | WolfSSL | `fafafa.ssl.wolfssl.native_handle` |
 
@@ -568,14 +598,14 @@ var
   Lib: ISSLLibrary;
   Caps: TSSLBackendCapabilities;
 begin
-  Candidates := [sslOpenSSL, sslWolfSSL, sslMbedTLS, sslWinSSL];
+  Candidates := [sslOpenSSL, sslFreePascal, sslWolfSSL, sslMbedTLS, sslWinSSL];
   BestScore := 0;
   Result := sslOpenSSL;
 
   for I := Low(Candidates) to High(Candidates) do
   begin
     try
-      Lib := TSSLFactory.GetLibrary(Candidates[I]);
+      Lib := TSSLFactory.GetLibraryInstance(Candidates[I]);
       if not Assigned(Lib) then
         Continue;
 

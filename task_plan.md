@@ -13716,3 +13716,63 @@
     commit / push
     条件
   - 收口后继续扫下一份高入口活跃文档里的旧 helper / 旧签名 / backend 依赖真相漂移
+
+### 2026-05-21 MIGRATION_GUIDE 当前 public entrypoint 与 native-handle 真相对齐
+
+- [completed] 当前新的 residual
+  已继续收窄到
+  `docs/MIGRATION_GUIDE_V1.1.md`
+  这份迁移文档：
+  - “99% 用户”区块
+    仍展示
+    `TSSLFactory.CreateLibrary(...)`
+  - 多处 native-handle 迁移示例
+    仍写
+    `Factory.CreateContext(...)`
+  - 智能后端选择示例
+    仍写
+    `TSSLFactory.GetLibrary(...)`
+  - helper 参考段
+    还叠加了两条更细的真相漂移：
+    - `AContextMsg`
+      旧参数名
+    - `TryGetNativeHandle(Ctx, Pointer(SSL_CTX))`
+      这种当前并不成立的示例
+- [completed] 最小正确修法已经落地：
+  - 新增
+    `docs/plans/2026-05-21-migration-guide-current-public-entrypoint-and-native-handle-truth-alignment.md`
+  - 新增
+    `tests/scripts/test_migration_guide_current_public_entrypoint_truth_contract.sh`
+  - `MIGRATION_GUIDE_V1.1`
+    已切回：
+    - 普通新代码：
+      `fafafa.ssl`
+      +
+      `TSSLContextBuilder`
+      /
+      `TSSLConnector`
+    - fixed-backend / native-handle 高级场景：
+      `TSSLFactory.GetLibraryInstance(...)`
+      +
+      `Lib.CreateContext(...)`
+    - 当前统一 helper：
+      `fafafa.ssl.native_handle`
+    - `TryGetNativeHandle`
+      示例与说明
+      对齐到当前接口真实语义
+    - 智能后端选择示例
+      不再使用
+      `GetLibrary(...)`
+      且补回
+      `sslFreePascal`
+- [completed] 当前批收口后的默认下一步：
+  - `bash -n tests/scripts/test_migration_guide_current_public_entrypoint_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_migration_guide_current_public_entrypoint_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  - 当前已具备
+    commit / push
+    条件
+  - 收口后继续扫下一份高入口活跃文档里的旧 public entrypoint / backend / helper truth drift

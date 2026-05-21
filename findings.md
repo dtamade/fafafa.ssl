@@ -13074,3 +13074,64 @@
     不只出现在 WinSSL 专题文档里
   - 只要高入口依赖文档还留着旧数值，
     后续路线判断就会反复被错误平台阈值干扰
+
+- `MIGRATION_GUIDE_V1.1.md`
+  这轮暴露的是“历史迁移文档继续发布当前入口漂移”的问题：
+  - 它表面上在讲
+    v1.1
+    的 native-handle 设计边界，
+    但高入口示例已经把调用方带回：
+    - `TSSLFactory.CreateLibrary(...)`
+    - `Factory.CreateContext(...)`
+    - `TSSLFactory.GetLibrary(...)`
+
+- 这类 drift
+  比普通历史说明更危险：
+  - 因为迁移文档天然会被高级用户当成
+    “底层用法权威页”
+  - 一旦这里继续发布旧入口，
+    后续高级示例、
+    contract、
+    backend 文档
+    就会反复把旧 public surface 写回来
+
+- 这页还叠加了第二层更细的 helper truth 漂移：
+  - `GetNativeHandleSafe`
+    参考段仍写
+    `AContextMsg`
+  - `TryGetNativeHandle`
+    仍被写成：
+    “对象不支持或句柄为 nil 时返回 False”
+  - 示例甚至写成：
+    `TryGetNativeHandle(Ctx, Pointer(SSL_CTX))`
+
+- 但当前源码真实语义是：
+  - 统一 helper
+    优先走
+    `fafafa.ssl.native_handle`
+  - `TryGetNativeHandle`
+    的布尔返回值
+    代表对象是否支持
+    `ISSLNativeHandleAccess`
+  - 输出句柄
+    仍可能是
+    `nil`
+    ，
+    所以要求已初始化句柄时
+    还要额外检查
+    handle 本身
+
+- 当前更准确的迁移文档真相应明确保留：
+  - 普通新代码：
+    `fafafa.ssl`
+    +
+    `TSSLContextBuilder`
+    /
+    `TSSLConnector`
+  - fixed-backend / native-handle 高级场景：
+    `TSSLFactory.GetLibraryInstance(...)`
+    +
+    `Lib.CreateContext(...)`
+  - `sslFreePascal`
+    已是 shipped backend，
+    不是未来占位描述

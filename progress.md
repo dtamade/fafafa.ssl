@@ -20130,6 +20130,124 @@
     - confirmed immediately before this final record sync that the batch still stayed green
     - confirmed this batch remained the only active worktree delta
 
+### Migration Guide Current Public Entrypoint And Native-Handle Truth Alignment
+
+- `mcp__ace_tool__.search_context`
+  - query:
+    - locate current migration-guide truth around
+      public entrypoints,
+      `GetLibraryInstance`,
+      `CreateLibrary` / `GetLibrary`,
+      shipped `sslFreePascal`,
+      and current native-handle helper guidance
+  - result: PASS
+  - summary:
+    - confirmed
+      `docs/MIGRATION_GUIDE_V1.1.md`
+      still published:
+      - `TSSLFactory.CreateLibrary(...)`
+      - `Factory.CreateContext(...)`
+      - `TSSLFactory.GetLibrary(...)`
+      - stale helper guidance around
+        `AContextMsg`
+        and
+        `TryGetNativeHandle(...)`
+
+- inspect current source/public truth:
+  - `src/fafafa.ssl.factory.pas`
+  - `src/fafafa.ssl.pas`
+  - `src/fafafa.ssl.native_handle.pas`
+  - result: PASS
+  - summary:
+    - confirmed
+      `CreateLibrary`
+      is not current public entrypoint truth for docs
+    - confirmed current advanced fixed-backend path is
+      `TSSLFactory.GetLibraryInstance(...)`
+      +
+      `Lib.CreateContext(...)`
+    - confirmed unified helper unit is
+      `fafafa.ssl.native_handle`
+    - confirmed current
+      `TryGetNativeHandle`
+      bool only states interface support;
+      output handle can still be
+      `nil`
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-migration-guide-current-public-entrypoint-and-native-handle-truth-alignment.md`
+  - `tests/scripts/test_migration_guide_current_public_entrypoint_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - documented the batch as migration-guide public-entrypoint truth repair
+    - added a static guard for old entrypoints and unified-helper truth
+
+- `bash -n tests/scripts/test_migration_guide_current_public_entrypoint_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - shell syntax for the new migration-guide contract is clean
+
+- `bash tests/scripts/test_migration_guide_current_public_entrypoint_truth_contract.sh`
+  - result: RED
+  - summary:
+    - first run failed immediately on missing
+      `TSSLContextBuilder`
+    - confirmed the migration guide still had real current-entrypoint drift,
+      not just wording differences
+
+- update docs:
+  - `docs/MIGRATION_GUIDE_V1.1.md`
+  - `tests/scripts/test_migration_guide_current_public_entrypoint_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - switched the standard-user path to
+      `fafafa.ssl`
+      +
+      `TSSLContextBuilder`
+      /
+      `TSSLConnector`
+    - switched advanced native-handle examples to
+      `TSSLFactory.GetLibraryInstance(...)`
+      +
+      `Lib.CreateContext(...)`
+    - switched helper guidance to
+      `fafafa.ssl.native_handle`
+    - corrected
+      `TryGetNativeHandle`
+      semantics and examples
+    - removed
+      `TSSLFactory.CreateLibrary(...)`
+      /
+      `Factory.CreateContext(...)`
+      /
+      `TSSLFactory.GetLibrary(...)`
+      drift
+
+- `bash tests/scripts/test_migration_guide_current_public_entrypoint_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - confirmed the migration guide now keeps:
+      - current standard entrypoint truth
+      - current advanced fixed-backend truth
+      - unified native-handle helper truth
+
+- final recheck after planning-file sync:
+  - `bash tests/scripts/test_migration_guide_current_public_entrypoint_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+  - `git status --short`
+    - result: PASS
+  - summary:
+    - confirmed the migration-guide batch stayed green after later
+      `task_plan.md`
+      /
+      `findings.md`
+      /
+      `progress.md`
+      sync
+    - confirmed the active worktree delta is scoped to this batch only
+
 ### Main Backends Ed25519 Certificate Algorithm Truth
 
 - add focused batch inputs:
