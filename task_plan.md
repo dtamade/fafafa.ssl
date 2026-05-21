@@ -10,6 +10,97 @@
 
 ## Current Status
 
+- [completed] `migration guide phase 2.4 TBufferSize truth alignment`
+  当前 focused 目标：
+  - 复核
+    `TBufferSize`
+    是否真的是下一条
+    type-safety adoption
+    实现缺口，
+    还是文档把它讲成了一个并不存在的当前高入口能力
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-migration-guide-phase24-tbuffersize-truth-alignment.md`
+  - 新增 contract：
+    - `tests/scripts/test_migration_guide_phase24_tbuffersize_truth_contract.sh`
+  - 更新：
+    - `docs/guides/MIGRATION_GUIDE_PHASE_2.4.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_migration_guide_phase24_tbuffersize_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_migration_guide_phase24_tbuffersize_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前状态：
+  - 重新核对后已确认：
+    `TBufferSize`
+    当前不是
+    `TTimeoutDuration`
+    那种“已存在真实高入口，只差 typed overload 接入”的 seam
+  - 当前 source / factory / direct-library truth
+    反而已经明确：
+    - `TSSLConfig.BufferSize`
+      是
+      connection-scoped buffering hint
+    - factory /
+      direct-library
+      创建路径
+      对自定义值
+      会显式 reject
+    - 当前推荐入口
+      是外围
+      socket / stream / transport / app-level
+      buffering policy
+  - 真实缺口落在：
+    `docs/guides/MIGRATION_GUIDE_PHASE_2.4.md`
+    仍把
+    `TBufferSize`
+    混进一个看似当前库内存在的
+    `ConfigureSSLConnection(...)`
+    /
+    `SetBuffer(...)`
+    路径
+  - 修复后：
+    - guide 现在明确写出
+      当前 TLS context / factory / direct-library path
+      没有单独的
+      `WithBufferSize(...)`
+      /
+      `SetBuffer(...)`
+      public entrypoint
+    - 组合示意被重新标记为：
+      你自己的 typed wrapper / policy boundary
+    - checklist
+      也收口为：
+      `TBufferSize`
+      适用于你自己的
+      transport / buffer policy helper
+  当前实施判断：
+  - 这批的价值不在于“又补一个 typed API”，
+    而在于及时纠正路线：
+    - 没有沿错误方向
+      给当前库硬加一个并不存在的
+      buffer-size 高入口
+    - 而是把活跃迁移文档收回
+      当前实现真相
+  当前路线图进度判断：
+  - 这批进一步说明，
+    下一条高价值路线
+    不能只看
+    “主门面 re-export 了哪些 safety type”，
+    还要先过一遍：
+    当前 runtime / factory / builder
+    是否真的存在可接入的主路径
+  下一刀：
+  - 继续沿
+    public-surface completeness
+    主线前进，
+    但优先排除这种
+    “看起来像 adoption gap，
+    实际是文档残留”
+    的假目标
+
 - [completed] `context builder session-timeout safety adoption`
   当前 focused 目标：
   - 把

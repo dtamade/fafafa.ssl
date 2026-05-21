@@ -358,6 +358,16 @@ AllocateBuffer(TBufferSize.MB(1));        // 1 MB = 1024 KB
 Assert(TBufferSize.KB(8).IsEqual(TBufferSize.Bytes(8192)));
 ```
 
+**当前 `fafafa.ssl` 真相**：
+
+- 当前 `fafafa.ssl` 的 TLS context / factory / direct-library 路径并没有单独的 `WithBufferSize(...)` / `SetBuffer(...)` public 入口。
+- 当前 `TSSLConfig.BufferSize` 仍是 connection-scoped buffering hint；若在 factory / direct-library 创建路径写入自定义值，会被显式拒绝。
+- 若你在当前库里需要调整缓冲策略，应放在外围 socket / stream / transport / app-level buffering layer。
+- 因此 `TBufferSize` 在当前 repo 里更适合：
+  - 你自己的 buffer pool / transport helper
+  - app-level payload / chunk sizing policy
+  - 而不是当前 TLS context builder / factory 配置入口
+
 ---
 
 ## 3. 泛型类型迁移
@@ -579,7 +589,7 @@ end;
 
 **之前**：
 ```pascal
-procedure ConfigureSSLConnection(
+procedure ConfigureLegacyClientPolicy(
   AVersion: Integer;           // ❌ 魔法数字
   ATimeout: Integer;           // ❌ 单位不明
   ABufferSize: Integer;        // ❌ 单位不明
@@ -596,7 +606,7 @@ begin
 end;
 
 // 调用
-ConfigureSSLConnection(13, 30000, 8192, 1);
+ConfigureLegacyClientPolicy(13, 30000, 8192, 1);
 // 参数含义需要查文档
 ```
 
@@ -605,12 +615,14 @@ ConfigureSSLConnection(13, 30000, 8192, 1);
 uses
   fafafa.ssl.safety;
 
-procedure ConfigureSSLConnection(
+procedure ConfigureClientPolicy(
   AVersion: TSSLVersion;               // ✅ 类型安全
   ATimeout: TTimeoutDuration;          // ✅ 明确单位
   ABufferSize: TBufferSize;            // ✅ 明确单位
   AVerifyMode: TVerificationMode       // ✅ 类型安全
 );
+var
+  LBufferBytes: NativeUInt;
 begin
   // 代码自解释
   case AVersion of
@@ -618,15 +630,19 @@ begin
     sslv_TLS12: SetTLS12;
   end;
 
-  SetTimeout(ATimeout.ToMilliseconds);
-  SetBuffer(ABufferSize.ToBytes);
+  // timeout 在当前库里应映射到连接级 API
+  ApplyConnectionTimeout(ATimeout.ToMilliseconds);
+
+  // buffer sizing 保持在 TLS 外围的 transport / IO 层
+  LBufferBytes := ABufferSize.ToBytes;
+  ConfigureTransportBuffering(LBufferBytes);
 
   if AVerifyMode = vm_Peer then
     EnableVerification;
 end;
 
 // 调用
-ConfigureSSLConnection(
+ConfigureClientPolicy(
   sslv_TLS13,                          // TLS 1.3
   TTimeoutDuration.Seconds(30),        // 30 秒
   TBufferSize.KB(8),                   // 8 KB
@@ -634,6 +650,8 @@ ConfigureSSLConnection(
 );
 // 参数含义一目了然
 ```
+
+下面这个组合示意应理解为“你自己的 typed wrapper / policy boundary”，不是当前 `fafafa.ssl` 直接提供的单一 SSL 配置入口。
 
 ---
 
@@ -711,7 +729,7 @@ uses
 
 - [ ] 密钥大小参数 → `TKeySize.Bits()` 或 `TKeySize.Bytes()`
 - [ ] 超时参数 → `TTimeoutDuration.Seconds()` 等
-- [ ] 缓冲区大小 → `TBufferSize.KB()` 等
+- [ ] 缓冲区大小（你自己的 transport / buffer policy helper）→ `TBufferSize.KB()` 等
 
 ### 第 5 步：迁移泛型类型
 

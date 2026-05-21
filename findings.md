@@ -2,6 +2,76 @@
 
 ## 2026-05-21
 
+- `TBufferSize`
+  这条线经过 current source truth
+  复核后，
+  当前并没有暴露出一个像
+  `TTimeoutDuration`
+  那样的
+  “高入口 typed adoption
+  还没落到真实 builder/facade path”
+  缺口
+
+- 相反，
+  repo 当前已经有相当硬的真相锚点：
+  - `TSSLConfig.BufferSize`
+    source comment
+    明确是
+    connection-scoped buffering hint
+  - factory /
+    direct-library
+    path
+    对自定义
+    `BufferSize`
+    都会显式 reject
+  - 当前推荐入口
+    也已经收敛成：
+    外围
+    socket / stream / transport / app-level
+    buffering policy
+
+- 这意味着：
+  如果继续把
+  `TBufferSize`
+  当成
+  “下一条待补进 context builder / factory 的 typed public seam”，
+  反而会把项目往错误方向推，
+  等于在当前 public truth 之外再发明一个新入口
+
+- 当前真实问题
+  不是实现缺口，
+  而是
+  `docs/guides/MIGRATION_GUIDE_PHASE_2.4.md`
+  这份仍会被读到的历史迁移指南
+  还残留两种误导：
+  - 把
+    `TBufferSize`
+    混进一个看似当前库内存在的
+    `ConfigureSSLConnection(...)`
+    统一入口
+  - 在组合示意里继续写
+    `SetBuffer(...)`
+
+- 修复后，
+  这条线的 repo truth
+  重新收敛成：
+  - `TBufferSize`
+    仍是 facade 可见的类型安全单位类型
+  - 但它当前更适合
+    调用方自己的
+    transport / buffer policy helper
+  - 不是当前
+    TLS context / factory / direct-library
+    的 buffer-size public seam
+
+- 这批也给后续路线一个很重要的校正：
+  不能只因为某个 safety type
+  已经被 main facade re-export，
+  就默认它一定还存在一条待补进高入口的实现主线；
+  还要先核对
+  当前 runtime / factory / builder
+  是否真的存在那条可接入路径
+
 - `TTimeoutDuration`
   在 timeout 这条线上，
   当前又暴露出一条更深一层的 adoption gap：

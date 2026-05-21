@@ -6,6 +6,122 @@
 
 ## 2026-05-21
 
+### Migration Guide Phase 2.4 TBufferSize Truth Alignment
+
+- re-check whether `TBufferSize` was a real implementation-adoption target:
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.factory.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/ARCHITECTURE.md`
+  - `docs/plans/2026-05-18-direct-library-connection-scope-clarification.md`
+  - `tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+  - change:
+    - confirmed the current repo truth already says:
+      - `TSSLConfig.BufferSize`
+        is connection-scoped
+      - factory /
+        direct-library
+        reject custom buffer-size config
+      - current replacement path is surrounding
+        transport / IO
+        buffering policy
+    - important conclusion:
+      - `TBufferSize`
+        was not the next
+        builder/facade implementation-adoption seam
+      - the real residual was active-doc drift
+
+- inspect the actual doc drift surface:
+  - `docs/guides/MIGRATION_GUIDE_PHASE_2.4.md`
+  - change:
+    - confirmed the historical phase guide still taught:
+      - a combined
+        `ConfigureSSLConnection(...)`
+        entrypoint
+      - `SetBuffer(...)`
+        inside the combined typed example
+    - confirmed that this could mislead readers into thinking
+      current
+      `fafafa.ssl`
+      exposes a buffer-size TLS public entrypoint
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-migration-guide-phase24-tbuffersize-truth-alignment.md`
+  - `tests/scripts/test_migration_guide_phase24_tbuffersize_truth_contract.sh`
+  - change:
+    - documented the batch as
+      migration-guide truth alignment,
+      not production API expansion
+    - added a focused shell contract
+      to guard:
+      - current no-`WithBufferSize` / no-`SetBuffer` public-entrypoint truth
+      - guide redirect to transport-level buffering policy
+      - wrapper-level labeling for the combined typed example
+
+- establish focused RED before doc repair:
+  - `bash -n tests/scripts/test_migration_guide_phase24_tbuffersize_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_migration_guide_phase24_tbuffersize_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - failed at:
+        `phase 2.4 migration guide must state that current TLS paths do not expose a buffer-size public entrypoint`
+      - important conclusion:
+        - the residual was real live guidance drift,
+          not a speculative polish item
+
+- repair phase-2.4 guide truth:
+  - `docs/guides/MIGRATION_GUIDE_PHASE_2.4.md`
+  - change:
+    - added an explicit
+      `当前 fafafa.ssl 真相`
+      block for
+      `TBufferSize`
+    - stated that current
+      TLS context / factory / direct-library
+      paths do not expose
+      `WithBufferSize(...)`
+      /
+      `SetBuffer(...)`
+    - stated that custom
+      `TSSLConfig.BufferSize`
+      is rejected on
+      factory / direct-library
+      creation paths
+    - redirected buffer sizing to surrounding
+      socket / stream / transport / app-level
+      buffering policy
+    - renamed the combined example away from
+      `ConfigureSSLConnection(...)`
+      and removed the fake typed
+      `SetBuffer(...)`
+      path
+    - labeled the combined example as
+      typed wrapper / policy-boundary guidance
+      rather than a current direct library entrypoint
+    - updated the checklist line
+      to keep
+      `TBufferSize`
+      anchored to caller-owned
+      transport / buffer helpers
+
+- verify focused doc truth:
+  - `bash -n tests/scripts/test_migration_guide_phase24_tbuffersize_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_migration_guide_phase24_tbuffersize_truth_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed the guide now states
+        current TLS paths do not expose a buffer-size public entrypoint
+      - confirmed the guide redirects buffer sizing to transport-level policy
+      - confirmed the old
+        `ConfigureSSLConnection(...)`
+        /
+        `SetBuffer(...)`
+        framing is gone from the combined typed example
+  - `git diff --check`
+    - result: PASS
+
 ### Context Builder Session Timeout Safety Adoption
 
 - inspect current session-timeout truth:
