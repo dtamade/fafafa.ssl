@@ -43,6 +43,8 @@ require_fixed "$migration_guide" "fafafa.ssl," \
   "MIGRATION_GUIDE must use the current public facade unit"
 require_fixed "$migration_guide" "fafafa.ssl.context.builder;" \
   "MIGRATION_GUIDE must use the current context-builder unit"
+require_fixed "$migration_guide" '旧的 `fafafa.ssl.abstract.intf` 已经收进当前公开接口面；新代码优先使用 `fafafa.ssl`，需要核对核心接口定义时再回到 `fafafa.ssl.base` 的 source truth。' \
+  "MIGRATION_GUIDE must route new code to the facade and demote fafafa.ssl.base to source-truth reference status"
 require_fixed "$migration_guide" "LContext := TSSLContextBuilder.Create" \
   "MIGRATION_GUIDE must use current builder-based context creation in migration examples"
 require_fixed "$migration_guide" "LTLS := TSSLConnector.FromContext(LContext).ConnectSocket(THandle(LSocket), 'example.com');" \
@@ -59,6 +61,8 @@ require_fixed "$migration_guide" '`GetFriendlyErrorMessage(...)` / `GetOpenSSLEr
   "MIGRATION_GUIDE must bound OpenSSL low-level helper scope"
 require_fixed "$migration_guide" "LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);" \
   "MIGRATION_GUIDE low-level helper example must use the current library entrypoint"
+require_fixed "$migration_guide" "  fafafa.ssl.openssl.api.err;" \
+  "MIGRATION_GUIDE low-level helper example must keep the OpenSSL-specific helper unit import"
 
 require_absent "$migration_guide" "> **版本**: v0.8" \
   "MIGRATION_GUIDE must stop advertising stale v0.8 as current version"
@@ -76,6 +80,12 @@ require_absent "$migration_guide" "CreateOpenSSLLibrary;" \
   "MIGRATION_GUIDE must stop promoting backend-specific CreateOpenSSLLibrary in active migration examples"
 require_absent "$migration_guide" "LLib := TSSLFactory.GetLibrary(sslOpenSSL);" \
   "MIGRATION_GUIDE low-level helper example must stop using stale GetLibrary entrypoint"
+require_absent "$migration_guide" '旧的 `fafafa.ssl.abstract.intf` 已经收进当前公开接口面；新代码直接使用 `fafafa.ssl` 或 `fafafa.ssl.base`。' \
+  "MIGRATION_GUIDE must stop teaching fafafa.ssl.base as an ordinary new-code import path"
+require_absent "$migration_guide" "  fafafa.ssl.base," \
+  "MIGRATION_GUIDE must stop teaching split base-unit imports in active examples"
+require_absent "$migration_guide" "  fafafa.ssl.factory," \
+  "MIGRATION_GUIDE must stop teaching split factory-unit imports in active examples"
 require_absent "$migration_guide" '`TSSLConfig.ServerName` / `ISSLContext.SetServerName(...)` / `TSSLContextBuilder.WithSNI(...)` 当前都只应视为 compatibility-only 入口。' \
   "MIGRATION_GUIDE must stop listing frozen context-level SNI literal names outside API_REFERENCE"
 

@@ -1,7 +1,7 @@
 # fafafa.ssl 迁移指南
 
 > **版本**: rolling
-> **最后更新**: 2026-05-20
+> **最后更新**: 2026-05-21
 > **当前路线图**: [当前路线图](../ROADMAP.md)
 > **说明**: 当前迁移真相以 `src/fafafa.ssl.base.pas`、`src/fafafa.ssl.pas`、`src/fafafa.ssl.tls.pas` 和 `docs/reference/API_REFERENCE.md` 为准。
 
@@ -23,7 +23,7 @@
 
 如果你在读预 `v1.0` 代码，最常见的迁移点是这几条：
 
-- 旧的 `fafafa.ssl.abstract.intf` 已经收进当前公开接口面；新代码直接使用 `fafafa.ssl` 或 `fafafa.ssl.base`。
+- 旧的 `fafafa.ssl.abstract.intf` 已经收进当前公开接口面；新代码优先使用 `fafafa.ssl`，需要核对核心接口定义时再回到 `fafafa.ssl.base` 的 source truth。
 - client hostname/SNI 不再推荐存进 context；改成每条连接自己带上 hostname。
 - 如果你想少写样板代码，优先从 `TSSLConnector` / `TSSLStream` 入手，而不是直接围绕 backend 单元做初始化。
 - 如果你必须继续使用原始 `ISSLConnection`，也要显式走 `ISSLClientConnection.SetServerName(...)`。
@@ -256,8 +256,7 @@ end;
 
 ```pascal
 uses
-  fafafa.ssl.base,
-  fafafa.ssl.factory,
+  fafafa.ssl,
   fafafa.ssl.openssl.api.err;
 
 var

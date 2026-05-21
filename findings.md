@@ -2,6 +2,79 @@
 
 ## 2026-05-21
 
+- migration guide current public import truth
+  这一刀确认的
+  不是
+  `MIGRATION_GUIDE`
+  不该继续讲
+  OpenSSL-specific
+  low-level helper，
+  而是
+  它在保留这层边界说明时
+  仍继续教学：
+  - `fafafa.ssl.base`
+  - `fafafa.ssl.factory`
+  这组旧 split import，
+  并且正文
+  还把
+  `fafafa.ssl.base`
+  说成
+  普通新代码
+  直接入口之一
+
+- 当前更准确的收口是：
+  - 新代码迁移
+    当前优先入口
+    仍是：
+    - `fafafa.ssl`
+    - `fafafa.ssl.context.builder`
+    - `TSSLConnector`
+    - `TSSLStream`
+  - `fafafa.ssl.base`
+    仍然重要，
+    但它现在更适合被说成：
+    - source-truth reference
+    - core interface definition
+    而不是
+    普通新代码
+    import
+    推荐路径
+  - `GetFriendlyErrorMessage(...)`
+    /
+    `GetOpenSSLErrorCategory(...)`
+    仍然要保留在：
+    - `fafafa.ssl.openssl.api.err`
+    这条
+    OpenSSL-specific
+    low-level helper
+    边界
+
+- 这说明
+  当前“迁移路线清晰”
+  这条线里，
+  不能只看
+  示例是不是用对了
+  `TSSLFactory.GetLibraryInstance(...)`，
+  还要继续收紧：
+  文本层
+  有没有把
+  `fafafa.ssl.base`
+  偷偷留成
+  普通入口
+
+- focused RED
+  首轮暴露的是：
+  - 正文仍写：
+    新代码直接使用
+    `fafafa.ssl`
+    或
+    `fafafa.ssl.base`
+  - OpenSSL low-level helper
+    示例
+    仍在使用：
+    - `fafafa.ssl.base`
+    - `fafafa.ssl.factory`
+
 - store usage guide current public import truth
   这一刀确认的
   不是

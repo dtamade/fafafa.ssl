@@ -6,6 +6,114 @@
 
 ## 2026-05-21
 
+### MIGRATION_GUIDE Current Public Import Truth
+
+- inspect active migration-guide import drift before editing:
+  - `docs/guides/MIGRATION_GUIDE.md`
+  - `src/fafafa.ssl.pas`
+  - `tests/scripts/test_migration_guide_active_truth_contract.sh`
+  - `docs/plans/2026-05-21-migration-guide-current-public-import-truth.md`
+  - change:
+    - confirmed
+      active migration
+      guidance
+      should route new code
+      back to
+      `fafafa.ssl`
+      as the generic public facade
+    - confirmed
+      `fafafa.ssl.base`
+      remains useful as
+      source-truth reference,
+      but should not stay
+      as an ordinary new-code import recommendation
+    - confirmed
+      `ISSLLibrary`
+      /
+      `TSSLFactory`
+      /
+      `sslOpenSSL`
+      are already
+      available from
+      `fafafa.ssl`
+    - confirmed
+      `GetFriendlyErrorMessage(...)`
+      /
+      `GetOpenSSLErrorCategory(...)`
+      still belong to
+      `fafafa.ssl.openssl.api.err`
+    - confirmed
+      stale drift
+      remained in:
+      - the old-version migration bullet
+      - the OpenSSL low-level helper example
+
+- add focused batch record and tighten the existing migration-guide contract:
+  - `docs/plans/2026-05-21-migration-guide-current-public-import-truth.md`
+  - `tests/scripts/test_migration_guide_active_truth_contract.sh`
+  - change:
+    - froze:
+      - new-code guidance must prefer
+        `fafafa.ssl`
+      - `fafafa.ssl.base`
+        is demoted to
+        source-truth reference
+      - the OpenSSL low-level helper example
+        must keep
+        `fafafa.ssl.openssl.api.err`
+      - active examples must not continue using
+        `fafafa.ssl.base`
+        /
+        `fafafa.ssl.factory`
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_migration_guide_active_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_migration_guide_active_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - `MIGRATION_GUIDE`
+        still routed
+        new code
+        partly to
+        `fafafa.ssl.base`
+        and still taught
+        split imports
+        in the low-level helper example
+
+- repair MIGRATION_GUIDE current public import truth:
+  - `docs/guides/MIGRATION_GUIDE.md`
+  - change:
+    - refreshed
+      active update date
+      to
+      `2026-05-21`
+    - rewrote
+      the old-version migration bullet
+      so new code
+      now prefers
+      `fafafa.ssl`
+      and only treats
+      `fafafa.ssl.base`
+      as source-truth reference
+    - rewrote
+      the OpenSSL low-level helper example
+      imports
+      to
+      `fafafa.ssl`
+      +
+      `fafafa.ssl.openssl.api.err`
+    - preserved
+      the OpenSSL-specific
+      low-level helper
+      boundary
+
+- verify focused closeout:
+  - `bash tests/scripts/test_migration_guide_active_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### STORE_USAGE_GUIDE Current Public Import Truth
 
 - inspect active store-guide import drift before editing:

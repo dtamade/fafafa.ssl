@@ -10,6 +10,75 @@
 
 ## Current Status
 
+- [completed] `migration guide current public import truth`
+  当前 focused 目标：
+  - 修复
+    `docs/guides/MIGRATION_GUIDE.md`
+    里仍残留的
+    `fafafa.ssl.base`
+    /
+    `fafafa.ssl.factory`
+    split import
+    与正文入口漂移，
+    让这份 active migration guide
+    继续保留
+    OpenSSL-specific low-level helper
+    边界说明，
+    但不再偏离
+    当前 public import truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-migration-guide-current-public-import-truth.md`
+  - 更新 focused contract：
+    - `tests/scripts/test_migration_guide_active_truth_contract.sh`
+  - 更新：
+    - `docs/guides/MIGRATION_GUIDE.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_migration_guide_active_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_migration_guide_active_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - `MIGRATION_GUIDE`
+    当前 generic migration
+    路径
+    应统一回到：
+    - `fafafa.ssl`
+  - `fafafa.ssl.base`
+    可以继续作为
+    source-truth
+    reference
+    被点名，
+    但不再是
+    普通新代码
+    import
+    推荐路径
+  - `GetFriendlyErrorMessage(...)`
+    /
+    `GetOpenSSLErrorCategory(...)`
+    继续属于：
+    - `fafafa.ssl.openssl.api.err`
+    这条
+    OpenSSL-specific
+    low-level helper
+    边界
+  当前批收口后的默认下一步：
+  - `MIGRATION_GUIDE`
+    不再继续教学
+    `fafafa.ssl.base`
+    /
+    `fafafa.ssl.factory`
+    这组旧 split import
+  - 下一条 residual
+    继续优先挑
+    仍在传播
+    旧 import
+    或
+    stale header
+    的活跃 guide/reference
+
 - [completed] `store usage guide current public import truth`
   当前 focused 目标：
   - 修复
