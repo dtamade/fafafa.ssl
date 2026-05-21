@@ -84,7 +84,7 @@ pkcs11:token=TestToken;object=TestKey;type=private?pin-value=1234&module-path=/u
 
 ```pascal
 uses
-  fafafa.ssl.base,
+  fafafa.ssl,
   fafafa.ssl.context.builder;
 
 var
@@ -118,7 +118,7 @@ build 阶段也会返回确定性的 source-resolution error。
 
 ```pascal
 uses
-  fafafa.ssl.base,
+  fafafa.ssl,
   fafafa.ssl.context.builder,
   fafafa.ssl.pkcs11.types;
 
@@ -139,7 +139,7 @@ end;
 
 ```pascal
 uses
-  fafafa.ssl.base,
+  fafafa.ssl,
   fafafa.ssl.context.builder,
   fafafa.ssl.pkcs11.types;
 

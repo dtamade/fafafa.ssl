@@ -10,6 +10,74 @@
 
 ## Current Status
 
+- [completed] `pkcs11 user guide current public import truth`
+  当前 focused 目标：
+  - 修复
+    `docs/guides/PKCS11_USER_GUIDE.md`
+    里三段 active
+    builder 示例
+    仍在使用的
+    `fafafa.ssl.base`
+    导入，
+    让这份
+    PKCS#11
+    用户指南
+    继续保留
+    builder/runtime
+    边界
+    与
+    lower-level
+    callback
+    叙事，
+    但不再偏离
+    当前 public
+    import truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-pkcs11-user-guide-current-public-import-truth.md`
+  - 更新 focused contract：
+    - `tests/scripts/test_pkcs11_docs_builder_guidance_contract.sh`
+  - 更新：
+    - `docs/guides/PKCS11_USER_GUIDE.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_pkcs11_docs_builder_guidance_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_pkcs11_docs_builder_guidance_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_api_inventory_pkcs11_high_entry_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - `PKCS11_USER_GUIDE`
+    三段 active
+    builder 示例
+    应统一回到：
+    - `fafafa.ssl`
+  - `TSSLContextBuilder`
+    继续来自：
+    - `fafafa.ssl.context.builder`
+  - `pmEnvironment`
+    /
+    `pmFile`
+    相关示例
+    继续保留：
+    - `fafafa.ssl.pkcs11.types`
+  - lower-level
+    callback
+    示例
+    不伪装成
+    facade-only
+  当前批收口后的默认下一步：
+  - `PKCS11_USER_GUIDE`
+    不再继续传播
+    `fafafa.ssl.base`
+  - 下一条 residual
+    继续优先挑
+    仍在传播
+    旧 import
+    的 active guide/reference
+
 - [completed] `early-data guide current public import truth`
   当前 focused 目标：
   - 修复

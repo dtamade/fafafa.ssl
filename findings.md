@@ -2,6 +2,73 @@
 
 ## 2026-05-21
 
+- pkcs11 user guide current public import truth
+  这一刀确认的
+  不是
+  `PKCS11_USER_GUIDE`
+  不该继续保留
+  builder/runtime
+  边界，
+  而是
+  它在
+  OpenSSL-only
+  published path
+  与
+  builder/runtime
+  能力边界
+  都已经讲清楚的前提下，
+  三段 active
+  builder 示例
+  仍继续教学：
+  - `fafafa.ssl.base`
+
+- 当前更准确的收口是：
+  - `ISSLContext`
+    /
+    `sslOpenSSL`
+    当前可直接来自
+    `fafafa.ssl`
+  - `TSSLContextBuilder`
+    继续来自
+    `fafafa.ssl.context.builder`
+  - `TPKCS11PINMethod`
+    /
+    `TPKCS11Config`
+    /
+    `TPKCS11ConfigDefault`
+    /
+    `IPKCS11Backend`
+    /
+    `TPKCS11BackendFactory`
+    仍然属于
+    PKCS#11
+    专用单元，
+    不该被误写成
+    主门面导出
+
+- 这说明
+  当前 PKCS#11
+  文档线里，
+  不只是
+  要冻结
+  runtime/capability
+  真相，
+  还要继续收紧：
+  builder 示例
+  是否会把调用方
+  误导回
+  `fafafa.ssl.base`
+
+- focused RED
+  首轮暴露的是：
+  - `PKCS11_USER_GUIDE`
+    三段 active
+    builder 示例
+    都还在使用
+    旧的
+    `fafafa.ssl.base`
+    导入
+
 - early-data guide current public import truth
   这一刀确认的
   不是

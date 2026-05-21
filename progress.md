@@ -6,6 +6,136 @@
 
 ## 2026-05-21
 
+### PKCS11_USER_GUIDE Current Public Import Truth
+
+- inspect active PKCS#11 guide import drift before editing:
+  - `docs/guides/PKCS11_USER_GUIDE.md`
+  - `src/fafafa.ssl.pas`
+  - `src/fafafa.ssl.context.builder.pas`
+  - `tests/scripts/test_pkcs11_docs_builder_guidance_contract.sh`
+  - `tests/scripts/test_api_inventory_pkcs11_high_entry_truth_contract.sh`
+  - `docs/plans/2026-05-19-api-inventory-pkcs11-high-entry-doc-truth.md`
+  - change:
+    - confirmed
+      the guide
+      already keeps
+      the right
+      OpenSSL-only
+      published path
+      and
+      builder/runtime
+      capability
+      boundaries
+    - confirmed
+      current drift
+      is now
+      the builder-example
+      import surface,
+      not the
+      PKCS#11
+      runtime/capability
+      narrative
+    - confirmed
+      `ISSLContext`
+      /
+      `sslOpenSSL`
+      are already
+      exported by
+      `fafafa.ssl`
+    - confirmed
+      `TSSLContextBuilder`
+      remains in
+      `fafafa.ssl.context.builder`
+    - confirmed
+      `pmEnvironment`
+      /
+      `pmFile`
+      /
+      `TPKCS11Config`
+      /
+      `TPKCS11BackendFactory`
+      remain in
+      PKCS#11
+      specialized units
+    - confirmed
+      the three
+      active builder
+      examples
+      still used
+      `fafafa.ssl.base`
+
+- add focused batch record and tighten the existing PKCS#11 builder/runtime contract:
+  - `docs/plans/2026-05-21-pkcs11-user-guide-current-public-import-truth.md`
+  - `tests/scripts/test_pkcs11_docs_builder_guidance_contract.sh`
+  - change:
+    - froze:
+      - existing
+        builder/runtime
+        boundary
+      - all three
+        active builder
+        examples
+        must use
+        `fafafa.ssl`
+      - active builder
+        examples
+        must stop using
+        `fafafa.ssl.base`
+    - added
+      `PKCS11_GUIDE_DOC`
+      override support
+      so the same
+      focused contract
+      can prove RED
+      against a
+      pre-fix
+      guide snapshot
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_pkcs11_docs_builder_guidance_contract.sh`
+    - result: PASS
+  - `PKCS11_GUIDE_DOC=/tmp/fafafa_ssl_pkcs11_user_guide_head.md bash tests/scripts/test_pkcs11_docs_builder_guidance_contract.sh`
+    - result: FAIL
+    - summary:
+      - `PKCS11_USER_GUIDE`
+        `HEAD`
+        snapshot
+        still used
+        `fafafa.ssl.base`
+        in all three
+        active builder
+        examples
+
+- repair PKCS11_USER_GUIDE current public import truth:
+  - `docs/guides/PKCS11_USER_GUIDE.md`
+  - change:
+    - rewrote
+      the three
+      active builder
+      examples
+      from
+      `fafafa.ssl.base`
+      to
+      `fafafa.ssl`
+    - preserved
+      the guide's
+      builder/runtime
+      boundary,
+      specialized
+      PKCS#11
+      unit imports,
+      and
+      lower-level
+      callback path
+
+- verify focused closeout:
+  - `bash tests/scripts/test_pkcs11_docs_builder_guidance_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_api_inventory_pkcs11_high_entry_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### EARLY_DATA_GUIDE Current Public Import Truth
 
 - inspect active early-data guide import drift before editing:

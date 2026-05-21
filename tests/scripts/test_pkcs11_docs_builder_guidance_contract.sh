@@ -7,7 +7,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 cd "$PROJECT_ROOT"
 
-GUIDE_FILE="docs/guides/PKCS11_USER_GUIDE.md"
+GUIDE_FILE="${PKCS11_GUIDE_DOC:-docs/guides/PKCS11_USER_GUIDE.md}"
 ARCH_FILE="docs/reference/PKCS11_ARCHITECTURE.md"
 
 assert_contains() {
@@ -39,6 +39,12 @@ assert_contains "$GUIDE_FILE" ".WithPKCS11PINMethod(pmEnvironment)" \
   "PKCS#11 guide lost the builder environment PIN example"
 assert_contains "$GUIDE_FILE" ".WithPKCS11PINMethod(pmFile)" \
   "PKCS#11 guide lost the builder file PIN example"
+facade_import_count="$( (rg -F -- '  fafafa.ssl,' "$GUIDE_FILE" || true) | wc -l | tr -d ' ' )"
+if [[ "$facade_import_count" != "3" ]]; then
+  echo "[FAIL] PKCS#11 guide must use the current public facade unit in all three active builder examples"
+  echo "[INFO] expected 3 facade import lines, found: $facade_import_count"
+  exit 1
+fi
 assert_contains "$GUIDE_FILE" "Builder 不支持 \`pmCallback\` 和 \`pmInteractive\`。" \
   "PKCS#11 guide no longer states that callback/interactive are not builder paths"
 assert_contains "$GUIDE_FILE" "TPKCS11ConfigDefault" \
@@ -56,6 +62,8 @@ assert_not_contains "$GUIDE_FILE" ".Build;" \
   "PKCS#11 guide still references removed Build method for the builder example"
 assert_not_contains "$GUIDE_FILE" "function MyPINCallback(" \
   "PKCS#11 guide regressed to a free-function callback example"
+assert_not_contains "$GUIDE_FILE" "  fafafa.ssl.base," \
+  "PKCS#11 guide still teaches fafafa.ssl.base in active builder examples"
 
 assert_contains "$ARCH_FILE" "**Builder Runtime Contract**:" \
   "PKCS#11 architecture doc lost the builder runtime contract section"
