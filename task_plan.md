@@ -10,6 +10,72 @@
 
 ## Current Status
 
+- [completed] `active doc metadata truth alignment`
+  当前 focused 目标：
+  - 收掉
+    `BACKEND_SELECTION_GUIDE`
+    /
+    `ARCHITECTURE`
+    /
+    `MIGRATION_GUIDE_V1.1`
+    里
+    header/footer
+    仍不一致的
+    旧元数据快照，
+    避免内容已经对齐
+    current truth
+    后，
+    仍被 footer
+    带回旧状态
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-active-doc-metadata-truth-alignment.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_active_doc_metadata_truth_contract.sh`
+  - 更新：
+    - `docs/BACKEND_SELECTION_GUIDE.md`
+    - `docs/ARCHITECTURE.md`
+    - `docs/MIGRATION_GUIDE_V1.1.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_active_doc_metadata_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_active_doc_metadata_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_backend_selection_guide_current_public_import_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - `BACKEND_SELECTION_GUIDE`
+    footer
+    应统一回到：
+    - `v1.5.0`
+    - `fafafa.ssl v1.5.0+`
+    - `2026-05-21`
+  - `ARCHITECTURE`
+    footer
+    应统一回到：
+    - `v1.5.0`
+    - `2026-05-21`
+  - `MIGRATION_GUIDE_V1.1`
+    footer
+    应明确成：
+    - 历史专题
+    - 已按当前 active truth 注释
+  当前批收口后的默认下一步：
+  - active docs
+    元数据残差
+    继续减少
+  - 下一条 residual
+    继续优先挑
+    `API_DESIGN_GUIDE`
+    /
+    `ERROR_HANDLING_BEST_PRACTICES`
+    /
+    `CODING_STANDARDS`
+    这类旧 header
+    snapshot
+
 - [completed] `migration guide v1.1 facade backend-name truth`
   当前 focused 目标：
   - 修复

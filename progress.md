@@ -6,6 +6,131 @@
 
 ## 2026-05-21
 
+### Active Doc Metadata Truth Alignment
+
+- inspect active doc metadata residuals before editing:
+  - `docs/BACKEND_SELECTION_GUIDE.md`
+  - `docs/ARCHITECTURE.md`
+  - `docs/MIGRATION_GUIDE_V1.1.md`
+  - `tests/scripts/test_backend_selection_guide_current_public_import_truth_contract.sh`
+  - change:
+    - confirmed
+      `BACKEND_SELECTION_GUIDE`
+      top header
+      is already
+      current,
+      but footer
+      still carries
+      `1.0 / v1.3.0+ / 2026-02-05`
+    - confirmed
+      `ARCHITECTURE`
+      top header
+      is already
+      current,
+      but footer
+      still carries
+      `1.0 / 2026-02-05`
+    - confirmed
+      `MIGRATION_GUIDE_V1.1`
+      footer
+      still presents
+      `1.2 / 2026-02-05`
+      as if it were
+      a static
+      current doc snapshot
+    - confirmed
+      the real drift
+      here is now
+      metadata truth,
+      not the
+      underlying
+      capability /
+      migration
+      semantics
+
+- add focused batch record and create a dedicated metadata-truth contract:
+  - `docs/plans/2026-05-21-active-doc-metadata-truth-alignment.md`
+  - `tests/scripts/test_active_doc_metadata_truth_contract.sh`
+  - change:
+    - froze:
+      - `BACKEND_SELECTION_GUIDE`
+        footer
+        version/applicability/date
+      - `ARCHITECTURE`
+        footer
+        version/date
+      - `MIGRATION_GUIDE_V1.1`
+        footer
+        historical-topic
+        status
+        and
+        refresh date
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_active_doc_metadata_truth_contract.sh`
+    - result: PASS
+  - `HEAD`
+    snapshot
+    run
+    via env-overridden
+    temp files
+    - result: FAIL
+    - summary:
+      - `BACKEND_SELECTION_GUIDE`
+        footer
+        still used
+        stale
+        `1.0 / v1.3.0+ / 2026-02-05`
+      - `ARCHITECTURE`
+        footer
+        still used
+        stale
+        `1.0 / 2026-02-05`
+      - `MIGRATION_GUIDE_V1.1`
+        footer
+        still used
+        stale
+        `1.2 / 2026-02-05`
+
+- repair active doc metadata truth:
+  - `docs/BACKEND_SELECTION_GUIDE.md`
+  - `docs/ARCHITECTURE.md`
+  - `docs/MIGRATION_GUIDE_V1.1.md`
+  - change:
+    - aligned
+      `BACKEND_SELECTION_GUIDE`
+      footer
+      back to
+      `v1.5.0`
+      /
+      `fafafa.ssl v1.5.0+`
+      /
+      `2026-05-21`
+    - aligned
+      `ARCHITECTURE`
+      footer
+      back to
+      `v1.5.0`
+      /
+      `2026-05-21`
+    - reclassified
+      `MIGRATION_GUIDE_V1.1`
+      footer
+      as
+      a historical
+      topic
+      with refreshed
+      active-truth
+      annotations
+
+- verify focused closeout:
+  - `bash tests/scripts/test_active_doc_metadata_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_backend_selection_guide_current_public_import_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### MIGRATION_GUIDE_V1.1 Facade Backend-Name Truth
 
 - inspect active migration-v1.1 backend-name drift before editing:

@@ -2,6 +2,69 @@
 
 ## 2026-05-21
 
+- active doc metadata truth alignment
+  这一刀确认的
+  不是
+  这些 active docs
+  内容还在大面积失真，
+  而是
+  它们在正文已经被多轮收回
+  current truth
+  之后，
+  header/footer
+  元数据
+  仍停留在
+  旧快照
+
+- 当前更准确的收口是：
+  - `BACKEND_SELECTION_GUIDE`
+    /
+    `ARCHITECTURE`
+    已经出现：
+    - header
+      当前
+    - footer
+      历史
+    这种双真相
+  - `MIGRATION_GUIDE_V1.1`
+    更准确的定位
+    已经不是
+    “当前 v1.2 文档”，
+    而是
+    历史迁移专题
+    上叠加
+    current truth
+    注释
+
+- 这说明
+  当前文档线里，
+  除了
+  import truth
+  /
+  capability truth
+  /
+  runtime truth
+  之外，
+  元数据快照
+  也会持续制造
+  “读者不知道哪一段才是当前口径”
+  的噪音
+
+- focused RED
+  首轮暴露的是：
+  - `BACKEND_SELECTION_GUIDE`
+    footer
+    仍停在
+    `1.0 / v1.3.0+ / 2026-02-05`
+  - `ARCHITECTURE`
+    footer
+    仍停在
+    `1.0 / 2026-02-05`
+  - `MIGRATION_GUIDE_V1.1`
+    footer
+    仍停在
+    `1.2 / 2026-02-05`
+
 - migration guide v1.1 facade backend-name truth
   这一刀确认的
   不是
