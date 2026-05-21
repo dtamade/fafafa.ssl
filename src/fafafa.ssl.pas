@@ -585,13 +585,21 @@ begin
     Result := LConfig;
     Result.LibraryType := sslAutoDetect;
     Result.ContextType := AContextType;
+    if (AContextType = sslCtxServer) and
+      (Result.VerifyMode = [sslVerifyPeer]) and
+      (Trim(Result.CAFile) = '') and
+      (Trim(Result.CAPath) = '') then
+      Result.VerifyMode := [];
     TSSLFactory.NormalizeConfig(Result);
   except
     Result := Default(TSSLConfig);
     Result.LibraryType := sslAutoDetect;
     Result.ContextType := AContextType;
     Result.ProtocolVersions := [sslProtocolTLS12, sslProtocolTLS13];
-    Result.VerifyMode := [sslVerifyPeer];
+    if AContextType = sslCtxServer then
+      Result.VerifyMode := []
+    else
+      Result.VerifyMode := [sslVerifyPeer];
     Result.VerifyDepth := SSL_DEFAULT_VERIFY_DEPTH;
     Result.BufferSize := SSL_DEFAULT_BUFFER_SIZE;
     Result.HandshakeTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;

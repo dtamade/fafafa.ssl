@@ -2,6 +2,106 @@
 
 ## 2026-05-21
 
+- server default verifymode baseline
+  这一刀确认的
+  不是单纯 helper drift，
+  而是
+  server 默认 verify 语义
+  长期夹在
+  client 默认值历史包袱
+  与
+  server 真实使用直觉
+  之间
+
+- 当前真正的设计难点是：
+  - raw/default-config/direct-library
+    可以看见
+    `sslCtxServer`
+  - 但 builder
+    在 `BuildClient` / `BuildServer`
+    之前
+    并不知道最终上下文类型
+  - 因而
+    直接把
+    `FVerifyMode`
+    默认值
+    从
+    `[sslVerifyPeer]`
+    粗暴翻成
+    `[]`
+    会把 client 默认也一起带歪
+
+- 这说明正确修法
+  不能是
+  “全局改一个默认数组”，
+  而必须把
+  “默认值”
+  与
+  “是否显式表达过 verify 意图”
+  分开
+
+- 修复后，
+  当前 server baseline
+  已经统一成
+  更自然的
+  ordinary one-way TLS truth：
+  - `CreateDefaultConfig(sslCtxServer)` -> `[]`
+  - raw `CreateContext(sslCtxServer, ...)` -> `[]`
+  - direct-library `ISSLLibrary.CreateContext(sslCtxServer)` -> `[]`
+  - `CreateServerContext(...)` / `QuickServer(...)` -> `[]`
+  - default builder `BuildServer` -> `[]`
+
+- 同时 client 默认没有被带歪：
+  - default `BuildClient`
+    仍是
+    `[sslVerifyPeer]`
+  - raw/default-config client path
+    也仍保持
+    verify-peer baseline
+
+- 这一批真正关键的实现点是：
+  - builder 新增内部
+    `FVerifyModeExplicit`
+  - default builder
+    在
+    `BuildClient`
+    与
+    `BuildServer`
+    上
+    分别解析不同 baseline
+  - 但显式 `.WithVerifyPeer`
+    /
+    `.WithMutualTLS(...)`
+    /
+    `.WithModernDefaults`
+    仍会保留严格 verify 意图
+
+- 另一个容易复发的坑已经确认：
+  - `use_system_roots`
+    当前只存在于 builder/import-export 语义里，
+    不属于
+    `TSSLConfig`
+    公共 record 字段
+  - 因此 direct-config/direct-library
+    这条线的 server baseline 解析
+    只能依据：
+    - `CAFile`
+    - `CAPath`
+  - 不能把 builder 内部字段
+    误投到
+    `TSSLConfig`
+    路径上
+
+- 这批收口后，
+  server verify 语义
+  不再只是：
+  - 文档上讲得通
+  - helper 上某一条路径看起来对
+  而是
+  default-config / factory / direct-library / builder / import-export
+  一整组入口
+  已经真正收平
+
 - server validation verifymode classification
   这一刀确认的
   不是新的 runtime bug，

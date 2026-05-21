@@ -585,6 +585,7 @@ var
   LConfig: TSSLConfig;
   LExposeEarlyData: Boolean;
   LExposeServerOCSP: Boolean;
+  LVerifyMode: TSSLVerifyModes;
 begin
   // P0 后端语义统一：与 OpenSSL/WinSSL 后端保持一致的失败语义
   if not FInitialized then
@@ -617,6 +618,12 @@ begin
   LExposeEarlyData := GetCapabilities.EarlyDataSupport <> sslSupportNone;
   LExposeServerOCSP := (AType in [sslCtxServer, sslCtxBoth]) and
     (GetCapabilities.OCSPStaplingSupport <> sslSupportNone);
+  LVerifyMode := LConfig.VerifyMode;
+  if (AType = sslCtxServer) and
+    (LVerifyMode = [sslVerifyPeer]) and
+    (Trim(LConfig.CAFile) = '') and
+    (Trim(LConfig.CAPath) = '') then
+    LVerifyMode := [];
 
   if LExposeEarlyData and LExposeServerOCSP then
     Result := TWolfSSLAdvancedContext.Create(Self, AType)
@@ -635,7 +642,7 @@ begin
     if LConfig.PreferredVersion <> sslProtocolUnknown then
       Result.SetPreferredVersion(LConfig.PreferredVersion);
 
-    Result.SetVerifyMode(LConfig.VerifyMode);
+    Result.SetVerifyMode(LVerifyMode);
 
     if LConfig.VerifyDepth > 0 then
       Result.SetVerifyDepth(LConfig.VerifyDepth);

@@ -23,8 +23,8 @@ if rg -F -n --quiet 'Result.SetVerifyMode([sslVerifyNone]); // 服务端默认�
   fail "CreateServerContext must stop silently forcing server helpers into no-verify mode"
 fi
 
-if ! rg -F -n --quiet '`CreateServerContext(...)` / `QuickServer(...)` 当前不会再隐式切到 no-verify；' "$api_ref"; then
-  fail "API reference must record the current helper verify-mode truth"
+if ! rg -F -n --quiet '`CreateDefaultConfig(sslCtxServer)` / raw `CreateContext(sslCtxServer, ...)` / `CreateServerContext(...)` / `QuickServer(...)` / default builder `BuildServer` 当前都会统一回到普通单向 TLS server 的 no-verify baseline。' "$api_ref"; then
+  fail "API reference must record the current unified server verify-mode baseline"
 fi
 
 mkdir -p "$units_dir" "$bin_dir"

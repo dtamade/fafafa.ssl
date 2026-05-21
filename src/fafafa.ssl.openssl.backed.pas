@@ -1287,6 +1287,7 @@ var
   LConfig: TSSLConfig;
   LExposeEarlyData: Boolean;
   LExposeServerOCSP: Boolean;
+  LVerifyMode: TSSLVerifyModes;
 begin
   // Rust-quality: Explicit error handling instead of returning nil
   if not FInitialized then
@@ -1322,6 +1323,12 @@ begin
   LExposeEarlyData := GetCapabilities.EarlyDataSupport <> sslSupportNone;
   LExposeServerOCSP := (AType in [sslCtxServer, sslCtxBoth]) and
     (GetCapabilities.OCSPStaplingSupport <> sslSupportNone);
+  LVerifyMode := LConfig.VerifyMode;
+  if (AType = sslCtxServer) and
+    (LVerifyMode = [sslVerifyPeer]) and
+    (Trim(LConfig.CAFile) = '') and
+    (Trim(LConfig.CAPath) = '') then
+    LVerifyMode := [];
 
   // Let exceptions propagate - caller must handle errors explicitly
   if LExposeEarlyData and LExposeServerOCSP then
@@ -1343,8 +1350,8 @@ begin
       (LConfig.PreferredVersion <> Result.GetPreferredVersion) then
       Result.SetPreferredVersion(LConfig.PreferredVersion);
 
-    if LConfig.VerifyMode <> Result.GetVerifyMode then
-      Result.SetVerifyMode(LConfig.VerifyMode);
+    if LVerifyMode <> Result.GetVerifyMode then
+      Result.SetVerifyMode(LVerifyMode);
 
     if (LConfig.VerifyDepth > 0) and (LConfig.VerifyDepth <> Result.GetVerifyDepth) then
       Result.SetVerifyDepth(LConfig.VerifyDepth);

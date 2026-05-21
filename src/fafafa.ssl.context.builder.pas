@@ -253,6 +253,7 @@ type
   private
     FProtocolVersions: TSSLProtocolVersions;
     FVerifyMode: TSSLVerifyModes;
+    FVerifyModeExplicit: Boolean;
     FVerifyDepth: Integer;
     FCertificateFile: string;
     FCertificatePEM: string;
@@ -414,6 +415,37 @@ type
 
 { TSSLContextBuilder }
 
+function ImportedVerifyModeIsExplicit(
+  const AVerifyMode: TSSLVerifyModes;
+  const ACAFile, ACAPath: string;
+  AUseSystemRoots: Boolean
+): Boolean;
+begin
+  if AVerifyMode <> [sslVerifyPeer] then
+    Exit(True);
+
+  Result := (Trim(ACAFile) <> '') or
+            (Trim(ACAPath) <> '') or
+            AUseSystemRoots;
+end;
+
+function EffectiveBuilderVerifyMode(
+  const ABuilder: TSSLContextBuilderImpl;
+  AForServer: Boolean
+): TSSLVerifyModes;
+begin
+  if not ABuilder.FVerifyModeExplicit then
+  begin
+    if AForServer then
+      Result := []
+    else
+      Result := [sslVerifyPeer];
+    Exit;
+  end;
+
+  Result := ABuilder.FVerifyMode;
+end;
+
 class function TSSLContextBuilder.Create: ISSLContextBuilder;
 begin
   Result := TSSLContextBuilderImpl.Create;
@@ -517,6 +549,7 @@ begin
   // Initialize with sensible defaults
   FProtocolVersions := [sslProtocolTLS12, sslProtocolTLS13];
   FVerifyMode := [sslVerifyPeer];
+  FVerifyModeExplicit := False;
   FVerifyDepth := SSL_DEFAULT_VERIFY_DEPTH;
   FCertificateFile := '';
   FCertificatePEM := '';
@@ -866,12 +899,14 @@ end;
 function TSSLContextBuilderImpl.WithVerifyPeer: ISSLContextBuilder;
 begin
   FVerifyMode := [sslVerifyPeer];
+  FVerifyModeExplicit := True;
   Result := Self;
 end;
 
 function TSSLContextBuilderImpl.WithVerifyNone: ISSLContextBuilder;
 begin
   FVerifyMode := [sslVerifyNone];
+  FVerifyModeExplicit := True;
   Result := Self;
 end;
 
@@ -945,7 +980,6 @@ function TSSLContextBuilderImpl.WithSafeDefaults: ISSLContextBuilder;
 begin
   // Apply modern, secure defaults
   FProtocolVersions := [sslProtocolTLS12, sslProtocolTLS13];
-  FVerifyMode := [sslVerifyPeer];
   FVerifyDepth := SSL_DEFAULT_VERIFY_DEPTH;
   FCipherList := SSL_DEFAULT_CIPHER_LIST;
   FTLS13Ciphersuites := SSL_DEFAULT_TLS13_CIPHERSUITES;
@@ -1181,6 +1215,7 @@ var
   ContextBackend: TSSLLibraryType;
   SelectedBackend: TSSLLibraryType;
   MatchScore: Integer;
+  LVerifyMode: TSSLVerifyModes;
 begin
   Store := nil;
   ContextBackend := sslAutoDetect;
@@ -1213,8 +1248,9 @@ begin
   // Apply configuration
   SyncOCSPStaplingOptions;
   SyncCertificateTransparencyOptions;
+  LVerifyMode := EffectiveBuilderVerifyMode(Self, False);
   Result.SetProtocolVersions(FProtocolVersions);
-  Result.SetVerifyMode(FVerifyMode);
+  Result.SetVerifyMode(LVerifyMode);
   Result.SetVerifyDepth(FVerifyDepth);
   Result.SetOptions(FOptions);
 
@@ -1302,6 +1338,7 @@ var
   ContextBackend: TSSLLibraryType;
   SelectedBackend: TSSLLibraryType;
   MatchScore: Integer;
+  LVerifyMode: TSSLVerifyModes;
 begin
   Store := nil;
   ContextBackend := sslAutoDetect;
@@ -1333,8 +1370,9 @@ begin
   // Apply configuration (same as client, but server context)
   SyncOCSPStaplingOptions;
   SyncCertificateTransparencyOptions;
+  LVerifyMode := EffectiveBuilderVerifyMode(Self, True);
   Result.SetProtocolVersions(FProtocolVersions);
-  Result.SetVerifyMode(FVerifyMode);
+  Result.SetVerifyMode(LVerifyMode);
   Result.SetVerifyDepth(FVerifyDepth);
   Result.SetOptions(FOptions);
 
@@ -1514,8 +1552,11 @@ end;
 
 function ValidateCommonBuilderSettings(const ABuilder: TSSLContextBuilderImpl;
   AForServer: Boolean): TBuildValidationResult;
+var
+  LVerifyMode: TSSLVerifyModes;
 begin
   Result := TBuildValidationResult.Ok;
+  LVerifyMode := EffectiveBuilderVerifyMode(ABuilder, AForServer);
 
   // Check protocol versions
   if ABuilder.FProtocolVersions = [] then
@@ -1534,11 +1575,11 @@ begin
     Result.AddWarning('TLS 1.1 is deprecated and should be avoided');
 
   // Check verification settings
-  if (not AForServer) and (not (sslVerifyPeer in ABuilder.FVerifyMode)) then
+  if (not AForServer) and (not (sslVerifyPeer in LVerifyMode)) then
     Result.AddWarning('Certificate verification is disabled - insecure for production');
 
   // Check CA configuration when verification is enabled
-  if (sslVerifyPeer in ABuilder.FVerifyMode) and
+  if (sslVerifyPeer in LVerifyMode) and
     (ABuilder.FCAFile = '') and (ABuilder.FCAPath = '') and (not ABuilder.FUseSystemRoots) then
   begin
     if AForServer then
@@ -1867,6 +1908,7 @@ begin
       if LVerifyMode in FVerifyMode then
         LVerify.Add(Ord(LVerifyMode));
     LRoot.Add('verify_modes', LVerify);
+    LRoot.Add('verify_mode_explicit', FVerifyModeExplicit);
     LRoot.Add('verify_depth', FVerifyDepth);
 
     // Certificate configuration
@@ -1936,7 +1978,9 @@ var
   LImportedRequirements: TSSLRequirements;
   LImportedExplicitBackend: TSSLLibraryType;
   LImportedPKCS11PINMethod: TPKCS11PINMethod;
+  LImportedVerifyModeExplicit: Boolean;
   LHasImportedPKCS11PINMethod: Boolean;
+  LHasImportedVerifyModeExplicit: Boolean;
   LHasExplicitBackend: Boolean;
   LHasAutoSelectBackend: Boolean;
   LAutoSelectBackend: Boolean;
@@ -1949,6 +1993,7 @@ begin
 
   FillChar(LImportedRequirements, SizeOf(LImportedRequirements), 0);
   LHasImportedPKCS11PINMethod := False;
+  LHasImportedVerifyModeExplicit := False;
   LHasExplicitBackend := False;
   LHasAutoSelectBackend := False;
   LAutoSelectBackend := False;
@@ -1976,6 +2021,12 @@ begin
         FVerifyMode := [];
         for I := 0 to LVerify.Count - 1 do
           Include(FVerifyMode, TSSLVerifyMode(LVerify.Integers[I]));
+      end;
+
+      if IndexOfName('verify_mode_explicit') >= 0 then
+      begin
+        LImportedVerifyModeExplicit := Booleans['verify_mode_explicit'];
+        LHasImportedVerifyModeExplicit := True;
       end;
 
       if IndexOfName('verify_depth') >= 0 then
@@ -2114,6 +2165,19 @@ begin
 
       SyncOCSPStaplingOptions;
       SyncCertificateTransparencyOptions;
+
+      if IndexOfName('verify_modes') >= 0 then
+      begin
+        if LHasImportedVerifyModeExplicit then
+          FVerifyModeExplicit := LImportedVerifyModeExplicit
+        else
+          FVerifyModeExplicit := ImportedVerifyModeIsExplicit(
+            FVerifyMode,
+            FCAFile,
+            FCAPath,
+            FUseSystemRoots
+          );
+      end;
     end;
   finally
     LRoot.Free;
@@ -2155,6 +2219,10 @@ begin
         LVerifyStr := LVerifyStr + IntToStr(Ord(LVerifyMode));
       end;
     LLines.Add('verify_modes=' + LVerifyStr);
+    if FVerifyModeExplicit then
+      LLines.Add('verify_mode_explicit=true')
+    else
+      LLines.Add('verify_mode_explicit=false');
     LLines.Add('verify_depth=' + IntToStr(FVerifyDepth));
     LLines.Add('');
 
@@ -2268,9 +2336,12 @@ var
   LImportedRequirements: TSSLRequirements;
   LImportedExplicitBackend: TSSLLibraryType;
   LImportedPKCS11PINMethod: TPKCS11PINMethod;
+  LImportedVerifyModeExplicit: Boolean;
   LHasImportedPKCS11PINMethod: Boolean;
+  LHasImportedVerifyModeExplicit: Boolean;
   LHasExplicitBackend: Boolean;
   LHasAutoSelectBackend: Boolean;
+  LHasVerifyModes: Boolean;
   LAutoSelectBackend: Boolean;
   J: Integer;
 begin
@@ -2281,8 +2352,10 @@ begin
 
   FillChar(LImportedRequirements, SizeOf(LImportedRequirements), 0);
   LHasImportedPKCS11PINMethod := False;
+  LHasImportedVerifyModeExplicit := False;
   LHasExplicitBackend := False;
   LHasAutoSelectBackend := False;
+  LHasVerifyModes := False;
   LAutoSelectBackend := False;
 
   LLines := TStringList.Create;
@@ -2319,6 +2392,12 @@ begin
           FVerifyMode := [];
           for J := 0 to LParts.Count - 1 do
             Include(FVerifyMode, TSSLVerifyMode(StrToIntDef(LParts[J], 0)));
+          LHasVerifyModes := True;
+        end
+        else if LKey = 'verify_mode_explicit' then
+        begin
+          LImportedVerifyModeExplicit := LowerCase(LValue) = 'true';
+          LHasImportedVerifyModeExplicit := True;
         end
         else if LKey = 'verify_depth' then
           FVerifyDepth := StrToIntDef(LValue, SSL_DEFAULT_VERIFY_DEPTH)
@@ -2443,6 +2522,19 @@ begin
 
     SyncOCSPStaplingOptions;
     SyncCertificateTransparencyOptions;
+
+    if LHasVerifyModes then
+    begin
+      if LHasImportedVerifyModeExplicit then
+        FVerifyModeExplicit := LImportedVerifyModeExplicit
+      else
+        FVerifyModeExplicit := ImportedVerifyModeIsExplicit(
+          FVerifyMode,
+          FCAFile,
+          FCAPath,
+          FUseSystemRoots
+        );
+    end;
   finally
     LParts.Free;
     LLines.Free;
@@ -2461,6 +2553,7 @@ begin
   // Copy all configuration fields
   LClone.FProtocolVersions := FProtocolVersions;
   LClone.FVerifyMode := FVerifyMode;
+  LClone.FVerifyModeExplicit := FVerifyModeExplicit;
   LClone.FVerifyDepth := FVerifyDepth;
   LClone.FCertificateFile := FCertificateFile;
   LClone.FCertificatePEM := FCertificatePEM;
@@ -2513,6 +2606,7 @@ begin
   // Reset all fields to default values (same as constructor)
   FProtocolVersions := [sslProtocolTLS12, sslProtocolTLS13];
   FVerifyMode := [sslVerifyPeer];
+  FVerifyModeExplicit := False;
   FVerifyDepth := SSL_DEFAULT_VERIFY_DEPTH;
   FCertificateFile := '';
   FCertificatePEM := '';
@@ -2576,8 +2670,11 @@ var
   LImportedRequirements: TSSLRequirements;
   LImportedExplicitBackend: TSSLLibraryType;
   LImportedPKCS11PINMethod: TPKCS11PINMethod;
+  LImportedVerifyModeExplicit: Boolean;
+  LHasImportedVerifyModeExplicit: Boolean;
   LHasExplicitBackend: Boolean;
   LHasAutoSelectBackend: Boolean;
+  LHasVerifyModes: Boolean;
   LAutoSelectBackend: Boolean;
   I: Integer;
 begin
@@ -2592,8 +2689,10 @@ begin
     Exit;
 
   FillChar(LImportedRequirements, SizeOf(LImportedRequirements), 0);
+  LHasImportedVerifyModeExplicit := False;
   LHasExplicitBackend := False;
   LHasAutoSelectBackend := False;
+  LHasVerifyModes := False;
   LAutoSelectBackend := False;
 
   LData := GetJSON(LSourceJSON);
@@ -2622,6 +2721,13 @@ begin
       FVerifyMode := [];
       for I := 0 to LVerify.Count - 1 do
         Include(FVerifyMode, TSSLVerifyMode(LVerify.Integers[I]));
+      LHasVerifyModes := True;
+    end;
+
+    if LObj.IndexOfName('verify_mode_explicit') >= 0 then
+    begin
+      LImportedVerifyModeExplicit := LObj.Booleans['verify_mode_explicit'];
+      LHasImportedVerifyModeExplicit := True;
     end;
 
     // Merge other fields if non-empty
@@ -2764,6 +2870,19 @@ begin
 
     SyncOCSPStaplingOptions;
     SyncCertificateTransparencyOptions;
+
+    if LHasVerifyModes then
+    begin
+      if LHasImportedVerifyModeExplicit then
+        FVerifyModeExplicit := LImportedVerifyModeExplicit
+      else
+        FVerifyModeExplicit := ImportedVerifyModeIsExplicit(
+          FVerifyMode,
+          FCAFile,
+          FCAPath,
+          FUseSystemRoots
+        );
+    end;
   finally
     LData.Free;
   end;
@@ -2868,6 +2987,7 @@ begin
 
   // Enable client certificate verification
   FVerifyMode := [sslVerifyPeer];
+  FVerifyModeExplicit := True;
 
   if ARequired then
     // Fail if client doesn't provide certificate
@@ -2919,6 +3039,7 @@ begin
 
   // Strict verification by default
   FVerifyMode := [sslVerifyPeer];
+  FVerifyModeExplicit := True;
   FVerifyDepth := 10;
 end;
 

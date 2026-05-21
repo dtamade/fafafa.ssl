@@ -622,6 +622,7 @@ end;
 function TMbedTLSLibrary.CreateContext(AType: TSSLContextType): ISSLContext;
 var
   LConfig: TSSLConfig;
+  LVerifyMode: TSSLVerifyModes;
 begin
   if not FInitialized then
     raise ESSLInitError.Create('Cannot create context: MbedTLS library not initialized');
@@ -649,6 +650,12 @@ begin
     AType,
     'TMbedTLSLibrary.CreateContext'
   );
+  LVerifyMode := LConfig.VerifyMode;
+  if (AType = sslCtxServer) and
+    (LVerifyMode = [sslVerifyPeer]) and
+    (Trim(LConfig.CAFile) = '') and
+    (Trim(LConfig.CAPath) = '') then
+    LVerifyMode := [];
 
   Result := TMbedTLSContext.Create(Self, AType);
   if Result <> nil then
@@ -659,7 +666,7 @@ begin
     if LConfig.PreferredVersion <> sslProtocolUnknown then
       Result.SetPreferredVersion(LConfig.PreferredVersion);
 
-    Result.SetVerifyMode(LConfig.VerifyMode);
+    Result.SetVerifyMode(LVerifyMode);
 
     if LConfig.VerifyDepth > 0 then
       Result.SetVerifyDepth(LConfig.VerifyDepth);

@@ -139,7 +139,7 @@ end;
 - 这条路径只负责 caller-provided material，不负责 online fetch、refresh，或 responder 调度。
 - 它是 server-side issuance path，不替代 client-side stapled-response verification 或 client online OCSP check。
 
-如果你的服务端并不做 mTLS，请像上面的示例一样显式加 `WithVerifyNone`。`TSSLContextBuilder.Create` 的默认 server verify 基线不是“无客户端证书也放行”，所以用它做最小 stapling smoke 时，最好把 verify 意图写明。
+如果你的服务端并不做 mTLS，请像上面的示例一样显式加 `WithVerifyNone`。`TSSLContextBuilder.Create` 当前普通单向 TLS server 默认已经会回到“无客户端证书也放行”的 baseline；这里仍建议把 `WithVerifyNone` 写出来，只是为了让 stapling smoke 和 mTLS server 的 verify 意图一眼可见。
 
 ### WolfSSL 上的对应路径（实验性）
 

@@ -252,6 +252,130 @@
   - `git diff --check`
     - result: PASS
 
+### Server Default VerifyMode Baseline
+
+- inspect deeper server-default verify seam before implementation:
+  - `task_plan.md`
+  - `docs/plans/2026-05-21-server-default-verifymode-baseline.md`
+  - `src/fafafa.ssl.context.builder.pas`
+  - `src/fafafa.ssl.factory.pas`
+  - `src/fafafa.ssl.pas`
+  - `src/fafafa.ssl.openssl.backed.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/guides/OCSP_USAGE_GUIDE.md`
+  - change:
+    - confirmed the deeper remaining seam was no longer helper-only
+    - confirmed default server paths still inherited historical
+      `[sslVerifyPeer]`
+      semantics
+    - confirmed the real difficulty was builder context-neutrality before
+      `BuildClient`
+      /
+      `BuildServer`
+
+- implement default-baseline split with explicit verify intent preservation:
+  - `src/fafafa.ssl.context.builder.pas`
+  - `src/fafafa.ssl.factory.pas`
+  - `src/fafafa.ssl.pas`
+  - `src/fafafa.ssl.openssl.backed.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - change:
+    - added internal builder state:
+      `FVerifyModeExplicit`
+    - split default builder resolution into:
+      - default `BuildClient` -> `[sslVerifyPeer]`
+      - default `BuildServer` -> `[]`
+    - kept explicit server intent observable across:
+      - `.WithVerifyPeer`
+      - `.WithVerifyNone`
+      - `.WithMutualTLS(...)`
+      - `.WithModernDefaults`
+    - synchronized the explicit-state through:
+      - JSON / INI import-export
+      - clone / reset / merge
+    - changed
+      `CreateDefaultConfig(sslCtxServer)`
+      to return ordinary one-way TLS server baseline
+    - aligned factory/direct-library/backend
+      `CreateContext(sslCtxServer, ...)`
+      paths to the same server baseline
+
+- update focused contract and active docs truth:
+  - `tests/contract/test_server_helper_verifymode_default_entry.pas`
+  - `tests/scripts/test_server_helper_verifymode_default_contract.sh`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/guides/OCSP_USAGE_GUIDE.md`
+  - change:
+    - expanded the contract to cover:
+      - client default unchanged
+      - server default switched
+      - direct-library parity
+      - builder JSON / INI round-trip parity
+    - updated API reference to record the new unified server baseline
+    - updated OCSP guide wording so builder examples stay explicit
+      without lying about the current server default
+
+- fix the first failed implementation attempt:
+  - `bash tests/scripts/test_server_helper_verifymode_default_contract.sh`
+    - result: FAIL
+    - summary:
+      - compile failed at:
+        `AConfig.UseSystemRoots`
+      - important conclusion:
+        - `use_system_roots`
+          exists on builder/import-export path
+          but is not a field on public
+          `TSSLConfig`
+        - direct-config/direct-library server baseline resolution must key off
+          `CAFile`
+          /
+          `CAPath`
+          only
+  - change:
+    - removed the mistaken
+      `UseSystemRoots`
+      access from:
+      - `src/fafafa.ssl.factory.pas`
+      - `src/fafafa.ssl.pas`
+      - all patched backend direct-library paths
+
+- verify unified default-baseline truth after residual fix:
+  - `bash -n tests/scripts/test_server_helper_verifymode_default_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_server_helper_verifymode_default_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed contract now covers:
+        - client default unchanged
+        - server default switched
+        - direct-library parity
+        - builder JSON / INI round-trip parity
+  - `mkdir -p tmp/config_import_export && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/config_import_export -FEtmp/config_import_export -otmp/config_import_export/test_config_import_export tests/config/test_config_import_export.pas && ./tmp/config_import_export/test_config_import_export`
+    - result: PASS
+    - summary:
+      - 96 / 96 tests passed
+      - import/export round-trips stayed stable after adding
+        `verify_mode_explicit`
+  - `mkdir -p tmp/config_snapshot_clone && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/config_snapshot_clone -FEtmp/config_snapshot_clone -otmp/config_snapshot_clone/test_config_snapshot_clone tests/config/test_config_snapshot_clone.pas && ./tmp/config_snapshot_clone/test_config_snapshot_clone`
+    - result: PASS
+    - summary:
+      - 57 / 57 tests passed
+      - clone / reset / merge preserved the new explicit-state semantics
+  - `mkdir -p tmp/config_validation && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/config_validation -FEtmp/config_validation -otmp/config_validation/test_config_validation tests/config/test_config_validation.pas && ./tmp/config_validation/test_config_validation`
+    - result: PASS
+    - summary:
+      - 53 / 53 tests passed
+      - validation split from the previous batch remained intact
+  - `git diff --check`
+    - result: PASS
+
 ### Active Docs VerifyMode Guidance Truth Alignment
 
 - inspect active docs verify guidance truth before editing:

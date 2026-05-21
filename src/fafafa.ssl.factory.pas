@@ -445,6 +445,36 @@ begin
   AConfig.EnableOCSPStapling := ssoEnableOCSPStapling in AConfig.Options;
 end;
 
+function ResolveContextVerifyModeForCreation(
+  const AConfig: TSSLConfig;
+  AContextType: TSSLContextType
+): TSSLVerifyModes;
+begin
+  Result := AConfig.VerifyMode;
+
+  if AContextType <> sslCtxServer then
+    Exit;
+
+  if Result = [] then
+    Exit;
+
+  if sslVerifyNone in Result then
+  begin
+    Result := [];
+    Exit;
+  end;
+
+  if sslVerifyFailIfNoPeerCert in Result then
+    Exit;
+
+  if (sslVerifyPeer in Result) and
+    ((Trim(AConfig.CAFile) <> '') or
+     (Trim(AConfig.CAPath) <> '')) then
+    Exit;
+
+  Result := [];
+end;
+
 procedure ValidateRequestLoggingScope(const AConfig: TSSLConfig);
 begin
   if AConfig.LogLevel <> sslLogError then
@@ -1084,12 +1114,15 @@ class function TSSLFactory.CreateContext(AContextType: TSSLContextType;
 var
   LLib: ISSLLibrary;
   LConfig: TSSLConfig;
+  LVerifyMode: TSSLVerifyModes;
 begin
   LLib := GetLibrary(ALibType);
   LConfig := LLib.GetDefaultConfig;
+  LConfig.ContextType := AContextType;
   NormalizeConfigOptions(LConfig);
   ValidateConnectionCreationScope(LConfig, AContextType,
     'TSSLFactory.CreateContext(AContextType, ALibType)');
+  LVerifyMode := ResolveContextVerifyModeForCreation(LConfig, AContextType);
 
   Result := LLib.CreateContext(AContextType);
   if Result <> nil then
@@ -1103,7 +1136,7 @@ begin
     if LConfig.PreferredVersion <> sslProtocolUnknown then
       Result.SetPreferredVersion(LConfig.PreferredVersion);
 
-    Result.SetVerifyMode(LConfig.VerifyMode);
+    Result.SetVerifyMode(LVerifyMode);
 
     if LConfig.VerifyDepth > 0 then
       Result.SetVerifyDepth(LConfig.VerifyDepth);
@@ -1136,12 +1169,14 @@ class function TSSLFactory.CreateContext(const AConfig: TSSLConfig): ISSLContext
 var
   LLib: ISSLLibrary;
   LConfig: TSSLConfig;
+  LVerifyMode: TSSLVerifyModes;
 begin
   LConfig := AConfig;
   NormalizeConfigOptions(LConfig);
   ValidateRequestLoggingScope(LConfig);
   ValidateConnectionCreationScope(LConfig, LConfig.ContextType,
     'TSSLFactory.CreateContext(const AConfig)');
+  LVerifyMode := ResolveContextVerifyModeForCreation(LConfig, LConfig.ContextType);
 
   LLib := GetLibrary(LConfig.LibraryType);
   Result := LLib.CreateContext(LConfig.ContextType);
@@ -1169,7 +1204,7 @@ begin
   if LConfig.CAFile <> '' then
     Result.LoadCAFile(LConfig.CAFile);
     
-  Result.SetVerifyMode(LConfig.VerifyMode);
+  Result.SetVerifyMode(LVerifyMode);
 
   if LConfig.VerifyDepth > 0 then
     Result.SetVerifyDepth(LConfig.VerifyDepth);

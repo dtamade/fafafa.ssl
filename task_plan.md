@@ -10,6 +10,78 @@
 
 ## Current Status
 
+- [completed] `server default verifymode baseline`
+  当前 focused 目标：
+  - 把 server 高入口默认 verify 基线
+    从历史 client 默认包袱里拆出来，
+    收成普通单向 TLS server
+    更自然的
+    no-verify baseline
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-server-default-verifymode-baseline.md`
+  - 实际更新：
+    - `src/fafafa.ssl.factory.pas`
+    - `src/fafafa.ssl.pas`
+    - `src/fafafa.ssl.context.builder.pas`
+    - `src/fafafa.ssl.openssl.backed.pas`
+    - `src/fafafa.ssl.freepascal.lib.pas`
+    - `src/fafafa.ssl.mbedtls.lib.pas`
+    - `src/fafafa.ssl.wolfssl.lib.pas`
+    - `src/fafafa.ssl.winssl.lib.pas`
+    - `docs/reference/API_REFERENCE.md`
+    - `docs/guides/OCSP_USAGE_GUIDE.md`
+    - `tests/contract/test_server_helper_verifymode_default_entry.pas`
+    - `tests/scripts/test_server_helper_verifymode_default_contract.sh`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_server_helper_verifymode_default_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_server_helper_verifymode_default_contract.sh`
+    - PASS
+  - `mkdir -p tmp/config_import_export && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/config_import_export -FEtmp/config_import_export -otmp/config_import_export/test_config_import_export tests/config/test_config_import_export.pas && ./tmp/config_import_export/test_config_import_export`
+    - PASS
+  - `mkdir -p tmp/config_snapshot_clone && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/config_snapshot_clone -FEtmp/config_snapshot_clone -otmp/config_snapshot_clone/test_config_snapshot_clone tests/config/test_config_snapshot_clone.pas && ./tmp/config_snapshot_clone/test_config_snapshot_clone`
+    - PASS
+  - `mkdir -p tmp/config_validation && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/config_validation -FEtmp/config_validation -otmp/config_validation/test_config_validation tests/config/test_config_validation.pas && ./tmp/config_validation/test_config_validation`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前 truth：
+  - client 默认
+    仍保持：
+    `sslVerifyPeer`
+  - 普通单向 TLS server
+    现在在高入口默认基线
+    统一回到：
+    `[]`
+  - 当前已对齐的路径：
+    - `CreateDefaultConfig(sslCtxServer)`
+    - raw `CreateContext(sslCtxServer, ...)`
+    - direct-library `ISSLLibrary.CreateContext(sslCtxServer)`
+    - `CreateServerContext(...)`
+    - `QuickServer(...)`
+    - default builder `BuildServer`
+  - builder 通过内部
+    `FVerifyModeExplicit`
+    保留显式意图，
+    因而：
+    - default `BuildClient` -> `[sslVerifyPeer]`
+    - default `BuildServer` -> `[]`
+    - 显式 `.WithVerifyPeer`
+      /
+      `.WithMutualTLS(...)`
+      仍不会被 server path 吞掉
+  - `verify_mode_explicit`
+    已同步到：
+    - JSON / INI import-export
+    - clone / reset / merge
+  下一步：
+  - 这一条深层 server verify seam
+    已经收口；
+    后续继续接口/后端完整性审查时，
+    可以转去下一个未闭合 feature seam，
+    不需要再重复拉起这条 default-baseline 问题
+
 - [completed] `server validation verifymode classification`
   当前 focused 目标：
   - 把

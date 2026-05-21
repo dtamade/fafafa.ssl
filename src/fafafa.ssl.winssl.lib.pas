@@ -778,6 +778,7 @@ end;
 function TWinSSLLibrary.CreateContext(AType: TSSLContextType): ISSLContext;
 var
   LConfig: TSSLConfig;
+  LVerifyMode: TSSLVerifyModes;
 begin
   // P0 后端语义统一：与 OpenSSL 后端保持一致的失败语义
   // 未初始化时抛出异常，而不是返回 nil
@@ -807,6 +808,12 @@ begin
     AType,
     'TWinSSLLibrary.CreateContext'
   );
+  LVerifyMode := LConfig.VerifyMode;
+  if (AType = sslCtxServer) and
+    (LVerifyMode = [sslVerifyPeer]) and
+    (Trim(LConfig.CAFile) = '') and
+    (Trim(LConfig.CAPath) = '') then
+    LVerifyMode := [];
 
   // 让异常传播 - 调用方必须显式处理错误
   Result := TWinSSLContext.Create(Self, AType);
@@ -819,7 +826,7 @@ begin
     if LConfig.PreferredVersion <> sslProtocolUnknown then
       Result.SetPreferredVersion(LConfig.PreferredVersion);
 
-    Result.SetVerifyMode(LConfig.VerifyMode);
+    Result.SetVerifyMode(LVerifyMode);
 
     if LConfig.VerifyDepth > 0 then
       Result.SetVerifyDepth(LConfig.VerifyDepth);

@@ -194,6 +194,7 @@ end;
 当前口径：
 
 - builder 上如果要禁用验证，请显式使用 `.WithVerifyNone`；
+- 普通单向 TLS server 的高入口默认基线现在也是 no-verify；如果要做 mTLS / client-certificate verification，必须显式改成 `.WithMutualTLS(...)`、`.WithVerifyPeer` + CA roots，或 direct-context 的 verify-peer 配置；
 - config/direct-context 当前 public no-verify 语义是 `[]`；
 - 这两条都会落成 no-verify runtime truth，但生产环境仍应优先启用验证。
 - `ValidateClient` 会继续把未启用 `sslVerifyPeer` 视为 no-verify 并给出生产风险 warning；但 `ValidateServer` 不会再把显式 `.WithVerifyNone` / `VerifyMode := []` 的普通单向 TLS server 误报成这条 client-only 警告。
@@ -1676,10 +1677,9 @@ class function TSSLFactory.GetLibraryInstance(ALibType: TSSLLibraryType = sslAut
   它不代替 `TSSLFactory` / `TSSLContextBuilder` / `TSSLConnector` 这条主入口。
 - `QuickServer(...)` 当前只是 `TSSLFactory.CreateServerContext(...)` 的 convenience bootstrap。
   它只返回配置好的 `ISSLContext`，不负责 socket bind/listen/accept。
-- `CreateServerContext(...)` / `QuickServer(...)` 当前不会再隐式切到 no-verify；
-  它们保留当前 server default-config / raw context verify baseline。
-  如果你的服务端确实不做 client-certificate verification，请显式 `SetVerifyMode([])`，
-  或在 builder 上明确写 `.WithVerifyNone`。
+- `CreateDefaultConfig(sslCtxServer)` / raw `CreateContext(sslCtxServer, ...)` / `CreateServerContext(...)` / `QuickServer(...)` / default builder `BuildServer` 当前都会统一回到普通单向 TLS server 的 no-verify baseline。
+- 如果你要做 mTLS / client-certificate verification，请显式使用 `.WithMutualTLS(...)`、`.WithVerifyPeer` + CA roots，或 direct-context `VerifyMode := [sslVerifyPeer, ...]`。
+- 即使当前 ordinary one-way TLS server 默认已经是 no-verify baseline，builder 示例里仍建议显式写 `.WithVerifyNone`，避免把普通单向 TLS 与 mTLS 意图混在一起。
 - `CreateOCSPClient(...)` / `CreateCRLManager(...)` 当前是证书工具 facade re-export，不是 TLS 连接/bootstrap 入口。
   只有在你显式需要 OCSP/CRL workflow 时，才直接走它们；普通 TLS client/server 建立流程仍然优先通过 context/builder/connector path。
 
