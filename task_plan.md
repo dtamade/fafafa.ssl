@@ -10,6 +10,104 @@
 
 ## Current Status
 
+- [completed] `builder empty VerifyMode validation parity`
+  当前 focused 目标：
+  - 修复
+    builder
+    在
+    `FVerifyMode = []`
+    时
+    `Validate*`
+    漏报
+    “禁用证书验证”
+    警告
+    的语义裂缝
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-builder-empty-verifymode-validation-parity.md`
+  - 新增 contract：
+    - `tests/contract/test_builder_empty_verifymode_validation_entry.pas`
+    - `tests/scripts/test_builder_empty_verifymode_validation_contract.sh`
+  - 更新：
+    - `src/fafafa.ssl.context.builder.pas`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_builder_empty_verifymode_validation_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_builder_empty_verifymode_validation_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前状态：
+  - 重新核对后已确认，
+    当前 runtime 上
+    - `FVerifyMode = []`
+    - `FVerifyMode = [sslVerifyNone]`
+    都会落成
+    no-verify
+  - 但 builder validation
+    之前只认：
+    - `sslVerifyNone in FVerifyMode`
+  - 同时
+    `ImportFromJSON(...)`
+    /
+    `ImportFromINI(...)`
+    又都可以把
+    `verify_modes`
+    导入成：
+    - `[]`
+  - 这就造成一条真实裂缝：
+    - 导入后的 builder
+      在 runtime 上已经
+      no-verify
+    - 但
+      `ValidateClient`
+      却不会给出
+      insecure warning
+  修复后：
+  - builder validation
+    现在改为按：
+    - `not (sslVerifyPeer in FVerifyMode)`
+    判断当前是否禁用验证
+  - focused contract
+    现在已经同时证明：
+    - JSON 导入
+      `verify_modes = []`
+      会触发 no-verify warning
+    - INI 导入
+      `verify_modes =`
+      会触发 no-verify warning
+    - 两条路径
+      runtime
+      仍都落成：
+      `GetVerifyMode = []`
+  当前实施判断：
+  - 这批再次说明，
+    `[]`
+    与
+    `[sslVerifyNone]`
+    这条线
+    不能只看 runtime，
+    还要看 validation /
+    import-export /
+    docs
+    的一致性
+  - 它已经把
+    builder/runtime
+    语义先拉平了一层，
+    为后续是否要做
+    `TVerificationMode`
+    typed adoption
+    提供更可靠的判断基础
+  下一刀：
+  - 继续检查
+    active docs
+    是否仍把
+    `[]`
+    /
+    `[sslVerifyNone]`
+    混用成会误导调用方的
+    当前 public guidance
+
 - [completed] `factory config VerifyMode empty-set semantics`
   当前 focused 目标：
   - 修复

@@ -2,6 +2,62 @@
 
 ## 2026-05-21
 
+- builder verify validation
+  这条线又暴露出一条
+  runtime / validation
+  不一致的问题：
+  当前 runtime 上，
+  `[]`
+  与
+  `[sslVerifyNone]`
+  都会关闭 peer verification，
+  但 validation
+  之前只把
+  `[sslVerifyNone]`
+  认成
+  “禁用验证”
+
+- 更关键的是，
+  这不是纯理论分歧，
+  因为 builder 的
+  `ImportFromJSON(...)`
+  /
+  `ImportFromINI(...)`
+  都可以把
+  `verify_modes`
+  导入成：
+  - `[]`
+
+- 这会导致：
+  导入后的 builder
+  在 runtime 上
+  已经是
+  no-verify，
+  但
+  `ValidateClient`
+  /
+  `ValidateServer`
+  却不会发出当前应有的
+  insecure warning
+
+- 修复后，
+  builder validation
+  现在不再盯着
+  `sslVerifyNone`
+  这个单一枚举值，
+  而是按
+  “是否启用了
+  `sslVerifyPeer`”
+  来判断当前 verify 是否真的开启
+
+- 这使得：
+  - `WithVerifyNone`
+    继续保持 warning
+  - JSON / INI 导入出的
+    `verify_modes = []`
+    也终于和 runtime 真相一致地
+    得到 warning
+
 - `VerifyMode = []`
   这条线最终暴露出的
   不是单纯文档残留，

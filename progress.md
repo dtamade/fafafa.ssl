@@ -6,6 +6,78 @@
 
 ## 2026-05-21
 
+### Builder Empty VerifyMode Validation Parity
+
+- inspect builder verify validation / import truth before editing:
+  - `src/fafafa.ssl.context.builder.pas`
+  - `tests/config/test_config_validation.pas`
+  - change:
+    - confirmed runtime-level no-verify semantics already treat
+      `[]`
+      and
+      `[sslVerifyNone]`
+      as equivalent
+    - confirmed builder validation still only warned on:
+      - `sslVerifyNone in ABuilder.FVerifyMode`
+    - confirmed `ImportFromJSON(...)` and `ImportFromINI(...)`
+      both can set:
+      - `FVerifyMode := []`
+    - important conclusion:
+      - imported builder state could already be
+        no-verify at runtime
+      - while validation still missed the insecure warning
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-builder-empty-verifymode-validation-parity.md`
+  - `tests/contract/test_builder_empty_verifymode_validation_entry.pas`
+  - `tests/scripts/test_builder_empty_verifymode_validation_contract.sh`
+  - change:
+    - documented the batch as builder empty verify-mode validation parity
+    - added a focused runtime contract
+      to guard:
+      - JSON import with
+        `verify_modes = []`
+      - INI import with
+        `verify_modes=`
+      - current validation warning parity with runtime no-verify truth
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_builder_empty_verifymode_validation_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_builder_empty_verifymode_validation_contract.sh`
+    - result: FAIL
+    - summary:
+      - failed at:
+        `builder validation must treat missing sslVerifyPeer as disabled certificate verification`
+      - important conclusion:
+        - the validation/runtime split was real
+        - imported empty verify modes were not covered by the current warning path
+
+- repair builder verify warning parity:
+  - `src/fafafa.ssl.context.builder.pas`
+  - change:
+    - changed the no-verify warning gate from:
+      - `sslVerifyNone in ABuilder.FVerifyMode`
+    - to:
+      - `not (sslVerifyPeer in ABuilder.FVerifyMode)`
+    - this keeps
+      `WithVerifyNone`
+      warning behavior,
+      while also covering imported empty verify-mode sets
+
+- verify focused builder validation parity:
+  - `bash -n tests/scripts/test_builder_empty_verifymode_validation_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_builder_empty_verifymode_validation_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed JSON-imported empty verify modes now emit the no-verify warning
+      - confirmed INI-imported empty verify modes now emit the no-verify warning
+      - confirmed both paths still build runtime contexts with
+        `GetVerifyMode = []`
+  - `git diff --check`
+    - result: PASS
+
 ### Factory Config VerifyMode Empty-Set Semantics
 
 - inspect current verify-mode creation truth before editing:
