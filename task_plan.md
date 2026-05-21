@@ -10,6 +10,101 @@
 
 ## Current Status
 
+- [completed] `cafile capath trust-loading parity`
+  当前 focused 目标：
+  - 补齐
+    `CAFile`
+    /
+    `CAPath`
+    在
+    one-shot factory
+    /
+    raw factory default-config
+    /
+    direct-library default-config
+    三条路径上的
+    trust-loading
+    真正消费逻辑
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-cafile-capath-trust-loading-parity.md`
+  - 新增 focused contracts：
+    - `tests/contract/test_cafile_capath_trust_loading_parity_entry.pas`
+    - `tests/scripts/test_cafile_capath_trust_loading_parity_contract.sh`
+  - 实际更新：
+    - `src/fafafa.ssl.factory.pas`
+    - `src/fafafa.ssl.openssl.backed.pas`
+    - `src/fafafa.ssl.freepascal.lib.pas`
+    - `src/fafafa.ssl.mbedtls.lib.pas`
+    - `src/fafafa.ssl.wolfssl.lib.pas`
+    - `src/fafafa.ssl.winssl.lib.pas`
+    - `docs/reference/API_REFERENCE.md`
+    - `tests/test_freepascal_client_chain_trust_runtime.pas`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_cafile_capath_trust_loading_parity_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_cafile_capath_trust_loading_parity_contract.sh`
+    - PASS
+  - `mkdir -p tmp/cafile_capath_trust_loading_parity && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/cafile_capath_trust_loading_parity -FEtmp/cafile_capath_trust_loading_parity -otmp/cafile_capath_trust_loading_parity/test_cafile_capath_trust_loading_parity tests/contract/test_cafile_capath_trust_loading_parity_entry.pas && ./tmp/cafile_capath_trust_loading_parity/test_cafile_capath_trust_loading_parity`
+    - PASS
+  - `mkdir -p tmp/freepascal_client_chain_trust_runtime && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/freepascal_client_chain_trust_runtime -FEtmp/freepascal_client_chain_trust_runtime -otmp/freepascal_client_chain_trust_runtime/test_freepascal_client_chain_trust_runtime tests/test_freepascal_client_chain_trust_runtime.pas && ./tmp/freepascal_client_chain_trust_runtime/test_freepascal_client_chain_trust_runtime`
+    - PASS
+  - `mkdir -p tmp/test_direct_library_default_config_parity && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_direct_library_default_config_parity -FEtmp/test_direct_library_default_config_parity -otmp/test_direct_library_default_config_parity/test_direct_library_default_config_parity tests/test_direct_library_default_config_parity.pas && ./tmp/test_direct_library_default_config_parity/test_direct_library_default_config_parity`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前 truth：
+  - one-shot
+    `TSSLFactory.CreateContext(const AConfig)`
+    现在不再只消费
+    `CAFile`
+    ，也会显式消费
+    `CAPath`
+  - 五个 backend 的
+    direct-library
+    `CreateContext(AType)`
+    现在都会消费
+    `CAFile`
+    /
+    `CAPath`
+  - raw factory default-config path
+    现在也随之真正补齐：
+    - `ISSLLibrary.SetDefaultConfig(...)`
+    - `TSSLFactory.CreateContext(AType, ALibType)`
+    不再把
+    `CAFile`
+    /
+    `CAPath`
+    静默丢掉
+  - active API reference
+    现在也把
+    direct-library aligned fields
+    补齐到了
+    `CAFile`
+    /
+    `CAPath`
+  当前批收口后的默认下一步：
+  - `UseSystemRoots`
+    /
+    `CAFile`
+    /
+    `CAPath`
+    这一整组
+    trust-loading family
+    现在已经不再是
+    incomplete seam
+  - 如果继续顺着
+    backend completeness
+    深挖，
+    更值得单开的下一条
+    应该转去
+    “文档宣称支持”
+    与
+    “backend 实际 fail-fast / capability”
+    的残余边界，
+    尤其是
+    backend-specific unsupported surfaces
+
 - [completed] `system-roots public surface parity`
   当前 focused 目标：
   - 把 `WithSystemRoots`

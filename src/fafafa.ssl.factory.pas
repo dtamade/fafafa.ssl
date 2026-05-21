@@ -1225,6 +1225,9 @@ begin
   if LConfig.CAFile <> '' then
     Result.LoadCAFile(LConfig.CAFile);
 
+  if LConfig.CAPath <> '' then
+    Result.LoadCAPath(LConfig.CAPath);
+
   Result.SetVerifyMode(LVerifyMode);
 
   if LConfig.VerifyDepth > 0 then

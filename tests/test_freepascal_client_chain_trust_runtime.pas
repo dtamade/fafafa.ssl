@@ -7,6 +7,7 @@ uses
   fafafa.ssl,
   fafafa.ssl.base,
   fafafa.ssl.factory,
+  fafafa.ssl.freepascal.lib,
   fafafa.ssl.cert.utils,
   fafafa.ssl.tls13.wire,
   fafafa.ssl.tls13.parser,
@@ -503,6 +504,77 @@ begin
   Result.SetCertVerifyFlags(AVerifyFlags);
 end;
 
+function CreateInitializedFreePascalLibrary: ISSLLibrary;
+begin
+  Result := CreateFreePascalSSLLibrary;
+  AssertTrue(Result <> nil, 'CreateFreePascalSSLLibrary should not return nil');
+  AssertTrue(Result.Initialize,
+    'FreePascal library should initialize for direct-library trust-loading runtime');
+end;
+
+procedure ConfigureClientTrustConfig(
+  var AConfig: TSSLConfig;
+  AKind: TTrustConfigKind;
+  const ACAPath: string
+);
+begin
+  AConfig.LibraryType := sslFreePascal;
+  AConfig.ContextType := sslCtxClient;
+  AConfig.ProtocolVersions := [sslProtocolTLS13];
+  AConfig.PreferredVersion := sslProtocolTLS13;
+  AConfig.VerifyMode := [sslVerifyPeer];
+  AConfig.CAFile := '';
+  AConfig.CAPath := '';
+  AConfig.UseSystemRoots := False;
+
+  case AKind of
+    tcCAFile:
+      AConfig.CAFile := 'tests/certificate/test_certs/ca_cert.pem';
+    tcCAPath:
+      AConfig.CAPath := ACAPath;
+  else
+    raise Exception.Create('ConfigureClientTrustConfig only supports CAFile or CAPath trust kinds');
+  end;
+end;
+
+function CreateFactoryOneShotTrustContext(
+  AKind: TTrustConfigKind;
+  const ACAPath: string
+): ISSLContext;
+var
+  LConfig: TSSLConfig;
+begin
+  LConfig := CreateDefaultConfig(sslCtxClient);
+  ConfigureClientTrustConfig(LConfig, AKind, ACAPath);
+  Result := TSSLFactory.CreateContext(LConfig);
+  AssertTrue(Result <> nil, 'Factory one-shot trust context should be created');
+  Result.SetCertVerifyFlags([sslCertVerifyDefault]);
+end;
+
+function CreateFactoryDefaultConfigTrustContext(
+  AKind: TTrustConfigKind;
+  const ACAPath: string
+): ISSLContext;
+var
+  LLib: ISSLLibrary;
+  LOriginalConfig: TSSLConfig;
+  LConfig: TSSLConfig;
+begin
+  LLib := TSSLFactory.GetLibraryInstance(sslFreePascal);
+  AssertTrue(LLib <> nil, 'Factory FreePascal library instance should be created');
+  LOriginalConfig := LLib.GetDefaultConfig;
+  LConfig := LOriginalConfig;
+  ConfigureClientTrustConfig(LConfig, AKind, ACAPath);
+  LLib.SetDefaultConfig(LConfig);
+  try
+    Result := TSSLFactory.CreateContext(sslCtxClient, sslFreePascal);
+    AssertTrue(Result <> nil, 'Factory default-config trust context should be created');
+    Result.SetCertVerifyFlags([sslCertVerifyDefault]);
+  finally
+    LLib.SetDefaultConfig(LOriginalConfig);
+  end;
+end;
+
 procedure ApplyTrustConfig(ALCtx: ISSLContext; AKind: TTrustConfigKind; const ACAPath: string);
 var
   LStore: ISSLCertificateStore;
@@ -524,6 +596,35 @@ begin
         );
         ALCtx.SetCertificateStore(LStore);
       end;
+  end;
+end;
+
+procedure AssertCASignedHandshakePassesWithContext(
+  ALCtx: ISSLContext;
+  const ALabel: string
+);
+var
+  LMaterial: TServerMaterial;
+  LConn: ISSLConnection;
+  LStream: TScriptedChainTrustServerStream;
+begin
+  LMaterial := GenerateCASignedServerMaterial('example.com', ['DNS:example.com']);
+  LStream := TScriptedChainTrustServerStream.Create(LMaterial.CertificateBlob, LMaterial.PrivateKeyBlob);
+  try
+    LConn := ALCtx.CreateConnection(LStream);
+    AssertTrue(LConn <> nil, ALabel + ' should create a connection');
+    (LConn as ISSLClientConnection).SetServerName('example.com');
+
+    AssertTrue(LConn.Connect,
+      ALabel + ' should allow scripted CA-signed certificate to connect');
+    AssertEqualsInt(0, LConn.GetVerifyResult,
+      ALabel + ' should surface verify success');
+    AssertTrue(
+      SameText(LConn.GetVerifyResultString, 'OK'),
+      ALabel + ' should surface verify OK string'
+    );
+  finally
+    LStream.Free;
   end;
 end;
 
@@ -653,6 +754,83 @@ begin
   end;
 end;
 
+procedure TestFactoryOneShotConfigPassesWithCAPath(const ACAPath: string);
+var
+  LCtx: ISSLContext;
+begin
+  LCtx := CreateFactoryOneShotTrustContext(tcCAPath, ACAPath);
+  AssertCASignedHandshakePassesWithContext(LCtx,
+    'Factory one-shot CAPath trust config');
+end;
+
+procedure TestFactoryDefaultConfigPassesWithCAFile;
+var
+  LCtx: ISSLContext;
+begin
+  LCtx := CreateFactoryDefaultConfigTrustContext(tcCAFile, '');
+  AssertCASignedHandshakePassesWithContext(LCtx,
+    'Factory default-config CAFile trust config');
+end;
+
+procedure TestFactoryDefaultConfigPassesWithCAPath(const ACAPath: string);
+var
+  LCtx: ISSLContext;
+begin
+  LCtx := CreateFactoryDefaultConfigTrustContext(tcCAPath, ACAPath);
+  AssertCASignedHandshakePassesWithContext(LCtx,
+    'Factory default-config CAPath trust config');
+end;
+
+procedure TestDirectLibraryDefaultConfigPassesWithCAFile;
+var
+  LLib: ISSLLibrary;
+  LOriginalConfig: TSSLConfig;
+  LConfig: TSSLConfig;
+  LCtx: ISSLContext;
+begin
+  LLib := CreateInitializedFreePascalLibrary;
+  try
+    LOriginalConfig := LLib.GetDefaultConfig;
+    LConfig := LOriginalConfig;
+    ConfigureClientTrustConfig(LConfig, tcCAFile, '');
+    LLib.SetDefaultConfig(LConfig);
+
+    LCtx := LLib.CreateContext(sslCtxClient);
+    AssertTrue(LCtx <> nil, 'Direct-library CAFile trust context should be created');
+    LCtx.SetCertVerifyFlags([sslCertVerifyDefault]);
+    AssertCASignedHandshakePassesWithContext(LCtx,
+      'Direct-library default-config CAFile trust config');
+  finally
+    LLib.SetDefaultConfig(LOriginalConfig);
+    LLib.Finalize;
+  end;
+end;
+
+procedure TestDirectLibraryDefaultConfigPassesWithCAPath(const ACAPath: string);
+var
+  LLib: ISSLLibrary;
+  LOriginalConfig: TSSLConfig;
+  LConfig: TSSLConfig;
+  LCtx: ISSLContext;
+begin
+  LLib := CreateInitializedFreePascalLibrary;
+  try
+    LOriginalConfig := LLib.GetDefaultConfig;
+    LConfig := LOriginalConfig;
+    ConfigureClientTrustConfig(LConfig, tcCAPath, ACAPath);
+    LLib.SetDefaultConfig(LConfig);
+
+    LCtx := LLib.CreateContext(sslCtxClient);
+    AssertTrue(LCtx <> nil, 'Direct-library CAPath trust context should be created');
+    LCtx.SetCertVerifyFlags([sslCertVerifyDefault]);
+    AssertCASignedHandshakePassesWithContext(LCtx,
+      'Direct-library default-config CAPath trust config');
+  finally
+    LLib.SetDefaultConfig(LOriginalConfig);
+    LLib.Finalize;
+  end;
+end;
+
 procedure TestSelfSignedCertificateFailsWithoutAllowFlag;
 var
   LMaterial: TServerMaterial;
@@ -716,6 +894,11 @@ begin
   TestCASignedCertificatePassesWithCAFile;
   TestCASignedCertificatePassesWithCAPath(LCAPath);
   TestCASignedCertificatePassesWithCertificateStore;
+  TestFactoryOneShotConfigPassesWithCAPath(LCAPath);
+  TestFactoryDefaultConfigPassesWithCAFile;
+  TestFactoryDefaultConfigPassesWithCAPath(LCAPath);
+  TestDirectLibraryDefaultConfigPassesWithCAFile;
+  TestDirectLibraryDefaultConfigPassesWithCAPath(LCAPath);
   TestSelfSignedCertificateFailsWithoutAllowFlag;
   TestSelfSignedCertificatePassesWhenAllowed;
 

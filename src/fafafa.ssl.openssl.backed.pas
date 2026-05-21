@@ -1386,6 +1386,12 @@ begin
       end;
     end;
 
+    if LConfig.CAFile <> '' then
+      Result.LoadCAFile(LConfig.CAFile);
+
+    if LConfig.CAPath <> '' then
+      Result.LoadCAPath(LConfig.CAPath);
+
     if LConfig.ServerName <> '' then
       InternalLog(
         sslLogWarning,

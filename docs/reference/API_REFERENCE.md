@@ -137,6 +137,8 @@
 - 当前对齐的字段：
   - `ProtocolVersions`
   - `PreferredVersion`
+  - `CAFile`
+  - `CAPath`
   - `UseSystemRoots`
   - `VerifyMode`
   - `VerifyDepth`

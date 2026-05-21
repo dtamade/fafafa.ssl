@@ -14555,3 +14555,70 @@
     `TResult<T, E>`
     则继续
     `uses fafafa.ssl.safety`
+
+- `CAFile` / `CAPath` 这条残口最终确认不是单点 bug，而是两层 truth 同时缺口：
+  - one-shot factory request path
+    只缺
+    `CAPath`
+  - direct-library default-config path
+    同时缺
+    `CAFile`
+    /
+    `CAPath`
+
+- raw factory default-config path
+  看起来像独立缺口，
+  但真实根因不是
+  `TSSLFactory.CreateContext(AType, ALibType)`
+  自己完全不认识
+  `CAFile`
+  /
+  `CAPath`
+  ，
+  而是它委托的
+  backend
+  `CreateContext(AType)`
+  之前没有真正消费这两个字段
+
+- 这说明这条 seam 的正确修法不是再发明一套新的 trust object plumbing，
+  而是：
+  - one-shot factory
+    补齐
+    `LoadCAPath(...)`
+  - direct-library backend path
+    补齐
+    `LoadCAFile(...)`
+    /
+    `LoadCAPath(...)`
+  - raw factory path
+    通过 backend default-config truth
+    自然补齐
+
+- 这批还确认了一个重要边界：
+  - WinSSL 上
+    `CAPath`
+    不是“ silently ignored ”
+  - 一旦 direct-library/config path 真把它传到 context，
+    当前 shipped truth
+    会走到
+    `TWinSSLContext.LoadCAPath(...)`
+    的
+    fail-fast unsupported
+    语义
+  - 这比之前的静默丢失更真实，
+    也更符合“接口设计要么支持，要么明确拒绝”的方向
+
+- real FreePascal chain-trust runtime
+  现在已经证明：
+  - one-shot factory `CAPath`
+    真能穿透到握手成功
+  - raw factory default-config
+    `CAFile`
+    /
+    `CAPath`
+    真能穿透到握手成功
+  - direct-library default-config
+    `CAFile`
+    /
+    `CAPath`
+    也真能穿透到握手成功

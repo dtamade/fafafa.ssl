@@ -21191,6 +21191,183 @@
   - summary:
     - no whitespace or patch-format drift remains before commit
 
+### CAFile CAPath Trust-Loading Parity
+
+- inspect current trust-loading seam before editing:
+  - `src/fafafa.ssl.factory.pas`
+  - `src/fafafa.ssl.openssl.backed.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `tests/test_freepascal_client_chain_trust_runtime.pas`
+  - `tests/contract/test_system_roots_public_surface_entry.pas`
+  - `tests/test_direct_library_default_config_parity.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - confirmed
+      `TSSLFactory.CreateContext(const AConfig)`
+      only loaded
+      `CAFile`
+      and still missed
+      `CAPath`
+    - confirmed five backend
+      `CreateContext(AType)`
+      paths only used
+      `CAFile`
+      /
+      `CAPath`
+      for server verify baseline classification,
+      but did not actually call
+      `LoadCAFile(...)`
+      /
+      `LoadCAPath(...)`
+    - confirmed raw factory default-config path would become complete once backend default-config consumption became real
+    - confirmed API reference direct-library aligned-field list still omitted
+      `CAFile`
+      /
+      `CAPath`
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-cafile-capath-trust-loading-parity.md`
+  - `tests/contract/test_cafile_capath_trust_loading_parity_entry.pas`
+  - `tests/scripts/test_cafile_capath_trust_loading_parity_contract.sh`
+  - change:
+    - recorded the batch as CAFile/CAPath trust-loading parity
+    - added a focused source contract
+    - added a mock-based Pascal contract
+    - extended FreePascal real trust runtime with one-shot/raw/direct-library trust-loading proof
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_cafile_capath_trust_loading_parity_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_cafile_capath_trust_loading_parity_contract.sh`
+    - result: FAIL
+    - summary:
+      - failed immediately at:
+        `factory one-shot path no longer checks CAPath before trust loading`
+      - important conclusion:
+        - one-shot factory
+          `CAPath`
+          residual was real current source truth
+  - `mkdir -p tmp/cafile_capath_trust_loading_parity && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/cafile_capath_trust_loading_parity -FEtmp/cafile_capath_trust_loading_parity -otmp/cafile_capath_trust_loading_parity/test_cafile_capath_trust_loading_parity tests/contract/test_cafile_capath_trust_loading_parity_entry.pas && ./tmp/cafile_capath_trust_loading_parity/test_cafile_capath_trust_loading_parity`
+    - result: FAIL
+    - summary:
+      - initial compile surfaced one new-test typo:
+        program terminator used
+        `end;`
+        instead of
+        `end.`
+      - after fixing the test terminator,
+        runtime failed on:
+        `one-shot factory loads CAPath exactly once`
+      - important conclusion:
+        - the mock runtime contract also reproduced the missing one-shot
+          `CAPath`
+          consumption
+  - `mkdir -p tmp/freepascal_client_chain_trust_runtime && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/freepascal_client_chain_trust_runtime -FEtmp/freepascal_client_chain_trust_runtime -otmp/freepascal_client_chain_trust_runtime/test_freepascal_client_chain_trust_runtime tests/test_freepascal_client_chain_trust_runtime.pas && ./tmp/freepascal_client_chain_trust_runtime/test_freepascal_client_chain_trust_runtime`
+    - result: FAIL
+    - summary:
+      - failed on:
+        `Factory one-shot CAPath trust config should allow scripted CA-signed certificate to connect`
+      - important conclusion:
+        - the missing
+          `CAPath`
+          load was not only static drift;
+          it failed real FreePascal chain-trust runtime too
+
+- repair CAFile/CAPath trust-loading parity:
+  - `src/fafafa.ssl.factory.pas`
+  - `src/fafafa.ssl.openssl.backed.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - one-shot factory path now loads
+      `CAPath`
+      alongside
+      `CAFile`
+    - five backend direct-library paths now load
+      `CAFile`
+      /
+      `CAPath`
+      from default config
+    - direct-library aligned fields in API reference now explicitly include
+      `CAFile`
+      /
+      `CAPath`
+
+- fix focused verification harness issues before rerun:
+  - `tests/scripts/test_cafile_capath_trust_loading_parity_contract.sh`
+  - change:
+    - added
+      `--`
+      to
+      `rg`
+      pattern handling so checks for lines beginning with
+      `- `
+      no longer misparse as flags
+  - command typo noted:
+    - one intermediate rerun accidentally used
+      `-otmp/tmp/...`
+      and failed before compile;
+      reran with the intended output path
+
+- verify focused CAFile/CAPath truth:
+  - `bash tests/scripts/test_cafile_capath_trust_loading_parity_contract.sh`
+    - result: PASS
+    - summary:
+      - source contract now confirms one-shot factory,
+        five backend direct-library paths,
+        and API reference all record the same trust-loading truth
+  - `mkdir -p tmp/cafile_capath_trust_loading_parity && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/cafile_capath_trust_loading_parity -FEtmp/cafile_capath_trust_loading_parity -otmp/cafile_capath_trust_loading_parity/test_cafile_capath_trust_loading_parity tests/contract/test_cafile_capath_trust_loading_parity_entry.pas && ./tmp/cafile_capath_trust_loading_parity/test_cafile_capath_trust_loading_parity`
+    - result: PASS
+    - summary:
+      - mock contract now reports
+        `PASSED: 21 checks`
+      - confirmed:
+        - one-shot factory consumes
+          `CAFile`
+          /
+          `CAPath`
+        - raw factory default-config path consumes
+          `CAFile`
+          /
+          `CAPath`
+        - direct-library default-config path consumes
+          `CAFile`
+          /
+          `CAPath`
+        - server verify-peer baseline remains intact when trust material exists
+  - `mkdir -p tmp/freepascal_client_chain_trust_runtime && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/freepascal_client_chain_trust_runtime -FEtmp/freepascal_client_chain_trust_runtime -otmp/freepascal_client_chain_trust_runtime/test_freepascal_client_chain_trust_runtime tests/test_freepascal_client_chain_trust_runtime.pas && ./tmp/freepascal_client_chain_trust_runtime/test_freepascal_client_chain_trust_runtime`
+    - result: PASS
+    - summary:
+      - confirmed real FreePascal chain-trust runtime now passes for:
+        - one-shot factory
+          `CAPath`
+        - raw factory default-config
+          `CAFile`
+          /
+          `CAPath`
+        - direct-library default-config
+          `CAFile`
+          /
+          `CAPath`
+  - `mkdir -p tmp/test_direct_library_default_config_parity && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_direct_library_default_config_parity -FEtmp/test_direct_library_default_config_parity -otmp/test_direct_library_default_config_parity/test_direct_library_default_config_parity tests/test_direct_library_default_config_parity.pas && ./tmp/test_direct_library_default_config_parity/test_direct_library_default_config_parity`
+    - result: PASS
+    - summary:
+      - existing direct-library parity regression stayed green after adding
+        `CAFile`
+        /
+        `CAPath`
+        consumption
+  - `git diff --check`
+    - result: PASS
+    - summary:
+      - no whitespace or patch-format drift remains after the trust-loading parity batch
+
 ### Facade Safety Surface Export Closure
 
 - inspect current type-safety surface continuity:
