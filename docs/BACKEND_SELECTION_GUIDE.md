@@ -1,8 +1,8 @@
 # fafafa.ssl 后端自动选择指南
 
-**版本**: v1.3.0
+**版本**: v1.5.0
 **作者**: fafafa.ssl 团队
-**更新日期**: 2026-02-05
+**更新日期**: 2026-05-21
 
 ---
 
@@ -48,6 +48,10 @@
 3. **SelectBestBackends()**: 多选函数
 4. **Builder 集成**: 链式 API
 
+当前入口说明：这页聚焦 backend auto-selection / builder integration / direct selector API。
+如果你只是普通客户端/服务端 TLS 建立，请优先回到 `docs/guides/GETTING_STARTED.md` 里的 `TSSLContextBuilder` / `TSSLConnector` / `TSSLAcceptor` / `TSSLStream` 主路径。
+这里保留 direct selector 示例，是因为它们属于专项 backend-selection API，不是普通 TLS bootstrap 第一入口。
+
 ---
 
 ## 快速开始
@@ -56,7 +60,7 @@
 
 ```pascal
 uses
-  fafafa.ssl.base,
+  fafafa.ssl,
   fafafa.ssl.context.builder;
 
 var
@@ -81,6 +85,9 @@ begin
     .BuildClient;
 end;
 ```
+
+这里的 Builder 推荐示例只负责“自动后端选择 + context 构建”。
+真正把已连接 socket/stream 升级成 TLS 时，普通调用方仍优先回到 `TSSLConnector` / `TSSLAcceptor` / `TSSLStream`。
 
 ### 方式 2: 直接使用选择器
 

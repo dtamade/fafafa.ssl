@@ -10,6 +10,73 @@
 
 ## Current Status
 
+- [completed] `backend selection guide current public import truth`
+  当前 focused 目标：
+  - 收掉
+    `docs/BACKEND_SELECTION_GUIDE.md`
+    里
+    builder 推荐路径
+    仍回退到
+    `fafafa.ssl.base`
+    的活跃入口漂移，
+    让专项 guide
+    继续讲
+    selector /
+    builder integration，
+    但不再偏离
+    当前 public import truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-backend-selection-guide-current-public-import-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_backend_selection_guide_current_public_import_truth_contract.sh`
+  - 更新：
+    - `docs/BACKEND_SELECTION_GUIDE.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_backend_selection_guide_current_public_import_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_backend_selection_guide_current_public_import_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_backend_selection_guide_runtime_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_active_server_example_verify_intent_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - `BACKEND_SELECTION_GUIDE`
+    是
+    backend-selection /
+    builder integration /
+    direct selector API
+    专项 guide，
+    不是普通 TLS bootstrap 第一入口页
+  - 其中
+    builder 推荐示例
+    当前应使用：
+    - `uses fafafa.ssl, fafafa.ssl.context.builder;`
+  - direct selector path
+    可以继续保留，
+    但普通 TLS 建立
+    仍应回到：
+    - `docs/guides/GETTING_STARTED.md`
+    - `TSSLConnector`
+    - `TSSLAcceptor`
+    - `TSSLStream`
+  当前批收口后的默认下一步：
+  - auto-selection
+    专项 guide
+    不再把
+    builder 推荐入口
+    带回
+    `fafafa.ssl.base`
+  - 下一条 residual
+    继续优先挑
+    还会影响
+    活跃 guide
+    默认 import / entrypoint
+    心智的页面
+
 - [completed] `user guide ordinary entrypoint truth alignment`
   当前 focused 目标：
   - 把

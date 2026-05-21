@@ -6,6 +6,101 @@
 
 ## 2026-05-21
 
+### BACKEND_SELECTION_GUIDE Current Public Import Truth
+
+- inspect backend-selection guide import/entrypoint drift before editing:
+  - `docs/BACKEND_SELECTION_GUIDE.md`
+  - `src/fafafa.ssl.pas`
+  - `src/fafafa.ssl.context.builder.pas`
+  - `src/fafafa.ssl.backend.selector.pas`
+  - `docs/guides/GETTING_STARTED.md`
+  - `tests/scripts/test_backend_selection_guide_runtime_truth_contract.sh`
+  - `tests/scripts/test_active_server_example_verify_intent_truth_contract.sh`
+  - change:
+    - confirmed
+      this page
+      is a
+      specialized
+      backend-selection /
+      builder-integration /
+      direct-selector
+      guide,
+      not the ordinary TLS bootstrap landing page
+    - confirmed
+      builder recommended path
+      still imported
+      `fafafa.ssl.base`
+    - confirmed
+      current facade truth
+      for that builder path
+      should be
+      `uses fafafa.ssl, fafafa.ssl.context.builder;`
+    - confirmed
+      direct selector path
+      can remain specialized
+      and does not need to be collapsed into the ordinary facade path
+
+- add focused batch record and new backend-selection import contract:
+  - `docs/plans/2026-05-21-backend-selection-guide-current-public-import-truth.md`
+  - `tests/scripts/test_backend_selection_guide_current_public_import_truth_contract.sh`
+  - change:
+    - froze:
+      - active version/date freshness
+      - specialized-scope note
+      - ordinary TLS bootstrap redirect
+      - builder quickstart facade import truth
+      - absence of
+        `fafafa.ssl.base`
+        in the builder quickstart
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_backend_selection_guide_current_public_import_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_backend_selection_guide_current_public_import_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - guide header
+        still stale
+      - builder quickstart
+        still used
+        `fafafa.ssl.base`
+
+- repair backend-selection guide current public import truth:
+  - `docs/BACKEND_SELECTION_GUIDE.md`
+  - change:
+    - refreshed
+      active version/date
+      to
+      current
+      v1.5.0-aligned state
+    - added explicit
+      guide-scope note
+      clarifying:
+      - this page is specialized
+      - ordinary TLS bootstrap flows should return to `GETTING_STARTED`
+    - rewrote
+      builder quickstart imports
+      from
+      `fafafa.ssl.base`
+      to
+      `fafafa.ssl`
+      +
+      `fafafa.ssl.context.builder`
+    - added a short note
+      that builder examples only cover
+      auto-selection + context build,
+      not the final connector/acceptor bootstrap step
+
+- verify focused closeout:
+  - `bash tests/scripts/test_backend_selection_guide_current_public_import_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_backend_selection_guide_runtime_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_active_server_example_verify_intent_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### USER_GUIDE Ordinary Entrypoint Truth Alignment
 
 - inspect ordinary-user entrypoint drift before editing:

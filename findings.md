@@ -2,6 +2,64 @@
 
 ## 2026-05-21
 
+- backend selection guide current public import truth
+  这一刀确认的
+  不是
+  `BACKEND_SELECTION_GUIDE`
+  不该存在
+  direct selector
+  示例，
+  而是
+  它的
+  builder 推荐路径
+  仍然回退到了
+  `fafafa.ssl.base`
+
+- 当前更准确的收口是：
+  - 这页的定位
+    仍然是：
+    - backend auto-selection
+    - builder integration
+    - direct selector API
+  - 它不是
+    普通 TLS bootstrap
+    第一入口页
+  - 但在这页内部，
+    builder 推荐示例
+    仍应使用：
+    - `uses fafafa.ssl, fafafa.ssl.context.builder;`
+  - direct selector
+    示例
+    仍可保留，
+    但应明确它是
+    专项 API，
+    不是普通 TLS
+    接入主路径
+
+- 这说明
+  当前“文档完整”
+  这条主线里，
+  不只是
+  把错误接口名改对，
+  还要持续区分：
+  - 普通主入口
+  - 专项 guide
+  - low-level / specialized API
+  三者的边界
+
+- focused RED
+  首轮暴露的是：
+  - guide header
+    还停在
+    `v1.3.0`
+    /
+    `2026-02-05`
+  - builder 推荐示例
+    仍在教学
+    `fafafa.ssl.base`
+    而不是
+    当前 public facade
+
 - user guide ordinary entrypoint truth alignment
   这一刀确认的
   不是
