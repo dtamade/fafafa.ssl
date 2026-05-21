@@ -208,7 +208,7 @@ Ctx := TSSLContextBuilder.Create
   .WithCertificate('tests/certificate/test_certs/signer_cert.pem')
   .WithPrivateKey('tests/certificate/test_certs/signer_key.pem')
   .WithSessionCache(True)
-  .WithSessionTimeout(7200)
+  .WithSessionTimeout(TTimeoutDuration.Minutes(120))
   .WithServerEarlyDataPolicy(sslEarlyDataServerAccept)
   .WithServerMaxEarlyDataSize(8)
   .WithServerEarlyDataReplayStoreFile('/var/lib/fafafa/replay-store.bin')

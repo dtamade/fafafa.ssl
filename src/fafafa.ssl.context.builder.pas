@@ -21,6 +21,7 @@ interface
 uses
   SysUtils, Classes,
   fafafa.ssl.base,
+  fafafa.ssl.safety,
   fafafa.ssl.pkcs11.types,
   fafafa.ssl.pkcs11.pin,
   fafafa.ssl.backend.selector;  // v1.3.0: 自动后端选择
@@ -78,7 +79,8 @@ type
       deprecated 'Use per-connection hostname via TSSLConnectionBuilder.WithHostname or ISSLClientConnection.SetServerName';
     function WithALPN(const AProtocols: string): ISSLContextBuilder;
     function WithSessionCache(AEnabled: Boolean): ISSLContextBuilder;
-    function WithSessionTimeout(ASeconds: Integer): ISSLContextBuilder;
+    function WithSessionTimeout(ASeconds: Integer): ISSLContextBuilder; overload;
+    function WithSessionTimeout(const ATimeout: TTimeoutDuration): ISSLContextBuilder; overload;
     function WithClientEarlyData(AEnabled: Boolean = True): ISSLContextBuilder;
     function WithServerEarlyDataPolicy(APolicy: TSSLEarlyDataServerPolicy): ISSLContextBuilder;
     function WithServerMaxEarlyDataSize(ASize: Cardinal): ISSLContextBuilder;
@@ -216,6 +218,35 @@ begin
     );
 end;
 
+function TimeoutDurationToSessionTimeoutSeconds(
+  const ATimeout: TTimeoutDuration): Integer;
+var
+  LMilliseconds: Int64;
+  LSeconds: Int64;
+begin
+  if ATimeout.IsInfinite then
+    raise ESSLInvalidArgument.Create(
+      'Infinite timeout is not valid for session lifetime',
+      sslErrInvalidParam
+    );
+
+  LMilliseconds := ATimeout.ToMilliseconds;
+  if (LMilliseconds mod 1000) <> 0 then
+    raise ESSLInvalidArgument.Create(
+      'Session timeout must be a whole number of seconds',
+      sslErrInvalidParam
+    );
+
+  LSeconds := LMilliseconds div 1000;
+  if (LSeconds < Low(Integer)) or (LSeconds > High(Integer)) then
+    raise ESSLInvalidArgument.Create(
+      'Session timeout exceeds Integer second range',
+      sslErrInvalidParam
+    );
+
+  Result := Integer(LSeconds);
+end;
+
 type
   { Internal builder implementation }
   TSSLContextBuilderImpl = class(TInterfacedObject, ISSLContextBuilder)
@@ -297,7 +328,8 @@ type
       deprecated 'Use per-connection hostname via TSSLConnectionBuilder.WithHostname or ISSLClientConnection.SetServerName';
     function WithALPN(const AProtocols: string): ISSLContextBuilder;
     function WithSessionCache(AEnabled: Boolean): ISSLContextBuilder;
-    function WithSessionTimeout(ASeconds: Integer): ISSLContextBuilder;
+    function WithSessionTimeout(ASeconds: Integer): ISSLContextBuilder; overload;
+    function WithSessionTimeout(const ATimeout: TTimeoutDuration): ISSLContextBuilder; overload;
     function WithClientEarlyData(AEnabled: Boolean = True): ISSLContextBuilder;
     function WithServerEarlyDataPolicy(APolicy: TSSLEarlyDataServerPolicy): ISSLContextBuilder;
     function WithServerMaxEarlyDataSize(ASize: Cardinal): ISSLContextBuilder;
@@ -958,6 +990,12 @@ function TSSLContextBuilderImpl.WithSessionTimeout(ASeconds: Integer): ISSLConte
 begin
   FSessionTimeout := ASeconds;
   Result := Self;
+end;
+
+function TSSLContextBuilderImpl.WithSessionTimeout(
+  const ATimeout: TTimeoutDuration): ISSLContextBuilder;
+begin
+  Result := WithSessionTimeout(TimeoutDurationToSessionTimeoutSeconds(ATimeout));
 end;
 
 function TSSLContextBuilderImpl.WithClientEarlyData(AEnabled: Boolean): ISSLContextBuilder;

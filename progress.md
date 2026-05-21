@@ -6,6 +6,86 @@
 
 ## 2026-05-21
 
+### Context Builder Session Timeout Safety Adoption
+
+- inspect current session-timeout truth:
+  - `src/fafafa.ssl.context.builder.pas`
+  - `src/fafafa.ssl.base.pas`
+  - `README.md`
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - confirmed the current high-visibility gap was:
+      - `TSSLContextBuilder.WithSessionTimeout(ASeconds: Integer)`
+    - confirmed the real storage/runtime truth remains:
+      - `TSSLConfig.SessionTimeout: Integer`
+      - `ISSLContext.SetSessionTimeout(Integer)`
+      - unit = seconds
+    - confirmed active builder docs still taught
+      `.WithSessionTimeout(7200)`
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-context-builder-session-timeout-safety-adoption.md`
+  - `tests/contract/test_context_builder_session_timeout_safety_entry.pas`
+  - `tests/scripts/test_context_builder_session_timeout_safety_contract.sh`
+  - change:
+    - documented the batch as
+      context builder session-timeout safety adoption
+    - added a focused compile/runtime contract
+      to guard:
+      - public overload surface
+      - docs example adoption
+      - duration-to-seconds bridge truth
+      - invalid `Infinite` / non-whole-second boundaries
+
+- implement context builder session-timeout safety adoption:
+  - `src/fafafa.ssl.context.builder.pas`
+  - `README.md`
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - added
+      `ISSLContextBuilder`
+      overload:
+      - `WithSessionTimeout(const ATimeout: TTimeoutDuration)`
+    - kept the old
+      `Integer`
+      overload unchanged for compatibility
+    - added explicit bridge from
+      `TTimeoutDuration`
+      to current
+      `Integer`
+      second storage
+    - made
+      `Infinite`
+      reject explicitly
+    - made non-whole-second duration reject explicitly
+    - added range guard for values outside current
+      `Integer`
+      second truth
+    - updated active builder docs
+      from
+      `.WithSessionTimeout(7200)`
+      to
+      `.WithSessionTimeout(TTimeoutDuration.Minutes(120))`
+
+- verify focused static/runtime truth:
+  - `bash -n tests/scripts/test_context_builder_session_timeout_safety_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_context_builder_session_timeout_safety_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed the builder public surface now exports the typed overload
+      - confirmed active builder docs adopted
+        `TTimeoutDuration.Minutes(120)`
+      - confirmed runtime bridge truth:
+        - typed minutes -> `120`
+        - legacy integer -> `90`
+        - `1500ms` rejected with
+          `ESSLInvalidArgument`
+        - `Infinite` rejected with
+          `ESSLInvalidArgument`
+  - `git diff --check`
+    - result: PASS
+
 ### Connector Timeout Safety Adoption
 
 - inspect current timeout fluent path truth:

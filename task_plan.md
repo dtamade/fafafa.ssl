@@ -10,6 +10,99 @@
 
 ## Current Status
 
+- [completed] `context builder session-timeout safety adoption`
+  当前 focused 目标：
+  - 把
+    `TTimeoutDuration`
+    从
+    connector / acceptor / connection builder
+    继续推进到
+    当前最常见的 context fluent path：
+    - `TSSLContextBuilder.WithSessionTimeout(...)`
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-context-builder-session-timeout-safety-adoption.md`
+  - 新增 contract：
+    - `tests/contract/test_context_builder_session_timeout_safety_entry.pas`
+    - `tests/scripts/test_context_builder_session_timeout_safety_contract.sh`
+  - 更新：
+    - `src/fafafa.ssl.context.builder.pas`
+    - `README.md`
+    - `docs/reference/API_REFERENCE.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_context_builder_session_timeout_safety_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_context_builder_session_timeout_safety_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前状态：
+  - `ISSLContextBuilder`
+    现在新增并保留兼容：
+    - `WithSessionTimeout(ASeconds: Integer);`
+    - `WithSessionTimeout(const ATimeout: TTimeoutDuration);`
+  - 当前 builder bridge
+    明确把
+    `TTimeoutDuration`
+    转回当前真实底层存储：
+    - `Integer`
+      秒
+  - `Infinite`
+    现在会明确抛出：
+    - `ESSLInvalidArgument`
+      `Infinite timeout is not valid for session lifetime`
+  - 非整秒 duration
+    现在会明确抛出：
+    - `ESSLInvalidArgument`
+      `Session timeout must be a whole number of seconds`
+  - 超出当前
+    `Integer`
+    秒范围的 duration
+    现在会明确 reject，
+    不再允许静默溢出
+  - 活跃 builder 文档示例
+    已开始采用：
+    - `.WithSessionTimeout(TTimeoutDuration.Minutes(120))`
+  - focused runtime probe
+    已真实证明：
+    - typed minutes -> `120`
+    - legacy integer -> `90`
+    - `1500ms` reject
+    - `Infinite` reject
+  当前实施判断：
+  - 这批继续沿
+    `type-safety adoption`
+    主线推进，
+    但没有去重写底层
+    `TSSLConfig.SessionTimeout: Integer`
+    /
+    `ISSLContext.SetSessionTimeout(Integer)`
+    真相，
+    因此范围收得很窄
+  - 同时它把
+    `TTimeoutDuration`
+    真正推进进了
+    context builder
+    这条高频 public path，
+    不再只停留在 facade/doc truth
+  当前路线图进度判断：
+  - 总主线继续不变：
+    - interface/implementation truth alignment
+    - backend implementation-completeness
+    - tests/docs completeness
+  - 这批进一步证明：
+    我们当前最有效的推进方式
+    是沿着
+    “已 shipped safety surface
+    是否真的进入高频 public path”
+    这条线做 focused adoption
+  下一刀：
+  - 继续沿同一主线
+    复查其它已 shipped safety surface
+    是否仍停留在 facade/doc truth，
+    优先找还能用 focused contract
+    低成本锁住的 builder / facade 接缝
+
 - [completed] `connector timeout safety adoption`
   当前 focused 目标：
   - 把

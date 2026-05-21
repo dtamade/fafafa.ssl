@@ -3,6 +3,81 @@
 ## 2026-05-21
 
 - `TTimeoutDuration`
+  在 timeout 这条线上，
+  当前又暴露出一条更深一层的 adoption gap：
+  虽然
+  `TSSLConnector`
+  /
+  `TSSLAcceptor`
+  /
+  `ISSLConnectionBuilder`
+  已经补上了 typed overload，
+  但
+  `TSSLContextBuilder`
+  之前仍只公开：
+  - `WithSessionTimeout(ASeconds: Integer)`
+
+- 这意味着：
+  safety type
+  还没有真正进入
+  context 配置这条最常见 fluent path，
+  而活跃 builder 示例也仍在继续教学：
+  - `.WithSessionTimeout(7200)`
+
+- 当前 source truth
+  还进一步确认了：
+  这条接口并不是握手 timeout，
+  而是
+  context-scoped session lifetime，
+  当前真实底层仍然是：
+  - `TSSLConfig.SessionTimeout: Integer`
+  - `ISSLContext.SetSessionTimeout(Integer)`
+  - 单位：秒
+
+- 因此这批最稳的最小修法
+  不是重构底层存储，
+  而是在 builder 高入口做 bridge：
+  - `WithSessionTimeout(const ATimeout: TTimeoutDuration)`
+  同时保留旧：
+  - `WithSessionTimeout(ASeconds: Integer)`
+
+- 这条 bridge
+  也必须显式锁住几个容易含糊的边界：
+  - `Infinite`
+    不能被解释成 session lifetime
+  - 非整秒 duration
+    不能被静默截断
+  - 超出当前
+    `Integer`
+    秒范围的 duration
+    不能被静默溢出
+
+- 修复后，
+  context builder
+  已经真实补上：
+  - `WithSessionTimeout(const ATimeout: TTimeoutDuration)`
+  并且活跃 builder 示例
+  已开始采用：
+  - `TTimeoutDuration.Minutes(120)`
+
+- focused contract
+  当前已经同时证明：
+  - typed duration
+    真会落成
+    `120`
+    秒
+  - legacy integer overload
+    仍继续保持可用
+  - `1500ms`
+    会以
+    `ESSLInvalidArgument`
+    明确 reject
+  - `Infinite`
+    会以
+    `ESSLInvalidArgument`
+    明确 reject
+
+- `TTimeoutDuration`
   之前也有一条和证书 key-config
   很像的 adoption gap：
   虽然
