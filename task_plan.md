@@ -13570,3 +13570,49 @@
   - 简短 review
   - commit / push
   - 继续扫下一份高入口活跃文档里的旧入口 / backend drift
+
+### 2026-05-21 PLATFORM_SUPPORT 当前 public entrypoint 与 backend 真相对齐
+
+- [completed] 当前新的 residual
+  已继续收窄到
+  `docs/PLATFORM_SUPPORT.md`
+  这份高入口平台文档：
+  - 仍教学
+    `CreateSSLLibrary()`
+  - 仍教学 backend-specific low-level creators：
+    - `CreateOpenSSLLibrary()`
+    - `CreateWinSSLLibrary()`
+  - 平台 backend 列表仍静默漏掉
+    shipped 的
+    `sslFreePascal`
+  - auto-select 优先级表也漏掉
+    `FreePascal=50`
+  - macOS 顶部已写
+    `✅ 已发布`
+    但已知问题区仍停留在
+    “验证进行中 / CI 待完成”
+- [completed] 最小正确修法已经落地：
+  - 新增
+    `docs/plans/2026-05-21-platform-support-current-public-entrypoint-and-backend-truth-alignment.md`
+  - 新增
+    `tests/scripts/test_platform_support_current_public_entrypoint_truth_contract.sh`
+  - `PLATFORM_SUPPORT`
+    已切回：
+    - `TSSLFactory.GetLibraryInstance(sslAutoDetect)`
+      的当前 auto-entrypoint
+    - `TSSLFactory.DetectBestLibrary()`
+      的当前 auto-select 说明
+    - `TSSLFactory.GetLibraryInstance(sslOpenSSL / sslWinSSL)`
+      的显式 backend 入口
+    - 平台 backend 列表补回
+      `sslFreePascal`
+    - 当前完整优先级表：
+      `WinSSL=200, MbedTLS=175, WolfSSL=150, OpenSSL=100, FreePascal=50`
+    - macOS 当前已发布口径
+- [completed] 当前批收口后的默认下一步：
+  - `bash -n tests/scripts/test_platform_support_current_public_entrypoint_truth_contract.sh`
+  - `bash tests/scripts/test_platform_support_current_public_entrypoint_truth_contract.sh`
+  - `git diff --check`
+  - 简短 review
+  - commit / push
+  - 继续扫下一份高入口活跃文档里的旧 public entrypoint / backend drift

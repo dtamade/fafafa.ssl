@@ -1,7 +1,7 @@
 # 平台支持文档
 
-**最后更新**: 2026-05-19
-**版本**: 1.5
+**最后更新**: 2026-05-21
+**版本**: v1.5.0
 
 ---
 
@@ -30,9 +30,9 @@ fafafa.ssl 是一个跨平台的 SSL/TLS 抽象框架,支持多个操作系统�
 
 | 平台        | 当前状态 | 后端支持        | 当前验证入口                                  | 自动化 |
 | ----------- | -------- | --------------- | --------------------------------------------- | ------ |
-| **Windows** | ✅ 已发布 | OpenSSL, WinSSL | `RELEASE_READINESS_V1.5.0` + WinSSL 状态报告  | ✅     |
-| **Linux**   | ✅ 已发布 | OpenSSL         | 本地 release-control + `ci.yml` minimal gate  | ✅     |
-| **macOS**   | ✅ 已发布 | OpenSSL         | cross-platform runtime workflow + smoke 入口 | ✅     |
+| **Windows** | ✅ 已发布 | OpenSSL, WinSSL, FreePascal | `RELEASE_READINESS_V1.5.0` + WinSSL 状态报告  | ✅     |
+| **Linux**   | ✅ 已发布 | OpenSSL, FreePascal         | 本地 release-control + `ci.yml` minimal gate  | ✅     |
+| **macOS**   | ✅ 已发布 | OpenSSL, FreePascal         | cross-platform runtime workflow + smoke 入口 | ✅     |
 
 ---
 
@@ -80,14 +80,14 @@ openssl version
 
 ```pascal
 // WinSSL 使用系统原生 Schannel,无需额外安装
-uses fafafa.ssl.factory;
+uses fafafa.ssl;
 
 var
   Lib: ISSLLibrary;
 begin
   // 自动选择当前优先级最高的可用后端
   // Windows 常见结果是 WinSSL，但仍取决于注册状态与可用性
-  Lib := CreateSSLLibrary();
+  Lib := TSSLFactory.GetLibraryInstance(sslAutoDetect);
   WriteLn('Backend: ', Lib.GetLibraryType);
 end;
 ```
@@ -124,7 +124,12 @@ cd tests
    - 版本: 1.1.x, 3.x
    - 动态库: `libssl.so.3`, `libcrypto.so.3`
    - 安装方式: 系统包管理器
-   - 说明: 如果工程编译并注册了 MbedTLS / WolfSSL，`CreateSSLLibrary()` 会按优先级选择可用后端，而不是把 Linux 固定到 OpenSSL
+   - 说明: 如果工程编译并注册了 MbedTLS / WolfSSL / FreePascal，`TSSLFactory.DetectBestLibrary()` / `TSSLFactory.GetLibraryInstance(sslAutoDetect)` 会按优先级选择可用后端，而不是把 Linux 固定到 OpenSSL
+
+2. **FreePascal** (pure Pascal / 无外部 SSL 动态库)
+   - 动态库: 无
+   - 状态: 当前已 shipped，适合 Pascal-first / 零外部 SSL 动态库路径
+   - 说明: capability coverage 当前仍小于 OpenSSL，但它已是当前平台支持页必须显式列出的 backend family
 
 ### 安装指南
 
@@ -205,7 +210,12 @@ bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local
    - 版本: 1.1.x, 3.x (推荐 3.x)
    - 动态库: `libssl.3.dylib`, `libcrypto.3.dylib`
    - 安装方式: Homebrew
-   - 说明: 如果工程编译并注册了 MbedTLS / WolfSSL，`CreateSSLLibrary()` 会按优先级选择可用后端，而不是把 macOS 固定到 OpenSSL
+   - 说明: 如果工程编译并注册了 MbedTLS / WolfSSL / FreePascal，`TSSLFactory.DetectBestLibrary()` / `TSSLFactory.GetLibraryInstance(sslAutoDetect)` 会按优先级选择可用后端，而不是把 macOS 固定到 OpenSSL
+
+2. **FreePascal** (pure Pascal / 无外部 SSL 动态库)
+   - 动态库: 无
+   - 状态: 当前已 shipped，适合 Pascal-first / 零外部 SSL 动态库路径
+   - 说明: 若你不想依赖 Homebrew OpenSSL，这条 backend 也是当前平台支持页中的正式 shipped 选项
 
 ### 安装指南
 
@@ -287,9 +297,8 @@ macOS 默认文件系统不区分大小写 (APFS 可配置)。确保文件名大
 
 ### 已知问题
 
-- 🔄 macOS 平台验证正在进行中
-- 待完成完整测试套件验证
-- CI/CD 配置待完成
+- 无当前 release-blocking 已知问题
+- 继续扩测时，优先按 focused smoke + `RELEASE_READINESS_V1.5.0.md` 口径推进
 
 ---
 
@@ -299,16 +308,17 @@ macOS 默认文件系统不区分大小写 (APFS 可配置)。确保文件名大
 
 工厂方法会在已注册且当前可用的实现里，选择 highest-priority available backend，而不是按平台硬编码单一路径。
 
-当前注册优先级为：`WinSSL=200, MbedTLS=175, WolfSSL=150, OpenSSL=100`。
+当前注册优先级为：`WinSSL=200, MbedTLS=175, WolfSSL=150, OpenSSL=100, FreePascal=50`。
 
 ```pascal
-uses fafafa.ssl.factory;
+uses fafafa.ssl;
 
 var
   Lib: ISSLLibrary;
 begin
   // 自动选择当前优先级最高、且真正可用的后端
-  Lib := CreateSSLLibrary();
+  // 如需先看决策结果，可先调用 TSSLFactory.DetectBestLibrary()
+  Lib := TSSLFactory.GetLibraryInstance(sslAutoDetect);
 
   WriteLn('使用后端: ', Lib.GetLibraryType);
 end;
@@ -318,10 +328,10 @@ end;
 
 ```pascal
 // 强制使用 OpenSSL
-Lib := CreateOpenSSLLibrary();
+Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
 
 // 强制使用 WinSSL (仅 Windows)
-Lib := CreateWinSSLLibrary();
+Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);
 ```
 
 ### 后端对比

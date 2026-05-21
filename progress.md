@@ -19886,6 +19886,78 @@
   - summary:
     - no whitespace or patch-format drift remains after the capability guide batch
 
+- `mcp__ace_tool__.search_context`
+  - query:
+    - locate active platform-support truth around
+      `CreateSSLLibrary()`,
+      current public entrypoints,
+      backend set,
+      and auto-select wording
+  - result: PASS
+  - summary:
+    - confirmed
+      `docs/PLATFORM_SUPPORT.md`
+      still taught removed public helper paths
+    - confirmed current truth source still points to:
+      - `TSSLFactory.GetLibraryInstance(...)`
+      - `TSSLFactory.CreateContext(...)`
+      - `TSSLContextBuilder.Create...`
+    - confirmed platform doc also still omitted shipped
+      `sslFreePascal`
+
+- `rg -n "CreateSSLLibrary\\(|CreateOpenSSLLibrary\\(|CreateWinSSLLibrary\\(|sslFreePascal|highest-priority available backend" docs/PLATFORM_SUPPORT.md`
+  - result: PASS
+  - summary:
+    - surfaced the exact stale public-entrypoint and backend-set strings in
+      `PLATFORM_SUPPORT.md`
+
+- `sed -n '1425,1450p' src/fafafa.ssl.openssl.backed.pas`
+- `sed -n '895,910p' src/fafafa.ssl.winssl.lib.pas`
+- `sed -n '725,738p' src/fafafa.ssl.mbedtls.lib.pas`
+- `sed -n '700,709p' src/fafafa.ssl.wolfssl.lib.pas`
+- `sed -n '1750,1760p' src/fafafa.ssl.freepascal.lib.pas`
+  - result: PASS
+  - summary:
+    - confirmed current registered backend priorities:
+      - `WinSSL=200`
+      - `MbedTLS=175`
+      - `WolfSSL=150`
+      - `OpenSSL=100`
+      - `FreePascal=50`
+    - directly proved the active platform doc priority list was incomplete
+
+- update docs:
+  - `docs/PLATFORM_SUPPORT.md`
+  - `docs/plans/2026-05-21-platform-support-current-public-entrypoint-and-backend-truth-alignment.md`
+  - `tests/scripts/test_platform_support_current_public_entrypoint_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - replaced removed public factory helpers with current
+      `TSSLFactory.GetLibraryInstance(...)`
+      entrypoints
+    - restored
+      `sslFreePascal`
+      to the platform/backend narrative
+    - completed the published backend priority list
+    - repaired stale macOS validation wording back to current release truth
+
+- `bash -n tests/scripts/test_platform_support_current_public_entrypoint_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - shell syntax for the new platform-support contract is clean
+
+- `bash tests/scripts/test_platform_support_current_public_entrypoint_truth_contract.sh`
+  - result: RED -> GREEN
+  - summary:
+    - first run exposed a script-only quoting bug around backtick patterns
+    - after tightening the affected `assert_contains` patterns to single-quoted literals,
+      the full platform-support truth guard turned green
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains after the platform-support batch
+
 ### Main Backends Ed25519 Certificate Algorithm Truth
 
 - add focused batch inputs:

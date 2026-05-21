@@ -12946,3 +12946,41 @@
     继续把
     `FreePascal`
     从 capability 讨论里静默漏掉
+
+- `PLATFORM_SUPPORT.md`
+  这轮又暴露了一条更直接的公开入口裂缝：
+  - 它不是只在措辞上旧一点，
+    而是仍在高入口平台文档里继续教学
+    `CreateSSLLibrary()`
+  - 但这条 helper
+    已经不属于当前 shipped source public function
+
+- 这类 drift
+  比普通 broken link 更容易误导后续路线：
+  - 因为读者会以为“平台文档里的工厂示例”就是当前权威 public entrypoint
+  - 进而继续把不存在的 helper
+    写回新文档 / 新示例 / 新测试
+
+- 同一页还叠加了第二层 backend truth 漂移：
+  - 平台表和各平台 backend 列表
+    仍在静默漏掉
+    `sslFreePascal`
+  - auto-select 优先级表
+    也只写到
+    `OpenSSL`
+    而没有把当前真实注册值里的
+    `FreePascal=50`
+    带上
+
+- 这让平台文档会同时制造两种错觉：
+  - 以为当前自动后端选择仍依赖旧 helper
+  - 以为
+    `sslFreePascal`
+    还不是平台支持叙事中的正式 shipped backend
+
+- macOS 区块还暴露了一条状态自相矛盾：
+  - 顶部已经写
+    `✅ 已发布`
+  - 但已知问题区仍残留
+    “平台验证正在进行中 / CI/CD 配置待完成”
+  - 这会直接干扰我们对当前 release 路线是否已闭环的判断
