@@ -107,6 +107,12 @@ begin
     Halt(ACode);
 end;
 
+procedure AssertTrue(ACondition: Boolean; ACode: Integer);
+begin
+  if not ACondition then
+    Halt(ACode);
+end;
+
 constructor TMockClientConnection.Create(AContext: ISSLContext);
 begin
   inherited Create(AContext);
@@ -459,6 +465,7 @@ var
   StreamTransport: TMemoryStream;
   TLS: TSSLStream;
   Conn: ISSLConnection;
+  Control: ISSLConnectionControl;
 begin
   Ctx := TMockContext.Create(sslCtxClient);
 
@@ -468,6 +475,8 @@ begin
     TLS := TSSLConnector.FromContext(Ctx)
       .WithTimeout(TTimeoutDuration.Seconds(15))
       .ConnectStream(StreamTransport, 'example.com');
+    AssertTrue(Supports(TLS.Connection, ISSLConnectionControl, Control), 11);
+    AssertEquals(15000, Control.GetTimeout, 12);
     AssertEquals(15000, TLS.Connection.GetTimeout, 1);
     TLS.Free;
     TLS := nil;
@@ -475,6 +484,8 @@ begin
     TLS := TSSLConnector.FromContext(Ctx)
       .WithTimeout(2500)
       .ConnectStream(StreamTransport, 'example.com');
+    AssertTrue(Supports(TLS.Connection, ISSLConnectionControl, Control), 13);
+    AssertEquals(2500, Control.GetTimeout, 14);
     AssertEquals(2500, TLS.Connection.GetTimeout, 2);
     TLS.Free;
     TLS := nil;
@@ -482,6 +493,8 @@ begin
     TLS := TSSLAcceptor.FromContext(TMockContext.Create(sslCtxServer))
       .WithTimeout(TTimeoutDuration.Seconds(20))
       .AcceptStream(StreamTransport);
+    AssertTrue(Supports(TLS.Connection, ISSLConnectionControl, Control), 15);
+    AssertEquals(20000, Control.GetTimeout, 16);
     AssertEquals(20000, TLS.Connection.GetTimeout, 3);
     TLS.Free;
     TLS := nil;
@@ -491,6 +504,8 @@ begin
       .WithStream(StreamTransport)
       .WithTimeout(TTimeoutDuration.Seconds(12))
       .BuildClient;
+    AssertTrue(Supports(Conn, ISSLConnectionControl, Control), 17);
+    AssertEquals(12000, Control.GetTimeout, 18);
     AssertEquals(12000, Conn.GetTimeout, 4);
   finally
     TLS.Free;

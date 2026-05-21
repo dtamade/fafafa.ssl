@@ -105,7 +105,7 @@
 - 迁移到 connection / transport surface
   - `HandshakeTimeout`
     - 当前推荐入口：`TSSLConnector.WithTimeout(...)` / `TSSLAcceptor.WithTimeout(...)`
-    - 连接创建后若需要局部覆盖，`ISSLConnection.SetTimeout(...)` 仍作为 `v1.x` connection-adjacent convenience surface 保留
+    - 连接创建后若需要局部覆盖，优先通过 `ISSLConnectionControl.SetTimeout(...)`；`ISSLConnection.SetTimeout(...)` 继续作为 `v1.x` connection-adjacent convenience surface 保留
   - `BufferSize`
     - 当前推荐入口：外围 socket / stream / transport / app-level buffer policy
   - `v2` 方向：从 context factory record 中移出这类 connection-adjacent 字段。
@@ -481,6 +481,13 @@ end;
 连接侧 owner surfaces 通过这几组可选接口暴露：
 
 ```pascal
+ISSLConnectionControl = interface
+  procedure SetTimeout(ATimeout: Integer);
+  function GetTimeout: Integer;
+  procedure SetBlocking(ABlocking: Boolean);
+  function GetBlocking: Boolean;
+end;
+
 ISSLConnectionInfo = interface
   function GetConnectionInfo: TSSLConnectionInfo;
   function GetContext: ISSLContext;
@@ -515,6 +522,7 @@ ISSLOCSPStapling = interface
 end;
 ```
 
+- 对 timeout / blocking 这组 runtime control state，新代码优先通过 `ISSLConnectionControl`。
 - 对 `GetConnectionInfo` / `GetContext` / `GetSelectedALPNProtocol` / `GetStateString` 这组连接信息 mirrors，新代码优先通过 `ISSLConnectionInfo` 获取。
 - 对健康、性能、诊断信息，新代码优先通过 `ISSLDiagnostics` 获取。
 - 对会话保存 / 注入 / 复用命中状态，新代码优先通过 `ISSLSessionResumption` 获取。
@@ -736,6 +744,7 @@ end;
 - `GetStateString` 在 `ISSLConnection` 上仅作为 `v1.x` compatibility-core mirror 保留；当前源码声明已经是编译期 `deprecated`，需要后端相关状态描述时，新代码优先通过 `ISSLConnectionInfo.GetStateString`。
 - `ReadString` / `WriteString` 继续作为 `v1.x` convenience-core 文本 helper 保留；框架/transport 集成优先使用 `Read` / `Write`。
 - `SetTimeout` / `GetTimeout` 继续作为 `v1.x` connection-adjacent convenience surface 保留；新代码优先在构建阶段使用 `TSSLConnectionBuilder.WithTimeout(...)` / `TSSLConnector.WithTimeout(...)` / `TSSLAcceptor.WithTimeout(...)`。
+- 连接创建后若需要读取或覆盖 runtime control state，新代码优先通过 `ISSLConnectionControl`。
 - `SetBlocking` / `GetBlocking` 继续作为 `v1.x` connection-adjacent convenience surface 保留；新代码优先在构建阶段使用 `TSSLConnectionBuilder.WithBlocking(...)`。
 - `GetHealthStatus` / `IsHealthy` / `GetDiagnosticInfo` / `GetPerformanceMetrics` 也由 `ISSLDiagnostics` 暴露。
 - `GetHealthStatus` / `IsHealthy` / `GetDiagnosticInfo` / `GetPerformanceMetrics` 在 `ISSLConnection` 上当前也只作为 `v1.x` compatibility-core mirror 保留；当前源码声明已经是编译期 `deprecated`，需要诊断/健康/性能信息时，新代码优先通过 `ISSLDiagnostics` owner surface 访问。

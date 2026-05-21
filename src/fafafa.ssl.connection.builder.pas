@@ -156,6 +156,29 @@ begin
   end;
 end;
 
+procedure ApplyConnectionControlOverrides(
+  AConnection: ISSLConnection;
+  ATimeout: Integer;
+  ABlocking: Boolean
+);
+var
+  LConnectionControl: ISSLConnectionControl;
+begin
+  if AConnection = nil then
+    Exit;
+
+  if Supports(AConnection, ISSLConnectionControl, LConnectionControl) then
+  begin
+    LConnectionControl.SetTimeout(ATimeout);
+    LConnectionControl.SetBlocking(ABlocking);
+  end
+  else
+  begin
+    AConnection.SetTimeout(ATimeout);
+    AConnection.SetBlocking(ABlocking);
+  end;
+end;
+
 { TSSLConnectionBuilder }
 
 class function TSSLConnectionBuilder.Create: ISSLConnectionBuilder;
@@ -328,9 +351,8 @@ begin
       Exit;
     end;
     
-    // Configure connection
-    AConnection.SetTimeout(FTimeout);
-    AConnection.SetBlocking(FBlocking);
+    // Prefer the connection-control owner path when the backend exposes it.
+    ApplyConnectionControlOverrides(AConnection, FTimeout, FBlocking);
     
     // Set session for reuse
     if FSessionReuse and (FSession <> nil) then
@@ -430,9 +452,8 @@ begin
       Exit;
     end;
     
-    // Configure connection
-    AConnection.SetTimeout(FTimeout);
-    AConnection.SetBlocking(FBlocking);
+    // Prefer the connection-control owner path when the backend exposes it.
+    ApplyConnectionControlOverrides(AConnection, FTimeout, FBlocking);
     
     // Perform server accept
     if not AConnection.Accept then

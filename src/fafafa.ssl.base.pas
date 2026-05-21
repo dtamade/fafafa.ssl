@@ -612,6 +612,7 @@ type
   // 前向声明
   ISSLContext = interface;
   ISSLConnection = interface;
+  ISSLConnectionControl = interface;
   ISSLCertificate = interface;
   ISSLCertificateStore = interface;
   ISSLSession = interface;
@@ -1319,21 +1320,25 @@ type
 
     {** 设置操作超时
         @param ATimeout 超时毫秒数
-        @preferred-access 新代码优先在构建阶段使用 TSSLConnectionBuilder.WithTimeout / TSSLConnector.WithTimeout / TSSLAcceptor.WithTimeout；连接创建后仍可通过此入口做 per-connection convenience override *}
+        @preferred-access 新代码优先在构建阶段使用 TSSLConnectionBuilder.WithTimeout / TSSLConnector.WithTimeout / TSSLAcceptor.WithTimeout；连接创建后若需要读取或覆盖 runtime control state，优先通过 ISSLConnectionControl.SetTimeout；此入口继续作为 per-connection convenience override 保留
+        @owner-note 当前 runtime connection-control state 的默认 owner 为 ISSLConnectionControl；ISSLConnection.SetTimeout 继续作为 v1.x convenience-core mirror 保留 *}
     procedure SetTimeout(ATimeout: Integer);
 
     {** 获取当前超时设置
-        @preferred-access 新代码优先在构建阶段使用 TSSLConnectionBuilder.WithTimeout / TSSLConnector.WithTimeout / TSSLAcceptor.WithTimeout；连接创建后仍可通过此入口做 per-connection convenience override
+        @preferred-access 新代码优先在构建阶段使用 TSSLConnectionBuilder.WithTimeout / TSSLConnector.WithTimeout / TSSLAcceptor.WithTimeout；连接创建后若需要读取或覆盖 runtime control state，优先通过 ISSLConnectionControl.GetTimeout；此入口继续作为 per-connection convenience override 保留
+        @owner-note 当前 runtime connection-control state 的默认 owner 为 ISSLConnectionControl；ISSLConnection.GetTimeout 继续作为 v1.x convenience-core mirror 保留
         @returns 超时毫秒数 *}
     function GetTimeout: Integer;
 
     {** 设置阻塞模式
         @param ABlocking True 为阻塞，False 为非阻塞
-        @preferred-access 新代码优先在构建阶段使用 TSSLConnectionBuilder.WithBlocking；连接创建后仍可通过此入口做 per-connection convenience override *}
+        @preferred-access 新代码优先在构建阶段使用 TSSLConnectionBuilder.WithBlocking；连接创建后若需要读取或覆盖 runtime control state，优先通过 ISSLConnectionControl.SetBlocking；此入口继续作为 per-connection convenience override 保留
+        @owner-note 当前 runtime connection-control state 的默认 owner 为 ISSLConnectionControl；ISSLConnection.SetBlocking 继续作为 v1.x convenience-core mirror 保留 *}
     procedure SetBlocking(ABlocking: Boolean);
 
     {** 获取当前阻塞模式
-        @preferred-access 新代码优先在构建阶段使用 TSSLConnectionBuilder.WithBlocking；连接创建后仍可通过此入口做 per-connection convenience override
+        @preferred-access 新代码优先在构建阶段使用 TSSLConnectionBuilder.WithBlocking；连接创建后若需要读取或覆盖 runtime control state，优先通过 ISSLConnectionControl.GetBlocking；此入口继续作为 per-connection convenience override 保留
+        @owner-note 当前 runtime connection-control state 的默认 owner 为 ISSLConnectionControl；ISSLConnection.GetBlocking 继续作为 v1.x convenience-core mirror 保留
         @returns True 如果是阻塞模式 *}
     function GetBlocking: Boolean;
 
@@ -1421,6 +1426,42 @@ type
         @deprecated 推荐使用 ISSLOCSPStapling.GetOCSPResponseStatus *}
     function GetOCSPResponseStatus: string;
       deprecated 'Use ISSLOCSPStapling.GetOCSPResponseStatus';
+  end;
+
+  {**
+   * ISSLConnectionControl - 连接级 timeout / blocking 控制扩展接口
+   *
+   * 承接 `ISSLConnection` 中这组 v1.x connection-adjacent convenience mirrors：
+   * - SetTimeout
+   * - GetTimeout
+   * - SetBlocking
+   * - GetBlocking
+   *
+   * builder / connector / acceptor 仍然是更高层的 build-stage 推荐入口；
+   * 当连接已经创建、调用方需要读取或覆盖 runtime control state 时，
+   * 新代码优先通过这个 optional owner path 访问。
+   *
+   * @stable 1.0
+   * @since 2026-05-21
+   *}
+  ISSLConnectionControl = interface
+    ['{4D3AA9AF-6D62-4CE1-9F30-6B5E7E6A9A21}']
+
+    {** 设置操作超时
+        @owner-note 当前 runtime connection-control state 的默认 owner；ISSLConnection.SetTimeout 继续作为 v1.x convenience mirror 保留 *}
+    procedure SetTimeout(ATimeout: Integer);
+
+    {** 获取当前超时设置
+        @owner-note 当前 runtime connection-control state 的默认 owner；ISSLConnection.GetTimeout 继续作为 v1.x convenience mirror 保留 *}
+    function GetTimeout: Integer;
+
+    {** 设置阻塞模式
+        @owner-note 当前 runtime connection-control state 的默认 owner；ISSLConnection.SetBlocking 继续作为 v1.x convenience mirror 保留 *}
+    procedure SetBlocking(ABlocking: Boolean);
+
+    {** 获取当前阻塞模式
+        @owner-note 当前 runtime connection-control state 的默认 owner；ISSLConnection.GetBlocking 继续作为 v1.x convenience mirror 保留 *}
+    function GetBlocking: Boolean;
   end;
 
   {**

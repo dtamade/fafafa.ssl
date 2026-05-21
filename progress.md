@@ -6,6 +6,133 @@
 
 ## 2026-05-21
 
+### ISSLConnection Control Owner-Path Adoption
+
+- inspect current timeout/blocking control seam before editing:
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.connection.base.pas`
+  - `src/fafafa.ssl.connection.builder.pas`
+  - `src/fafafa.ssl.tls.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/INTERFACE_DESIGN_V2.md`
+  - `docs/ARCHITECTURE.md`
+  - `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+  - `tests/contract/test_connector_timeout_safety_entry.pas`
+  - change:
+    - confirmed
+      `timeout / blocking`
+      仍只有
+      builder-first
+      recommendation truth
+      ，尚无正式 owner interface
+    - confirmed
+      `TBaseSSLConnection`
+      已共享实现
+      这 4 个方法，
+      所以最小非破坏性切片
+      适合落在 optional interface + owner-path adoption
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-isslconnection-control-owner-path-adoption.md`
+  - `tests/scripts/test_isslconnection_control_owner_path_contract.sh`
+  - change:
+    - documented the batch as
+      `ISSLConnectionControl`
+      owner-path adoption
+    - added a focused contract to freeze:
+      - new optional owner interface must exist
+      - base class must implement it
+      - builder / connector / acceptor must prefer owner path
+      - canonical docs / audit must record the new truth
+
+- establish focused RED before doc sync completes:
+  - `bash -n tests/scripts/test_isslconnection_control_owner_path_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_isslconnection_control_owner_path_contract.sh`
+    - result: FAIL
+    - summary:
+      - failed at:
+        `API reference must publish ISSLConnectionControl as the timeout/blocking owner path`
+      - important conclusion:
+        - source-side owner path was landing,
+          but canonical docs truth had not been synchronized yet
+
+- repair source / owner-path adoption:
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.connection.base.pas`
+  - `src/fafafa.ssl.connection.builder.pas`
+  - `src/fafafa.ssl.tls.pas`
+  - `src/fafafa.ssl.debug.utils.pas`
+  - `tests/contract/test_connector_timeout_safety_entry.pas`
+  - change:
+    - added
+      `ISSLConnectionControl`
+      to public base source
+    - reclassified core
+      `SetTimeout`
+      /
+      `GetTimeout`
+      /
+      `SetBlocking`
+      /
+      `GetBlocking`
+      as
+      owner-path-aware
+      convenience mirrors
+    - made
+      `TBaseSSLConnection`
+      explicitly implement
+      `ISSLConnectionControl`
+    - switched builder / connector / acceptor application flow to:
+      `Supports(..., ISSLConnectionControl, ...)`
+      first,
+      direct core fallback second
+    - expanded the focused runtime probe so mock connections must expose
+      `ISSLConnectionControl`
+      and report the same timeout values through the owner path
+
+- repair focused contract quoting:
+  - `tests/scripts/test_isslconnection_control_owner_path_contract.sh`
+  - change:
+    - converted backtick-bearing literal expectations to shell-safe quoting
+    - important conclusion:
+      - the interim
+        `command not found`
+        failure was a shell quoting bug,
+        not an implementation mismatch
+
+- repair canonical docs / audit truth:
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/INTERFACE_DESIGN_V2.md`
+  - `docs/ARCHITECTURE.md`
+  - `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+  - change:
+    - published
+      `ISSLConnectionControl`
+      as the timeout/blocking owner surface
+    - updated
+      v2 hierarchy / migration table / implementation sketch
+    - updated
+      architecture note
+      so minimal-core snippet no longer hides the new owner path
+    - narrowed the audit so
+      timeout / blocking
+      no longer sit in the same residual bucket as
+      `ReadString` / `WriteString`
+
+- verify focused closeout:
+  - `bash tests/scripts/test_isslconnection_control_owner_path_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_connector_timeout_safety_contract.sh`
+    - result: PASS
+  - `python3 scripts/compile_all_modules.py`
+    - result: PASS
+    - summary:
+      - `186/186`
+        core modules compiled successfully
+  - `git diff --check`
+    - result: PASS
+
 ### Interface Audit Capability Current-Truth Refresh
 
 - inspect current audit/control-plane drift before editing:

@@ -329,7 +329,7 @@ begin
       [AConfig.BufferSize]
     );
     LSB.AppendFormat(
-      '握手超时: %d ms (连接层配置；使用 TSSLConnector/TSSLAcceptor/ISSLConnection)',
+      '握手超时: %d ms (连接层配置；使用 TSSLConnector/TSSLAcceptor/ISSLConnectionControl)',
       [AConfig.HandshakeTimeout]
     );
     LSB.AppendFormat(

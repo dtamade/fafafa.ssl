@@ -46,6 +46,7 @@ type
    *
    * 实现的接口：
    * - ISSLConnection: 核心连接功能
+   * - ISSLConnectionControl: timeout / blocking runtime control owner
    * - ISSLDiagnostics: 诊断功能
    * - ISSLSessionResumption: 会话复用
    * - ISSLCertificateVerification: 证书验证
@@ -69,6 +70,10 @@ type
  * - `GetContext` 当前通过一条共享基类实现同时服务于 core mirror 和
  *   `ISSLConnectionInfo` owner；active docs 已转向 `ISSLConnectionInfo.GetContext`，
  *   direct core `GetContext` 只剩 contract mirror proof。
+ * - `SetTimeout` / `GetTimeout` / `SetBlocking` / `GetBlocking`
+ *   当前共享同一组 connection-control 基类实现；builder / connector / acceptor
+ *   已开始优先通过 `ISSLConnectionControl` owner path 访问，direct core control
+ *   当前保留为 v1.x convenience mirror / fallback path。
  * - `GetHealthStatus` / `IsHealthy` / `GetDiagnosticInfo` / `GetPerformanceMetrics`
  *   当前共享同一组 diagnostics 基类实现；ordinary docs/tests 已转向 `ISSLDiagnostics` owner path，
  *   direct core diagnostics 当前只剩 contract mirror proof 和 WinSSL runtime residuals。
@@ -84,6 +89,7 @@ type
  *}
   TBaseSSLConnection = class(TInterfacedObject,
     ISSLConnection,
+    ISSLConnectionControl,
     ISSLDiagnostics,
     ISSLSessionResumption,
     ISSLCertificateVerification,

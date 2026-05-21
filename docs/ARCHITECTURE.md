@@ -207,6 +207,7 @@ end;
 
 以下代码块是 **概念上的最小 core slice**，不是 `v1.5.0` 当前 shipped source 的完整逐行镜像。
 当前 shipped source 仍保留 `ReadString` / `WriteString` 与 timeout/blocking 这组 convenience-core / connection-adjacent 方法；权威 source-truth 视图请看 `docs/reference/API_REFERENCE.md`。
+当前 shipped source 对 timeout / blocking 这组 runtime control state 已补上 `ISSLConnectionControl` owner path；core 侧继续保留 convenience mirror。
 
 ```pascal
 ISSLConnection = interface
@@ -227,6 +228,22 @@ end;
 ---
 
 ## 可选接口
+
+### ISSLConnectionControl - timeout / blocking 控制 (v1.5.0+)
+
+**设计目的**:
+- 为连接创建后的 runtime control state 提供正式 owner path
+- 保持 builder / connector / acceptor 仍是更高层的 build-stage 推荐入口
+- 让 `ISSLConnection` 上的 timeout / blocking 方法继续作为 `v1.x` convenience mirror 保留
+
+```pascal
+ISSLConnectionControl = interface
+  procedure SetTimeout(ATimeout: Integer);
+  function GetTimeout: Integer;
+  procedure SetBlocking(ABlocking: Boolean);
+  function GetBlocking: Boolean;
+end;
+```
 
 ### ISSLNativeHandleAccess - 原生句柄访问 (v1.1+)
 

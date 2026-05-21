@@ -147,6 +147,29 @@ begin
   end;
 end;
 
+procedure ApplyConnectionControlOverrides(
+  AConn: ISSLConnection;
+  ATimeout: Integer;
+  ABlocking: Boolean
+);
+var
+  LConnectionControl: ISSLConnectionControl;
+begin
+  if AConn = nil then
+    Exit;
+
+  if Supports(AConn, ISSLConnectionControl, LConnectionControl) then
+  begin
+    LConnectionControl.SetTimeout(ATimeout);
+    LConnectionControl.SetBlocking(ABlocking);
+  end
+  else
+  begin
+    AConn.SetTimeout(ATimeout);
+    AConn.SetBlocking(ABlocking);
+  end;
+end;
+
 { TSSLStream }
 
 constructor TSSLStream.Create(AConnection: ISSLConnection);
@@ -291,8 +314,7 @@ begin
   if AConn = nil then
     Exit;
 
-  AConn.SetTimeout(FTimeout);
-  AConn.SetBlocking(FBlocking);
+  ApplyConnectionControlOverrides(AConn, FTimeout, FBlocking);
 
   if FSessionReuse and (FSession <> nil) then
   begin
@@ -508,8 +530,7 @@ begin
   if AConn = nil then
     Exit;
 
-  AConn.SetTimeout(FTimeout);
-  AConn.SetBlocking(FBlocking);
+  ApplyConnectionControlOverrides(AConn, FTimeout, FBlocking);
 end;
 
 function TSSLAcceptor.TryAcceptSocket(ASocket: THandle; out AStream: TSSLStream): TSSLOperationResult;

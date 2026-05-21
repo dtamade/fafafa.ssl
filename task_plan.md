@@ -10,6 +10,80 @@
 
 ## Current Status
 
+- [completed] `isslconnection control owner-path adoption`
+  当前 focused 目标：
+  - 给
+    `ISSLConnection`
+    上的
+    `timeout / blocking`
+    这组
+    connection-adjacent
+    control surface
+    补上正式 owner path，
+    同时保持
+    `v1.x`
+    兼容不破
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-isslconnection-control-owner-path-adoption.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_isslconnection_control_owner_path_contract.sh`
+  - 目标更新：
+    - `src/fafafa.ssl.base.pas`
+    - `src/fafafa.ssl.connection.base.pas`
+    - `src/fafafa.ssl.connection.builder.pas`
+    - `src/fafafa.ssl.tls.pas`
+    - `src/fafafa.ssl.debug.utils.pas`
+    - `tests/contract/test_connector_timeout_safety_entry.pas`
+    - `docs/reference/API_REFERENCE.md`
+    - `docs/reference/INTERFACE_DESIGN_V2.md`
+    - `docs/ARCHITECTURE.md`
+    - `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_isslconnection_control_owner_path_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_isslconnection_control_owner_path_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_connector_timeout_safety_contract.sh`
+    - PASS
+  - `python3 scripts/compile_all_modules.py`
+    - PASS
+      - `186/186`
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - `SetTimeout` / `GetTimeout`
+    /
+    `SetBlocking` / `GetBlocking`
+    当前已有
+    `ISSLConnectionControl`
+    owner path
+  - `ISSLConnection`
+    core 上这 4 个方法
+    继续作为
+    `v1.x`
+    convenience mirror
+    保留
+  - builder / connector / acceptor
+    当前已开始
+    owner-path-first
+    ，core convenience
+    只作 fallback
+  当前批收口后的默认下一步：
+  - `ISSLConnection`
+    core-too-fat
+    这条线
+    已不再被
+    timeout / blocking
+    拖住
+  - 下一条更值得继续压的 residual
+    会更集中在：
+    `ReadString` / `WriteString`
+    的最终定位
+    /
+    `TSSLConfig`
+    mixed-scope public record
+
 - [completed] `interface audit capability current-truth refresh`
   当前 focused 目标：
   - 把

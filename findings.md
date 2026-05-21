@@ -2,6 +2,66 @@
 
 ## 2026-05-21
 
+- isslconnection control owner-path adoption
+  这一刀确认的
+  不是
+  `timeout / blocking`
+  runtime
+  做不到分层，
+  而是
+  它们此前只有
+  builder-first
+  推荐说明，
+  没有正式的
+  optional owner interface
+
+- 当前更准确的收口是：
+  - `ISSLConnectionControl`
+    现在承接：
+    - `SetTimeout`
+    - `GetTimeout`
+    - `SetBlocking`
+    - `GetBlocking`
+  - `ISSLConnection`
+    core 上这 4 个方法
+    继续作为
+    `v1.x`
+    convenience mirror
+    /
+    fallback path
+
+- 这说明
+  `ISSLConnection`
+  core-too-fat
+  这条主残口
+  不是必须一次性做
+  breaking surgery；
+  可以继续按
+  owner-path
+  一刀一刀往外迁
+
+- 这批之后，
+  timeout / blocking
+  不再只是
+  “文档说 builder-first”
+  的半收口状态，
+  而是已经同时具备：
+  - public source owner
+  - shared base-class implementation
+  - internal caller adoption
+  - contract/runtime proof
+  - canonical doc / audit truth
+
+- 这也把
+  `ISSLConnection`
+  线上的剩余问题
+  进一步缩小到：
+  - `ReadString` / `WriteString`
+    是否继续作为
+    convenience-core
+    长留
+  - 以及其余历史 compatibility baggage
+
 - interface audit capability current-truth refresh
   这一刀确认的
   不是 capability runtime truth 还没收口，
