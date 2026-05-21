@@ -228,7 +228,7 @@ var
   TLS: TSSLConnector;
   Stream: TSSLStream;
 begin
-  TLS := TSSLConnector.FromContext(Ctx).WithTimeout(15000);
+  TLS := TSSLConnector.FromContext(Ctx).WithTimeout(TTimeoutDuration.Seconds(15));
   Stream := TLS.ConnectStream(YourDuplexStream, 'example.com');
   try
     // Stream.Read / Stream.Write

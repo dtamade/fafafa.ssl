@@ -6,6 +6,132 @@
 
 ## 2026-05-21
 
+### Connector Timeout Safety Adoption
+
+- inspect current timeout fluent path truth:
+  - `src/fafafa.ssl.tls.pas`
+  - `src/fafafa.ssl.connection.builder.pas`
+  - `docs/INTEGRATION_GUIDE.md`
+  - `docs/guides/MIGRATION_GUIDE.md`
+  - `tests/examples/test_real_websites.pas`
+  - `tests/examples/test_real_websites_enhanced.pas`
+  - `tests/examples/test_real_websites_comprehensive.pas`
+  - `src/fafafa.ssl.safety.pas`
+  - change:
+    - confirmed
+      `TTimeoutDuration`
+      was already shipped and re-exported
+    - confirmed the real high-visibility gap was:
+      - `TSSLConnector.WithTimeout(AMs: Integer)`
+      - `TSSLAcceptor.WithTimeout(AMs: Integer)`
+      - `ISSLConnectionBuilder.WithTimeout(AMs: Integer)`
+    - confirmed active docs/examples still taught
+      `.WithTimeout(15000)`
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-connector-timeout-safety-adoption.md`
+  - `tests/contract/test_connector_timeout_safety_entry.pas`
+  - `tests/scripts/test_connector_timeout_safety_contract.sh`
+  - change:
+    - documented the batch as timeout type-safety adoption
+      for current TLS high entrypoints
+    - added a focused compile/runtime contract
+      to guard:
+      - public overload surface
+      - docs/examples adoption
+      - typed duration -> integer-millisecond bridge truth
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_connector_timeout_safety_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_connector_timeout_safety_contract.sh`
+    - result: FAIL
+    - summary:
+      - failed at:
+        `connector must export TTimeoutDuration overload`
+      - important conclusion:
+        - the timeout type-safety gap
+          was a real current public-entrypoint hole
+          rather than a speculative polish item
+
+- implement connector / acceptor / builder timeout safety adoption:
+  - `src/fafafa.ssl.tls.pas`
+  - `src/fafafa.ssl.connection.builder.pas`
+  - `docs/INTEGRATION_GUIDE.md`
+  - `docs/guides/MIGRATION_GUIDE.md`
+  - `tests/examples/test_real_websites.pas`
+  - `tests/examples/test_real_websites_enhanced.pas`
+  - `tests/examples/test_real_websites_comprehensive.pas`
+  - change:
+    - added typed overloads for:
+      - `TSSLConnector.WithTimeout(const ATimeout: TTimeoutDuration)`
+      - `TSSLAcceptor.WithTimeout(const ATimeout: TTimeoutDuration)`
+      - `ISSLConnectionBuilder.WithTimeout(const ATimeout: TTimeoutDuration)`
+    - kept old
+      `Integer`
+      overloads unchanged for compatibility
+    - added explicit bridge from
+      `TTimeoutDuration`
+      to current
+      `Integer`
+      millisecond storage
+    - preserved
+      `Infinite -> -1`
+      semantics
+    - added overflow guard for durations outside current
+      `Integer`
+      millisecond range
+    - updated active docs/examples
+      from
+      `.WithTimeout(15000)`
+      to
+      `.WithTimeout(TTimeoutDuration.Seconds(15))`
+
+- first contract rerun exposed a mock-source truth drift:
+  - `tests/contract/test_connector_timeout_safety_entry.pas`
+  - change:
+    - initial contract only
+      `uses fafafa.ssl`
+      and therefore missed
+      `TSSLOptions`
+      /
+      some base-scope enum truth
+  - verification:
+    - focused compile showed:
+      - `Identifier not found "TSSLOptions"`
+      - plus derived mock interface implementation mismatches
+    - important conclusion:
+      - the main implementation was not the issue
+      - the contract itself needed to bind directly to
+        `fafafa.ssl.base`
+        for current interface truth
+
+- repair contract source-truth binding:
+  - `tests/contract/test_connector_timeout_safety_entry.pas`
+  - change:
+    - added
+      `fafafa.ssl.base`
+      to the
+      `uses`
+      list so the mock contract compiles against the current base interface truth
+
+- verify focused static/runtime truth:
+  - `bash -n tests/scripts/test_connector_timeout_safety_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_connector_timeout_safety_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed the public typed timeout overloads now exist
+      - confirmed active docs/examples adopted
+        `TTimeoutDuration.Seconds(15)`
+      - confirmed runtime bridge truth:
+        - connector typed timeout -> `15000`
+        - connector legacy integer timeout -> `2500`
+        - acceptor typed timeout -> `20000`
+        - builder typed timeout -> `12000`
+  - `git diff --check`
+    - result: PASS
+
 ### Certificate Builder Safety Key Config Adoption
 
 - inspect current builder / safety / high-level cert path truth:

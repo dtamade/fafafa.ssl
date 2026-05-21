@@ -23,7 +23,8 @@ interface
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.base;
+  fafafa.ssl.base,
+  fafafa.ssl.safety;
 
 type
   { Forward declarations }
@@ -46,7 +47,8 @@ type
     function WithStream(AStream: TStream): ISSLConnectionBuilder;
     
     // Connection options
-    function WithTimeout(AMs: Integer): ISSLConnectionBuilder;
+    function WithTimeout(AMs: Integer): ISSLConnectionBuilder; overload;
+    function WithTimeout(const ATimeout: TTimeoutDuration): ISSLConnectionBuilder; overload;
     function WithBlocking(ABlocking: Boolean): ISSLConnectionBuilder;
     function WithHostname(const AHostname: string): ISSLConnectionBuilder;
     
@@ -97,7 +99,8 @@ type
     function WithContext(AContext: ISSLContext): ISSLConnectionBuilder;
     function WithSocket(ASocket: THandle): ISSLConnectionBuilder;
     function WithStream(AStream: TStream): ISSLConnectionBuilder;
-    function WithTimeout(AMs: Integer): ISSLConnectionBuilder;
+    function WithTimeout(AMs: Integer): ISSLConnectionBuilder; overload;
+    function WithTimeout(const ATimeout: TTimeoutDuration): ISSLConnectionBuilder; overload;
     function WithBlocking(ABlocking: Boolean): ISSLConnectionBuilder;
     function WithHostname(const AHostname: string): ISSLConnectionBuilder;
     function WithSession(ASession: ISSLSession): ISSLConnectionBuilder;
@@ -107,6 +110,24 @@ type
     function TryBuildClient(out AConnection: ISSLConnection): TSSLOperationResult;
     function TryBuildServer(out AConnection: ISSLConnection): TSSLOperationResult;
   end;
+
+function TimeoutDurationToConnectionTimeout(
+  const ATimeout: TTimeoutDuration): Integer;
+var
+  LMilliseconds: Int64;
+begin
+  if ATimeout.IsInfinite then
+    Exit(-1);
+
+  LMilliseconds := ATimeout.ToMilliseconds;
+  if (LMilliseconds < Low(Integer)) or (LMilliseconds > High(Integer)) then
+    raise ESSLInvalidArgument.Create(
+      'Timeout duration exceeds Integer millisecond range',
+      sslErrInvalidParam
+    );
+
+  Result := Integer(LMilliseconds);
+end;
 
 procedure ReadConnectionVerificationSurface(
   AConnection: ISSLConnection;
@@ -190,6 +211,12 @@ function TSSLConnectionBuilderImpl.WithTimeout(AMs: Integer): ISSLConnectionBuil
 begin
   FTimeout := AMs;
   Result := Self;
+end;
+
+function TSSLConnectionBuilderImpl.WithTimeout(
+  const ATimeout: TTimeoutDuration): ISSLConnectionBuilder;
+begin
+  Result := WithTimeout(TimeoutDurationToConnectionTimeout(ATimeout));
 end;
 
 function TSSLConnectionBuilderImpl.WithBlocking(ABlocking: Boolean): ISSLConnectionBuilder;

@@ -121,7 +121,7 @@ begin
       .WithSystemRoots
       .BuildClient;
 
-    Connector := TSSLConnector.FromContext(Ctx).WithTimeout(15000);
+    Connector := TSSLConnector.FromContext(Ctx).WithTimeout(TTimeoutDuration.Seconds(15));
 
     for I := Low(TEST_SITES) to High(TEST_SITES) do
       TestWebsite(TEST_SITES[I], Connector);

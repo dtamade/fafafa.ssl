@@ -26,6 +26,7 @@ interface
 uses
   SysUtils, Classes,
   fafafa.ssl.base,
+  fafafa.ssl.safety,
   fafafa.ssl.exceptions;
 
 type
@@ -61,7 +62,8 @@ type
   public
     class function FromContext(AContext: ISSLContext): TSSLConnector; static;
 
-    function WithTimeout(AMs: Integer): TSSLConnector;
+    function WithTimeout(AMs: Integer): TSSLConnector; overload;
+    function WithTimeout(const ATimeout: TTimeoutDuration): TSSLConnector; overload;
     function WithBlocking(ABlocking: Boolean): TSSLConnector;
     function WithSession(ASession: ISSLSession): TSSLConnector;
     function WithSessionReuse(AEnabled: Boolean): TSSLConnector;
@@ -87,7 +89,8 @@ type
   public
     class function FromContext(AContext: ISSLContext): TSSLAcceptor; static;
 
-    function WithTimeout(AMs: Integer): TSSLAcceptor;
+    function WithTimeout(AMs: Integer): TSSLAcceptor; overload;
+    function WithTimeout(const ATimeout: TTimeoutDuration): TSSLAcceptor; overload;
     function WithBlocking(ABlocking: Boolean): TSSLAcceptor;
 
     function AcceptSocket(ASocket: THandle): TSSLStream;
@@ -98,6 +101,24 @@ type
   end;
 
 implementation
+
+function TimeoutDurationToConnectionTimeout(
+  const ATimeout: TTimeoutDuration): Integer;
+var
+  LMilliseconds: Int64;
+begin
+  if ATimeout.IsInfinite then
+    Exit(-1);
+
+  LMilliseconds := ATimeout.ToMilliseconds;
+  if (LMilliseconds < Low(Integer)) or (LMilliseconds > High(Integer)) then
+    raise ESSLInvalidArgument.Create(
+      'Timeout duration exceeds Integer millisecond range',
+      sslErrInvalidParam
+    );
+
+  Result := Integer(LMilliseconds);
+end;
 
 procedure ReadConnectionVerificationSurface(
   AConn: ISSLConnection;
@@ -231,6 +252,11 @@ function TSSLConnector.WithTimeout(AMs: Integer): TSSLConnector;
 begin
   Result := Self;
   Result.FTimeout := AMs;
+end;
+
+function TSSLConnector.WithTimeout(const ATimeout: TTimeoutDuration): TSSLConnector;
+begin
+  Result := WithTimeout(TimeoutDurationToConnectionTimeout(ATimeout));
 end;
 
 function TSSLConnector.WithBlocking(ABlocking: Boolean): TSSLConnector;
@@ -464,6 +490,11 @@ function TSSLAcceptor.WithTimeout(AMs: Integer): TSSLAcceptor;
 begin
   Result := Self;
   Result.FTimeout := AMs;
+end;
+
+function TSSLAcceptor.WithTimeout(const ATimeout: TTimeoutDuration): TSSLAcceptor;
+begin
+  Result := WithTimeout(TimeoutDurationToConnectionTimeout(ATimeout));
 end;
 
 function TSSLAcceptor.WithBlocking(ABlocking: Boolean): TSSLAcceptor;

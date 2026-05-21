@@ -159,7 +159,7 @@ begin
     .WithSystemRoots
     .BuildClient;
 
-  LTLS := TSSLConnector.FromContext(LContext).WithTimeout(15000)
+  LTLS := TSSLConnector.FromContext(LContext).WithTimeout(TTimeoutDuration.Seconds(15))
     .ConnectSocket(THandle(LSocket), 'example.com');
   try
     LTLS.WriteBuffer(Pointer('GET / HTTP/1.1'#13#10'Host: example.com'#13#10#13#10)^, 37);

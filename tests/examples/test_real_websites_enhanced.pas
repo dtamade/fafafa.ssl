@@ -214,7 +214,7 @@ begin
       .WithSystemRoots
       .BuildClient;
 
-    Connector := TSSLConnector.FromContext(Ctx).WithTimeout(15000);
+    Connector := TSSLConnector.FromContext(Ctx).WithTimeout(TTimeoutDuration.Seconds(15));
 
     SetLength(Results, Length(TEST_SITES));
 

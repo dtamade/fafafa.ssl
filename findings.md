@@ -2,6 +2,82 @@
 
 ## 2026-05-21
 
+- `TTimeoutDuration`
+  之前也有一条和证书 key-config
+  很像的 adoption gap：
+  虽然
+  `fafafa.ssl`
+  主门面已经 re-export 了
+  `TTimeoutDuration`，
+  而且历史迁移文档也已经讲过
+  “毫秒/秒混淆”，
+  但当前最常见的 TLS 高入口
+  仍只暴露：
+  - `TSSLConnector.WithTimeout(AMs: Integer)`
+  - `TSSLAcceptor.WithTimeout(AMs: Integer)`
+  - `ISSLConnectionBuilder.WithTimeout(AMs: Integer)`
+
+- 这意味着：
+  type-safety
+  在 timeout 这条线上，
+  仍没有真正进入
+  用户最可能直接调用的
+  connector / acceptor / builder fluent path
+
+- 当前最稳的最小修法
+  也不是重构底层
+  `ISSLConnection.SetTimeout(Integer)`
+  真相，
+  而是先在高入口做 bridge：
+  - `WithTimeout(const ATimeout: TTimeoutDuration)`
+  并保留旧
+  `Integer`
+  overload
+
+- 这条 bridge
+  还暴露出一条必须显式处理的边界：
+  `TTimeoutDuration`
+  的内部存储是
+  `Int64`
+  毫秒，
+  而 connector / builder
+  当前真实存储仍是
+  `Integer`
+
+- 因此如果不加 guard，
+  极大 duration
+  会静默溢出。
+  当前更稳的真相是：
+  - `Infinite` -> `-1`
+  - 可表示范围内的 duration
+    -> `Integer` 毫秒
+  - 超范围
+    -> `ESSLInvalidArgument`
+
+- 修复后，
+  timeout type-safety
+  已经真实进入：
+  - `TSSLConnector`
+  - `TSSLAcceptor`
+  - `ISSLConnectionBuilder`
+  同时活跃文档 / compileable examples
+  也开始采用：
+  - `TTimeoutDuration.Seconds(15)`
+
+- focused contract
+  当前已经证明：
+  - connector typed timeout
+    真会落成
+    `15000`
+  - acceptor typed timeout
+    真会落成
+    `20000`
+  - builder typed timeout
+    真会落成
+    `12000`
+  - legacy integer overload
+    仍继续保持可用
+
 - `type-safety`
   目前还有一条很真实的 adoption gap：
   虽然

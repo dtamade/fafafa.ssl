@@ -10,6 +10,109 @@
 
 ## Current Status
 
+- [completed] `connector timeout safety adoption`
+  当前 focused 目标：
+  - 把
+    `TTimeoutDuration`
+    从
+    facade/doc truth
+    继续推进到
+    当前最常见的 TLS 高入口：
+    - `TSSLConnector`
+    - `TSSLAcceptor`
+    - `ISSLConnectionBuilder`
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-connector-timeout-safety-adoption.md`
+  - 新增 contract：
+    - `tests/contract/test_connector_timeout_safety_entry.pas`
+    - `tests/scripts/test_connector_timeout_safety_contract.sh`
+  - 更新：
+    - `src/fafafa.ssl.tls.pas`
+    - `src/fafafa.ssl.connection.builder.pas`
+    - `docs/INTEGRATION_GUIDE.md`
+    - `docs/guides/MIGRATION_GUIDE.md`
+    - `tests/examples/test_real_websites.pas`
+    - `tests/examples/test_real_websites_enhanced.pas`
+    - `tests/examples/test_real_websites_comprehensive.pas`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_connector_timeout_safety_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_connector_timeout_safety_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前状态：
+  - `TSSLConnector`
+    现在新增并保留兼容：
+    - `WithTimeout(AMs: Integer);`
+    - `WithTimeout(const ATimeout: TTimeoutDuration);`
+  - `TSSLAcceptor`
+    现在新增并保留兼容：
+    - `WithTimeout(AMs: Integer);`
+    - `WithTimeout(const ATimeout: TTimeoutDuration);`
+  - `ISSLConnectionBuilder`
+    现在新增并保留兼容：
+    - `WithTimeout(AMs: Integer);`
+    - `WithTimeout(const ATimeout: TTimeoutDuration);`
+  - 三条 fluent path
+    当前都通过显式 bridge
+    把
+    `TTimeoutDuration`
+    转成当前真实底层存储：
+    - `Integer` 毫秒
+  - `Infinite`
+    继续保持
+    `-1`
+    语义
+  - 超出当前
+    `Integer`
+    毫秒范围时，
+    现在会明确抛
+    `ESSLInvalidArgument`
+  - 活跃文档 / compileable examples
+    已开始采用：
+    - `TTimeoutDuration.Seconds(15)`
+  - focused runtime probe
+    已真实证明：
+    - connector typed timeout -> `15000`
+    - acceptor typed timeout -> `20000`
+    - builder typed timeout -> `12000`
+    - connector legacy integer timeout -> `2500`
+  当前实施判断：
+  - 这批把
+    `TTimeoutDuration`
+    真正接进了
+    用户最常走的 TLS facade path，
+    不再只停留在
+    migration doc
+    和 type-safety 说明里
+  - 同时保持了
+    `ISSLConnection.SetTimeout(Integer)`
+    这条当前实现真相不动，
+    所以范围可控，
+    风险归因清楚
+  当前路线图进度判断：
+  - 总主线继续不变：
+    - interface/implementation truth alignment
+    - backend implementation-completeness
+    - tests/docs completeness
+  - 这批继续把
+    “已经 shipped 的 safety type
+    是否真的进入高入口 public path”
+    往前推进了一层
+  下一刀：
+  - 继续沿同一主线
+    找
+    `TBufferSize`
+    /
+    其他已 shipped safety type
+    仍未进入真实 helper / builder / facade path
+    的接缝，
+    优先挑
+    还能用 focused contract
+    低成本锁住的点
+
 - [completed] `certificate builder safety key config adoption`
   当前 focused 目标：
   - 把
