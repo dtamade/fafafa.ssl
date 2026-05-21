@@ -821,6 +821,8 @@ type
 
 ### 项目结构
 
+下列项目结构片段描述的是源码树 owner / unit 角色，不代表普通调用方默认 `uses` 列表。
+
 ```
 my_https_client/
 ├── src/
@@ -828,10 +830,11 @@ my_https_client/
 ├── lib/
 │   └── fafafa.ssl/           # fafafa.ssl 源代码（子模块或复制）
 │       ├── src/
-│       │   ├── fafafa.ssl.base.pas
-│       │   ├── fafafa.ssl.pas
-│       │   ├── fafafa.ssl.factory.pas
-│       │   ├── fafafa.ssl.winssl.*.pas
+│       │   ├── fafafa.ssl.pas                # 主门面 / 当前普通入口
+│       │   ├── fafafa.ssl.context.builder.pas # 推荐 context builder 入口
+│       │   ├── fafafa.ssl.factory.pas        # core factory surface / direct-library helper
+│       │   ├── fafafa.ssl.base.pas           # 底层 source truth / supporting types
+│       │   ├── fafafa.ssl.winssl.*.pas       # WinSSL backend implementation units
 │       │   └── ...
 │       └── ...
 ├── bin/                      # 编译输出

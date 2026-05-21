@@ -6,6 +6,110 @@
 
 ## 2026-05-22
 
+### Repository Guidance Entrypoint Classification Truth
+
+- inspect the remaining repo-structure residuals after closing CODE_STYLE:
+  - `docs/guides/WINSSL_QUICKSTART.md`
+  - `docs/guides/LINUX_QUICKSTART.md`
+  - `docs/AGENTS.md`
+  - `tests/scripts/test_backend_quickstarts_direct_path_classification_contract.sh`
+  - `tests/scripts/test_linux_quickstart_current_public_truth_contract.sh`
+  - change:
+    - confirmed
+      `LINUX_QUICKSTART`
+      current public-entry
+      contract
+      and compile probe
+      still pass
+    - confirmed
+      `WINSSL_QUICKSTART`
+      direct-path wording
+      is already classified,
+      but its
+      project-structure snippet
+      still leaves
+      façade / builder / factory / base
+      roles unlabeled
+    - confirmed
+      `docs/AGENTS.md`
+      still compresses
+      structure truth
+      into
+      `fafafa.ssl.base`
+      only
+
+- add a focused batch record and a dedicated classification contract:
+  - `docs/plans/2026-05-22-repository-guidance-entrypoint-classification-truth.md`
+  - `tests/scripts/test_repository_guidance_entrypoint_classification_contract.sh`
+  - change:
+    - scoped
+      this batch
+      as
+      repo-structure /
+      source-owner
+      classification truth,
+      not ordinary
+      import drift
+
+- establish RED on current HEAD:
+  - `bash -n tests/scripts/test_repository_guidance_entrypoint_classification_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_repository_guidance_entrypoint_classification_contract.sh`
+    - result: FAIL
+    - summary:
+      - `WINSSL_QUICKSTART`
+        still lacked
+        explicit
+        source-owner /
+        repo-structure
+        classification wording
+  - note:
+    - first draft of the new
+      contract had a shell
+      quoting bug around
+      backticks;
+      fixed immediately
+      before taking the
+      real RED
+
+- repair repository-guidance classification truth:
+  - `docs/guides/WINSSL_QUICKSTART.md`
+  - `docs/AGENTS.md`
+  - `tests/scripts/test_repository_guidance_entrypoint_classification_contract.sh`
+  - change:
+    - added
+      an explicit note that
+      the `WINSSL_QUICKSTART`
+      project-structure snippet
+      describes source-owner /
+      unit roles,
+      not a default
+      `uses` list
+    - relabeled
+      `fafafa.ssl.pas`
+      /
+      `fafafa.ssl.context.builder.pas`
+      /
+      `fafafa.ssl.factory.pas`
+      /
+      `fafafa.ssl.base.pas`
+      to match
+      current repository truth
+    - expanded
+      `docs/AGENTS.md`
+      so contributors now see
+      façade / builder / base
+      role split directly
+      in the structure section
+
+- verify focused closeout:
+  - `bash -n tests/scripts/test_repository_guidance_entrypoint_classification_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_repository_guidance_entrypoint_classification_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### CODE_STYLE Public Import Truth Hardening
 
 - inspect remaining high-entry docs residuals before opening the next batch:

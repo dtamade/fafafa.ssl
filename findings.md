@@ -2,6 +2,61 @@
 
 ## 2026-05-22
 
+- repository guidance entrypoint classification truth
+  这一刀把
+  “真正的 public import drift”
+  和
+  “repo-structure / source-owner
+  分类还不够清楚”
+  这两类问题
+  明确分开了：
+  - `LINUX_QUICKSTART`
+    当前普通入口合同
+    与 probe compile
+    都是绿的，
+    说明它的 public-entry
+    主线当前已经比较稳
+  - `WINSSL_QUICKSTART`
+    当前更值得修的
+    不是正文 direct path
+    是否存在，
+    而是项目结构片段
+    没把
+    façade / builder / factory / base
+    的角色标清
+  - `docs/AGENTS.md`
+    之前那句
+    “公共抽象在 `fafafa.ssl.base`”
+    对贡献者来说过于压缩，
+    会弱化当前
+    `src/fafafa.ssl.pas`
+    /
+    `src/fafafa.ssl.context.builder.pas`
+    的实际入口地位
+
+- 当前更准确的收口是：
+  - `WINSSL_QUICKSTART`
+    的项目结构片段
+    是源码树 owner 分类，
+    不是普通调用方默认
+    `uses` 列表
+  - `docs/AGENTS.md`
+    需要同时讲清：
+    - 主门面入口
+    - 推荐 builder 入口
+    - `base` 的 source-truth /
+      supporting-types owner 角色
+
+- 这也意味着
+  docs residual
+  主线现在已经更接近闭环：
+  - public import drift
+    基本被逐步收平
+  - 剩下更少的是：
+    - 结构分类说明
+    - 更深层接口设计 / backend 完整性
+      静态问题
+
 - code style public import truth hardening
   这一刀再次暴露了一个
   典型的 partial-closeout

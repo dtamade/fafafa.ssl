@@ -10,6 +10,75 @@
 
 ## Current Status
 
+- [completed] `repository guidance entrypoint classification truth`
+  当前 focused 目标：
+  - 收平
+    `docs/guides/WINSSL_QUICKSTART.md`
+    的项目结构片段
+    与
+    `docs/AGENTS.md`
+    的仓库结构说明，
+    让贡献者和高级用户
+    看到的是：
+    - repo-structure / source-owner 分类
+    - 当前 façade / builder / base 角色边界
+  - 而不是
+    `fafafa.ssl.base`
+    一句带过的
+    base-only 心智
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-22-repository-guidance-entrypoint-classification-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_repository_guidance_entrypoint_classification_contract.sh`
+  - 更新：
+    - `docs/guides/WINSSL_QUICKSTART.md`
+    - `docs/AGENTS.md`
+  当前预期 truth：
+  - `WINSSL_QUICKSTART`
+    必须明确：
+    - 项目结构片段
+      是源码树 owner / unit 角色说明
+    - `fafafa.ssl.pas`
+      是主门面 / 当前普通入口
+    - `fafafa.ssl.context.builder.pas`
+      是推荐 builder 入口
+    - `fafafa.ssl.factory.pas`
+      是 core factory surface / direct-library helper
+    - `fafafa.ssl.base.pas`
+      是底层 source truth / supporting types
+  - `docs/AGENTS.md`
+    必须明确：
+    - `src/fafafa.ssl.pas`
+    - `src/fafafa.ssl.context.builder.pas`
+    - `src/fafafa.ssl.base.pas`
+    的不同角色
+  当前 focused proof：
+  - `bash -n tests/scripts/test_repository_guidance_entrypoint_classification_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_repository_guidance_entrypoint_classification_contract.sh`
+    - FAIL -> PASS
+    - RED summary:
+      - `WINSSL_QUICKSTART`
+        still lacked
+        repo-structure
+        classification wording
+  - `git diff --check`
+    - PASS
+  当前批收口后的默认下一步：
+  - docs residual
+    这条线
+    已经进一步从
+    public import drift
+    推进到
+    repo-structure classification truth
+  - 下一阶段更应该切回：
+    - `ISSL*`
+      接口设计完整性
+    - 各 backend
+      implementation completeness
+    的深度静态审查
+
 - [completed] `code style public import truth hardening`
   当前 focused 目标：
   - 修复
