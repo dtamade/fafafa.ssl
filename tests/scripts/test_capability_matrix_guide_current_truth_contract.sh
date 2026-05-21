@@ -54,6 +54,12 @@ assert_contains "$DOC" \
   "uses fafafa.ssl;" \
   "CAPABILITY_MATRIX_GUIDE quickstart should use the current facade import"
 assert_contains "$DOC" \
+  "WriteLn('Backend: ', LibraryTypeToString(Caps.BackendType));" \
+  "CAPABILITY_MATRIX_GUIDE should use the public LibraryTypeToString helper in capability snippets"
+assert_contains "$DOC" \
+  "WriteLn('Optimal Configuration for ', LibraryTypeToString(ABackend));" \
+  "CAPABILITY_MATRIX_GUIDE should use the public LibraryTypeToString helper in config examples"
+assert_contains "$DOC" \
   '普通 capability / native-handle 查询不必再拆分回 `uses fafafa.ssl.base` / `fafafa.ssl.factory`；`fafafa.ssl` 已 re-export 当前所需的 capability helper surface。' \
   "CAPABILITY_MATRIX_GUIDE should document the current public import guidance"
 assert_contains "$DOC" \
@@ -74,5 +80,8 @@ assert_contains "$DOC" \
 assert_contains "$DOC" \
   "**文档版本**: v1.5.0" \
   "CAPABILITY_MATRIX_GUIDE footer should reflect the current doc version"
+assert_not_contains "$DOC" \
+  "SSL_LIBRARY_NAMES[" \
+  "CAPABILITY_MATRIX_GUIDE façade-only examples must stop teaching base-only SSL_LIBRARY_NAMES constants"
 
 echo "[PASS] CAPABILITY_MATRIX_GUIDE current truth contract passed"

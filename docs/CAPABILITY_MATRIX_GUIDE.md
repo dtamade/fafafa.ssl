@@ -147,7 +147,7 @@ if Caps.SupportsTLS13 then
   WriteLn('TLS 1.3 is supported');
 
 // 查询后端版本
-WriteLn('Backend: ', SSL_LIBRARY_NAMES[Caps.BackendType]);
+WriteLn('Backend: ', LibraryTypeToString(Caps.BackendType));
 WriteLn('Version: ', Caps.BackendVersion);
 
 // 查询算法支持
@@ -590,7 +590,7 @@ var
 begin
   Caps := TSSLFactory.GetLibraryInstance(ABackend).GetCapabilities;
 
-  WriteLn('Optimal Configuration for ', SSL_LIBRARY_NAMES[ABackend]);
+  WriteLn('Optimal Configuration for ', LibraryTypeToString(ABackend));
   WriteLn('==========================================');
 
   // TLS 版本

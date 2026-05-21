@@ -10,6 +10,68 @@
 
 ## Current Status
 
+- [completed] `capability matrix guide facade backend-name truth`
+  当前 focused 目标：
+  - 修复
+    `docs/CAPABILITY_MATRIX_GUIDE.md`
+    里仍残留的
+    `SSL_LIBRARY_NAMES[...]`
+    直取，
+    让这份 capability guide
+    继续保留
+    capability / backend
+    决策与动态枚举路径，
+    但不再让
+    façade-only
+    示例回流到
+    `fafafa.ssl.base`
+    常量心智
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-capability-matrix-guide-facade-backend-name-truth.md`
+  - 更新 focused contract：
+    - `tests/scripts/test_capability_matrix_guide_current_truth_contract.sh`
+  - 更新：
+    - `docs/CAPABILITY_MATRIX_GUIDE.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_capability_matrix_guide_current_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_capability_matrix_guide_current_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - `CAPABILITY_MATRIX_GUIDE`
+    façade-only
+    capability 示例
+    当前 backend-name
+    输出
+    应统一使用：
+    - `LibraryTypeToString(Caps.BackendType)`
+    - `LibraryTypeToString(ABackend)`
+  - `SSL_LIBRARY_NAMES`
+    仍可继续留在
+    `fafafa.ssl.base`
+    作为 source-level
+    常量，
+    但不再出现在
+    façade-only
+    guide 示例里
+  当前批收口后的默认下一步：
+  - `CAPABILITY_MATRIX_GUIDE`
+    不再继续传播
+    `SSL_LIBRARY_NAMES[...]`
+    这类
+    base-only
+    常量心智
+  - 下一条 residual
+    继续优先挑
+    仍在传播
+    旧 import
+    或
+    stale header
+    的活跃 guide/reference
+
 - [completed] `api reference current public import truth`
   当前 focused 目标：
   - 修复

@@ -2,6 +2,66 @@
 
 ## 2026-05-21
 
+- capability matrix guide facade backend-name truth
+  这一刀确认的
+  不是
+  `CAPABILITY_MATRIX_GUIDE`
+  还停留在
+  split import
+  阶段，
+  而是
+  它在已经切回
+  `uses fafafa.ssl;`
+  之后，
+  示例里的 backend-name
+  输出
+  仍继续直取：
+  - `SSL_LIBRARY_NAMES[...]`
+
+- 当前更准确的收口是：
+  - `ISSLLibrary`
+    /
+    `TSSLFactory`
+    /
+    `TSSLBackendCapabilities`
+    /
+    `LibraryTypeToString(...)`
+    当前都已经是
+    `fafafa.ssl`
+    主门面的一部分
+  - `SSL_LIBRARY_NAMES`
+    当前仍属于
+    `fafafa.ssl.base`
+    source-level
+    常量，
+    不该再被
+    façade-only
+    示例教学成
+    普通调用方可依赖的入口
+
+- 这说明
+  当前 capability
+  文档线里，
+  不只是
+  把入口单元
+  改对就够了，
+  还要继续收紧：
+  示例里
+  是不是还在偷偷
+  直取
+  base-only
+  常量
+
+- focused RED
+  首轮暴露的是：
+  - `CAPABILITY_MATRIX_GUIDE`
+    “查询后端版本”
+    与
+    “Optimal Configuration”
+    两段输出
+    仍未切到
+    `LibraryTypeToString(...)`
+
 - api reference current public import truth
   这一刀确认的
   不是

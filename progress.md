@@ -6,6 +6,93 @@
 
 ## 2026-05-21
 
+### CAPABILITY_MATRIX_GUIDE Facade Backend-Name Truth
+
+- inspect residual backend-name drift in the capability guide:
+  - `docs/CAPABILITY_MATRIX_GUIDE.md`
+  - `src/fafafa.ssl.pas`
+  - `tests/scripts/test_capability_matrix_guide_current_truth_contract.sh`
+  - `docs/plans/2026-05-21-capability-matrix-guide-facade-backend-name-truth.md`
+  - change:
+    - confirmed
+      the guide
+      already routes
+      imports
+      back to
+      `fafafa.ssl`
+    - confirmed
+      the remaining drift
+      was not the
+      entry unit
+      but the
+      backend-name
+      output path
+    - confirmed
+      `LibraryTypeToString(...)`
+      is already
+      re-exported by
+      `fafafa.ssl`
+    - confirmed
+      `SSL_LIBRARY_NAMES`
+      is still a
+      `fafafa.ssl.base`
+      constant
+      and should not remain
+      in façade-only
+      guide examples
+
+- add focused batch record and tighten the existing capability-guide contract:
+  - `docs/plans/2026-05-21-capability-matrix-guide-facade-backend-name-truth.md`
+  - `tests/scripts/test_capability_matrix_guide_current_truth_contract.sh`
+  - change:
+    - froze:
+      - backend-name
+        output
+        must use
+        `LibraryTypeToString(...)`
+      - façade-only
+        guide examples
+        must stop using
+        `SSL_LIBRARY_NAMES[...]`
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_capability_matrix_guide_current_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_capability_matrix_guide_current_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - `CAPABILITY_MATRIX_GUIDE`
+        still used
+        base-only
+        backend-name
+        constants
+        in two guide examples
+
+- repair CAPABILITY_MATRIX_GUIDE façade backend-name truth:
+  - `docs/CAPABILITY_MATRIX_GUIDE.md`
+  - change:
+    - rewrote
+      backend-name
+      output
+      in the
+      quickstart
+      and
+      optimal-config
+      examples
+      to
+      `LibraryTypeToString(...)`
+    - preserved
+      the guide's
+      capability /
+      backend-decision
+      structure
+
+- verify focused closeout:
+  - `bash tests/scripts/test_capability_matrix_guide_current_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### API_REFERENCE Current Public Import Truth
 
 - inspect active API-reference import drift before editing:
