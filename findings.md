@@ -12984,3 +12984,52 @@
   - 但已知问题区仍残留
     “平台验证正在进行中 / CI/CD 配置待完成”
   - 这会直接干扰我们对当前 release 路线是否已闭环的判断
+
+- `ZERO_DEPENDENCY_DEPLOYMENT.md`
+  这轮暴露的是另一种更危险的活跃文档漂移：
+  - 它不是局部一个旧例子，
+    而是整页从导入面到工厂入口再到 FAQ 代码块，
+    都还停留在旧 helper 时代
+
+- 这份文档当前最真实的问题有 4 组：
+  - 旧 public helper 仍成片存在：
+    - `CreateSSLLibrary(...)`
+  - 旧单元导入仍成片存在：
+    - `fafafa.ssl.abstract.types`
+    - `fafafa.ssl.abstract.intf`
+  - auto-detect 叙述仍按平台硬编码，
+    与当前工厂
+    highest-priority available backend
+    真相不一致
+  - 同页还有显式签名漂移：
+    - `Lib.IsFeatureSupported('SNI')`
+    - `Lib.IsFeatureSupported('ALPN')`
+
+- 这类 drift
+  的危害甚至比普通 doc wording 更大：
+  - 因为调用方几乎会直接把这页的代码块 copy 进项目
+  - 那么他们拿到的不是“略老一点的建议”，
+    而是会立刻踩到：
+    - 不存在的 public helper
+    - 已移除的旧 unit
+    - 错误的方法签名
+
+- 同页 FAQ 的固定性能数字表
+  也属于当前活跃文档真相的一部分：
+  - 现在仓库已经明确把固定 `ms` / `MB/s` 表述视为不可靠长期 truth
+  - 所以零依赖部署指南继续保留
+    `~160 ms / ~150 ms`
+    这种表，
+    也会把后续路线判断带回过时 benchmark 心智
+
+- 当前更准确的零依赖部署文档真相应明确保留：
+  - WinSSL-specific path
+    可以直接写
+    `TSSLFactory.GetLibraryInstance(sslWinSSL)`
+  - OpenSSL fallback
+    则写
+    `TSSLFactory.GetLibraryInstance(sslOpenSSL)`
+  - auto-detect
+    则必须解释成：
+    工厂按当前注册优先级与可用性选择，
+    而不是平台硬编码规则

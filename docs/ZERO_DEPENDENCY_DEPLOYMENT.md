@@ -5,6 +5,8 @@
 本指南详细说明如何使用 **fafafa.ssl** 的 **WinSSL 后端**实现 Windows 应用的零依赖部署，消除对外部 SSL 库（如 OpenSSL DLL）的依赖。
 
 > 当前口径：WinSSL 的零依赖客户端 baseline 已验证；如果你要判断 session resumption / Session Ticket 的当前真相，请同时查看 [WinSSL 后端状态报告](test_reports/WINSSL_BACKEND_STATUS_REPORT.md) 和 [WinSSL 后端能力矩阵](reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md)。这部分能力目前仍按实验性 public surface 理解。
+>
+> 公开入口说明：本页如果展示 WinSSL-specific path，会显式使用 `TSSLFactory.GetLibraryInstance(sslWinSSL)`；如果展示 auto-detect，则按当前工厂 truth 使用 `TSSLFactory.GetLibraryInstance(sslAutoDetect)`。普通跨后端新代码优先继续使用 `fafafa.ssl` + `TSSLContextBuilder` / `TSSLConnector`。
 
 ---
 
@@ -287,18 +289,16 @@ program MyApp;
 
 uses
   SysUtils,
-  fafafa.ssl.abstract.types,
-  fafafa.ssl.abstract.intf,
-  fafafa.ssl.factory;  // 工厂模式，自动选择最佳后端
+  fafafa.ssl;
 
 var
   Lib: ISSLLibrary;
   Ctx: ISSLContext;
   Conn: ISSLConnection;
 begin
-  // Windows 上自动使用 WinSSL（零依赖）
-  // Linux/macOS 上自动使用 OpenSSL
-  Lib := CreateSSLLibrary(sslAutoDetect);
+  // 如果你的发布目标是 Windows 零依赖客户端，
+  // 这里应显式固定 WinSSL backend，而不是依赖旧 helper。
+  Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);
 
   if not Lib.Initialize then
   begin
@@ -528,7 +528,7 @@ MyApp_Portable.7z (约 250 KB)
 program InternalTool;
 
 uses
-  fafafa.ssl.factory, fafafa.ssl.abstract.intf;
+  fafafa.ssl;
 
 var
   Lib: ISSLLibrary;
@@ -536,7 +536,7 @@ var
   Conn: ISSLConnection;
 begin
   // 1. 自动使用 WinSSL
-  Lib := CreateSSLLibrary(sslWinSSL);
+  Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);
   Lib.Initialize;
 
   // 2. 连接到内部 API
@@ -606,7 +606,7 @@ MyApp_Installer.msi (3 MB)
 program MyAppUpdater;
 
 uses
-  fafafa.ssl.factory, fafafa.ssl.abstract.intf;
+  fafafa.ssl;
 
 function CheckForUpdates: Boolean;
 var
@@ -615,7 +615,7 @@ var
   Conn: ISSLConnection;
   Response: string;
 begin
-  Lib := CreateSSLLibrary(sslWinSSL);  // 零依赖更新器！
+  Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);  // 零依赖更新器！
   Lib.Initialize;
 
   Ctx := Lib.CreateContext(sslCtxClient);
@@ -655,7 +655,7 @@ program MyService;
 
 uses
   Windows, SysUtils,
-  fafafa.ssl.factory, fafafa.ssl.abstract.intf;
+  fafafa.ssl;
 
 var
   ServiceStatus: TServiceStatus;
@@ -669,7 +669,7 @@ begin
   ServiceStatusHandle := RegisterServiceCtrlHandler('MyService', @ServiceCtrlHandler);
 
   // 2. 初始化 WinSSL（无需额外 DLL）
-  Lib := CreateSSLLibrary(sslWinSSL);
+  Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);
   Lib.Initialize;
 
   // 3. 运行服务逻辑
@@ -720,13 +720,13 @@ Computer Configuration → Windows Settings → Security Settings
 program FIPSCompliantApp;
 
 uses
-  fafafa.ssl.factory, fafafa.ssl.abstract.intf;
+  fafafa.ssl;
 
 var
   Lib: ISSLLibrary;
   Ctx: ISSLContext;
 begin
-  Lib := CreateSSLLibrary(sslWinSSL);
+  Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);
   Lib.Initialize;
 
   // WinSSL 自动检测 FIPS 模式并使用 FIPS 认证的算法
@@ -878,14 +878,14 @@ var
 begin
   Result := False;
   try
-    Lib := CreateSSLLibrary(sslWinSSL);
+    Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);
     if not Lib.Initialize then
     begin
       // 可能是 Windows 版本太旧
       LogError('WinSSL initialization failed. Windows Vista+ required.');
 
       // 回退到 OpenSSL（如果可用）
-      Lib := CreateSSLLibrary(sslOpenSSL);
+      Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
       if not Lib.Initialize then
       begin
         LogError('OpenSSL initialization also failed.');
@@ -905,13 +905,13 @@ end;
 
 ```pascal
 uses
-  fafafa.ssl.factory, fafafa.ssl.abstract.intf;
+  fafafa.ssl;
 
 procedure CheckWindowsVersion;
 var
   Lib: ISSLLibrary;
 begin
-  Lib := CreateSSLLibrary(sslWinSSL);
+  Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);
   if Lib.Initialize then
   begin
     WriteLn('WinSSL version: ', Lib.GetVersionString);
@@ -932,9 +932,8 @@ end;
 // 最佳实践：让工厂自动选择
 function CreateHTTPSClient: ISSLLibrary;
 begin
-  // Windows: 优先 WinSSL，回退 OpenSSL
-  // Linux/macOS: 使用 OpenSSL
-  Result := CreateSSLLibrary(sslAutoDetect);
+  // 工厂会按当前注册优先级与可用性选择 highest-priority available backend，而不是按平台硬编码单一路径。
+  Result := TSSLFactory.GetLibraryInstance(sslAutoDetect);
 
   if not Result.Initialize then
     raise Exception.Create('No SSL library available');
@@ -964,11 +963,11 @@ begin
   Backend := ReadConfig('SSL', 'Backend', 'auto');
 
   if Backend = 'auto' then
-    Lib := CreateSSLLibrary(sslAutoDetect)
+    Lib := TSSLFactory.GetLibraryInstance(sslAutoDetect)
   else if Backend = 'winssl' then
-    Lib := CreateSSLLibrary(sslWinSSL)
+    Lib := TSSLFactory.GetLibraryInstance(sslWinSSL)
   else
-    Lib := CreateSSLLibrary(sslOpenSSL);
+    Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
 
   // 配置协议版本
   MinProto := ParseProtocol(ReadConfig('SSL', 'MinProtocol', 'tls12'));
@@ -987,7 +986,7 @@ var
   Lib: ISSLLibrary;
   Ctx: ISSLContext;
 begin
-  Lib := CreateSSLLibrary(sslWinSSL);
+  Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);
   Lib.Initialize;
 
   WriteLn('=== SSL Diagnostics ===');
@@ -1003,8 +1002,8 @@ begin
   WriteLn('');
 
   WriteLn('Feature support:');
-  WriteLn('  SNI: ', Lib.IsFeatureSupported('SNI'));
-  WriteLn('  ALPN: ', Lib.IsFeatureSupported('ALPN'));
+  WriteLn('  SNI: ', Lib.IsFeatureSupported(sslFeatSNI));
+  WriteLn('  ALPN: ', Lib.IsFeatureSupported(sslFeatALPN));
   WriteLn('=======================');
 end;
 ```
@@ -1062,12 +1061,12 @@ var
   Lib: ISSLLibrary;
 begin
   try
-    Lib := CreateSSLLibrary(sslWinSSL);
+    Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);
     if not Lib.Initialize then
       raise Exception.Create('WinSSL not available');
   except
     // 回退到 OpenSSL
-    Lib := CreateSSLLibrary(sslOpenSSL);
+    Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
     if not Lib.Initialize then
       raise Exception.Create('No SSL library available');
   end;
@@ -1091,15 +1090,20 @@ MyApp_Legacy.exe  (OpenSSL, Windows XP+)
 
 ### Q4: 性能是否有影响？
 
-**A**: 性能相当或更好：
+**A**: 部署体积、系统集成与证书存储接入通常更有利于 WinSSL；但 TLS 握手延迟、吞吐量与内存占用会同时受到：
 
-| 指标 | OpenSSL | WinSSL | 对比 |
-|------|---------|--------|------|
-| TLS 握手 | ~160 ms | ~150 ms | WinSSL 略快 |
-| 数据吞吐 | ~85 MB/s | ~80 MB/s | 相当 |
-| 内存占用 | ~3 MB | ~2 MB | WinSSL 更少 |
+- CPU 与硬件加速能力
+- Windows / OpenSSL 运行时版本
+- 目标站点、网络路径
+- session / ticket 当前证据状态
 
-WinSSL 可能利用硬件加速（如 CPU AES-NI），性能可能更好。
+影响，所以不要把单次 `ms` / `MB/s` 数字当成长期 truth。
+
+如需查看当前性能真相源，优先看：
+
+- `docs/BACKEND_CAPABILITY_MATRIX.md`
+- `docs/guides/PERFORMANCE_GUIDE.md`
+- `scripts/run_phase2_performance_baseline.sh`
 
 ### Q5: 是否可以在同一应用中混用 WinSSL 和 OpenSSL？
 
@@ -1107,11 +1111,11 @@ WinSSL 可能利用硬件加速（如 CPU AES-NI），性能可能更好。
 
 ```pascal
 // ❌ 不推荐
-Lib1 := CreateSSLLibrary(sslWinSSL);
-Lib2 := CreateSSLLibrary(sslOpenSSL);
+Lib1 := TSSLFactory.GetLibraryInstance(sslWinSSL);
+Lib2 := TSSLFactory.GetLibraryInstance(sslOpenSSL);
 
 // ✅ 推荐
-Lib := CreateSSLLibrary(sslAutoDetect);  // 自动选择最佳后端
+Lib := TSSLFactory.GetLibraryInstance(sslAutoDetect);  // 让工厂按当前可用性与优先级选择
 ```
 
 ### Q6: WinSSL 是否支持 HTTPS 代理？

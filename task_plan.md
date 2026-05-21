@@ -13616,3 +13616,49 @@
   - 简短 review
   - commit / push
   - 继续扫下一份高入口活跃文档里的旧 public entrypoint / backend drift
+
+### 2026-05-21 ZERO_DEPENDENCY_DEPLOYMENT 当前 public entrypoint 真相对齐
+
+- [completed] 当前新的 residual
+  已继续收窄到
+  `docs/ZERO_DEPENDENCY_DEPLOYMENT.md`
+  这份 WinSSL 零依赖部署指南：
+  - 多处仍教学
+    `CreateSSLLibrary(...)`
+  - 仍要求
+    `fafafa.ssl.abstract.types`
+    /
+    `fafafa.ssl.abstract.intf`
+  - auto-detect 示例仍按平台硬编码：
+    - Windows 优先 WinSSL，回退 OpenSSL
+    - Linux/macOS 使用 OpenSSL
+  - 同页还残留 compile drift：
+    - `Lib.IsFeatureSupported('SNI')`
+    - `Lib.IsFeatureSupported('ALPN')`
+  - FAQ 性能段仍发布固定 `ms` / `MB/s` 数字表
+- [completed] 最小正确修法已经落地：
+  - 新增
+    `docs/plans/2026-05-21-zero-dependency-deployment-current-public-entrypoint-truth-alignment.md`
+  - 新增
+    `tests/scripts/test_zero_dependency_deployment_current_public_entrypoint_truth_contract.sh`
+  - `ZERO_DEPENDENCY_DEPLOYMENT`
+    已切回：
+    - `fafafa.ssl`
+      主门面导入
+    - `TSSLFactory.GetLibraryInstance(sslWinSSL / sslOpenSSL / sslAutoDetect)`
+      的当前 public library-entrypoint
+    - auto-detect
+      按
+      highest-priority available backend
+      解释，
+      不再按平台硬编码
+    - `IsFeatureSupported(sslFeatSNI / sslFeatALPN)`
+      的当前枚举签名
+    - 性能段改为定性说明 + 当前真相源链接
+- [completed] 当前批收口后的默认下一步：
+  - `bash -n tests/scripts/test_zero_dependency_deployment_current_public_entrypoint_truth_contract.sh`
+  - `bash tests/scripts/test_zero_dependency_deployment_current_public_entrypoint_truth_contract.sh`
+  - `git diff --check`
+  - 简短 review
+  - commit / push
+  - 继续扫下一份仍残留旧 helper / 旧导入面的高入口活跃文档

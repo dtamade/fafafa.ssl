@@ -19958,6 +19958,76 @@
   - summary:
     - no whitespace or patch-format drift remains after the platform-support batch
 
+- `mcp__ace_tool__.search_context`
+  - query:
+    - locate current zero-dependency deployment doc truth around
+      removed public helpers,
+      abstract.* imports,
+      auto-detect wording,
+      and WinSSL-specific entrypoints
+  - result: PASS
+  - summary:
+    - confirmed
+      `docs/ZERO_DEPENDENCY_DEPLOYMENT.md`
+      still taught removed helper paths
+    - confirmed current truth source remains:
+      - `TSSLFactory.GetLibraryInstance(...)`
+      - `TSSLFactory.CreateContext(...)`
+      - `fafafa.ssl`
+        facade import
+      - release notes v1.5.0 removed helpers section
+
+- `rg -n "CreateSSLLibrary\\(|CreateOpenSSLLibrary\\(|CreateWinSSLLibrary\\(|fafafa\\.ssl\\.abstract\\.types|fafafa\\.ssl\\.abstract\\.intf|Windows 上自动使用 WinSSL|Linux/macOS 上自动使用 OpenSSL|Windows: 优先 WinSSL，回退 OpenSSL|Linux/macOS: 使用 OpenSSL" docs/ZERO_DEPENDENCY_DEPLOYMENT.md`
+  - result: PASS
+  - summary:
+    - surfaced the exact stale helper / import / auto-detect strings in
+      `ZERO_DEPENDENCY_DEPLOYMENT.md`
+
+- `rg -n "function IsFeatureSupported\\(|sslFeatSNI|sslFeatALPN" src/fafafa.ssl.base.pas src/fafafa.ssl*.pas`
+  - result: PASS
+  - summary:
+    - confirmed current source signature is
+      `IsFeatureSupported(AFeature: TSSLFeature)`
+    - directly proved the doc's string-based
+      `('SNI')`
+      /
+      `('ALPN')`
+      calls were stale
+
+- update docs:
+  - `docs/ZERO_DEPENDENCY_DEPLOYMENT.md`
+  - `docs/plans/2026-05-21-zero-dependency-deployment-current-public-entrypoint-truth-alignment.md`
+  - `tests/scripts/test_zero_dependency_deployment_current_public_entrypoint_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - replaced removed public helpers with current
+      `TSSLFactory.GetLibraryInstance(...)`
+      entrypoints
+    - removed old
+      `fafafa.ssl.abstract.*`
+      imports
+    - repaired auto-detect wording back to factory priority/availability truth
+    - fixed stale enum-signature examples for
+      `IsFeatureSupported`
+    - replaced fixed performance number claims with current truth-source guidance
+
+- `bash -n tests/scripts/test_zero_dependency_deployment_current_public_entrypoint_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - shell syntax for the new zero-dependency contract is clean
+
+- `bash tests/scripts/test_zero_dependency_deployment_current_public_entrypoint_truth_contract.sh`
+  - result: GREEN after script-guard tightening
+  - summary:
+    - first contract pass exposed two script-only quoting issues around backtick literals
+    - after tightening those patterns,
+      the full zero-dependency truth guard stayed clean and green
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format drift remains after the zero-dependency batch
+
 ### Main Backends Ed25519 Certificate Algorithm Truth
 
 - add focused batch inputs:
