@@ -586,6 +586,7 @@ var
   LExposeEarlyData: Boolean;
   LExposeServerOCSP: Boolean;
   LVerifyMode: TSSLVerifyModes;
+  Store: ISSLCertificateStore;
 begin
   // P0 后端语义统一：与 OpenSSL/WinSSL 后端保持一致的失败语义
   if not FInitialized then
@@ -622,7 +623,8 @@ begin
   if (AType = sslCtxServer) and
     (LVerifyMode = [sslVerifyPeer]) and
     (Trim(LConfig.CAFile) = '') and
-    (Trim(LConfig.CAPath) = '') then
+    (Trim(LConfig.CAPath) = '') and
+    (not LConfig.UseSystemRoots) then
     LVerifyMode := [];
 
   if LExposeEarlyData and LExposeServerOCSP then
@@ -657,6 +659,16 @@ begin
     Result.SetSessionCacheSize(LConfig.SessionCacheSize);
     Result.SetSessionTimeout(LConfig.SessionTimeout);
     Result.SetSessionCacheMode(ssoEnableSessionCache in LConfig.Options);
+
+    if LConfig.UseSystemRoots then
+    begin
+      Store := TSSLFactory.CreateCertificateStore(GetLibraryType);
+      if Store <> nil then
+      begin
+        Store.LoadSystemStore;
+        Result.SetCertificateStore(Store);
+      end;
+    end;
 
     if LConfig.ServerName <> '' then
       InternalLog(

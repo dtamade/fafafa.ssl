@@ -321,6 +321,10 @@ begin
     ]);
     LSB.AppendFormat('CA文件: %s', [AConfig.CAFile]);
     LSB.AppendFormat(
+      '系统根证书: %s (context-scoped trust-store opt-in；factory/direct-library path 会在创建时加载)',
+      [BoolToStr(AConfig.UseSystemRoots, '启用', '禁用')]
+    );
+    LSB.AppendFormat(
       '缓冲区大小: %d (transport/IO 层配置；factory context 创建不消费)',
       [AConfig.BufferSize]
     );

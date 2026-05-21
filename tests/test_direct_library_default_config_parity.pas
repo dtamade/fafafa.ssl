@@ -99,9 +99,37 @@ begin
   end;
 end;
 
+procedure Test_ServerContextKeepsVerifyPeerWithSystemRootsDefaultConfig;
+var
+  Lib: ISSLLibrary;
+  OriginalConfig: TSSLConfig;
+  DefaultConfig: TSSLConfig;
+  Ctx: ISSLContext;
+begin
+  TestHeader('FreePascal direct-library server context keeps verify-peer with UseSystemRoots');
+
+  Lib := CreateInitializedFreePascalLibrary;
+  try
+    OriginalConfig := Lib.GetDefaultConfig;
+    DefaultConfig := OriginalConfig;
+    DefaultConfig.VerifyMode := [sslVerifyPeer];
+    DefaultConfig.UseSystemRoots := True;
+    Lib.SetDefaultConfig(DefaultConfig);
+
+    Ctx := Lib.CreateContext(sslCtxServer);
+
+    Assert(Ctx.GetVerifyMode = [sslVerifyPeer],
+      'direct-library server context keeps VerifyMode when UseSystemRoots is enabled');
+  finally
+    Lib.SetDefaultConfig(OriginalConfig);
+    Lib.Finalize;
+  end;
+end;
+
 begin
   try
     Test_ClientContextReflectsLibraryDefaultConfig;
+    Test_ServerContextKeepsVerifyPeerWithSystemRootsDefaultConfig;
 
     WriteLn;
     WriteLn('Tests Passed: ', GTestsPassed);

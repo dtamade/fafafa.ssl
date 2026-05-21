@@ -315,6 +315,7 @@ end;
 - **context-scoped**
   - `ProtocolVersions` / `PreferredVersion`
   - `CertificateFile` / `PrivateKeyFile` / `CAFile` / `CAPath`
+  - `UseSystemRoots`
   - `VerifyMode` / `VerifyDepth`
   - `CipherList` / `CipherSuites` / `Options`
   - `SessionCacheSize` / `SessionTimeout`

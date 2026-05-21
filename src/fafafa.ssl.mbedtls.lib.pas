@@ -623,6 +623,7 @@ function TMbedTLSLibrary.CreateContext(AType: TSSLContextType): ISSLContext;
 var
   LConfig: TSSLConfig;
   LVerifyMode: TSSLVerifyModes;
+  Store: ISSLCertificateStore;
 begin
   if not FInitialized then
     raise ESSLInitError.Create('Cannot create context: MbedTLS library not initialized');
@@ -654,7 +655,8 @@ begin
   if (AType = sslCtxServer) and
     (LVerifyMode = [sslVerifyPeer]) and
     (Trim(LConfig.CAFile) = '') and
-    (Trim(LConfig.CAPath) = '') then
+    (Trim(LConfig.CAPath) = '') and
+    (not LConfig.UseSystemRoots) then
     LVerifyMode := [];
 
   Result := TMbedTLSContext.Create(Self, AType);
@@ -681,6 +683,16 @@ begin
     Result.SetSessionCacheSize(LConfig.SessionCacheSize);
     Result.SetSessionTimeout(LConfig.SessionTimeout);
     Result.SetSessionCacheMode(ssoEnableSessionCache in LConfig.Options);
+
+    if LConfig.UseSystemRoots then
+    begin
+      Store := TSSLFactory.CreateCertificateStore(GetLibraryType);
+      if Store <> nil then
+      begin
+        Store.LoadSystemStore;
+        Result.SetCertificateStore(Store);
+      end;
+    end;
 
     if LConfig.ServerName <> '' then
       InternalLog(

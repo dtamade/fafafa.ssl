@@ -1288,6 +1288,7 @@ var
   LExposeEarlyData: Boolean;
   LExposeServerOCSP: Boolean;
   LVerifyMode: TSSLVerifyModes;
+  Store: ISSLCertificateStore;
 begin
   // Rust-quality: Explicit error handling instead of returning nil
   if not FInitialized then
@@ -1327,7 +1328,8 @@ begin
   if (AType = sslCtxServer) and
     (LVerifyMode = [sslVerifyPeer]) and
     (Trim(LConfig.CAFile) = '') and
-    (Trim(LConfig.CAPath) = '') then
+    (Trim(LConfig.CAPath) = '') and
+    (not LConfig.UseSystemRoots) then
     LVerifyMode := [];
 
   // Let exceptions propagate - caller must handle errors explicitly
@@ -1373,6 +1375,16 @@ begin
 
     if (ssoEnableSessionCache in LConfig.Options) <> Result.GetSessionCacheMode then
       Result.SetSessionCacheMode(ssoEnableSessionCache in LConfig.Options);
+
+    if LConfig.UseSystemRoots then
+    begin
+      Store := TSSLFactory.CreateCertificateStore(GetLibraryType);
+      if Store <> nil then
+      begin
+        Store.LoadSystemStore;
+        Result.SetCertificateStore(Store);
+      end;
+    end;
 
     if LConfig.ServerName <> '' then
       InternalLog(

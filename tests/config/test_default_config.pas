@@ -49,6 +49,7 @@ begin
   AssertTrue('VerifyDepth non-zero', Cfg.VerifyDepth > 0);
   AssertTrue('CipherList not empty', Cfg.CipherList <> '');
   AssertTrue('CipherSuites not empty', Cfg.CipherSuites <> '');
+  AssertTrue('UseSystemRoots defaults to False', not Cfg.UseSystemRoots);
   AssertTrue('ClientEarlyDataEnabled defaults to False', not Cfg.ClientEarlyDataEnabled);
   AssertTrue('ServerEarlyDataPolicy defaults to Reject',
     Cfg.ServerEarlyDataPolicy = sslEarlyDataServerReject);

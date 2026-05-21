@@ -11,6 +11,7 @@ fafafa.ssl 是一个 **SSL/TLS 库**：负责握手、加密传输、证书与�
 ### 构建 TLS 配置（Context）
 使用 `fafafa.ssl.context.builder`：
 - `.WithSystemRoots`：加载系统根证书（现在通过 `ISSLCertificateStore.LoadSystemStore` 实现，跨后端一致）。
+- 如果你走 factory / direct-library config path，对应字段是 `TSSLConfig.UseSystemRoots`。
 - `.WithTLS12And13` / `.WithVerifyPeer`：给出安全默认。
 
 ### 建立 TLS 连接（Rust 风格门面）
@@ -89,6 +90,23 @@ begin
     Stream.Free;
   end;
 end.
+```
+
+如果你不用 builder，而是走 `TSSLFactory.CreateContext(...)` 或
+`ISSLLibrary.SetDefaultConfig(...)` + `CreateContext(...)`，等价的显式 trust opt-in 是：
+
+```pascal
+var
+  LConfig: TSSLConfig;
+begin
+  LConfig := CreateDefaultConfig(sslCtxClient);
+  LConfig.LibraryType := sslOpenSSL;
+  LConfig.ContextType := sslCtxClient;
+  LConfig.VerifyMode := [sslVerifyPeer];
+  LConfig.UseSystemRoots := True;
+
+  Ctx := TSSLFactory.CreateContext(LConfig);
+end;
 ```
 
 ## 4) 直接用 ISSLConnection（显式设置 per-connection SNI）

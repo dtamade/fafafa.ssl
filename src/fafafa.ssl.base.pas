@@ -394,6 +394,7 @@ type
     PrivateKeyPassword: string;              // 私钥口令（可选）
     CAFile: string;                          // CA证书文件路径
     CAPath: string;                          // CA证书目录路径
+    UseSystemRoots: Boolean;                 // Context-scoped system trust-store opt-in; loads platform roots via ISSLCertificateStore
     VerifyMode: TSSLVerifyModes;            // 证书验证模式
     VerifyDepth: Integer;                    // 验证深度
     

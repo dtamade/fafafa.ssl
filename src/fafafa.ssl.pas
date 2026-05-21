@@ -585,6 +585,7 @@ begin
     Result := LConfig;
     Result.LibraryType := sslAutoDetect;
     Result.ContextType := AContextType;
+    Result.UseSystemRoots := False;
     if (AContextType = sslCtxServer) and
       (Result.VerifyMode = [sslVerifyPeer]) and
       (Trim(Result.CAFile) = '') and
@@ -600,6 +601,7 @@ begin
       Result.VerifyMode := []
     else
       Result.VerifyMode := [sslVerifyPeer];
+    Result.UseSystemRoots := False;
     Result.VerifyDepth := SSL_DEFAULT_VERIFY_DEPTH;
     Result.BufferSize := SSL_DEFAULT_BUFFER_SIZE;
     Result.HandshakeTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;

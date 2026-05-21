@@ -6,6 +6,140 @@
 
 ## 2026-05-21
 
+### System-Roots Public Surface Parity
+
+- inspect current system-roots seam before editing:
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.pas`
+  - `src/fafafa.ssl.factory.pas`
+  - `src/fafafa.ssl.openssl.backed.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `src/fafafa.ssl.context.builder.pas`
+  - `tests/config/test_context_builder_system_roots_contract.pas`
+  - `tests/test_direct_library_default_config_parity.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/ARCHITECTURE.md`
+  - `docs/CA_CERTIFICATE_AUTO_LOADING.md`
+  - `docs/guides/GETTING_STARTED.md`
+  - change:
+    - confirmed builder already had a complete
+      `WithSystemRoots`
+      runtime path
+    - confirmed `TSSLConfig`
+      still had no
+      `UseSystemRoots`
+      public field
+    - confirmed factory/direct-library paths therefore had no equivalent explicit trust-loading surface
+    - confirmed server verify baseline still only treated
+      `CAFile`
+      /
+      `CAPath`
+      as trust-root presence
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-system-roots-public-surface-parity.md`
+  - `tests/contract/test_system_roots_public_surface_entry.pas`
+  - `tests/scripts/test_system_roots_public_surface_contract.sh`
+  - change:
+    - documented the batch as system-roots public-surface parity
+    - added a focused source/docs contract
+    - added a mock runtime contract for the factory paths
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_system_roots_public_surface_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_system_roots_public_surface_contract.sh`
+    - result: FAIL
+    - summary:
+      - failed at:
+        `TSSLConfig no longer exposes UseSystemRoots as a context-scoped trust-store opt-in`
+      - important conclusion:
+        - the missing public field was real current source truth
+        - this was not just a docs mismatch
+  - `mkdir -p tmp/system_roots_public_surface && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/system_roots_public_surface -FEtmp/system_roots_public_surface -otmp/system_roots_public_surface/test_system_roots_public_surface tests/contract/test_system_roots_public_surface_entry.pas`
+    - result: FAIL
+    - summary:
+      - compile failed on:
+        `Identifier idents no member "UseSystemRoots"`
+      - important conclusion:
+        - factory/direct-config path still lacked the public field entirely
+
+- repair system-roots public surface:
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.pas`
+  - `src/fafafa.ssl.factory.pas`
+  - `src/fafafa.ssl.openssl.backed.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `src/fafafa.ssl.debug.utils.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/ARCHITECTURE.md`
+  - `docs/CA_CERTIFICATE_AUTO_LOADING.md`
+  - `docs/guides/GETTING_STARTED.md`
+  - `tests/config/test_default_config.pas`
+  - `tests/test_direct_library_default_config_parity.pas`
+  - change:
+    - added
+      `TSSLConfig.UseSystemRoots`
+      as a context-scoped public trust-store opt-in
+    - kept
+      `CreateDefaultConfig(...)`
+      fresh baseline at
+      `UseSystemRoots=False`
+    - taught
+      `ResolveContextVerifyModeForCreation(...)`
+      to treat
+      `UseSystemRoots`
+      as trust-root presence for server verify baseline resolution
+    - added factory helper plumbing so both
+      `CreateContext(...)`
+      overloads now create a backend-matching store,
+      call
+      `LoadSystemStore`,
+      and inject it into the context
+    - added the same explicit injection block to the five direct-library backend paths
+    - synchronized debug output and active docs to the new config/direct-library truth
+
+- verify focused system-roots truth:
+  - `bash -n tests/scripts/test_system_roots_public_surface_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_system_roots_public_surface_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed source comments, factory plumbing, direct-library plumbing, debug output, and active docs all record the same system-roots truth
+  - `mkdir -p tmp/system_roots_public_surface && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/system_roots_public_surface -FEtmp/system_roots_public_surface -otmp/system_roots_public_surface/test_system_roots_public_surface tests/contract/test_system_roots_public_surface_entry.pas && ./tmp/system_roots_public_surface/test_system_roots_public_surface`
+    - result: PASS
+    - summary:
+      - confirmed one-shot factory path injects a system-root store from the explicit backend
+      - confirmed raw factory default-config path injects a system-root store from the explicit backend
+      - confirmed server verify mode stays
+        `[sslVerifyPeer]`
+        when
+        `UseSystemRoots=True`
+  - `mkdir -p tmp/test_direct_library_default_config_parity && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_direct_library_default_config_parity -FEtmp/test_direct_library_default_config_parity -otmp/test_direct_library_default_config_parity/test_direct_library_default_config_parity tests/test_direct_library_default_config_parity.pas && ./tmp/test_direct_library_default_config_parity/test_direct_library_default_config_parity`
+    - result: PASS
+    - summary:
+      - confirmed real FreePascal direct-library server context no longer downgrades
+        `VerifyMode=[sslVerifyPeer]`
+        when
+        `UseSystemRoots=True`
+  - `mkdir -p tmp/test_default_config && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_default_config -FEtmp/test_default_config -otmp/test_default_config/test_default_config tests/config/test_default_config.pas && ./tmp/test_default_config/test_default_config`
+    - result: PASS
+    - summary:
+      - confirmed fresh default-config baseline now explicitly keeps
+        `UseSystemRoots=False`
+  - `mkdir -p tmp/config_validation && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/config_validation -FEtmp/config_validation -otmp/config_validation/test_config_validation tests/config/test_config_validation.pas && ./tmp/config_validation/test_config_validation`
+    - result: PASS
+    - summary:
+      - existing validation behavior remained green after adding the new public trust-loading field
+  - `git diff --check`
+    - result: PASS
+
 ### Server Validation VerifyMode Classification
 
 - inspect server/client verify validation truth before editing:

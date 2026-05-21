@@ -1,7 +1,7 @@
 # fafafa.ssl API 参考文档
 
 > **版本**: rolling
-> **最后更新**: 2026-05-18
+> **最后更新**: 2026-05-21
 > **当前路线图**: [当前路线图](../ROADMAP.md)
 > **说明**: 当前接口真相源以 `src/fafafa.ssl.base.pas` 为准；本页优先收敛最常用的 public API。
 
@@ -31,6 +31,12 @@
 `fafafa.ssl` 主门面当前也 re-export 这组 non-generic type-safety public surface（如 `TSSLVersion` / `TKeySize` / `TTimeoutDuration` / `TBufferSize`）；`TSecureData<T>` / `TResult<T, E>` 继续保留在 `fafafa.ssl.safety`。
 如果你只想单独使用这套类型安全工具而不引入 TLS bootstrap facade，也可以窄用 `fafafa.ssl.safety`。
 
+## System Roots Opt-In Note
+
+- builder 侧当前公共入口仍是 `.WithSystemRoots`。
+- 如果你走 `TSSLFactory.CreateContext(...)` 或 `ISSLLibrary.SetDefaultConfig(...)` + `CreateContext(...)`，等价字段现在是 `TSSLConfig.UseSystemRoots`。
+- `Lib.CreateContext(sslCtxClient)` 本身仍不代表“自动加载系统 CA”；只有在 default config 明确把 `UseSystemRoots=True` 写进去时，direct-library path 才会在创建 context 时加载并注入 system roots。
+
 ---
 
 ## TSSLConfig Scope Buckets
@@ -40,7 +46,7 @@
 - ordinary context/config fields
   - `LibraryType` / `ContextType` / `ProtocolVersions` / `PreferredVersion`
   - `CertificateFile` / `PrivateKeyFile` / `PrivateKeyPassword`
-  - `CAFile` / `CAPath` / `VerifyMode` / `VerifyDepth`
+  - `CAFile` / `CAPath` / `UseSystemRoots` / `VerifyMode` / `VerifyDepth`
   - `CipherList` / `CipherSuites` / `Options`
 - library-scoped defaults
   - `LogLevel`
@@ -83,7 +89,7 @@
 - 继续保留在 context-safe `TSSLConfig` 主路径
   - `ProtocolVersions` / `PreferredVersion`
   - `CertificateFile` / `PrivateKeyFile` / `PrivateKeyPassword`
-  - `CAFile` / `CAPath` / `VerifyMode` / `VerifyDepth`
+  - `CAFile` / `CAPath` / `UseSystemRoots` / `VerifyMode` / `VerifyDepth`
   - `CipherList` / `CipherSuites` / `Options`
   - `SessionCacheSize` / `SessionTimeout`
   - `ALPNProtocols`
@@ -131,6 +137,7 @@
 - 当前对齐的字段：
   - `ProtocolVersions`
   - `PreferredVersion`
+  - `UseSystemRoots`
   - `VerifyMode`
   - `VerifyDepth`
   - `CipherList`

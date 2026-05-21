@@ -779,6 +779,7 @@ function TWinSSLLibrary.CreateContext(AType: TSSLContextType): ISSLContext;
 var
   LConfig: TSSLConfig;
   LVerifyMode: TSSLVerifyModes;
+  Store: ISSLCertificateStore;
 begin
   // P0 后端语义统一：与 OpenSSL 后端保持一致的失败语义
   // 未初始化时抛出异常，而不是返回 nil
@@ -812,7 +813,8 @@ begin
   if (AType = sslCtxServer) and
     (LVerifyMode = [sslVerifyPeer]) and
     (Trim(LConfig.CAFile) = '') and
-    (Trim(LConfig.CAPath) = '') then
+    (Trim(LConfig.CAPath) = '') and
+    (not LConfig.UseSystemRoots) then
     LVerifyMode := [];
 
   // 让异常传播 - 调用方必须显式处理错误
@@ -841,6 +843,16 @@ begin
     Result.SetSessionCacheSize(LConfig.SessionCacheSize);
     Result.SetSessionTimeout(LConfig.SessionTimeout);
     Result.SetSessionCacheMode(ssoEnableSessionCache in LConfig.Options);
+
+    if LConfig.UseSystemRoots then
+    begin
+      Store := TSSLFactory.CreateCertificateStore(GetLibraryType);
+      if Store <> nil then
+      begin
+        Store.LoadSystemStore;
+        Result.SetCertificateStore(Store);
+      end;
+    end;
 
     if LConfig.ServerName <> '' then
       InternalLog(

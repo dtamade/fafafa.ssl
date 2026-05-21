@@ -2,6 +2,105 @@
 
 ## 2026-05-21
 
+- system-roots public surface parity
+  这一刀确认的
+  不是单纯文档口径漂移，
+  而是
+  builder 之外
+  根本缺了一条
+  可复用的
+  public trust-loading surface
+
+- 当前真正的问题不是：
+  - `LoadSystemStore`
+    底层做不到
+  而是：
+  - `UseSystemRoots`
+    只存在于
+    builder/import-export
+    内部状态里
+  - `TSSLConfig`
+    /
+    factory
+    /
+    direct-library
+    没有等价表达
+
+- 这说明正确修法
+  不能是
+  继续把 builder 内部状态
+  偷投到
+  config 路径，
+  而必须正式把
+  `UseSystemRoots`
+  升成
+  `TSSLConfig`
+  的 public field，
+  再把 plumbing
+  接到
+  factory
+  与
+  direct-library
+
+- 这批还揭示了一条更隐蔽的实现真相：
+  - server verify baseline
+    判断
+    “有没有 trust roots”
+    时，
+    不能只看
+    `CAFile`
+    /
+    `CAPath`
+  - 如果漏掉
+    `UseSystemRoots`
+    ，
+    `VerifyMode=[sslVerifyPeer]`
+    会被静默降成
+    no-verify
+
+- 修复后，
+  当前 trust-loading 语义
+  已经真正收平到：
+  - builder:
+    `.WithSystemRoots`
+  - factory/direct-config:
+    `TSSLConfig.UseSystemRoots := True`
+  - direct-library default-config:
+    `ISSLLibrary.SetDefaultConfig(...)`
+    + `UseSystemRoots=True`
+
+- 这批的证据结构也更清楚了：
+  - factory path
+    用 mock runtime contract
+    证明：
+    backend-matching store
+    /
+    `LoadSystemStore`
+    /
+    `SetCertificateStore`
+    真发生
+  - direct-library path
+    用 source contract
+    锁住五个 backend 的
+    注入代码，
+    再用 real FreePascal runtime
+    证明 server verify 语义没有再被降级
+
+- 这条 seam 收口后，
+  后续不该再回到
+  “system roots 只是 builder 推荐写法”
+  的旧口径；
+  如果继续顺着 trust-loading family 深挖，
+  更值得单独验证的
+  residual
+  已前移到：
+  direct-library path
+  对
+  `CAFile`
+  /
+  `CAPath`
+  的完整对齐问题
+
 - server default verifymode baseline
   这一刀确认的
   不是单纯 helper drift，

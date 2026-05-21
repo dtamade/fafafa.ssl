@@ -10,6 +10,110 @@
 
 ## Current Status
 
+- [completed] `system-roots public surface parity`
+  当前 focused 目标：
+  - 把 `WithSystemRoots`
+    从 builder 专属能力
+    补成
+    `TSSLConfig`
+    /
+    factory
+    /
+    direct-library
+    都可表达的
+    public trust-loading opt-in
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-system-roots-public-surface-parity.md`
+  - 新增 focused contracts：
+    - `tests/contract/test_system_roots_public_surface_entry.pas`
+    - `tests/scripts/test_system_roots_public_surface_contract.sh`
+  - 实际更新：
+    - `src/fafafa.ssl.base.pas`
+    - `src/fafafa.ssl.pas`
+    - `src/fafafa.ssl.factory.pas`
+    - `src/fafafa.ssl.openssl.backed.pas`
+    - `src/fafafa.ssl.freepascal.lib.pas`
+    - `src/fafafa.ssl.mbedtls.lib.pas`
+    - `src/fafafa.ssl.wolfssl.lib.pas`
+    - `src/fafafa.ssl.winssl.lib.pas`
+    - `src/fafafa.ssl.debug.utils.pas`
+    - `docs/reference/API_REFERENCE.md`
+    - `docs/reference/ARCHITECTURE.md`
+    - `docs/CA_CERTIFICATE_AUTO_LOADING.md`
+    - `docs/guides/GETTING_STARTED.md`
+    - `tests/config/test_default_config.pas`
+    - `tests/test_direct_library_default_config_parity.pas`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_system_roots_public_surface_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_system_roots_public_surface_contract.sh`
+    - PASS
+  - `mkdir -p tmp/system_roots_public_surface && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/system_roots_public_surface -FEtmp/system_roots_public_surface -otmp/system_roots_public_surface/test_system_roots_public_surface tests/contract/test_system_roots_public_surface_entry.pas && ./tmp/system_roots_public_surface/test_system_roots_public_surface`
+    - PASS
+  - `mkdir -p tmp/test_direct_library_default_config_parity && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_direct_library_default_config_parity -FEtmp/test_direct_library_default_config_parity -otmp/test_direct_library_default_config_parity/test_direct_library_default_config_parity tests/test_direct_library_default_config_parity.pas && ./tmp/test_direct_library_default_config_parity/test_direct_library_default_config_parity`
+    - PASS
+  - `mkdir -p tmp/test_default_config && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_default_config -FEtmp/test_default_config -otmp/test_default_config/test_default_config tests/config/test_default_config.pas && ./tmp/test_default_config/test_default_config`
+    - PASS
+  - `mkdir -p tmp/config_validation && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/config_validation -FEtmp/config_validation -otmp/config_validation/test_config_validation tests/config/test_config_validation.pas && ./tmp/config_validation/test_config_validation`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前 truth：
+  - `TSSLConfig`
+    现在正式拥有：
+    `UseSystemRoots`
+  - builder
+    /
+    one-shot factory
+    /
+    raw factory default-config
+    /
+    direct-library default-config
+    现在都能表达同一条
+    explicit system-roots opt-in
+  - factory 两个
+    `CreateContext(...)`
+    路径
+    现在都会按
+    resolved backend
+    创建 store、
+    `LoadSystemStore`、
+    再注入 context
+  - 五个 backend 的
+    direct-library
+    `CreateContext(AType)`
+    现在也补齐了同一条
+    system-roots
+    注入路径
+  - server path
+    在
+    `VerifyMode=[sslVerifyPeer]`
+    且
+    `UseSystemRoots=True`
+    时，
+    不会再被错误降成
+    no-verify
+  - `CreateDefaultConfig(...)`
+    的 fresh baseline
+    当前明确保持：
+    `UseSystemRoots=False`
+  当前批收口后的默认下一步：
+  - `system roots`
+    这条 public seam
+    已经收口，
+    后续不需要再回到
+    “builder-only trust-loading”
+    的旧口径
+  - 如果继续深挖 trust-loading completeness，
+    更值得单开一批验证的是：
+    direct-library path
+    对
+    `CAFile`
+    /
+    `CAPath`
+    是否还存在独立残口
+
 - [completed] `server default verifymode baseline`
   当前 focused 目标：
   - 把 server 高入口默认 verify 基线

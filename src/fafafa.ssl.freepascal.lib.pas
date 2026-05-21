@@ -1639,6 +1639,7 @@ function TFreePascalSSLLibrary.CreateContext(AType: TSSLContextType): ISSLContex
 var
   LConfig: TSSLConfig;
   LVerifyMode: TSSLVerifyModes;
+  Store: ISSLCertificateStore;
 begin
   if not FInitialized then
     raise ESSLInitializationException.CreateWithContext(
@@ -1676,7 +1677,8 @@ begin
   if (AType = sslCtxServer) and
     (LVerifyMode = [sslVerifyPeer]) and
     (Trim(LConfig.CAFile) = '') and
-    (Trim(LConfig.CAPath) = '') then
+    (Trim(LConfig.CAPath) = '') and
+    (not LConfig.UseSystemRoots) then
     LVerifyMode := [];
 
   Result := TFreePascalContext.Create(Self, AType);
@@ -1703,6 +1705,16 @@ begin
     Result.SetSessionCacheSize(LConfig.SessionCacheSize);
     Result.SetSessionTimeout(LConfig.SessionTimeout);
     Result.SetSessionCacheMode(ssoEnableSessionCache in LConfig.Options);
+
+    if LConfig.UseSystemRoots then
+    begin
+      Store := TSSLFactory.CreateCertificateStore(GetLibraryType);
+      if Store <> nil then
+      begin
+        Store.LoadSystemStore;
+        Result.SetCertificateStore(Store);
+      end;
+    end;
 
     if LConfig.ServerName <> '' then
       InternalLog(

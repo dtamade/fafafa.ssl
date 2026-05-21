@@ -469,10 +469,27 @@ begin
 
   if (sslVerifyPeer in Result) and
     ((Trim(AConfig.CAFile) <> '') or
-     (Trim(AConfig.CAPath) <> '')) then
+     (Trim(AConfig.CAPath) <> '') or
+     (AConfig.UseSystemRoots)) then
     Exit;
 
   Result := [];
+end;
+
+procedure ApplySystemRootsIfRequested(const AContext: ISSLContext;
+  const AConfig: TSSLConfig; const LLib: ISSLLibrary);
+var
+  LStore: ISSLCertificateStore;
+begin
+  if (AContext = nil) or (not AConfig.UseSystemRoots) then
+    Exit;
+
+  LStore := TSSLFactory.CreateCertificateStore(LLib.GetLibraryType);
+  if LStore <> nil then
+  begin
+    LStore.LoadSystemStore;
+    AContext.SetCertificateStore(LStore);
+  end;
 end;
 
 procedure ValidateRequestLoggingScope(const AConfig: TSSLConfig);
@@ -1151,6 +1168,8 @@ begin
     Result.SetSessionTimeout(LConfig.SessionTimeout);
     Result.SetSessionCacheMode(ssoEnableSessionCache in LConfig.Options);
 
+    ApplySystemRootsIfRequested(Result, LConfig, LLib);
+
     if LConfig.ServerName <> '' then
       LogContextLevelServerNameCompatibilityWarning(
         'TSSLFactory.CreateContext(AContextType, ALibType)'
@@ -1200,10 +1219,12 @@ begin
     
   if LConfig.PrivateKeyFile <> '' then
     Result.LoadPrivateKey(LConfig.PrivateKeyFile, LConfig.PrivateKeyPassword);
-    
+
+  ApplySystemRootsIfRequested(Result, LConfig, LLib);
+
   if LConfig.CAFile <> '' then
     Result.LoadCAFile(LConfig.CAFile);
-    
+
   Result.SetVerifyMode(LVerifyMode);
 
   if LConfig.VerifyDepth > 0 then

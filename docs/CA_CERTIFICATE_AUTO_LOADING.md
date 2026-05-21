@@ -6,7 +6,8 @@ This page is now a current-state note, not a feature-completion record.
 
 Do not assume that `Lib.CreateContext(sslCtxClient)` by itself automatically loads
 system CA certificates across backends. The supported, documented path is to ask
-for system trust explicitly through the context builder.
+for system trust explicitly through the context builder, or through
+`TSSLConfig.UseSystemRoots` on factory/direct-library config surfaces.
 
 ## Recommended Client Pattern
 
@@ -37,11 +38,13 @@ begin
 end.
 ```
 
-`WithSystemRoots` is the portable contract:
+Explicit system-roots opt-in is the portable contract:
 
-- it asks the selected backend to load its platform-appropriate trust source
-- it keeps the trust-store setup explicit in user code
-- it composes cleanly with `.WithCAFile`, `.WithCAPath`, or `SetCertificateStore(...)`
+- builder path: `.WithSystemRoots`
+- config/direct-library path: `TSSLConfig.UseSystemRoots := True`
+- both ask the selected backend to load its platform-appropriate trust source
+- both keep the trust-store setup explicit in user code
+- both compose cleanly with `.WithCAFile`, `.WithCAPath`, or `SetCertificateStore(...)`
 
 ## What To Avoid Documenting
 
@@ -57,8 +60,8 @@ end.
   implementation details.
 - WinSSL ultimately validates against Windows certificate-store semantics.
 - OpenSSL-family backends may rely on file/path-based trust loading.
-- The common API surface is the builder/store abstraction, not an implicit
-  "auto-loaded client context" guarantee.
+- The common API surface is explicit opt-in plus the store abstraction, not an
+  implicit "auto-loaded client context" guarantee.
 
 ## Custom or Private Trust Anchors
 
@@ -70,6 +73,23 @@ Ctx := TSSLContextBuilder.Create
   .WithSystemRoots
   .WithCAFile('/path/to/internal-ca.pem')
   .BuildClient;
+```
+
+The same layered trust model is available on config/direct-library paths:
+
+```pascal
+var
+  LConfig: TSSLConfig;
+begin
+  LConfig := CreateDefaultConfig(sslCtxClient);
+  LConfig.LibraryType := sslOpenSSL;
+  LConfig.ContextType := sslCtxClient;
+  LConfig.VerifyMode := [sslVerifyPeer];
+  LConfig.UseSystemRoots := True;
+  LConfig.CAFile := '/path/to/internal-ca.pem';
+
+  Ctx := TSSLFactory.CreateContext(LConfig);
+end;
 ```
 
 Or inject a backend-specific `ISSLCertificateStore` through `SetCertificateStore(...)`
