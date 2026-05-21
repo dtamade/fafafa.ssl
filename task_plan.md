@@ -10,6 +10,84 @@
 
 ## Current Status
 
+- [completed] `helper-linked https examples public import truth`
+  当前 focused 目标：
+  - 收口
+    一组通过 helper unit
+    串起来的 HTTPS client/server
+    活跃示例
+    仍在继续教学
+    `fafafa.ssl.base`
+    的旧入口漂移，
+    让普通 SSL public surface
+    回到
+    `fafafa.ssl`
+    ，同时保留
+    `https_server_common`
+    /
+    `fafafa.examples.tcp`
+    作为真实 helper owner
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-helper-linked-https-examples-public-import-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_helper_linked_https_examples_public_import_truth_contract.sh`
+  - 更新：
+    - `examples/https_server/https_server_common.pas`
+    - `examples/https_server/https_server_simple.pas`
+    - `examples/https_server/https_server_alpn.pas`
+    - `examples/https_server/https_server_mtls.pas`
+    - `examples/https_client/https_client_session.pas`
+  当前预期 truth：
+  - `https_server_common`
+    对
+    `ISSLConnection`
+    的依赖
+    应直接来自
+    `fafafa.ssl`
+  - `https_server_simple`
+    /
+    `https_server_alpn`
+    /
+    `https_server_mtls`
+    应保留
+    `https_server_common`
+    helper，
+    但不再继续发布
+    `fafafa.ssl.base`
+  - `https_client_session`
+    应通过
+    `fafafa.examples.tcp`
+    获取 socket helper，
+    不再额外带入
+    `fafafa.ssl.base`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_helper_linked_https_examples_public_import_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_helper_linked_https_examples_public_import_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_alpn_owner_path_active_guidance_contract.sh`
+    - PASS
+  - focused compile proof：
+    - `examples/https_server/https_server_simple.pas`
+      - PASS
+    - `examples/https_server/https_server_alpn.pas`
+      - PASS
+    - `examples/https_server/https_server_mtls.pas`
+      - PASS
+    - `examples/https_client/https_client_session.pas`
+      - PASS
+  - `git diff --check`
+    - PASS
+  当前批收口后的默认下一步：
+  - 若这组 helper-linked HTTPS examples
+    拉绿，
+    继续扫
+    remaining visible
+    active examples/docs
+    的 residual public-entry drift，
+    优先 still-active examples
+
 - [completed] `top-level active examples public import truth`
   当前 focused 目标：
   - 收口

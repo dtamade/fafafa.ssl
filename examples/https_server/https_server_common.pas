@@ -8,7 +8,7 @@ interface
 uses
   SysUtils, Classes,
   {$IFDEF MSWINDOWS}Windows, WinSock2{$ELSE}BaseUnix, UnixType, Sockets{$ENDIF},
-  fafafa.ssl.base;
+  fafafa.ssl;
 
 type
   {$IFDEF MSWINDOWS}

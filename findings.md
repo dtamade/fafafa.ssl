@@ -2,6 +2,74 @@
 
 ## 2026-05-21
 
+- helper-linked https examples public import truth
+  这一刀确认的
+  不是
+  这组 HTTPS client/server
+  helper-linked 示例
+  真的还依赖
+  `fafafa.ssl.base`
+  才能工作，
+  而是
+  façade 导出面
+  已经足够，
+  这些示例
+  还在保留
+  历史拆分入口
+
+- 当前更准确的收口是：
+  - `https_server_common`
+    只需要
+    `ISSLConnection`
+    ，当前已可直接来自
+    `fafafa.ssl`
+  - `https_server_simple`
+    /
+    `https_server_alpn`
+    /
+    `https_server_mtls`
+    真正的 helper owner
+    是
+    `https_server_common`
+    ，不是
+    `fafafa.ssl.base`
+  - `https_client_session`
+    真正依赖的
+    `INVALID_SOCKET`
+    /
+    `TSocketHandle`
+    /
+    `ConnectTCP`
+    /
+    `CloseSocket`
+    都来自
+    `fafafa.examples.tcp`
+
+- 这说明
+  当前 residual
+  继续落在
+  “helper-linked active examples
+  是否还在教学旧入口”，
+  不是
+  新的 façade export
+  或 backend 实现缺口
+
+- 这批还确认：
+  - `https_server_common`
+    作为 server helper owner
+    需要保留
+  - `fafafa.examples.tcp`
+    作为 client socket helper owner
+    需要保留
+  - `https_server_alpn`
+    的 owner-path
+    仍应通过
+    `ISSLConnectionInfo.GetSelectedALPNProtocol`
+    暴露，
+    本批 import 收口
+    没有打坏
+    既有 ALPN 语义合同
+
 - top-level active examples public import truth
   这一刀确认的
   不是

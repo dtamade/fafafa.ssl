@@ -9,7 +9,7 @@ program https_server_alpn;
 
 uses
   SysUtils,
-  fafafa.ssl, fafafa.ssl.base,
+  fafafa.ssl,
   https_server_common;
 
 const

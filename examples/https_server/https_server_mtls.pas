@@ -13,7 +13,7 @@ program https_server_mtls;
 
 uses
   SysUtils,
-  fafafa.ssl, fafafa.ssl.base,
+  fafafa.ssl,
   https_server_common;
 
 procedure Log(const AMsg: string);

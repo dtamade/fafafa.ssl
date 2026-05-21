@@ -6,6 +6,112 @@
 
 ## 2026-05-21
 
+### Helper-Linked HTTPS Examples Public Import Truth
+
+- inspect helper-linked HTTPS example import residuals before editing:
+  - `src/fafafa.ssl.pas`
+  - `examples/https_server/https_server_common.pas`
+  - `examples/https_server/https_server_simple.pas`
+  - `examples/https_server/https_server_alpn.pas`
+  - `examples/https_server/https_server_mtls.pas`
+  - `examples/https_client/https_client_session.pas`
+  - `examples/fafafa.examples.tcp.pas`
+  - `tests/scripts/test_alpn_owner_path_active_guidance_contract.sh`
+  - change:
+    - confirmed
+      helper-linked drift
+      is guidance-only,
+      not a runtime gap
+    - confirmed
+      `ISSLConnection`
+      /
+      `ISSLConnectionInfo`
+      /
+      `ISSLContext`
+      /
+      `ISSLClientConnection`
+      /
+      `ISSLSessionResumption`
+      /
+      `ISSLSession`
+      /
+      `TSSLFactory`
+      /
+      `sslCtxServer`
+      /
+      `sslCtxClient`
+      /
+      `sslVerifyPeer`
+      are already
+      re-exported by
+      `fafafa.ssl`
+    - confirmed
+      `https_server_common`
+      remains the
+      server helper owner
+    - confirmed
+      `fafafa.examples.tcp`
+      remains the
+      client socket helper owner
+
+- add focused batch record and create a dedicated helper-linked HTTPS import contract:
+  - `docs/plans/2026-05-21-helper-linked-https-examples-public-import-truth.md`
+  - `tests/scripts/test_helper_linked_https_examples_public_import_truth_contract.sh`
+  - change:
+    - froze
+      helper-linked HTTPS
+      example truth
+      around
+      façade-first imports
+      while preserving
+      helper-owner boundaries
+
+- repair helper-linked HTTPS examples public import truth:
+  - `examples/https_server/https_server_common.pas`
+  - `examples/https_server/https_server_simple.pas`
+  - `examples/https_server/https_server_alpn.pas`
+  - `examples/https_server/https_server_mtls.pas`
+  - `examples/https_client/https_client_session.pas`
+  - change:
+    - removed
+      obsolete
+      `fafafa.ssl.base`
+      imports
+      from all target files
+    - kept
+      `https_server_common`
+      and
+      `fafafa.examples.tcp`
+      as the true helper owners
+    - left
+      runtime logic
+      unchanged
+
+- verify focused closeout:
+  - `bash -n tests/scripts/test_helper_linked_https_examples_public_import_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_helper_linked_https_examples_public_import_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_alpn_owner_path_active_guidance_contract.sh`
+    - result: PASS
+  - `fpc -B -Fu./src -Fu./examples/https_server ... examples/https_server/https_server_simple.pas`
+    - result: PASS
+  - `fpc -B -Fu./src -Fu./examples/https_server ... examples/https_server/https_server_alpn.pas`
+    - result: PASS
+  - `fpc -B -Fu./src -Fu./examples/https_server ... examples/https_server/https_server_mtls.pas`
+    - result: PASS
+  - `fpc -B -Fu./src -Fu./examples -Fu./examples/https_client ... examples/https_client/https_client_session.pas`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+  - note:
+    - compile logs
+      still contain
+      repo pre-existing
+      warnings/notes,
+      but no new failure
+      from this batch
+
 ### Top-Level Active Examples Public Import Truth
 
 - confirm previous batch CI truth before opening the next focused example batch:

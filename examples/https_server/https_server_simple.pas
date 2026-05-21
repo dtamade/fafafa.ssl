@@ -17,7 +17,7 @@ program https_server_simple;
 
 uses
   SysUtils,
-  fafafa.ssl, fafafa.ssl.base,
+  fafafa.ssl,
   https_server_common;
 
 const
