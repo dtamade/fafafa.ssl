@@ -239,10 +239,10 @@ begin
 end;
 
 // 3. 启用调试日志
-var LLogConfig := LLib.GetDefaultConfig;
-LLogConfig.LogLevel := sslLogDebug;
-LLib.SetDefaultConfig(LLogConfig);
-LLib.SetLogCallback(@MyLogCallback);
+var LLogDefaults := GetLibraryDefaults(LLib);
+LLogDefaults.LogLevel := sslLogDebug;
+LLogDefaults.LogCallback := @MyLogCallback;
+ApplyLibraryDefaults(LLib, LLogDefaults);
 ```
 
 **常见原因与解决方案**:
@@ -974,12 +974,12 @@ begin
 end;
 
 var
-  LLogConfig: TSSLConfig;
+  LLogDefaults: TSSLLibraryDefaults;
 begin
-  LLogConfig := LLib.GetDefaultConfig;
-  LLogConfig.LogLevel := sslLogDebug;
-  LLib.SetDefaultConfig(LLogConfig);
-  LLib.SetLogCallback(@MyLogCallback);
+  LLogDefaults := GetLibraryDefaults(LLib);
+  LLogDefaults.LogLevel := sslLogDebug;
+  LLogDefaults.LogCallback := @MyLogCallback;
+  ApplyLibraryDefaults(LLib, LLogDefaults);
   LLib.Log(sslLogInfo, 'Application started');
 end;
 

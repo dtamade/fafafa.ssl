@@ -10,6 +10,83 @@
 
 ## Current Status
 
+- [completed] `tssllibrarydefaults additive surface adoption`
+  当前 focused 目标：
+  - 继续压缩
+    `TSSLConfig`
+    mixed-scope public record
+    ，但本批只处理
+    library-scoped logging defaults，
+    给
+    `LogLevel`
+    /
+    `LogCallback`
+    一个显式 additive public surface
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-tssllibrarydefaults-surface-adoption.md`
+  - 新增 focused contract：
+    - `tests/test_tssllibrarydefaults_surface.pas`
+    - `tests/scripts/test_tssllibrarydefaults_surface_contract.sh`
+  - 目标更新：
+    - `src/fafafa.ssl.base.pas`
+    - `src/fafafa.ssl.pas`
+    - `docs/reference/API_REFERENCE.md`
+    - `docs/reference/ARCHITECTURE.md`
+    - `docs/guides/USER_GUIDE.md`
+    - `docs/guides/TROUBLESHOOTING.md`
+    - `docs/plans/2026-05-18-tsslconfig-public-surface-slimming-roadmap.md`
+    - `tests/scripts/test_tsslconfig_logging_surface_truth_contract.sh`
+    - `tests/scripts/test_tsslconfig_migration_targets_contract.sh`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_tssllibrarydefaults_surface_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_tssllibrarydefaults_surface_contract.sh`
+    - PASS
+  - `python3 scripts/compile_all_modules.py`
+    - PASS
+      - `186/186`
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - `TSSLLibraryDefaults`
+    当前已经成为
+    `LogLevel`
+    /
+    `LogCallback`
+    的推荐 public helper surface
+  - `fafafa.ssl`
+    主门面当前也完整 re-export：
+    - `TSSLLibraryDefaults`
+    - `CreateDefaultLibraryDefaults(...)`
+    - `GetLibraryDefaults(...)`
+    - `ApplyLibraryDefaults(...)`
+    - `TSSLLogCallback`
+    - `sslLogNone` / `sslLogError` / `sslLogWarning` / `sslLogInfo` / `sslLogDebug` / `sslLogTrace`
+  - 底层 runtime owner model
+    保持不变：
+    - `LogLevel`
+      仍通过
+      `GetDefaultConfig(...)`
+      /
+      `SetDefaultConfig(...)`
+      落地
+    - `LogCallback`
+      仍通过
+      `ISSLLibrary.SetLogCallback(...)`
+      安装
+  当前批收口后的默认下一步：
+  - `TSSLConfig`
+    mixed-scope 债
+    已不再被 logging defaults 这组字段拖住
+  - 下一条更值得继续压的 residual
+    会更集中在：
+    其余
+    non-request-local
+    字段的迁移目标
+    /
+    facade 主入口的剩余 supporting-surface 完整性
+
 - [completed] `isslconnection control owner-path adoption`
   当前 focused 目标：
   - 给

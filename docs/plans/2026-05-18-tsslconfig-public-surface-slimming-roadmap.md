@@ -56,16 +56,18 @@
 ### 迁移到 library defaults surface
 
 - `LogLevel`
-  - 当前推荐：`ISSLLibrary.GetDefaultConfig(...)` / `SetDefaultConfig(...)`
+  - 当前推荐：`TSSLLibraryDefaults` + `GetLibraryDefaults(...)` / `ApplyLibraryDefaults(...)`
 - `LogCallback`
-  - 当前推荐：`ISSLLibrary.SetLogCallback(...)`
+  - 当前推荐：`TSSLLibraryDefaults` + `GetLibraryDefaults(...)` / `ApplyLibraryDefaults(...)`
+  - runtime owner 仍是 `ISSLLibrary.SetLogCallback(...)`
 - `v2` 方向：
   - 不再把 library defaults 混在 context/request config record 中
 
 ### 迁移到 connection / transport surface
 
 - `HandshakeTimeout`
-  - 当前推荐：`TSSLConnector.WithTimeout(...)` / `TSSLAcceptor.WithTimeout(...)` / `ISSLConnection.SetTimeout(...)`
+  - 当前推荐：`TSSLConnector.WithTimeout(...)` / `TSSLAcceptor.WithTimeout(...)`
+  - 连接创建后如需 runtime override，优先走 `ISSLConnectionControl.SetTimeout(...)`
 - `BufferSize`
   - 当前推荐：外围 socket / stream / transport / app-level buffer policy
 - `v2` 方向：

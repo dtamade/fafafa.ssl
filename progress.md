@@ -6,6 +6,79 @@
 
 ## 2026-05-21
 
+### TSSLLibraryDefaults Additive Surface Adoption
+
+- inspect current helper/doc/facade seam before final closeout:
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.pas`
+  - `tests/test_tssllibrarydefaults_surface.pas`
+  - `tests/scripts/test_tssllibrarydefaults_surface_contract.sh`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/ARCHITECTURE.md`
+  - `docs/guides/USER_GUIDE.md`
+  - `docs/guides/TROUBLESHOOTING.md`
+  - change:
+    - confirmed the new additive helper surface had already landed in
+      `fafafa.ssl.base`
+      and active docs
+    - confirmed the remaining real blocker was a facade compile seam:
+      `uses fafafa.ssl`
+      still did not re-export
+      `TSSLLogCallback`
+      and the
+      `sslLog*`
+      constants required by the focused runtime probe
+
+- repair facade compile seam:
+  - `src/fafafa.ssl.pas`
+  - change:
+    - re-exported
+      `TSSLLogCallback`
+    - re-exported
+      `sslLogNone`
+      /
+      `sslLogError`
+      /
+      `sslLogWarning`
+      /
+      `sslLogInfo`
+      /
+      `sslLogDebug`
+      /
+      `sslLogTrace`
+    - important conclusion:
+      - the last blocker for this batch was not helper semantics,
+        but main-facade completeness for
+        `uses fafafa.ssl`
+        callers
+
+- verify focused closeout:
+  - `bash -n tests/scripts/test_tssllibrarydefaults_surface_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_tssllibrarydefaults_surface_contract.sh`
+    - result: PASS
+    - summary:
+      - focused runtime probe now compiles and runs through:
+        - `CreateDefaultLibraryDefaults`
+          keeps
+          `sslLogError`
+          +
+          `nil`
+          baseline
+        - `ApplyLibraryDefaults(...)`
+          updates
+          log level
+          and callback together
+        - `GetLibraryDefaults(...)`
+          reads back the current library-owned defaults
+  - `python3 scripts/compile_all_modules.py`
+    - result: PASS
+    - summary:
+      - `186/186`
+        core modules compiled successfully
+  - `git diff --check`
+    - result: PASS
+
 ### ISSLConnection Control Owner-Path Adoption
 
 - inspect current timeout/blocking control seam before editing:

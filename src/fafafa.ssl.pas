@@ -87,6 +87,7 @@ type
   TSSLConnectionInfo = fafafa.ssl.base.TSSLConnectionInfo;
   PSSLConnectionInfo = fafafa.ssl.base.PSSLConnectionInfo;
   TSSLConfig = fafafa.ssl.base.TSSLConfig;
+  TSSLLibraryDefaults = fafafa.ssl.base.TSSLLibraryDefaults;
   PSSLConfig = fafafa.ssl.base.PSSLConfig;
   TSSLStatistics = fafafa.ssl.base.TSSLStatistics;
   PSSLStatistics = fafafa.ssl.base.PSSLStatistics;
@@ -123,6 +124,7 @@ type
   ESSLTimeoutException = fafafa.ssl.exceptions.ESSLTimeoutException;
   ESSLLibraryException = fafafa.ssl.exceptions.ESSLLibraryException;
   
+  TSSLLogCallback = fafafa.ssl.base.TSSLLogCallback;
   TSSLVerifyCallback = fafafa.ssl.base.TSSLVerifyCallback;
   TSSLPasswordCallback = fafafa.ssl.base.TSSLPasswordCallback;
   TSSLInfoCallback = fafafa.ssl.base.TSSLInfoCallback;
@@ -351,6 +353,14 @@ const
   sslErrLibraryNotFound = fafafa.ssl.base.sslErrLibraryNotFound;
   sslErrFunctionNotFound = fafafa.ssl.base.sslErrFunctionNotFound;
   sslErrVersionMismatch = fafafa.ssl.base.sslErrVersionMismatch;
+
+  // 日志级别常量
+  sslLogNone = fafafa.ssl.base.sslLogNone;
+  sslLogError = fafafa.ssl.base.sslLogError;
+  sslLogWarning = fafafa.ssl.base.sslLogWarning;
+  sslLogInfo = fafafa.ssl.base.sslLogInfo;
+  sslLogDebug = fafafa.ssl.base.sslLogDebug;
+  sslLogTrace = fafafa.ssl.base.sslLogTrace;
   
   // 默认值常量
   SSL_DEFAULT_BUFFER_SIZE = fafafa.ssl.base.SSL_DEFAULT_BUFFER_SIZE;
@@ -385,6 +395,9 @@ const
 function SSLErrorToString(AError: TSSLErrorCode): string;
 function ProtocolVersionToString(AVersion: TSSLProtocolVersion): string;
 function LibraryTypeToString(ALibType: TSSLLibraryType): string;
+function CreateDefaultLibraryDefaults: TSSLLibraryDefaults;
+function GetLibraryDefaults(const ALibrary: ISSLLibrary): TSSLLibraryDefaults;
+procedure ApplyLibraryDefaults(const ALibrary: ISSLLibrary; const ADefaults: TSSLLibraryDefaults);
 
 // type-safety supporting helper surface
 function SSLVersionToString(AVersion: TSSLVersion): string;
@@ -417,7 +430,7 @@ function GetCapabilitiesDescription(const ACaps: TSSLBackendCapabilities): strin
 // 便捷API（仍然 shipped，但不替代 TSSLFactory / TSSLConnector 主入口）
 // ============================================================================
 
-{ 初始化默认配置（fresh default-config convenience helper；若需要 library-owned defaults，请优先走 ISSLLibrary.GetDefaultConfig/SetDefaultConfig） }
+{ 初始化默认配置（fresh default-config convenience helper；若需要 library-owned defaults，请优先走 TSSLLibraryDefaults + GetLibraryDefaults/ApplyLibraryDefaults） }
 function CreateDefaultConfig(AContextType: TSSLContextType = sslCtxClient): TSSLConfig;
 
 { 快速创建服务端 context（只返回配置好的 ISSLContext；socket bind/listen/accept 仍由应用层负责） }
@@ -468,6 +481,22 @@ end;
 function LibraryTypeToString(ALibType: TSSLLibraryType): string;
 begin
   Result := fafafa.ssl.base.LibraryTypeToString(ALibType);
+end;
+
+function CreateDefaultLibraryDefaults: TSSLLibraryDefaults;
+begin
+  Result := fafafa.ssl.base.CreateDefaultLibraryDefaults;
+end;
+
+function GetLibraryDefaults(const ALibrary: ISSLLibrary): TSSLLibraryDefaults;
+begin
+  Result := fafafa.ssl.base.GetLibraryDefaults(ALibrary);
+end;
+
+procedure ApplyLibraryDefaults(const ALibrary: ISSLLibrary;
+  const ADefaults: TSSLLibraryDefaults);
+begin
+  fafafa.ssl.base.ApplyLibraryDefaults(ALibrary, ADefaults);
 end;
 
 function SSLVersionToString(AVersion: TSSLVersion): string;

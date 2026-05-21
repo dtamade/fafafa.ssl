@@ -31,6 +31,14 @@
 `fafafa.ssl` 主门面当前也 re-export 这组 non-generic type-safety public surface（如 `TSSLVersion` / `TKeySize` / `TTimeoutDuration` / `TBufferSize`）；`TSecureData<T>` / `TResult<T, E>` 继续保留在 `fafafa.ssl.safety`。
 如果你只想单独使用这套类型安全工具而不引入 TLS bootstrap facade，也可以窄用 `fafafa.ssl.safety`。
 
+## Library Defaults Surface Note
+
+- `LogLevel` / `LogCallback` 这组 library-scoped defaults 当前更清晰的 additive surface 是 `TSSLLibraryDefaults` + `GetLibraryDefaults(...)` / `ApplyLibraryDefaults(...)`。
+- 低层 truth 仍保持不变：
+  - `LogLevel` 继续通过 library default-config round-trip 落地
+  - `LogCallback` 继续由 `ISSLLibrary.SetLogCallback(...)` 安装
+- 新 helper 只是把这组组合收成显式 public surface，不改变 backend runtime owner model。
+
 ## System Roots Opt-In Note
 
 - builder 侧当前公共入口仍是 `.WithSystemRoots`。
@@ -51,7 +59,8 @@
 - library-scoped defaults
   - `LogLevel`
   - `LogCallback`
-  - 通过 `ISSLLibrary.GetDefaultConfig(...)` / `SetDefaultConfig(...)` 调整 `LogLevel`，通过 `ISSLLibrary.SetLogCallback(...)` 安装回调；`SetDefaultConfig(...)` 不再安装或替换回调；fresh request config 仍会回到 `sslLogError` + `nil` baseline。
+  - 通过 `TSSLLibraryDefaults` + `GetLibraryDefaults(...)` / `ApplyLibraryDefaults(...)` 访问 library-owned defaults；底层仍分别落到 `SetDefaultConfig(...)` / `SetLogCallback(...)`。
+  - fresh request config 仍会回到 `sslLogError` + `nil` baseline。
   - `TSSLFactory.CreateContext(const AConfig)` 会拒绝 request-local 覆盖。
 - context-scoped
   - `SessionCacheSize`
@@ -66,7 +75,7 @@
 - connection-scoped
   - `HandshakeTimeout`
   - `BufferSize`
-  - factory request path 和 direct-library context path 都不接受它们的自定义值；请改走 `TSSLConnector.WithTimeout` / `TSSLAcceptor.WithTimeout` / `ISSLConnection.SetTimeout` 或外围 transport / IO 配置。
+  - factory request path 和 direct-library context path 都不接受它们的自定义值；请改走 `TSSLConnector.WithTimeout` / `TSSLAcceptor.WithTimeout`，连接创建后若需要 runtime override 则优先走 `ISSLConnectionControl.SetTimeout(...)`，其余 buffer 策略继续放在外围 transport / IO 配置。
 - compatibility-only
   - `ServerName`
   - 当前 client context 创建路径是 warning + ignore，server context 创建路径会 reject；新代码应改走 per-connection SNI。
@@ -98,9 +107,10 @@
   - `ServerEarlyDataReplayStoreFile` / `ServerEarlyDataReplayStoreDirectory`
 - 迁移到 library defaults surface
   - `LogLevel`
-    - 当前推荐入口：`ISSLLibrary.GetDefaultConfig(...)` / `SetDefaultConfig(...)`
+    - 当前推荐入口：`TSSLLibraryDefaults` + `GetLibraryDefaults(...)` / `ApplyLibraryDefaults(...)`
   - `LogCallback`
-    - 当前推荐入口：`ISSLLibrary.SetLogCallback(...)`（`SetDefaultConfig(...)` 不再安装或替换回调）
+    - 当前推荐入口：`TSSLLibraryDefaults` + `GetLibraryDefaults(...)` / `ApplyLibraryDefaults(...)`
+    - runtime owner 仍是 `ISSLLibrary.SetLogCallback(...)`
   - `v2` 方向：不再把 library defaults 混在 context/request config record 中。
 - 迁移到 connection / transport surface
   - `HandshakeTimeout`
@@ -1693,7 +1703,7 @@ class function TSSLFactory.GetLibraryInstance(ALibType: TSSLLibraryType = sslAut
 
 - `CreateDefaultConfig(...)` 当前只是 fresh default-config convenience helper。
   如果你需要 library-owned defaults、持续的 logging policy，或 direct-library default-config truth，
-  优先通过 `ISSLLibrary.GetDefaultConfig(...)` / `SetDefaultConfig(...)` 访问。
+  优先通过 `TSSLLibraryDefaults` + `GetLibraryDefaults(...)` / `ApplyLibraryDefaults(...)` 访问。
 - `TSSLHelper` 当前保留为证书文件检查 / 随机与摘要工具 / early-data optional-interface convenience helper。
   它不代替 `TSSLFactory` / `TSSLContextBuilder` / `TSSLConnector` 这条主入口。
 - `QuickServer(...)` 当前只是 `TSSLFactory.CreateServerContext(...)` 的 convenience bootstrap。

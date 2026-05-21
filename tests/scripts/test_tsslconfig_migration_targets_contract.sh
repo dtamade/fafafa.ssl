@@ -24,15 +24,18 @@ require_fixed() {
 require_fixed '## TSSLConfig Migration Targets' \
   "$api_ref" \
   "API reference no longer contains the TSSLConfig migration-targets section"
-require_fixed '当前推荐入口：`ISSLLibrary.GetDefaultConfig(...)` / `SetDefaultConfig(...)`' \
+require_fixed '当前推荐入口：`TSSLLibraryDefaults` + `GetLibraryDefaults(...)` / `ApplyLibraryDefaults(...)`' \
   "$api_ref" \
   "API reference no longer maps LogLevel to library default config APIs"
-require_fixed '当前推荐入口：`ISSLLibrary.SetLogCallback(...)`' \
+require_fixed 'runtime owner 仍是 `ISSLLibrary.SetLogCallback(...)`' \
   "$api_ref" \
-  "API reference no longer maps LogCallback to the library log callback surface"
-require_fixed '当前推荐入口：`TSSLConnector.WithTimeout(...)` / `TSSLAcceptor.WithTimeout(...)` / `ISSLConnection.SetTimeout(...)`' \
+  "API reference no longer records the runtime owner for LogCallback"
+require_fixed '当前推荐入口：`TSSLConnector.WithTimeout(...)` / `TSSLAcceptor.WithTimeout(...)`' \
   "$api_ref" \
   "API reference no longer maps HandshakeTimeout to connection timeout APIs"
+require_fixed '优先通过 `ISSLConnectionControl.SetTimeout(...)`' \
+  "$api_ref" \
+  "API reference no longer records ISSLConnectionControl as the runtime timeout override owner"
 require_fixed '当前推荐入口：外围 socket / stream / transport / app-level buffer policy' \
   "$api_ref" \
   "API reference no longer maps BufferSize to transport-level configuration"

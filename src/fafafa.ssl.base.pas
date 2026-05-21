@@ -378,6 +378,12 @@ type
   { 日志回调类型 }
   TSSLLogCallback = procedure(ALevel: TSSLLogLevel; const AMessage: string) of object;
 
+  { 显式的 library-scoped defaults helper surface }
+  TSSLLibraryDefaults = record
+    LogLevel: TSSLLogLevel;
+    LogCallback: TSSLLogCallback;
+  end;
+
   { SSL 配置 }
   TSSLConfig = record
     // 基本配置
@@ -2014,6 +2020,9 @@ const
 function SSLErrorToString(AError: TSSLErrorCode): string;
 function ProtocolVersionToString(AVersion: TSSLProtocolVersion): string;
 function LibraryTypeToString(ALibType: TSSLLibraryType): string;
+function CreateDefaultLibraryDefaults: TSSLLibraryDefaults;
+function GetLibraryDefaults(const ALibrary: ISSLLibrary): TSSLLibraryDefaults;
+procedure ApplyLibraryDefaults(const ALibrary: ISSLLibrary; const ADefaults: TSSLLibraryDefaults);
 
 {** 获取库版本字符串 *}
 function GetFafafaSSLVersion: string;
@@ -2207,6 +2216,39 @@ end;
 function LibraryTypeToString(ALibType: TSSLLibraryType): string;
 begin
   Result := SSL_LIBRARY_NAMES[ALibType];
+end;
+
+function CreateDefaultLibraryDefaults: TSSLLibraryDefaults;
+begin
+  Result.LogLevel := sslLogError;
+  Result.LogCallback := nil;
+end;
+
+function GetLibraryDefaults(const ALibrary: ISSLLibrary): TSSLLibraryDefaults;
+var
+  LConfig: TSSLConfig;
+begin
+  Result := CreateDefaultLibraryDefaults;
+  if ALibrary = nil then
+    Exit;
+
+  LConfig := ALibrary.GetDefaultConfig;
+  Result.LogLevel := LConfig.LogLevel;
+  Result.LogCallback := LConfig.LogCallback;
+end;
+
+procedure ApplyLibraryDefaults(const ALibrary: ISSLLibrary;
+  const ADefaults: TSSLLibraryDefaults);
+var
+  LConfig: TSSLConfig;
+begin
+  if ALibrary = nil then
+    Exit;
+
+  LConfig := ALibrary.GetDefaultConfig;
+  LConfig.LogLevel := ADefaults.LogLevel;
+  ALibrary.SetDefaultConfig(LConfig);
+  ALibrary.SetLogCallback(ADefaults.LogCallback);
 end;
 
 { TSSLOperationResult }

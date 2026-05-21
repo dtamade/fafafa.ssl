@@ -18,32 +18,38 @@ require_fixed() {
   fi
 }
 
-require_fixed '通过 `ISSLLibrary.GetDefaultConfig(...)` / `SetDefaultConfig(...)` 调整 `LogLevel`，通过 `ISSLLibrary.SetLogCallback(...)` 安装回调；`SetDefaultConfig(...)` 不再安装或替换回调；fresh request config 仍会回到 `sslLogError` + `nil` baseline。' \
+require_fixed '通过 `TSSLLibraryDefaults` + `GetLibraryDefaults(...)` / `ApplyLibraryDefaults(...)` 访问 library-owned defaults；底层仍分别落到 `SetDefaultConfig(...)` / `SetLogCallback(...)`。' \
   "$api_ref" \
-  "API reference no longer explains the library-default logging entrypoints and request-safe baseline"
+  "API reference no longer explains the additive TSSLLibraryDefaults surface"
 
-require_fixed '通过 `ISSLLibrary.GetDefaultConfig(...)` / `SetDefaultConfig(...)` 调整 `LogLevel`，通过 `ISSLLibrary.SetLogCallback(...)` 安装回调；`SetDefaultConfig(...)` 不再安装或替换回调；factory request path 不接受 request-local 覆盖。' \
+require_fixed '通过 `TSSLLibraryDefaults` + `GetLibraryDefaults(...)` / `ApplyLibraryDefaults(...)` 访问 library-owned defaults；底层仍分别落到 `SetDefaultConfig(...)` / `SetLogCallback(...)`；factory request path 不接受 request-local 覆盖。' \
   "$arch_ref" \
   "Architecture reference no longer states the split logging entrypoints"
 
-require_fixed 'LLogConfig := LLib.GetDefaultConfig;' \
+require_fixed 'LLogDefaults := GetLibraryDefaults(LLib);' \
   "$user_guide" \
-  "User guide no longer fetches library default config before raising the log level"
-require_fixed 'LLogConfig.LogLevel := sslLogInfo;' \
+  "User guide no longer fetches TSSLLibraryDefaults before raising the log level"
+require_fixed 'LLogDefaults.LogLevel := sslLogInfo;' \
   "$user_guide" \
   "User guide no longer shows LogLevel configuration for info-level logging"
-require_fixed 'LLib.SetDefaultConfig(LLogConfig);' \
+require_fixed 'LLogDefaults.LogCallback := @MyLogCallback;' \
   "$user_guide" \
-  "User guide no longer persists the raised logging level through SetDefaultConfig"
+  "User guide no longer sets the callback through TSSLLibraryDefaults"
+require_fixed 'ApplyLibraryDefaults(LLib, LLogDefaults);' \
+  "$user_guide" \
+  "User guide no longer applies library defaults through ApplyLibraryDefaults"
 
-require_fixed 'LLogConfig := LLib.GetDefaultConfig;' \
+require_fixed 'LLogDefaults := GetLibraryDefaults(LLib);' \
   "$troubleshooting" \
-  "Troubleshooting guide no longer fetches library default config before raising the log level"
-require_fixed 'LLogConfig.LogLevel := sslLogDebug;' \
+  "Troubleshooting guide no longer fetches TSSLLibraryDefaults before raising the log level"
+require_fixed 'LLogDefaults.LogLevel := sslLogDebug;' \
   "$troubleshooting" \
   "Troubleshooting guide no longer shows debug-level logging through library defaults"
-require_fixed 'LLib.SetDefaultConfig(LLogConfig);' \
+require_fixed 'LLogDefaults.LogCallback := @MyLogCallback;' \
   "$troubleshooting" \
-  "Troubleshooting guide no longer persists the raised logging level before installing callback"
+  "Troubleshooting guide no longer sets the callback through TSSLLibraryDefaults"
+require_fixed 'ApplyLibraryDefaults(LLib, LLogDefaults);' \
+  "$troubleshooting" \
+  "Troubleshooting guide no longer applies library defaults through ApplyLibraryDefaults"
 
 echo "PASS: TSSLConfig logging surface truth remains aligned across active docs"

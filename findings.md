@@ -2,6 +2,80 @@
 
 ## 2026-05-21
 
+- tssllibrarydefaults additive surface adoption
+  这一刀确认的
+  不是 backend runtime
+  还没把
+  `LogLevel`
+  /
+  `LogCallback`
+  收平，
+  而是
+  public surface
+  还停留在
+  “语义上已经分离，
+  代码入口却仍要调用方手拼低层 owner path”
+  的半收口状态
+
+- 当前更准确的收口是：
+  - `TSSLLibraryDefaults`
+    现在承接：
+    - `LogLevel`
+    - `LogCallback`
+  - `CreateDefaultLibraryDefaults(...)`
+    /
+    `GetLibraryDefaults(...)`
+    /
+    `ApplyLibraryDefaults(...)`
+    现在给出一条
+    显式 additive public helper surface
+  - `fafafa.ssl`
+    主门面也已补齐
+    `TSSLLogCallback`
+    与整组
+    `sslLog*`
+    常量重导出，
+    所以
+    `uses fafafa.ssl`
+    的最小 probe
+    已经能够单独编译
+
+- 这说明
+  当前真正的缺口
+  不是
+  `SetDefaultConfig(...)`
+  /
+  `SetLogCallback(...)`
+  的 owner model
+  还需要重写，
+  而是
+  缺少一个与当前语义真相匹配的
+  public helper surface
+
+- 这批也证明了
+  `TSSLConfig`
+  mixed-scope 债
+  可以继续按
+  additive extraction
+  一刀一刀往外迁，
+  不必等到
+  `v2`
+  才能让调用方摆脱
+  raw mixed record
+
+- focused RED
+  首轮直接暴露的是
+  facade compile gap：
+  - `TSSLLogCallback`
+    未重导出
+  - `sslLog*`
+    常量未重导出
+  这比单纯 doc drift 更关键，
+  因为它会让
+  `uses fafafa.ssl`
+  这条主入口
+  在新 helper surface 上直接失真
+
 - isslconnection control owner-path adoption
   这一刀确认的
   不是
