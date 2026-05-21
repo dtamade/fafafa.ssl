@@ -6,6 +6,120 @@
 
 ## 2026-05-21
 
+### Backend Capability Matrix Active Import Truth And Contract Hardening
+
+- confirm handoff truth before opening the next batch:
+  - `gh run view 26237953233 --json status,conclusion,workflowName,displayTitle,headSha,createdAt,updatedAt`
+  - `git status --short`
+  - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  - `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+  - `tests/scripts/test_winssl_store_active_docs_truth_contract.sh`
+  - `tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+  - change:
+    - confirmed
+      commit
+      `9aaebe4`
+      corresponding
+      `CI`
+      run
+      `26237953233`
+      completed
+      `success`
+    - confirmed
+      working tree
+      was clean
+    - confirmed
+      both backend matrix docs
+      still retained
+      single-line
+      `uses fafafa.ssl.base;`
+      in active
+      backend identifier
+      snippets
+    - confirmed
+      WinSSL focused contract
+      only forbade
+      `  fafafa.ssl.base,`
+      and therefore
+      could false-green
+      on single-line import
+
+- add a focused batch record for active matrix import truth and contract hardening:
+  - `docs/plans/2026-05-21-backend-capability-matrix-active-import-truth-and-contract-hardening.md`
+  - change:
+    - scoped
+      this batch
+      as
+      docs truth
+      +
+      contract hardening,
+      not a broader
+      capability rewrite
+
+- tighten focused contracts before changing docs:
+  - `tests/scripts/test_winssl_store_active_docs_truth_contract.sh`
+  - `tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+  - change:
+    - added
+      explicit guards
+      against
+      `uses fafafa.ssl.base;`
+    - added
+      explicit current-entry
+      requirements for
+      `fafafa.ssl.context.builder`
+      when
+      `TSSLContextBuilder`
+      appears
+
+- establish RED on current HEAD:
+  - `bash -n tests/scripts/test_winssl_store_active_docs_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_winssl_store_active_docs_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - `WINSSL_BACKEND_CAPABILITY_MATRIX`
+        still taught
+        `uses fafafa.ssl.base;`
+  - `bash -n tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - `MBEDTLS_BACKEND_CAPABILITY_MATRIX`
+        still taught
+        `uses fafafa.ssl.base;`
+
+- repair active backend identifier import truth:
+  - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  - `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+  - change:
+    - replaced
+      stale
+      `fafafa.ssl.base`
+      import
+      with
+      `fafafa.ssl`
+      +
+      `fafafa.ssl.context.builder`
+    - kept
+      backend enum
+      and builder-based
+      example intent
+      unchanged
+
+- verify focused closeout:
+  - `bash -n tests/scripts/test_winssl_store_active_docs_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_winssl_store_active_docs_truth_contract.sh`
+    - result: PASS
+  - `bash -n tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### Active Root Entry Metadata And Install Guidance Truth
 
 - inspect root-entry residuals before scoping the next batch:

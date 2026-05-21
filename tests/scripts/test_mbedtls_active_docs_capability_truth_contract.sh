@@ -38,6 +38,10 @@ require_fixed "$mbedtls_matrix" "| 0-RTT | ❌ 当前 capability 不发布 | 当
   "MbedTLS matrix must stop implying published 0-RTT support"
 require_fixed "$mbedtls_matrix" "| 自定义 I/O | ❌ 当前 public callback surface 不发布 | 当前 transport path 仅使用内置 socket/stream BIO wiring，不提供 caller-supplied I/O callback seam |" \
   "MbedTLS matrix must stop implying published custom I/O callbacks"
+require_fixed "$mbedtls_matrix" "  fafafa.ssl," \
+  "MbedTLS matrix backend identifier example must use the current public facade unit"
+require_fixed "$mbedtls_matrix" "  fafafa.ssl.context.builder;" \
+  "MbedTLS matrix backend identifier example must import the current builder entry"
 require_fixed "$mbedtls_matrix" ".WithCAFile('/etc/ssl/certs/ca-certificates.crt')" \
   "MbedTLS matrix example should use explicit CA file guidance"
 require_absent "$mbedtls_matrix" "| 证书固定 | ✅ 支持 | 通过回调 |" \
@@ -46,6 +50,8 @@ require_absent "$mbedtls_matrix" "| 0-RTT | ⚠️ 部分 |" \
   "MbedTLS matrix must stop describing 0-RTT as partially published"
 require_absent "$mbedtls_matrix" "| 自定义 I/O | ✅ 支持 | 回调函数 |" \
   "MbedTLS matrix must stop claiming published custom I/O callbacks"
+require_absent "$mbedtls_matrix" "uses fafafa.ssl.base;" \
+  "MbedTLS matrix backend identifier example must stop teaching fafafa.ssl.base"
 require_absent "$mbedtls_matrix" ".WithSystemRoots" \
   "MbedTLS matrix example should stop implying system roots as the primary deterministic path"
 

@@ -10,6 +10,83 @@
 
 ## Current Status
 
+- [completed] `backend capability matrix active import truth and contract hardening`
+  当前 focused 目标：
+  - 修复
+    `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+    /
+    `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+    在 backend identifier
+    代码块里
+    继续教学
+    `uses fafafa.ssl.base;`
+    的 active import drift
+  - 同时补上
+    focused contract
+    对单行旧导入形式
+    的漏检，
+    避免再出现
+    “文档仍旧，
+    contract 却假绿”
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-backend-capability-matrix-active-import-truth-and-contract-hardening.md`
+  - 更新：
+    - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+    - `docs/reference/MBEDTLS_BACKEND_CAPABILITY_MATRIX.md`
+    - `tests/scripts/test_winssl_store_active_docs_truth_contract.sh`
+    - `tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+  当前预期 truth：
+  - 这两份 active
+    backend matrix
+    的 backend identifier
+    示例
+    当前应回到：
+    - `fafafa.ssl`
+    - `fafafa.ssl.context.builder`
+  - `uses fafafa.ssl.base;`
+    不应再出现在
+    这类活跃入口代码块里
+  - WinSSL focused contract
+    不能只拦
+    带逗号的
+    `fafafa.ssl.base,`
+    形式，
+    也必须拦住
+    单行
+    `uses fafafa.ssl.base;`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_winssl_store_active_docs_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_winssl_store_active_docs_truth_contract.sh`
+    - FAIL -> PASS
+    - RED summary:
+      - `WINSSL_BACKEND_CAPABILITY_MATRIX`
+        仍保留
+        `uses fafafa.ssl.base;`
+  - `bash -n tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_mbedtls_active_docs_capability_truth_contract.sh`
+    - FAIL -> PASS
+    - RED summary:
+      - `MBEDTLS_BACKEND_CAPABILITY_MATRIX`
+        仍保留
+        `uses fafafa.ssl.base;`
+  - `git diff --check`
+    - PASS
+  当前批收口后的默认下一步：
+  - 继续清
+    剩余 active docs residual：
+    - `docs/guides/CODE_STYLE.md`
+    - `docs/guides/WINSSL_QUICKSTART.md`
+    - `docs/guides/LINUX_QUICKSTART.md`
+    - `docs/AGENTS.md`
+  - 然后再切回
+    更深的
+    interface / backend
+    completeness
+    静态审查
+
 - [completed] `active root entry metadata and install guidance truth`
   当前 focused 目标：
   - 收口

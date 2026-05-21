@@ -159,3 +159,16 @@ git diff --check
     - PASS
   - `git diff --check`
     - PASS
+
+## Post-Closeout Correction
+
+- later same-day static audit found a
+  contract false-green gap:
+  - the contract only forbade
+    `  fafafa.ssl.base,`
+  - but missed the still-live
+    single-line form
+    `uses fafafa.ssl.base;`
+    in the backend identifier snippet
+- the actual truth closeout for that residual is therefore superseded by:
+  - `docs/plans/2026-05-21-backend-capability-matrix-active-import-truth-and-contract-hardening.md`

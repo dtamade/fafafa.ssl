@@ -12,7 +12,9 @@ WinSSL 是 fafafa.ssl 对 Windows 原生 TLS 实现（Schannel）的封装。使
 ## 后端标识
 
 ```pascal
-uses fafafa.ssl.base;
+uses
+  fafafa.ssl,
+  fafafa.ssl.context.builder;
 
 // 后端枚举值
 sslWinSSL  // TSSLBackend.sslWinSSL

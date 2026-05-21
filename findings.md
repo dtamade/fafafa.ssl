@@ -2,6 +2,73 @@
 
 ## 2026-05-21
 
+- backend capability matrix active import truth and contract hardening
+  这一步确认了一个
+  真实的 workflow 问题，
+  不是单纯文档措辞问题：
+  - `WINSSL_BACKEND_CAPABILITY_MATRIX`
+    仍然保留
+    `uses fafafa.ssl.base;`
+  - 但对应 focused contract
+    之前只禁止了
+    `  fafafa.ssl.base,`
+    这种带逗号形式，
+    没有覆盖
+    `uses fafafa.ssl.base;`
+    这种单行导入
+
+- 这意味着
+  之前那条 WinSSL docs
+  closeout 记录
+  存在
+  false-green gap：
+  - contract
+    并没有真正证明
+    active backend identifier
+    snippet
+    已经回到当前 public import truth
+  - working memory
+    因而会被误导成
+    “这类 residual 已收口”
+
+- 同时也确认：
+  - `MBEDTLS_BACKEND_CAPABILITY_MATRIX`
+    在同一类 active snippet
+    上存在同样的
+    `fafafa.ssl.base`
+    残差
+  - 但旧的
+    `test_mbedtls_active_docs_capability_truth_contract.sh`
+    关注的是 capability wording，
+    没有冻结
+    backend identifier
+    import truth
+
+- 当前更准确的收口是：
+  - backend-specific
+    capability matrix
+    若继续使用
+    `TSSLContextBuilder`
+    示例，
+    当前应显式导入：
+    - `fafafa.ssl`
+    - `fafafa.ssl.context.builder`
+  - 不应继续把
+    `fafafa.ssl.base`
+    当成活跃入口单元
+
+- 这次修复的价值
+  不只是把两页文档改对，
+  还把
+  “单行旧导入会漏检”
+  这个 contract 缺口
+  收掉了；
+  后续再扫
+  quickstart / style / agents
+  这类入口页时，
+  可以沿用同样的
+  false-green 防线
+
 - active root entry metadata and install guidance truth
   这一刀确认的
   已经不只是
