@@ -79,6 +79,21 @@
       - PASS
   - `git diff --check`
     - PASS
+  - post-push proof：
+    - `gh run list --branch master --limit 3`
+      - PASS
+      - `CI`
+        run `26234557500`
+        for commit
+        `0b84e69`
+        completed `success`
+    - workflow scope truth：
+      - 本批未触发新的
+        `WinSSL Runtime Gate`
+        属于预期行为，
+        因为改动范围
+        不含
+        `examples/*winssl*.pas`
   当前批收口后的默认下一步：
   - 若这组 helper-linked HTTPS examples
     拉绿，

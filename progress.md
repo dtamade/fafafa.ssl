@@ -112,6 +112,38 @@
       but no new failure
       from this batch
 
+- post-push CI truth:
+  - `git push`
+    - result: PASS
+    - commit:
+      - `0b84e69`
+  - `gh run list --branch master --limit 5`
+    - result: PASS
+    - summary:
+      - `CI`
+        run `26234557500`
+        queued
+        for
+        `examples: align helper-linked https public imports`
+  - `gh run view 26234557500 --json status,conclusion,jobs`
+    - result: PASS
+    - summary:
+      - `Minimal Gate (Linux)`
+        completed `success`
+      - `FreePascal TLS 1.3 Completeness`
+        completed `success`
+      - overall
+        `CI`
+        completed `success`
+  - workflow scope note:
+    - no new
+      `WinSSL Runtime Gate`
+      run
+      was expected,
+      because this batch
+      did not touch
+      `examples/*winssl*.pas`
+
 ### Top-Level Active Examples Public Import Truth
 
 - confirm previous batch CI truth before opening the next focused example batch:

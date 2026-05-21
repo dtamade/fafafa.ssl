@@ -205,6 +205,24 @@ git diff --check
 - hygiene:
   - `git diff --check`
     - PASS
+- post-push proof:
+  - `gh run list --branch master --limit 3`
+    - PASS
+    - `CI`
+      run `26234557500`
+      for commit
+      `0b84e69`
+      completed `success`
+  - workflow scope truth:
+    - 本批只改
+      helper-linked HTTPS
+      示例，
+      不属于
+      `WinSSL Runtime Gate`
+      的 path-trigger 面，
+      因此没有新的
+      `WinSSL Runtime Gate`
+      建单
 - note:
   - 这批只收口
     helper-linked HTTPS

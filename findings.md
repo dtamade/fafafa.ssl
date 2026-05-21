@@ -69,6 +69,18 @@
     本批 import 收口
     没有打坏
     既有 ALPN 语义合同
+  - workflow scope
+    也仍然符合
+    当前真相：
+    这类 helper-linked HTTPS
+    示例改动
+    会触发通用
+    `CI`
+    ，但不会新建
+    `WinSSL Runtime Gate`
+    run，
+    因为路径不属于
+    `examples/*winssl*.pas`
 
 - top-level active examples public import truth
   这一刀确认的
