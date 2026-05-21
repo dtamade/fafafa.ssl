@@ -280,6 +280,7 @@ Context := TSSLContextBuilder.Create
   .WithCertificate('server.crt')
   .UsePKCS11('pkcs11:token=MyToken;object=MyKey;type=private')
   .WithPKCS11PIN('1234')
+  .WithVerifyNone  // 普通单向 TLS server；如需 mTLS 改用 WithMutualTLS(...)
   .BuildServer;
 ```
 

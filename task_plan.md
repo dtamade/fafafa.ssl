@@ -10,6 +10,73 @@
 
 ## Current Status
 
+- [completed] `active server example verify intent truth`
+  当前 focused 目标：
+  - 把活跃文档里
+    会进入
+    `BuildServer`
+    的主要 server 示例
+    收成
+    “显式写 verify 意图”
+    的 current truth，
+    避免
+    backend-selection /
+    PKCS#11 /
+    error-handling
+    示例继续把
+    server verify policy
+    讲成隐式默认
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-active-server-example-verify-intent-truth.md`
+  - 新增 docs contract：
+    - `tests/scripts/test_active_server_example_verify_intent_truth_contract.sh`
+  - 更新：
+    - `docs/BACKEND_SELECTION_GUIDE.md`
+    - `docs/guides/PKCS11_USER_GUIDE.md`
+    - `docs/guides/ERROR_HANDLING_BEST_PRACTICES.md`
+    - `docs/reference/API_DOCUMENTATION.md`
+    - `docs/reference/PKCS11_ARCHITECTURE.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_active_server_example_verify_intent_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_active_server_example_verify_intent_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前 truth：
+  - `WithSecurityFirst`
+    /
+    `WithPerformanceFirst`
+    /
+    `WithCompatibilityFirst`
+    当前只负责：
+    - backend requirement / auto-selection
+  - 它们不额外决定：
+    - client/server verify policy
+  - server 调用方当前仍必须显式表达：
+    - 普通单向 TLS:
+      `.WithVerifyNone`
+    - mTLS:
+      `.WithMutualTLS(...)`
+      或 direct-context 严格 verify 配置
+  当前实施判断：
+  - 如果活跃 server 示例继续省略 verify 意图，
+    调用方很容易把
+    helper/preset/backend-selection
+    读成
+    “这些高入口会自动选好 server verify 策略”
+  当前状态：
+  - 活跃 server 文档现在明确区分：
+    - 普通单向 TLS:
+      `.WithVerifyNone`
+    - mTLS:
+      `.WithMutualTLS(...)`
+  - backend-selection
+    快捷方法的边界也已写清：
+    - 只负责 backend requirement / auto-selection
+    - 不决定 client/server verify policy
+
 - [completed] `server helper VerifyMode default alignment`
   当前 focused 目标：
   - 把

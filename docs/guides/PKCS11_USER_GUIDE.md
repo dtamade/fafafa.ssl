@@ -95,6 +95,7 @@ begin
     .WithCertificate('/path/to/cert.pem')
     .UsePKCS11('pkcs11:token=TestToken;object=TestKey;type=private')
     .WithPKCS11PIN('1234')
+    .WithVerifyNone  // 普通单向 TLS server；如需 mTLS 改用 WithMutualTLS(...)
     .BuildServer;
 end;
 ```
@@ -129,6 +130,7 @@ begin
     .UsePKCS11('pkcs11:token=TestToken;object=TestKey;type=private')
     .WithPKCS11PIN('PKCS11_PIN_ENV')
     .WithPKCS11PINMethod(pmEnvironment)
+    .WithVerifyNone  // 普通单向 TLS server；如需 mTLS 改用 WithMutualTLS(...)
     .BuildServer;
 end;
 ```
@@ -149,6 +151,7 @@ begin
     .UsePKCS11('pkcs11:token=TestToken;object=TestKey;type=private')
     .WithPKCS11PIN('/run/secrets/pkcs11-pin')
     .WithPKCS11PINMethod(pmFile)
+    .WithVerifyNone  // 普通单向 TLS server；如需 mTLS 改用 WithMutualTLS(...)
     .BuildServer;
 end;
 ```

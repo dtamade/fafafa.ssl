@@ -541,6 +541,8 @@ except
 end;
 ```
 
+如果这里只是普通单向 TLS server，请显式加 `.WithVerifyNone`；如果要做 mTLS，请改成 `.WithMutualTLS(...)` 或等价 direct-context 配置。
+
 #### 示例 2: 异常重抛
 
 ```pascal
@@ -560,6 +562,8 @@ begin
   end;
 end;
 ```
+
+这里 `CreateWithSafeDefaults` 只负责协议/cipher/profile baseline，不会替 server 调用方决定是否校验客户端证书；verify 意图仍需要显式写出。
 
 ---
 

@@ -2,6 +2,82 @@
 
 ## 2026-05-21
 
+- active server example verify intent truth
+  这一刀确认的
+  不是新的 runtime bug，
+  而是活跃 server 文档
+  仍在把 verify policy
+  藏进“看起来像默认就该如此”的示例里
+
+- 当前更危险的误导点在于：
+  - `WithSecurityFirst`
+    /
+    `WithPerformanceFirst`
+    /
+    `WithCompatibilityFirst`
+    这类高入口
+    容易被读成
+    “会顺手把 server verify 策略也选好”
+  - PKCS#11
+    /
+    API 文档
+    /
+    error-handling
+    里的
+    `BuildServer`
+    示例
+    又没有显式补出
+    verify 意图
+
+- 这会把最近几批刚收平的
+  server verify 真相
+  又重新讲散：
+  - helper
+    不再 silent no-verify
+  - builder
+    no-verify 入口
+    是
+    `.WithVerifyNone`
+  - 但读者看到活跃 server 示例时，
+    仍可能误读成：
+    - `BuildServer`
+      自己会决定
+      one-way TLS
+      还是
+      mTLS
+
+- 修复后，
+  活跃 server 示例
+  现在统一明确：
+  - 普通单向 TLS server:
+    `.WithVerifyNone`
+  - mTLS server:
+    `.WithMutualTLS(...)`
+    或 direct-context 严格 verify 配置
+
+- 这条线的重要意义是：
+  verify 语义
+  不再只在
+  source /
+  helper /
+  builder import-merge-validation
+  这些实现层面一致，
+  高入口活跃文档
+  也终于不再把
+  server verify policy
+  讲成隐式默认
+
+- 同时还补上了一条
+  长期稳定边界：
+  - backend-selection
+    快捷方法
+    只负责
+    backend requirement / auto-selection
+  - 它们不替
+    client/server
+    决定
+    verify mode
+
 - server helper verify baseline
   这一刀确认的是
   helper-level

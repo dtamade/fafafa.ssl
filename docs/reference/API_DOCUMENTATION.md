@@ -522,6 +522,8 @@ Builder
 Context := Builder.BuildServer;
 ```
 
+如果这个 server context 只是普通单向 TLS，请在 builder 上显式加 `.WithVerifyNone`；如果要做 mTLS，请改成 `.WithMutualTLS(...)`。
+
 在当前 server/runtime path 上：
 
 - `WithServerOCSPStapledResponseFile(...)` 会在 `BuildServer` 时把 DER 文件加载到 `ISSLServerOCSPStaplingContext`。
@@ -858,6 +860,8 @@ Builder
 
 Context := Builder.BuildServer;
 ```
+
+如果这个 server context 只是普通单向 TLS，请在 builder 上显式加 `.WithVerifyNone`；如果要做 mTLS，请改成 `.WithMutualTLS(...)`。
 
 ### 3. 错误处理
 

@@ -6,6 +6,72 @@
 
 ## 2026-05-21
 
+### Active Server Example Verify Intent Truth
+
+- inspect active server example verify-intent truth before closing the batch:
+  - `docs/BACKEND_SELECTION_GUIDE.md`
+  - `docs/guides/PKCS11_USER_GUIDE.md`
+  - `docs/guides/ERROR_HANDLING_BEST_PRACTICES.md`
+  - `docs/reference/API_DOCUMENTATION.md`
+  - `docs/reference/PKCS11_ARCHITECTURE.md`
+  - change:
+    - confirmed several active
+      `BuildServer`
+      server examples still did not state whether they were:
+      - ordinary one-way TLS
+      - or mTLS
+    - confirmed
+      `WithSecurityFirst`
+      /
+      `WithPerformanceFirst`
+      /
+      `WithCompatibilityFirst`
+      needed an explicit docs boundary that they only choose backend requirements / auto-selection
+      and do not choose verify policy
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-active-server-example-verify-intent-truth.md`
+  - `tests/scripts/test_active_server_example_verify_intent_truth_contract.sh`
+  - change:
+    - documented the batch as active server example verify-intent truth
+    - added a focused docs contract
+      to guard:
+      - backend-selection guide must state that quick selection methods do not decide verify mode
+      - active PKCS#11 / API / architecture / error-handling server examples must make verify intent explicit
+
+- repair active server example verify truth:
+  - `docs/BACKEND_SELECTION_GUIDE.md`
+  - `docs/guides/PKCS11_USER_GUIDE.md`
+  - `docs/guides/ERROR_HANDLING_BEST_PRACTICES.md`
+  - `docs/reference/API_DOCUMENTATION.md`
+  - `docs/reference/PKCS11_ARCHITECTURE.md`
+  - change:
+    - added the explicit high-entry wording that
+      backend-selection
+      shortcuts only choose backend requirements / auto-selection
+      and do not choose client/server verify mode
+    - updated ordinary server examples that end at
+      `BuildServer`
+      to write:
+      - `.WithVerifyNone`
+    - added the explicit mTLS hint:
+      - use `.WithMutualTLS(...)`
+        when the server is intended to verify client certificates
+    - clarified in error-handling guidance that
+      `CreateWithSafeDefaults`
+      does not decide server-side client-certificate verification policy
+
+- verify focused docs truth after residual closeout:
+  - `bash -n tests/scripts/test_active_server_example_verify_intent_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_active_server_example_verify_intent_truth_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed backend-selection active docs now state their verify-policy boundary
+      - confirmed PKCS#11 / API / architecture / error-handling server examples now make verify intent explicit
+  - `git diff --check`
+    - result: PASS
+
 ### Server Helper VerifyMode Default Alignment
 
 - inspect server verify baseline truth before editing:

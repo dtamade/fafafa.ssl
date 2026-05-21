@@ -383,6 +383,12 @@ Ctx := TSSLContextBuilder.Create
 - 最低性能评分 85
 - 优选硬件加速的算法（AES-NI）
 
+这些快捷方法只负责 backend requirement / auto-selection，不会替 client/server 决定 VerifyMode。
+如果你最后走 `BuildServer`，仍需要显式写出当前 server verify 意图：
+
+- 普通单向 TLS server：`.WithVerifyNone`
+- mTLS server：`.WithMutualTLS(...)`
+
 #### WithCompatibilityFirst
 
 兼容性优先的快捷方法。
@@ -521,6 +527,7 @@ Ctx := TSSLContextBuilder.Create
   .WithPerformanceFirst
   .WithCertificate('server.crt')
   .WithPrivateKey('server.key')
+  .WithVerifyNone  // 普通单向 TLS server；如需 mTLS 改用 WithMutualTLS(...)
   .BuildServer;
 ```
 
