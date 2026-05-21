@@ -16372,3 +16372,52 @@
     /
     `CAPath`
     也真能穿透到握手成功
+
+- 2026-05-21 这轮 route refresh 进一步证明，
+  当前最需要修的已经不是某条实现 seam，
+  而是我们的“下一步选择”：
+  - handoff 里把
+    `direct-library connection-scope clarification`
+    仍当作候选，
+    但当前 source / docs / tests
+    实际已经全部收口
+  - focused revalidation
+    再次证明：
+    - direct-library contract 继续 PASS
+    - FreePascal direct-library runtime proof 继续 PASS
+    - factory connection-scope runtime proof 继续 PASS
+
+- 同一轮核对还确认，
+  原先准备补的
+  `backend connection-surface execution receipt gap`
+  也已经不是 live gap：
+  - `docs/plans/2026-05-04-backend-client-connection-sni-interface-alignment.md`
+  - `docs/plans/2026-05-04-backend-connection-native-handle-interface-alignment.md`
+  - `docs/plans/2026-05-04-backend-ocsp-connection-interface-alignment.md`
+    当前都已经带有
+    `Focused Revalidation Result (2026-05-18)`
+
+- 这说明当前 workflow 真正的偏差，
+  已经从
+  “有没有验证”
+  变成
+  “会不会继续把已关闭 concern 当成下一步”。
+
+- 因而当前总 goal 的即时路线应改成：
+  - 停止重开
+    direct-library
+    /
+    receipt-gap
+    /
+    metadata-sweep
+    这类已关闭批次
+  - 切回仍然真实存在的 broader interface debt：
+    - `ISSLConnection` core-too-fat
+    - `TSSLConfig` mixed-scope public record
+    - facade 多历史入口
+
+- 就当前 repo 状态判断，
+  相比已经做过大量 helper adoption / truth freeze 的 `TSSLConfig`，
+  `ISSLConnection` 更像下一条真正还在前面的主残口：
+  - 它直接决定 core/optional 分层是否继续失焦
+  - 也比继续扫旧 proof 更接近“接口设计完整”这个总目标

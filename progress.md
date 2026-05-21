@@ -26698,3 +26698,104 @@
   - result: PASS
   - summary:
     - no whitespace or patch-format drift remains before commit
+
+### Interface Goal Route Refresh
+
+- inspect current route truth before picking the next batch:
+  - `task_plan.md`
+  - `findings.md`
+  - `progress.md`
+  - `docs/plans/2026-05-18-direct-library-connection-scope-clarification.md`
+  - `tests/scripts/test_direct_library_connection_scope_clarification_contract.sh`
+  - `tests/test_freepascal_library_default_config_connection_scope_clarification.pas`
+  - `tests/test_factory_connection_scope_clarification.pas`
+  - `src/fafafa.ssl.context.config.pas`
+  - `src/fafafa.ssl.openssl.backed.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - change:
+    - confirmed
+      the previously suggested
+      `direct-library connection-scope`
+      lane
+      is already implemented,
+      documented,
+      and recorded
+    - confirmed
+      the five backend library
+      `CreateContext(AType)`
+      paths
+      already share
+      `ValidateDirectLibraryConnectionScope(...)`
+    - confirmed
+      this concern should no longer be treated as
+      immediate next work
+
+- verify current direct-library closeout instead of reopening it:
+  - `bash -n tests/scripts/test_direct_library_connection_scope_clarification_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_direct_library_connection_scope_clarification_contract.sh`
+    - result: PASS
+    - summary:
+      - source/docs contract still records the same direct-library reject truth
+        across the shared helper and all five backend library paths
+  - `mkdir -p tmp/test_freepascal_library_default_config_connection_scope_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_freepascal_library_default_config_connection_scope_clarification -FEtmp/test_freepascal_library_default_config_connection_scope_clarification -otmp/test_freepascal_library_default_config_connection_scope_clarification/test_freepascal_library_default_config_connection_scope_clarification tests/test_freepascal_library_default_config_connection_scope_clarification.pas && ./tmp/test_freepascal_library_default_config_connection_scope_clarification/test_freepascal_library_default_config_connection_scope_clarification`
+    - result: PASS
+    - summary:
+      - FreePascal direct-library path still rejects custom
+        `HandshakeTimeout`
+        /
+        `BufferSize`
+      - request-safe defaults still build successfully
+      - final runtime totals:
+        - `Tests Passed: 9`
+        - `Tests Failed: 0`
+  - `mkdir -p tmp/test_factory_connection_scope_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_factory_connection_scope_clarification -FEtmp/test_factory_connection_scope_clarification -otmp/test_factory_connection_scope_clarification/test_factory_connection_scope_clarification tests/test_factory_connection_scope_clarification.pas && ./tmp/test_factory_connection_scope_clarification/test_factory_connection_scope_clarification`
+    - result: PASS
+    - summary:
+      - one-shot factory path
+        and
+        factory-held library default path
+        both still reject custom
+        `HandshakeTimeout`
+        /
+        `BufferSize`
+      - final runtime totals:
+        - `Tests Passed: 12`
+        - `Tests Failed: 0`
+
+- inspect whether the previously suspected connection-surface receipt gap is still real:
+  - `docs/plans/2026-05-04-backend-client-connection-sni-interface-alignment.md`
+  - `docs/plans/2026-05-04-backend-connection-native-handle-interface-alignment.md`
+  - `docs/plans/2026-05-04-backend-ocsp-connection-interface-alignment.md`
+  - `docs/plans/2026-05-18-backend-connection-surface-completion-audit-revalidation.md`
+  - change:
+    - confirmed
+      all three 2026-05-04 connection-layer plans
+      already carry
+      `Focused Revalidation Result (2026-05-18)`
+    - dropped the idea of reopening that revalidation batch,
+      because the receipt gap is no longer live
+
+- write back the route refresh so future sessions do not reopen closed concerns:
+  - `docs/plans/2026-05-21-interface-goal-route-refresh.md`
+  - `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+  - `task_plan.md`
+  - `findings.md`
+  - `progress.md`
+  - change:
+    - recorded
+      that the current workflow drift is route-selection drift,
+      not a new implementation gap
+    - marked
+      direct-library connection-scope
+      and
+      connection-surface receipt-gap
+      as no longer valid immediate next-step candidates
+    - reset the next queue toward the remaining broader interface debt,
+      especially
+      `ISSLConnection`
+      core-too-fat
+      instead of another metadata/proof sweep

@@ -19,6 +19,31 @@
 - capability public surface 的 runtime/source truth 已经不再是未分类的双真相冲突。
 - paired feature 当前已经收敛到 support-level-first；legacy `Supports*` 更接近 compatibility projection baggage。
 
+## 2026-05-21 路线刷新注记
+
+这份审计报告当前仍然可用，
+但它不应该再被解读成
+“下一步先回去补 direct-library drift 或旧 plan receipt”。
+
+截至 2026-05-21 当前真相：
+
+- `direct-library connection-scope clarification`
+  已经完成并且 focused revalidation 继续绿色
+- 三份 2026-05-04 连接层旧 plan
+  也已经带有
+  `Focused Revalidation Result (2026-05-18)`
+- 因而这份报告里真正仍然活跃的剩余问题，
+  应继续理解为更高层的 interface debt：
+  - `ISSLConnection` core-too-fat
+  - `TSSLConfig` mixed-scope public record
+  - facade 多历史入口
+
+换句话说，
+这份报告现在更适合作为
+“剩余设计债地图”，
+而不是
+“继续找上一轮 proof 缺口” 的入口。
+
 ## 主要问题
 
 ### 1. 核心连接接口过胖，optional 分层失效

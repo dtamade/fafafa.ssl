@@ -17310,3 +17310,73 @@
     “哪些安全类型仍只停留在 isolated unit/tests，
     尚未进入真实实现路径”
     的下一刀
+
+### 2026-05-21 interface goal route refresh
+
+- [completed] 当前 workflow / route drift
+  已进一步明确成：
+  - handoff
+    仍把
+    `direct-library connection-scope clarification`
+    当成候选下一步
+  - 也仍把
+    `backend connection-surface execution receipt gap`
+    当成待补批次
+  - 但当前 repo truth
+    实际已经把这两条都收掉了
+
+- [completed] 当前 focused revalidation
+  已确认：
+  - `src/fafafa.ssl.context.config.pas`
+    已有
+    `ValidateDirectLibraryConnectionScope(...)`
+  - `openssl` / `freepascal` / `winssl` / `mbedtls` / `wolfssl`
+    的 library
+    `CreateContext(AType)`
+    当前都已接入这条 shared validator
+  - `docs/plans/2026-05-04-backend-client-connection-sni-interface-alignment.md`
+  - `docs/plans/2026-05-04-backend-connection-native-handle-interface-alignment.md`
+  - `docs/plans/2026-05-04-backend-ocsp-connection-interface-alignment.md`
+    当前都已经带有
+    `Focused Revalidation Result (2026-05-18)`
+
+- [completed] 当前 proof：
+  - `bash -n tests/scripts/test_direct_library_connection_scope_clarification_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_direct_library_connection_scope_clarification_contract.sh`
+    - PASS
+  - `fpc ... tests/test_freepascal_library_default_config_connection_scope_clarification.pas`
+    - PASS
+  - `tmp/test_freepascal_library_default_config_connection_scope_clarification/test_freepascal_library_default_config_connection_scope_clarification`
+    - PASS
+      - `Tests Passed: 9`
+      - `Tests Failed: 0`
+  - `fpc ... tests/test_factory_connection_scope_clarification.pas`
+    - PASS
+  - `tmp/test_factory_connection_scope_clarification/test_factory_connection_scope_clarification`
+    - PASS
+      - `Tests Passed: 12`
+      - `Tests Failed: 0`
+
+- [completed] 当前批收口后的默认下一步：
+  - 不再把
+    文档 metadata 扫尾
+    /
+    direct-library `HandshakeTimeout` / `BufferSize`
+    /
+    三份旧 plan 的 receipt gap
+    当成 immediate next step
+  - 当前主线应切回
+    真正剩余的 broader interface debt：
+    - `ISSLConnection` core-too-fat
+    - `TSSLConfig` mixed-scope 剩余长期拆分
+    - facade 多历史入口
+  - 就当前状态看，
+    下一条更值得优先继续推进的是：
+    - `ISSLConnection`
+      broader slimming
+      /
+      recommendation truth
+      主线，
+      而不是
+      再回头做旧 closeout proof
