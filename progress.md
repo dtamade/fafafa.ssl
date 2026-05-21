@@ -27168,3 +27168,97 @@
     - result: PASS
   - `git diff --check`
     - result: PASS
+
+### Facade Option Surface Export Closure
+
+- inspect the next live main-facade completeness residual after the route-truth closeout:
+  - `src/fafafa.ssl.pas`
+  - `src/fafafa.ssl.base.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - confirmed
+      previously closed facade batches
+      already covered
+      owner interfaces,
+      capability/native-handle surface,
+      certificate supporting types
+    - confirmed
+      `ISSLContext.SetOptions/GetOptions`
+      /
+      `TSSLConfig.Options`
+      /
+      builder option methods
+      still depended on
+      `TSSLOption`
+      /
+      `TSSLOptions`
+    - confirmed
+      the main facade
+      still lacked
+      those type aliases
+      and any
+      `sso*`
+      option constants
+
+- add a focused plan and compile-based contract for the option surface:
+  - `docs/plans/2026-05-21-facade-option-surface-export-closure.md`
+  - `tests/contract/test_facade_option_surface_entry.pas`
+  - `tests/scripts/test_facade_option_surface_export_contract.sh`
+  - change:
+    - locked
+      source re-export truth for
+      `TSSLOption`
+      /
+      `TSSLOptions`
+      /
+      representative
+      `sso*`
+      constants
+    - locked
+      a
+      `uses fafafa.ssl`
+      compile-run proof
+      for the option surface
+
+- establish focused RED before repairing the main facade:
+  - `bash -n tests/scripts/test_facade_option_surface_export_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_facade_option_surface_export_contract.sh`
+    - result: FAIL
+    - summary:
+      - `src/fafafa.ssl.pas`
+        still lacked
+        `TSSLOption = fafafa.ssl.base.TSSLOption;`
+
+- repair the main-facade option surface:
+  - `src/fafafa.ssl.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - re-exported
+      `TSSLOption`
+      and
+      `TSSLOptions`
+      from the main facade
+    - re-exported
+      the full
+      `sso*`
+      context-option constant set
+    - recorded
+      in
+      `API_REFERENCE`
+      that ordinary callers
+      can configure context options
+      directly from
+      `uses fafafa.ssl`
+
+- verify the focused closeout:
+  - `bash tests/scripts/test_facade_option_surface_export_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_facade_certificate_supporting_types_export_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_api_reference_library_context_surface_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS

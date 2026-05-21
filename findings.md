@@ -16776,3 +16776,54 @@
       当前高入口文档
       是否还在发布
       过期路线 truth
+
+- 继续把视线从高入口 route/docs 收回主门面 completeness 后，
+  这一轮抓到了一条更实在的 public compile gap：
+  - `ISSLContext.SetOptions/GetOptions`
+  - `TSSLConfig.Options`
+  - `TSSLContextBuilder.WithOption/WithOptions`
+  都已经把
+    `TSSLOption`
+    /
+    `TSSLOptions`
+    当成当前 shipped public surface
+  - 但主门面
+    `src/fafafa.ssl.pas`
+    之前还没有 re-export：
+    - `TSSLOption`
+    - `TSSLOptions`
+    - `sso*` option 常量
+
+- 这条缺口的性质
+  不是
+  “某个测试 mock 需要更多 base truth”，
+  而是主门面 public completeness 自身不闭合：
+  - 只
+    `uses fafafa.ssl`
+  - 再声明
+    `TSSLOptions`
+    或使用
+    `[ssoEnableSNI]`
+  - 当前就会直接编译失败
+
+- focused RED
+  已把这条判断压实：
+  - 新增
+    `tests/scripts/test_facade_option_surface_export_contract.sh`
+    首轮即报：
+    - `main facade must re-export TSSLOption`
+
+- 这说明
+  当前高价值 residual
+  已进一步从
+  “入口文档有没有旧心智”
+  转向
+  “主门面是否真能独立承载 shipped public surface”
+  ：
+  - `TSSLConfig`
+    已经 re-export
+  - 但它的
+    `Options`
+    字段类型
+    之前却还没一起导出
+  - 这是比单纯文档漂移更直接的库设计闭环问题

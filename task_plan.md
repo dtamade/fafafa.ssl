@@ -17693,3 +17693,88 @@
     implementation-facing guidance
     里的
     core/optional 分层误导
+
+### 2026-05-21 facade option surface export closure
+
+- [completed] 当前新的 residual
+  已从
+  “高入口 route/docs drift”
+  继续收窄到
+  主门面
+  `src/fafafa.ssl.pas`
+  的一条真实 public compile gap：
+  - `ISSLContext.SetOptions/GetOptions`
+  - `TSSLConfig.Options`
+  - `TSSLContextBuilder.WithOption/WithOptions`
+  都已经把
+    `TSSLOption`
+    /
+    `TSSLOptions`
+    当成当前 shipped public surface
+  - 但主门面之前仍未 re-export：
+    - `TSSLOption`
+    - `TSSLOptions`
+    - `sso*` option 常量
+
+- [completed] focused RED
+  已通过
+  新增的
+  `tests/scripts/test_facade_option_surface_export_contract.sh`
+  压实：
+  - 首轮结果：
+    - FAIL
+      `main facade must re-export TSSLOption`
+  - 说明这不是
+    mock/test source truth
+    的偶发缺口，
+    而是主门面 completeness
+    本身不闭合
+
+- [completed] 最小正确修法已经落地：
+  - 新增
+    `docs/plans/2026-05-21-facade-option-surface-export-closure.md`
+  - 新增
+    `tests/contract/test_facade_option_surface_entry.pas`
+  - 新增
+    `tests/scripts/test_facade_option_surface_export_contract.sh`
+  - 更新：
+    - `src/fafafa.ssl.pas`
+    - `docs/reference/API_REFERENCE.md`
+  - 当前主门面
+    已明确补齐：
+    - `TSSLOption`
+    - `TSSLOptions`
+    - 全量
+      `sso*`
+      context-option 常量
+  - `API_REFERENCE`
+    也已明确记录：
+    - 普通调用方配置 context options 时，
+      不需要回退
+      `fafafa.ssl.base`
+
+- [completed] 当前批收口后的默认下一步：
+  - `bash -n tests/scripts/test_facade_option_surface_export_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_facade_option_surface_export_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_facade_certificate_supporting_types_export_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_api_reference_library_context_surface_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  - 当前已具备
+    commit / push
+    条件
+  - 收口后继续沿
+    main facade completeness
+    主线往前，
+    优先寻找
+    下一个仍会让
+    `uses fafafa.ssl`
+    调用方静态编译踩坑的
+    supporting type / const
+    残口

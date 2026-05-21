@@ -67,6 +67,8 @@ type
   TSSLVerifyMode = fafafa.ssl.base.TSSLVerifyMode;
   TSSLVerifyModes = fafafa.ssl.base.TSSLVerifyModes;
   TSSLContextType = fafafa.ssl.base.TSSLContextType;
+  TSSLOption = fafafa.ssl.base.TSSLOption;
+  TSSLOptions = fafafa.ssl.base.TSSLOptions;
   TSSLHandshakeState = fafafa.ssl.base.TSSLHandshakeState;
   TSSLEarlyDataStatus = fafafa.ssl.base.TSSLEarlyDataStatus;
   TSSLEarlyDataServerPolicy = fafafa.ssl.base.TSSLEarlyDataServerPolicy;
@@ -324,6 +326,27 @@ const
   sslCtxClient = fafafa.ssl.base.sslCtxClient;
   sslCtxServer = fafafa.ssl.base.sslCtxServer;
   sslCtxBoth = fafafa.ssl.base.sslCtxBoth;
+
+  // context option 常量
+  ssoEnableSNI = fafafa.ssl.base.ssoEnableSNI;
+  ssoEnableALPN = fafafa.ssl.base.ssoEnableALPN;
+  ssoEnableSessionCache = fafafa.ssl.base.ssoEnableSessionCache;
+  ssoEnableSessionTickets = fafafa.ssl.base.ssoEnableSessionTickets;
+  ssoDisableCompression = fafafa.ssl.base.ssoDisableCompression;
+  ssoDisableRenegotiation = fafafa.ssl.base.ssoDisableRenegotiation;
+  ssoEnableOCSPStapling = fafafa.ssl.base.ssoEnableOCSPStapling;
+  ssoSingleDHUse = fafafa.ssl.base.ssoSingleDHUse;
+  ssoSingleECDHUse = fafafa.ssl.base.ssoSingleECDHUse;
+  ssoCipherServerPreference = fafafa.ssl.base.ssoCipherServerPreference;
+  ssoNoSSLv2 = fafafa.ssl.base.ssoNoSSLv2;
+  ssoNoSSLv3 = fafafa.ssl.base.ssoNoSSLv3;
+  ssoNoTLSv1 = fafafa.ssl.base.ssoNoTLSv1;
+  ssoNoTLSv1_1 = fafafa.ssl.base.ssoNoTLSv1_1;
+  ssoNoTLSv1_2 = fafafa.ssl.base.ssoNoTLSv1_2;
+  ssoNoTLSv1_3 = fafafa.ssl.base.ssoNoTLSv1_3;
+  ssoRequireOCSPStapling = fafafa.ssl.base.ssoRequireOCSPStapling;
+  ssoEnableCertVerifyCache = fafafa.ssl.base.ssoEnableCertVerifyCache;
+  ssoRequireCertificateTransparency = fafafa.ssl.base.ssoRequireCertificateTransparency;
 
   // Early-data 状态与服务端策略常量
   sslEarlyDataNone = fafafa.ssl.base.sslEarlyDataNone;

@@ -428,6 +428,8 @@ begin
 end;
 ```
 
+主门面 `fafafa.ssl` 当前也 re-export `TSSLOption` / `TSSLOptions` 与 `sso*` option 常量；普通调用方配置 context options 时不需要回退 `fafafa.ssl.base`。
+
 #### 其他可选 public interfaces
 
 `ISSLNativeHandleAccess` 之外，当前 shipped source 还公开了多组 optional public interfaces，分别承载：
