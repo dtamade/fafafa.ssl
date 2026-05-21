@@ -2,6 +2,68 @@
 
 ## 2026-05-21
 
+- security-best-practices current public import truth
+  这一刀确认的
+  不是
+  `security-best-practices`
+  不该继续保留
+  当前安全语义，
+  而是
+  它在
+  builder fluent
+  真相
+  与
+  client/server
+  OCSP
+  语义边界
+  都已经讲清楚的前提下，
+  OCSP stapling
+  那段 active
+  builder 示例
+  仍继续教学：
+  - `fafafa.ssl.base`
+
+- 当前更准确的收口是：
+  - `ISSLContext`
+    /
+    `ISSLOCSPStapling`
+    当前都可直接来自
+    `fafafa.ssl`
+  - `TSSLContextBuilder`
+    继续来自
+    `fafafa.ssl.context.builder`
+  - 所以这里该保留的
+    是
+    builder/OCSP
+    语义，
+    不是
+    base-unit
+    入口
+
+- 这说明
+  当前安全文档线里，
+  不只是
+  要冻结
+  fluent API
+  真相，
+  还要继续收紧：
+  剩余 active
+  示例
+  是否还在把读者
+  带回
+  `fafafa.ssl.base`
+
+- focused RED
+  首轮暴露的是：
+  - `security-best-practices`
+    `HEAD`
+    snapshot
+    里 OCSP
+    这段 active
+    builder 示例
+    仍在使用
+    `fafafa.ssl.base`
+
 - pkcs11 user guide current public import truth
   这一刀确认的
   不是

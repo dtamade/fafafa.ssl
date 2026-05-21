@@ -448,7 +448,7 @@ end;
 
 ```pascal
 uses
-  fafafa.ssl.base,
+  fafafa.ssl,
   fafafa.ssl.context.builder;
 
 var

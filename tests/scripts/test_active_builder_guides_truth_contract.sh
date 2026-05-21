@@ -28,7 +28,7 @@ require_absent() {
 }
 
 perf_guide="docs/guides/PERFORMANCE_PROFILING_GUIDE.md"
-security_guide="docs/guides/security-best-practices.md"
+security_guide="${SECURITY_BEST_PRACTICES_DOC:-docs/guides/security-best-practices.md}"
 
 printf '[TEST] active builder guidance truth contract\n'
 
@@ -53,6 +53,8 @@ require_absent "$security_guide" '.WithSSL3' \
   "security best practices guide must stop teaching nonexistent WithSSL3 builder method"
 require_absent "$security_guide" '.WithTLS10' \
   "security best practices guide must stop teaching nonexistent WithTLS10 builder method"
+require_absent "$security_guide" '  fafafa.ssl.base,' \
+  "security best practices guide must stop teaching fafafa.ssl.base in active builder examples"
 
 require_fixed "$security_guide" '.WithSafeDefaults             // 当前高入口：收紧 cipher/profile baseline' \
   "security best practices guide must redirect strong-cipher guidance to WithSafeDefaults"
@@ -64,5 +66,7 @@ require_fixed "$security_guide" '.WithVerifyNone               // 危险！' \
   "security best practices guide must use the current insecure verify-disable entrypoint"
 require_fixed "$security_guide" '.WithProtocols([sslProtocolSSL3, sslProtocolTLS10])' \
   "security best practices guide must use current protocol-set API for the weak-protocol anti-example"
+require_fixed "$security_guide" '  fafafa.ssl,' \
+  "security best practices guide must keep the current public facade import in active builder examples"
 
 printf '[PASS] active builder guidance truth contract passed\n'

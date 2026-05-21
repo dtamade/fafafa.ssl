@@ -6,6 +6,118 @@
 
 ## 2026-05-21
 
+### security-best-practices Current Public Import Truth
+
+- inspect active security guide import drift before editing:
+  - `docs/guides/security-best-practices.md`
+  - `src/fafafa.ssl.pas`
+  - `tests/scripts/test_active_builder_guides_truth_contract.sh`
+  - `docs/plans/2026-05-21-active-builder-guidance-truth-alignment.md`
+  - change:
+    - confirmed
+      the guide
+      already keeps
+      the current
+      builder fluent
+      semantics
+      and
+      client/server
+      OCSP
+      boundary
+    - confirmed
+      current drift
+      is now
+      the OCSP
+      builder-example
+      import surface,
+      not the
+      security guidance
+      semantics
+    - confirmed
+      `ISSLContext`
+      /
+      `ISSLOCSPStapling`
+      are already
+      exported by
+      `fafafa.ssl`
+    - confirmed
+      `TSSLContextBuilder`
+      remains in
+      `fafafa.ssl.context.builder`
+    - confirmed
+      the remaining
+      active OCSP
+      builder example
+      still used
+      `fafafa.ssl.base`
+
+- add focused batch record and tighten the existing active-builder contract:
+  - `docs/plans/2026-05-21-security-best-practices-current-public-import-truth.md`
+  - `tests/scripts/test_active_builder_guides_truth_contract.sh`
+  - change:
+    - froze:
+      - existing
+        builder surface
+        truth
+      - active OCSP
+        builder example
+        must stop using
+        `fafafa.ssl.base`
+    - added
+      `SECURITY_BEST_PRACTICES_DOC`
+      override support
+      so the same
+      focused contract
+      can prove RED
+      against a
+      pre-fix
+      guide snapshot
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_active_builder_guides_truth_contract.sh`
+    - result: PASS
+  - `SECURITY_BEST_PRACTICES_DOC=/tmp/fafafa_ssl_security_best_practices_head.md bash tests/scripts/test_active_builder_guides_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - `security-best-practices`
+        `HEAD`
+        snapshot
+        still used
+        `fafafa.ssl.base`
+        in the
+        active OCSP
+        builder example
+
+- repair security-best-practices current public import truth:
+  - `docs/guides/security-best-practices.md`
+  - change:
+    - rewrote
+      the active
+      OCSP builder
+      example
+      import
+      from
+      `fafafa.ssl.base`
+      to
+      `fafafa.ssl`
+    - preserved
+      the guide's
+      builder fluent
+      semantics,
+      OCSP
+      request/required
+      boundary,
+      and
+      server-side
+      caller-provided
+      path narrative
+
+- verify focused closeout:
+  - `bash tests/scripts/test_active_builder_guides_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### PKCS11_USER_GUIDE Current Public Import Truth
 
 - inspect active PKCS#11 guide import drift before editing:
