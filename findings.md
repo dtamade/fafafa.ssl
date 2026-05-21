@@ -2,6 +2,75 @@
 
 ## 2026-05-21
 
+- readme helper surface truth resync
+  这一刀确认的
+  不是
+  helper surface
+  真被删空了，
+  而是
+  README
+  把
+  “deprecated 顶层 helper aliases/functions 已移除”
+  说宽成了
+  “deprecated helper API 已移除”
+
+- 当前更准确的收口是：
+  - 移除的是
+    deprecated
+    global helper aliases/functions
+  - 显式
+    `TSSLHelper`
+    类
+    仍然保留
+  - `QuickServer(...)`
+    /
+    `CreateOCSPClient(...)`
+    /
+    `CreateCRLManager(...)`
+    也仍然是
+    shipped
+    convenience helpers
+  - 但它们
+    不再是
+    TLS bootstrap
+    主入口；
+    主入口
+    仍然是
+    `TSSLFactory.*`
+    /
+    `TSSLConnector`
+
+- 这说明
+  门面设计这条线
+  当前最容易误导人的
+  不是 source export
+  本身，
+  而是
+  首页 wording
+  没把
+  “removed deprecated aliases/functions”
+  和
+  “retained convenience helpers”
+  区分开
+
+- focused RED
+  首轮暴露的就是
+  README
+  过宽表述：
+  - contract
+    要求首页明确：
+    - 移除的是
+      deprecated 顶层 aliases/functions
+    - `TSSLHelper` /
+      `QuickServer(...)` /
+      `CreateOCSPClient(...)` /
+      `CreateCRLManager(...)`
+      仍保留
+  - README
+    还停在
+    `deprecated helper API 已移除`
+    这类笼统说法
+
 - tsslconfig timeout owner truth resync
   这一刀确认的
   不是

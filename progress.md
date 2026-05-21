@@ -6,6 +6,80 @@
 
 ## 2026-05-21
 
+### README Helper Surface Truth Resync
+
+- inspect current facade/helper wording drift before editing:
+  - `README.md`
+  - `RELEASE_NOTES_V1.5.0.md`
+  - `docs/reference/API_REFERENCE.md`
+  - `tests/scripts/test_helper_surface_classification_truth_contract.sh`
+  - change:
+    - confirmed
+      release notes
+      already distinguished
+      removed
+      deprecated global helper aliases/functions
+      from the still-shipped
+      `TSSLHelper`
+      class
+    - confirmed
+      `API_REFERENCE`
+      already classified
+      `TSSLHelper`
+      /
+      `QuickServer(...)`
+      /
+      `CreateOCSPClient(...)`
+      /
+      `CreateCRLManager(...)`
+      as convenience helpers
+    - important conclusion:
+      - the live drift was in README wording,
+        not facade source truth
+
+- add focused batch record and tighten the helper-surface contract:
+  - `docs/plans/2026-05-21-readme-helper-surface-truth-resync.md`
+  - `tests/scripts/test_helper_surface_classification_truth_contract.sh`
+  - change:
+    - added README assertions requiring:
+      - removed surface
+        be described as
+        deprecated top-level aliases/functions
+      - retained convenience helpers
+        be named explicitly
+      - absence of the over-broad
+        `deprecated helper API 已移除`
+        wording
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_helper_surface_classification_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_helper_surface_classification_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - README still did not distinguish
+        removed deprecated aliases/functions
+        from the current shipped helper surface
+
+- repair README high-entry truth:
+  - `README.md`
+  - change:
+    - narrowed the top release-candidate wording
+      to
+      removed deprecated top-level helper aliases/functions
+    - added explicit retention wording for:
+      - `TSSLHelper`
+      - `QuickServer(...)`
+      - `CreateOCSPClient(...)`
+      - `CreateCRLManager(...)`
+    - aligned the v1.5.0 history bullet to the same truth
+
+- verify focused closeout:
+  - `bash tests/scripts/test_helper_surface_classification_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### TSSLConfig Timeout Owner Truth Resync
 
 - inspect current timeout owner truth across source/docs/contracts before editing:

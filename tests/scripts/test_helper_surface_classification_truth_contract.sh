@@ -30,8 +30,16 @@ require_absent() {
 api_ref="docs/reference/API_REFERENCE.md"
 facade_file="src/fafafa.ssl.pas"
 factory_file="src/fafafa.ssl.factory.pas"
+readme_file="README.md"
 
 echo "[TEST] helper surface classification truth contract"
+
+require_fixed "$readme_file" 'deprecated 顶层 helper aliases/functions 已移除；TLS 建立流程统一推荐走 `TSSLFactory.*` / `TSSLConnector` 主路径。' \
+  "README must distinguish removed deprecated top-level helper aliases/functions from the current TLS bootstrap entry"
+require_fixed "$readme_file" '显式 `TSSLHelper` 类与 `QuickServer(...)` / `CreateOCSPClient(...)` / `CreateCRLManager(...)` 这组 convenience helpers 仍然保留。' \
+  "README must state that shipped convenience helpers still remain available"
+require_absent "$readme_file" "deprecated helper API 已移除" \
+  "README must stop implying that the entire helper surface was removed"
 
 require_fixed "$factory_file" "TSSLHelper - 证书/随机/early-data 便捷辅助类；不作为 TLS bootstrap 主入口" \
   "factory source must classify TSSLHelper as a convenience helper surface"

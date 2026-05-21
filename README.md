@@ -12,12 +12,12 @@
 
 ## 最新版本 v1.5.0
 
-**正式发布候选** - deprecated helper API 已移除，接口版本号为 `10500`，发布门禁与 release workflow 已对齐到当前仓库入口。
+**正式发布候选** - deprecated 顶层 helper aliases/functions 已移除；TLS 建立流程统一推荐走 `TSSLFactory.*` / `TSSLConnector` 主路径。显式 `TSSLHelper` 类与 `QuickServer(...)` / `CreateOCSPClient(...)` / `CreateCRLManager(...)` 这组 convenience helpers 仍然保留。接口版本号为 `10500`，发布门禁与 release workflow 已对齐到当前仓库入口。
 
 ### 新增功能
 
 - ✅ `FAFAFA_SSL_VERSION_STRING = '1.5.0'` / `FAFAFA_SSL_INTERFACE_VERSION = 10500`
-- ✅ deprecated 便捷函数已移除，调用方应使用 `TSSLFactory.*` 路径
+- ✅ deprecated 顶层 helper aliases/functions 已移除；保留的 convenience helpers 不替代 `TSSLFactory.*` / `TSSLConnector` 主入口
 - ✅ OpenSSL 连接级 Early Data 契约与运行时接口对齐
 - ⚠️ WolfSSL 连接级 Early Data 仅在 helper 完整时暴露接口
 - ❌ MbedTLS 和 WinSSL 不再暴露不可用的 Early Data 接口
@@ -486,7 +486,7 @@ fafafa.ssl/
 
 - **v1.5.0** (2026-05-12) - 正式发布候选
   - 接口版本 `10500`
-  - 移除 deprecated helper API，统一迁移到 `TSSLFactory.*`
+  - 移除 deprecated 顶层 helper aliases/functions；保留的 convenience helpers 继续存在，但 TLS 建立流程统一推荐走 `TSSLFactory.*` / `TSSLConnector`
   - 安全加固、跨后端契约测试、FreePascal TLS 1.3 completeness gate 收口
   - WinSSL 稳定版发布仍以真实 Windows runtime proof 为硬门槛
 

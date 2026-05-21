@@ -10,6 +10,68 @@
 
 ## Current Status
 
+- [completed] `readme helper surface truth resync`
+  当前 focused 目标：
+  - 修复
+    README
+    把
+    “deprecated 顶层 helper aliases/functions 已移除”
+    说宽成
+    “helper API 已移除”
+    的高入口漂移，
+    明确当前仍然 shipped 的
+    convenience helpers
+    与
+    TLS bootstrap
+    主入口
+    的边界
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-readme-helper-surface-truth-resync.md`
+  - 更新：
+    - `README.md`
+    - `tests/scripts/test_helper_surface_classification_truth_contract.sh`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_helper_surface_classification_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_helper_surface_classification_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - 被移除的是
+    deprecated
+    顶层 helper aliases/functions
+  - 当前仍然保留并 shipped 的
+    convenience helpers
+    包括：
+    - `TSSLHelper`
+    - `QuickServer(...)`
+    - `CreateOCSPClient(...)`
+    - `CreateCRLManager(...)`
+  - 这些 helper
+    不代替
+    `TSSLFactory.*`
+    /
+    `TSSLConnector`
+    这条
+    TLS bootstrap
+    主入口
+  当前批收口后的默认下一步：
+  - README
+    这层高入口
+    不再把
+    helper surface
+    误报成“整体移除”
+  - 下一条更值得继续压的 residual
+    会继续集中在：
+    capability /
+    facade /
+    helper
+    的其余高入口分类面
+    是否还残留
+    过宽或过时表述
+
 - [completed] `tsslconfig timeout owner truth resync`
   当前 focused 目标：
   - 把
