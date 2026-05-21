@@ -2,6 +2,74 @@
 
 ## 2026-05-21
 
+- winssl backend capability matrix current public import truth
+  这一刀确认的
+  不是
+  `WINSSL_BACKEND_CAPABILITY_MATRIX`
+  不该继续保留
+  WinSSL
+  cert-store
+  helper
+  示例，
+  而是
+  它在
+  shipped
+  store helper
+  路径
+  与
+  证书枚举
+  public API
+  都已经讲清楚的前提下，
+  active
+  cert-store
+  示例
+  仍继续教学：
+  - `fafafa.ssl.base`
+
+- 当前更准确的收口是：
+  - `ISSLCertificateStore`
+    /
+    `ISSLCertificate`
+    当前都可直接来自
+    `fafafa.ssl`
+  - `OpenSystemStore(...)`
+    /
+    `SSL_STORE_MY`
+    仍然属于
+    `fafafa.ssl.winssl.certstore`
+  - 所以这里该保留的
+    是
+    helper/API
+    边界，
+    不是
+    base-unit
+    入口
+
+- 这说明
+  当前 WinSSL
+  专题参考页里，
+  不只是
+  要冻结
+  capability
+  / helper
+  真相，
+  还要继续收紧：
+  active 示例
+  是否还在把调用方
+  带回
+  `fafafa.ssl.base`
+
+- focused RED
+  首轮暴露的是：
+  - `WINSSL_BACKEND_CAPABILITY_MATRIX`
+    `HEAD`
+    snapshot
+    里的 active
+    cert-store
+    示例
+    仍在使用
+    `fafafa.ssl.base`
+
 - security-best-practices current public import truth
   这一刀确认的
   不是

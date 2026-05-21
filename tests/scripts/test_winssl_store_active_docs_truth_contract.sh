@@ -3,7 +3,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
 best_practices="$repo_root/docs/guides/WINSSL_BEST_PRACTICES.md"
-winssl_matrix="$repo_root/docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md"
+winssl_matrix="${WINSSL_MATRIX_DOC:-$repo_root/docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md}"
 store_guide="$repo_root/docs/guides/STORE_USAGE_GUIDE.md"
 
 require_fixed() {
@@ -40,6 +40,8 @@ forbid_fixed "$winssl_matrix" "Store.Certificates" \
   "WinSSL backend matrix must not teach a non-public Certificates property on ISSLCertificateStore"
 forbid_fixed "$winssl_matrix" "Cert.Subject" \
   "WinSSL backend matrix must not teach property-style Subject access on ISSLCertificate"
+forbid_fixed "$winssl_matrix" "  fafafa.ssl.base," \
+  "WinSSL backend matrix must stop teaching fafafa.ssl.base in the active certificate-store example"
 
 require_fixed "$winssl_matrix" "Store := OpenSystemStore(SSL_STORE_MY);" \
   "WinSSL backend matrix must use the shipped OpenSystemStore(...) helper"
@@ -49,5 +51,7 @@ require_fixed "$winssl_matrix" "Cert := Store.GetCertificate(I);" \
   "WinSSL backend matrix must enumerate certificates through the public GetCertificate API"
 require_fixed "$winssl_matrix" "WriteLn(Cert.GetSubject);" \
   "WinSSL backend matrix must read certificate subjects through GetSubject"
+require_fixed "$winssl_matrix" "  fafafa.ssl," \
+  "WinSSL backend matrix must use the current public facade unit in the active certificate-store example"
 
 echo "[PASS] WinSSL store active docs truth contract is satisfied."

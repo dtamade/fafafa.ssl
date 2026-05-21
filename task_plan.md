@@ -10,6 +10,73 @@
 
 ## Current Status
 
+- [completed] `winssl backend capability matrix current public import truth`
+  当前 focused 目标：
+  - 修复
+    `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+    里系统证书存储
+    那段 active
+    WinSSL 示例
+    仍在使用的
+    `fafafa.ssl.base`
+    导入，
+    让这份
+    WinSSL
+    专用矩阵页
+    继续保留
+    store helper
+    /
+    证书枚举
+    的 current
+    public API
+    真相，
+    但不再偏离
+    当前 public
+    import truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-winssl-backend-capability-matrix-current-public-import-truth.md`
+  - 更新 focused contract：
+    - `tests/scripts/test_winssl_store_active_docs_truth_contract.sh`
+  - 更新：
+    - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_winssl_store_active_docs_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_winssl_store_active_docs_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - `WINSSL_BACKEND_CAPABILITY_MATRIX`
+    active
+    cert-store
+    示例
+    应统一回到：
+    - `fafafa.ssl`
+    - `fafafa.ssl.winssl.certstore`
+  - `ISSLCertificateStore`
+    /
+    `ISSLCertificate`
+    继续来自：
+    - `fafafa.ssl`
+  - `OpenSystemStore(...)`
+    /
+    `SSL_STORE_MY`
+    继续来自：
+    - `fafafa.ssl.winssl.certstore`
+  当前批收口后的默认下一步：
+  - `WINSSL_BACKEND_CAPABILITY_MATRIX`
+    不再继续传播
+    `fafafa.ssl.base`
+  - 下一条 residual
+    继续优先挑
+    仍在传播
+    `SSL_LIBRARY_NAMES[...]`
+    或
+    旧页头快照
+    的 active guide/reference
+
 - [completed] `security-best-practices current public import truth`
   当前 focused 目标：
   - 修复

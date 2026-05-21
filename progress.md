@@ -6,6 +6,125 @@
 
 ## 2026-05-21
 
+### WINSSL_BACKEND_CAPABILITY_MATRIX Current Public Import Truth
+
+- inspect active WinSSL matrix import drift before editing:
+  - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  - `src/fafafa.ssl.pas`
+  - `src/fafafa.ssl.winssl.certstore.pas`
+  - `tests/scripts/test_winssl_store_active_docs_truth_contract.sh`
+  - change:
+    - confirmed
+      the matrix
+      already keeps
+      the shipped
+      WinSSL
+      store helper
+      and
+      certificate
+      enumeration
+      API truth
+    - confirmed
+      current drift
+      is now
+      the active
+      cert-store
+      example
+      import surface,
+      not the
+      helper/API
+      semantics
+    - confirmed
+      `ISSLCertificateStore`
+      /
+      `ISSLCertificate`
+      are already
+      exported by
+      `fafafa.ssl`
+    - confirmed
+      `OpenSystemStore(...)`
+      /
+      `SSL_STORE_MY`
+      remain in
+      `fafafa.ssl.winssl.certstore`
+    - confirmed
+      the active
+      cert-store
+      example
+      still used
+      `fafafa.ssl.base`
+
+- add focused batch record and tighten the existing WinSSL store contract:
+  - `docs/plans/2026-05-21-winssl-backend-capability-matrix-current-public-import-truth.md`
+  - `tests/scripts/test_winssl_store_active_docs_truth_contract.sh`
+  - change:
+    - froze:
+      - existing
+        store helper
+        truth
+      - active
+        matrix example
+        must use
+        `fafafa.ssl`
+      - active
+        matrix example
+        must stop using
+        `fafafa.ssl.base`
+    - added
+      `WINSSL_MATRIX_DOC`
+      override support
+      so the same
+      focused contract
+      can prove RED
+      against a
+      pre-fix
+      matrix snapshot
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_winssl_store_active_docs_truth_contract.sh`
+    - result: PASS
+  - `WINSSL_MATRIX_DOC=/tmp/fafafa_ssl_winssl_backend_capability_matrix_head.md bash tests/scripts/test_winssl_store_active_docs_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - `WINSSL_BACKEND_CAPABILITY_MATRIX`
+        `HEAD`
+        snapshot
+        still used
+        `fafafa.ssl.base`
+        in the
+        active
+        cert-store
+        example
+
+- repair WINSSL_BACKEND_CAPABILITY_MATRIX current public import truth:
+  - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  - change:
+    - rewrote
+      the active
+      cert-store
+      example
+      import
+      from
+      `fafafa.ssl.base`
+      to
+      `fafafa.ssl`
+    - preserved
+      the matrix's
+      WinSSL
+      helper path,
+      public
+      certificate-store
+      API,
+      and
+      capability
+      narrative
+
+- verify focused closeout:
+  - `bash tests/scripts/test_winssl_store_active_docs_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### security-best-practices Current Public Import Truth
 
 - inspect active security guide import drift before editing:

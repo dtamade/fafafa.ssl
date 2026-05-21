@@ -232,7 +232,7 @@ program winssl_certstore;
 
 uses
   SysUtils,
-  fafafa.ssl.base,
+  fafafa.ssl,
   fafafa.ssl.winssl.certstore;
 
 var
