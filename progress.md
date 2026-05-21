@@ -6,6 +6,73 @@
 
 ## 2026-05-21
 
+### Builder Import Guidance Closure
+
+- inspect current builder/public-unit guidance before editing:
+  - `docs/guides/FAQ.md`
+  - `docs/ARCHITECTURE.md`
+  - `docs/reference/ARCHITECTURE.md`
+  - `docs/MIGRATION_GUIDE_V1.1.md`
+  - `docs/plans/2026-05-19-public-unit-import-guidance-truth.md`
+  - `src/fafafa.ssl.pas`
+  - `src/fafafa.ssl.context.builder.pas`
+  - change:
+    - confirmed
+      `TSSLContextBuilder`
+      is still published through
+      `fafafa.ssl.context.builder`
+      rather than the main facade
+    - confirmed several high-visibility guidance lines still implied:
+      `uses fafafa.ssl;`
+      +
+      `TSSLContextBuilder`
+    - important conclusion:
+      - this was a public import-guidance drift,
+        not a builder runtime or facade-export bug
+
+- add focused batch inputs and extend the existing import-guidance contract:
+  - `docs/plans/2026-05-21-builder-import-guidance-closure.md`
+  - `tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - change:
+    - added checks requiring:
+      - `uses fafafa.ssl, fafafa.ssl.context.builder;`
+      - absence of the old
+        `uses fafafa.ssl;` + `TSSLContextBuilder` / `TSSLConnector`
+        wording
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - first failed at:
+        `FAQ must state the current facade-plus-builder import truth`
+      - important conclusion:
+        - after a brief quoting repair in the contract itself,
+          the real blocker remained the stale high-entry wording
+
+- repair high-entry import guidance truth:
+  - `docs/guides/FAQ.md`
+  - `docs/ARCHITECTURE.md`
+  - `docs/reference/ARCHITECTURE.md`
+  - `docs/MIGRATION_GUIDE_V1.1.md`
+  - change:
+    - rewrote the top-level guidance to explicitly teach:
+      `uses fafafa.ssl, fafafa.ssl.context.builder;`
+    - kept
+      `TSSLConnector`
+      on the main-facade side
+      and
+      `TSSLContextBuilder`
+      on the builder-unit side
+
+- verify focused closeout:
+  - `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### Facade Connection-Control Owner Export Closure
 
 - inspect current migration/facade truth before editing:

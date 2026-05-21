@@ -34,7 +34,7 @@ fafafa.ssl 是一个多后端 TLS/SSL 库，为 Free Pascal 提供统一的高�
 - **跨平台** - Linux, Windows, macOS, FreeBSD
 
 > 当前入口说明：
-> - 普通新代码优先使用 `uses fafafa.ssl;` + `TSSLContextBuilder` / `TSSLConnector`
+> - 普通新代码优先使用 `uses fafafa.ssl, fafafa.ssl.context.builder;`，然后通过 `TSSLContextBuilder` / `TSSLConnector` 建立 TLS
 > - 需要固定 backend 或做更低层控制时，再使用
 >   `TSSLFactory.GetLibraryInstance(...)`
 >   或

@@ -2,6 +2,51 @@
 
 ## 2026-05-21
 
+- builder import guidance closure
+  这一刀确认的
+  不是
+  builder runtime
+  或
+  facade export
+  本身又坏了，
+  而是
+  高入口说明文字
+  还残留一层
+  “像是只 `uses fafafa.ssl` 就能直接拿到 `TSSLContextBuilder`”
+  的误导
+
+- 当前更准确的收口是：
+  - `TSSLConnector`
+    继续是
+    `fafafa.ssl`
+    主门面 surface
+  - `TSSLContextBuilder`
+    继续是
+    `fafafa.ssl.context.builder`
+    public unit
+  - 普通新代码的推荐导入组合
+    当前应明确写成：
+    - `uses fafafa.ssl, fafafa.ssl.context.builder;`
+
+- 这说明
+  当前 builder 这条线
+  更真实的问题
+  不是要不要立刻把 builder classes
+  全量塞进主门面，
+  而是
+  先把 public import truth
+  讲清楚、锁住
+
+- focused RED
+  首轮暴露的是真实 doc drift，
+  不是 runtime bug：
+  - `FAQ`
+    仍写着
+    `uses fafafa.ssl;` + `TSSLContextBuilder` / `TSSLConnector`
+  - 这与
+    现有 plan / code snippet / public unit truth
+    并不一致
+
 - facade connection-control owner export closure
   这一刀确认的
   不是

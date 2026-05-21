@@ -10,6 +10,60 @@
 
 ## Current Status
 
+- [completed] `builder import guidance closure`
+  当前 focused 目标：
+  - 把高入口说明里
+    会误导调用方的
+    builder 导入口径
+    收回到当前
+    shipped public units truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-builder-import-guidance-closure.md`
+  - 更新 focused contract：
+    - `tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - 目标更新：
+    - `docs/guides/FAQ.md`
+    - `docs/ARCHITECTURE.md`
+    - `docs/reference/ARCHITECTURE.md`
+    - `docs/MIGRATION_GUIDE_V1.1.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - 当前高入口普通导入组合
+    继续是：
+    - `fafafa.ssl`
+    - `fafafa.ssl.context.builder`
+  - `TSSLConnector`
+    当前由
+    `fafafa.ssl`
+    提供
+  - `TSSLContextBuilder`
+    当前由
+    `fafafa.ssl.context.builder`
+    提供
+  - 高可见度说明文字
+    不再把
+    `TSSLContextBuilder`
+    误教成
+    主门面自带 surface
+  当前批收口后的默认下一步：
+  - public import guidance
+    这条线
+    已不再在“说明文字”层反弹
+  - 下一条更值得继续压的 residual
+    会继续集中在：
+    `TSSLConfig`
+    非 request-local 字段的 additive extraction
+    /
+    `ISSLConnection`
+    其余 convenience-core seam
+
 - [completed] `facade connection-control owner export closure`
   当前 focused 目标：
   - 把 timeout/blocking

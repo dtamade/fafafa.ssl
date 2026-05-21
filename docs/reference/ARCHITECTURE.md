@@ -3,7 +3,7 @@
 > 当前路线图: [当前路线图](../ROADMAP.md)
 > 说明: 本页保留架构与抽象层设计说明；当前执行顺序和阶段判断以 `docs/ROADMAP.md` 为准。
 > 当前入口说明:
-> - 普通新代码优先使用 `uses fafafa.ssl;` + `TSSLContextBuilder` / `TSSLConnector`
+> - 普通新代码优先使用 `uses fafafa.ssl, fafafa.ssl.context.builder;`，然后通过 `TSSLContextBuilder` / `TSSLConnector` 建立 TLS
 > - 需要 fixed-backend / core factory surface 时，再使用
 >   `TSSLFactory.GetLibraryInstance(...)`
 >   或

@@ -17,7 +17,7 @@ v1.1.0 引入了架构改进，将 `GetNativeHandle` 方法从核心接口移至
 **向后兼容性**: ✅ 对于标准用户代码，此变更完全向后兼容，无需任何修改。
 
 > 当前口径：
-> - 普通新代码优先使用 `uses fafafa.ssl;` + `TSSLContextBuilder` / `TSSLConnector`
+> - 普通新代码优先使用 `uses fafafa.ssl, fafafa.ssl.context.builder;`，然后通过 `TSSLContextBuilder` / `TSSLConnector` 建立 TLS
 > - 只有在你明确固定 backend、或需要 native-handle 高级访问时，才使用
 >   `TSSLFactory.GetLibraryInstance(...)` + `Lib.CreateContext(...)`
 

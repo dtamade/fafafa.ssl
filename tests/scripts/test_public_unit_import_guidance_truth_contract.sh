@@ -29,6 +29,10 @@ require_absent() {
 
 user_guide="docs/guides/USER_GUIDE.md"
 integration_guide="docs/INTEGRATION_GUIDE.md"
+faq_guide="docs/guides/FAQ.md"
+architecture_doc="docs/ARCHITECTURE.md"
+reference_architecture="docs/reference/ARCHITECTURE.md"
+migration_v11="docs/MIGRATION_GUIDE_V1.1.md"
 winssl_quickstart="docs/guides/WINSSL_QUICKSTART.md"
 winssl_guide="docs/guides/WINSSL_USER_GUIDE.md"
 mbedtls_guide="docs/guides/MBEDTLS_USER_GUIDE.md"
@@ -46,6 +50,15 @@ require_fixed "$integration_guide" "fafafa.ssl.context.builder;" \
   "INTEGRATION_GUIDE must keep the current builder unit in hook/client setup examples"
 require_fixed "$integration_guide" "  fafafa.ssl;" \
   "INTEGRATION_GUIDE must use the current public facade unit in active examples"
+
+require_fixed "$faq_guide" '普通新代码推荐直接 `uses fafafa.ssl, fafafa.ssl.context.builder;`，然后通过 `TSSLContextBuilder` / `TSSLConnector` 建立 TLS；只有在你明确固定某个 backend 时，才需要关心 backend-specific 依赖。' \
+  "FAQ must state the current facade-plus-builder import truth"
+require_fixed "$architecture_doc" '普通新代码优先使用 `uses fafafa.ssl, fafafa.ssl.context.builder;`，然后通过 `TSSLContextBuilder` / `TSSLConnector` 建立 TLS' \
+  "ARCHITECTURE must state the current facade-plus-builder import truth"
+require_fixed "$reference_architecture" '普通新代码优先使用 `uses fafafa.ssl, fafafa.ssl.context.builder;`，然后通过 `TSSLContextBuilder` / `TSSLConnector` 建立 TLS' \
+  "reference ARCHITECTURE must state the current facade-plus-builder import truth"
+require_fixed "$migration_v11" '普通新代码优先使用 `uses fafafa.ssl, fafafa.ssl.context.builder;`，然后通过 `TSSLContextBuilder` / `TSSLConnector` 建立 TLS' \
+  "MIGRATION_GUIDE_V1.1 must state the current facade-plus-builder import truth"
 
 require_fixed "$winssl_quickstart" "fafafa.ssl;" \
   "WINSSL_QUICKSTART must use the current public facade unit"
@@ -96,6 +109,14 @@ require_absent "$integration_guide" "fafafa.ssl.base," \
   "INTEGRATION_GUIDE must stop teaching direct base-unit imports in active examples"
 require_absent "$integration_guide" "fafafa.ssl.tls;" \
   "INTEGRATION_GUIDE must stop teaching direct tls-unit imports in active examples"
+for file in \
+  "$faq_guide" \
+  "$architecture_doc" \
+  "$reference_architecture" \
+  "$migration_v11"; do
+  require_absent "$file" '`uses fafafa.ssl;` + `TSSLContextBuilder` / `TSSLConnector`' \
+    "$file must stop implying TSSLContextBuilder comes from the main facade alone"
+done
 require_absent "$user_guide" "fafafa.ssl.openssl" \
   "USER_GUIDE must stop teaching nonexistent fafafa.ssl.openssl facade unit"
 require_absent "$troubleshooting" "fafafa.ssl.openssl;" \
