@@ -6,6 +6,106 @@
 
 ## 2026-05-21
 
+### Native Handle Quick Ref Current Public Entrypoint Truth
+
+- inspect current native-handle quick-ref drift before editing:
+  - `docs/NATIVE_HANDLE_QUICK_REF.md`
+  - `src/fafafa.ssl.pas`
+  - `docs/MIGRATION_GUIDE_V1.1.md`
+  - `docs/ARCHITECTURE.md`
+  - `tests/scripts/test_implemented_backend_future_truth_contract.sh`
+  - `tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - change:
+    - confirmed
+      `fafafa.ssl`
+      already re-exported
+      `ISSLContext`
+      /
+      `ISSLNativeHandleAccess`
+      /
+      `TSSLFactory`
+    - confirmed
+      current advanced
+      fixed-backend
+      library-entrypoint truth
+      is
+      `TSSLFactory.GetLibraryInstance(...)`
+      +
+      `Lib.CreateContext(...)`
+    - confirmed
+      quick ref
+      still used
+      split
+      `fafafa.ssl.base`
+      imports
+      and
+      stale
+      `CreateLibrary`
+      wording
+
+- add focused batch record and new quick-ref contract:
+  - `docs/plans/2026-05-21-native-handle-quick-ref-current-public-entrypoint-truth.md`
+  - `tests/scripts/test_native_handle_quick_ref_current_public_entrypoint_truth_contract.sh`
+  - change:
+    - froze:
+      - current public entry note
+      - facade import truth
+      - fixed-backend library-entrypoint example truth
+      - absence of
+        `CreateLibrary`
+        and
+        `TSSLFactory.CreateContext(sslCtxClient, sslOpenSSL)`
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_native_handle_quick_ref_current_public_entrypoint_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_native_handle_quick_ref_current_public_entrypoint_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - quick ref still lacked
+        current public entry guidance
+
+- repair native-handle quick ref high-entry truth:
+  - `docs/NATIVE_HANDLE_QUICK_REF.md`
+  - change:
+    - updated header freshness
+      to
+      current v1.5.0-aligned state
+    - added explicit
+      public-entrypoint note
+      covering:
+      - `fafafa.ssl`
+        facade re-export truth
+      - fixed-backend
+        `GetLibraryInstance(...)`
+        +
+        `Lib.CreateContext(...)`
+      - ordinary TLS
+        builder / connector
+        main path
+    - switched active current examples
+      from
+      `fafafa.ssl.base`
+      to
+      `fafafa.ssl`
+    - replaced
+      OpenSSL-specific
+      `TSSLFactory.CreateContext(...)`
+      example
+      with
+      current library-entrypoint flow
+    - removed stale
+      `CreateLibrary`
+      FAQ wording
+
+- verify focused closeout:
+  - `bash tests/scripts/test_native_handle_quick_ref_current_public_entrypoint_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_implemented_backend_future_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### README Helper Surface Truth Resync
 
 - inspect current facade/helper wording drift before editing:

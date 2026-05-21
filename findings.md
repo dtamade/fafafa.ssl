@@ -2,6 +2,87 @@
 
 ## 2026-05-21
 
+- native handle quick ref current public entrypoint truth
+  这一刀确认的
+  不是
+  native-handle
+  helper
+  行为真相
+  有问题，
+  而是
+  quick ref
+  这页
+  还停在
+  旧 public entrypoint
+  心智：
+  - split
+    `uses fafafa.ssl.base`
+  - OpenSSL
+    示例直接写
+    `TSSLFactory.CreateContext(...)`
+  - FAQ
+    还提
+    `CreateLibrary`
+
+- 当前更准确的收口是：
+  - 普通
+    capability /
+    native-handle 查询
+    不必再拆回
+    `fafafa.ssl.base`
+    /
+    `fafafa.ssl.factory`
+  - 当前主门面
+    `fafafa.ssl`
+    已 re-export：
+    - `ISSLContext`
+    - `ISSLNativeHandleAccess`
+    - `TSSLFactory`
+  - fixed-backend /
+    native-handle
+    高级场景
+    当前 library-entrypoint
+    优先写成：
+    - `TSSLFactory.GetLibraryInstance(...)`
+    - `Lib.CreateContext(...)`
+  - 普通 TLS
+    建立流程
+    仍应回到：
+    - `TSSLContextBuilder`
+    - `TSSLConnector`
+    - `TSSLStream`
+
+- 这说明
+  当前文档主线里
+  真正容易把
+  高级调用方
+  带偏的，
+  往往不是
+  `ISSLNativeHandleAccess`
+  本身，
+  而是
+  快速参考页
+  没把
+  “native-handle 高级入口”
+  和
+  “普通 TLS 主入口”
+  的边界重新写回当前状态
+
+- focused RED
+  首轮暴露的就是：
+  - 文档缺少
+    当前 public 入口说明
+  - 当前 quick ref
+    仍没有主动声明：
+    - `fafafa.ssl`
+      已 re-export
+      关键 surface
+    - 固定 backend
+      场景应优先走
+      `GetLibraryInstance(...)`
+      +
+      `Lib.CreateContext(...)`
+
 - readme helper surface truth resync
   这一刀确认的
   不是

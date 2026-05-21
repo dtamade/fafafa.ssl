@@ -10,6 +10,66 @@
 
 ## Current Status
 
+- [completed] `native handle quick ref current public entrypoint truth`
+  当前 focused 目标：
+  - 收掉
+    `docs/NATIVE_HANDLE_QUICK_REF.md`
+    里仍会把
+    native-handle
+    高级用户
+    带回旧入口心智的几处漂移：
+    - split `uses fafafa.ssl.base`
+    - `TSSLFactory.CreateContext(sslCtxClient, sslOpenSSL)`
+    - `CreateLibrary`
+      旧工厂说法
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-native-handle-quick-ref-current-public-entrypoint-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_native_handle_quick_ref_current_public_entrypoint_truth_contract.sh`
+  - 更新：
+    - `docs/NATIVE_HANDLE_QUICK_REF.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_native_handle_quick_ref_current_public_entrypoint_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_native_handle_quick_ref_current_public_entrypoint_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_implemented_backend_future_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - 普通 capability /
+    native-handle 查询
+    不必再 split
+    回
+    `fafafa.ssl.base`
+    /
+    `fafafa.ssl.factory`
+  - 当前固定 backend
+    的 native-handle
+    高级入口
+    优先写成：
+    - `TSSLFactory.GetLibraryInstance(...)`
+    - `Lib.CreateContext(...)`
+  - 普通 TLS 建立流程
+    仍优先：
+    - `TSSLContextBuilder`
+    - `TSSLConnector`
+    - `TSSLStream`
+  当前批收口后的默认下一步：
+  - native-handle
+    quick ref
+    不再继续教授
+    旧工厂入口
+    和 split import
+  - 下一条 residual
+    可以继续挑
+    还未被 contract
+    冻住的
+    活跃高入口文档
+    漂移
+
 - [completed] `readme helper surface truth resync`
   当前 focused 目标：
   - 修复
