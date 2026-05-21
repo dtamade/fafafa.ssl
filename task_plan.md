@@ -17475,3 +17475,92 @@
     core / optional 分层
     讲歪的
     高可见度 active surface
+
+### 2026-05-21 ARCHITECTURE optional owner-surface truth
+
+- [completed] 当前新的 residual
+  已继续收窄到
+  顶层
+  `docs/ARCHITECTURE.md`
+  这份高可见度总览页：
+  - `接口继承关系`
+    仍只画出
+    `ISSLClientConnection`
+    ，
+    没把当前已发布的
+    connection-side owner surfaces
+    讲清楚
+  - `后端接口实现`
+    仍写成：
+    - `每个后端实现所有核心接口 + 可选接口`
+    这会把
+    optional interface
+    误导成统一全挂载
+
+- [completed] focused RED
+  已通过
+  新增的
+  `tests/scripts/test_architecture_optional_owner_surface_truth_contract.sh`
+  压实：
+  - 首轮结果：
+    - FAIL
+      `ARCHITECTURE interface graph must include ISSLConnectionControl`
+  - 说明顶层总览页
+    当前确实还没把
+    connection-side owner surfaces
+    和
+    capability-gated optional exposure
+    说完整
+
+- [completed] 最小正确修法已经落地：
+  - 新增
+    `docs/plans/2026-05-21-architecture-optional-owner-surface-truth.md`
+  - 新增
+    `tests/scripts/test_architecture_optional_owner_surface_truth_contract.sh`
+  - 更新
+    `docs/ARCHITECTURE.md`
+    ，已明确补回：
+    - `ISSLConnectionControl`
+    - `ISSLConnectionInfo`
+    - `ISSLDiagnostics`
+    - `ISSLSessionResumption`
+    - `ISSLCertificateVerification`
+    - `ISSLOCSPStapling`
+    这组 connection-side owner surfaces
+  - 同时把 backend 语义
+    改回：
+    - optional interface
+      按 capability / runtime truth
+      暴露
+    - 不是
+      每个 backend / class
+      统一实现全部 optional surfaces
+
+- [completed] 当前批收口后的默认下一步：
+  - `bash -n tests/scripts/test_architecture_optional_owner_surface_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_architecture_optional_owner_surface_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  - 当前已具备
+    commit / push
+    条件
+  - 收口后继续沿
+    `ISSLConnection`
+    主线推进时，
+    顶层总览
+    /
+    设计锚点
+    /
+    canonical reference
+    已进一步统一；
+    下一步应继续找
+    仍残留在
+    高入口文档
+    或
+    implementation-facing guidance
+    里的
+    core/optional 分层误导

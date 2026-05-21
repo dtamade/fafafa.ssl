@@ -158,6 +158,12 @@ IInterface (FreePascal 内置)
     ├─ ISSLContext          (上下文管理)
     ├─ ISSLConnection       (连接管理)
     │   ├─ ISSLClientConnection  (客户端扩展)
+    │   ├─ ISSLConnectionControl   (timeout / blocking owner)
+    │   ├─ ISSLConnectionInfo      (连接信息 mirrors)
+    │   ├─ ISSLDiagnostics         (诊断扩展)
+    │   ├─ ISSLSessionResumption   (会话扩展)
+    │   ├─ ISSLCertificateVerification (证书验证扩展)
+    │   └─ ISSLOCSPStapling        (OCSP 扩展)
     ├─ ISSLCertificate      (证书管理)
     ├─ ISSLCertificateStore (证书存储)
     └─ ISSLSession          (会话管理)
@@ -166,6 +172,11 @@ IInterface (FreePascal 内置)
 > 当前 public Pascal source 只声明了 `ISSLClientConnection`；
 > 服务端特有能力目前主要通过可选 context 扩展接口暴露，
 > 而不是通过单独的 `ISSLServerConnection` 公开接口。
+>
+> `ISSLConnection` 的 connection-side owner surfaces 当前主要通过这些可选接口暴露：
+> - `ISSLConnectionControl`：timeout / blocking runtime control owner
+> - `ISSLConnectionInfo`：connection info / ALPN / context / state-string mirrors 的默认 owner
+> - `ISSLDiagnostics` / `ISSLSessionResumption` / `ISSLCertificateVerification` / `ISSLOCSPStapling`：其余 connection-side optional owners
 
 ### ISSLLibrary - 库管理
 
@@ -314,7 +325,8 @@ end;
 
 ### 后端接口实现
 
-每个后端实现所有核心接口 + 可选接口：
+后端按 capability / runtime truth 暴露 optional interface，
+不是每个 backend / class 都统一实现全部 optional surfaces。
 
 ```pascal
 // OpenSSL 后端

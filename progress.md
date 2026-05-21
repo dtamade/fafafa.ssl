@@ -26895,3 +26895,76 @@
     - result: PASS
   - `git diff --check`
     - result: PASS
+
+### ARCHITECTURE Optional Owner-Surface Truth
+
+- inspect the next high-visibility `ISSLConnection` residual after the v2 anchor repair:
+  - `docs/ARCHITECTURE.md`
+  - `tests/scripts/test_reference_architecture_current_factory_surface_truth_contract.sh`
+  - change:
+    - confirmed
+      the top-level architecture overview
+      still only drew
+      `ISSLClientConnection`
+      in the interface graph
+    - confirmed
+      the backend section still taught
+      `every backend implements all optional interfaces`
+      instead of the current
+      capability-gated optional exposure truth
+
+- add a focused architecture contract for owner-surface completeness:
+  - `docs/plans/2026-05-21-architecture-optional-owner-surface-truth.md`
+  - `tests/scripts/test_architecture_optional_owner_surface_truth_contract.sh`
+  - change:
+    - locked
+      top-level architecture graph coverage for:
+      - `ISSLConnectionControl`
+      - `ISSLConnectionInfo`
+      - `ISSLDiagnostics`
+      - `ISSLSessionResumption`
+      - `ISSLCertificateVerification`
+      - `ISSLOCSPStapling`
+    - locked
+      the capability-gated optional-interface story
+    - explicitly rejected
+      the stale
+      `every backend/class implements all optional surfaces`
+      wording
+
+- establish focused RED before editing the architecture overview:
+  - `bash -n tests/scripts/test_architecture_optional_owner_surface_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_architecture_optional_owner_surface_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - `ARCHITECTURE`
+        interface graph
+        was still missing
+        `ISSLConnectionControl`
+      - this confirmed the top-level overview
+        had not yet been brought up to the current owner-surface truth
+
+- repair the top-level architecture overview:
+  - `docs/ARCHITECTURE.md`
+  - change:
+    - expanded the interface graph
+      to include the published
+      connection-side owner surfaces
+    - added an explicit note that
+      connection-side owner surfaces
+      are primarily exposed through optional interfaces
+    - replaced the stale
+      `every backend implements all core + optional interfaces`
+      wording
+      with the current
+      capability / runtime-truth
+      exposure model
+
+- verify the focused closeout:
+  - `bash tests/scripts/test_architecture_optional_owner_surface_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS

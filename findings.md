@@ -16512,3 +16512,79 @@
     哪些 surface
     仍该留在 core，
     哪些只应通过 owner / optional path 暴露
+
+- 继续沿
+  `ISSLConnection`
+  主线往前扫后，
+  当前下一个真实残口
+  出现在
+  顶层
+  `docs/ARCHITECTURE.md`
+  ：
+  - `接口继承关系`
+    仍只画出
+    `ISSLClientConnection`
+  - `后端接口实现`
+    仍写成
+    `每个后端实现所有核心接口 + 可选接口`
+
+- 这类 drift 的问题
+  不只是“图画少了几个接口”，
+  而是它会把整个 optional surface 心智重新拉回
+  “所有后端 / 类默认全挂载”
+  ：
+  - 这和当前 shipped truth 不符
+  - 也会冲淡前面已经收口的：
+    - `ISSLConnectionControl`
+    - `ISSLConnectionInfo`
+    - `ISSLDiagnostics`
+    - `ISSLSessionResumption`
+    - `ISSLCertificateVerification`
+    - `ISSLOCSPStapling`
+    这组 owner / optional 分层
+
+- focused RED
+  直接证明这里仍是 live gap：
+  - 新增的
+    `tests/scripts/test_architecture_optional_owner_surface_truth_contract.sh`
+    首轮即报：
+    - `ARCHITECTURE interface graph must include ISSLConnectionControl`
+
+- 这条线的最小正确修法
+  仍然是
+  docs / contract
+  收口，
+  而不是重开源码实现：
+  - 把
+    `docs/ARCHITECTURE.md`
+    的接口继承图
+    补成当前 owner-surface 真相
+  - 明确写出：
+    - connection-side owner surfaces
+      当前主要通过可选接口暴露
+    - optional interface
+      按 capability / runtime truth 暴露
+    - 不是
+      每个 backend / class
+      统一实现全部 optional surfaces
+
+- 这批收口后，
+  `ISSLConnection`
+  主线的三层高可见度锚点又更一致了：
+  - 顶层总览：
+    `ARCHITECTURE.md`
+  - canonical reference：
+    `API_REFERENCE.md`
+  - v2 设计锚点：
+    `INTERFACE_DESIGN_V2.md`
+
+- 因而当前更接近真实的剩余工作，
+  已不再是
+  “高入口页还在大面上说错 optional surface”，
+  而是更细粒度的：
+  - 哪些 active guides / implementation-facing guidance
+    仍在个别场景里把
+    core / optional
+    用法顺序说歪
+  - 或哪些 backend/runtime 面
+    仍缺真正实现 / contract 完整性
