@@ -6,6 +6,103 @@
 
 ## 2026-05-21
 
+### STORE_USAGE_GUIDE Current Public Import Truth
+
+- inspect active store-guide import drift before editing:
+  - `docs/guides/STORE_USAGE_GUIDE.md`
+  - `src/fafafa.ssl.pas`
+  - `tests/scripts/test_store_usage_guide_current_public_import_truth_contract.sh`
+  - `docs/plans/2026-05-21-store-usage-guide-current-public-import-truth.md`
+  - change:
+    - confirmed
+      generic store-path
+      symbols
+      such as
+      `ISSLCertificateStore`
+      /
+      `ISSLCertificate`
+      /
+      `ISSLContext`
+      /
+      `TSSLFactory`
+      /
+      `sslAutoDetect`
+      /
+      `sslOpenSSL`
+      /
+      `sslCtxClient`
+      are already
+      re-exported by
+      `fafafa.ssl`
+    - confirmed
+      `OpenSystemStore(...)`
+      and
+      `SSL_STORE_*`
+      still belong to
+      `fafafa.ssl.winssl.certstore`
+    - confirmed
+      the guide should preserve:
+      - generic cross-platform store flow
+      - WinSSL-specific helper flow
+    - confirmed
+      stale split imports
+      remained in
+      four active code examples
+
+- add focused batch record and new STORE_USAGE_GUIDE contract:
+  - `docs/plans/2026-05-21-store-usage-guide-current-public-import-truth.md`
+  - `tests/scripts/test_store_usage_guide_current_public_import_truth_contract.sh`
+  - change:
+    - froze:
+      - required
+        `fafafa.ssl`
+        generic import
+      - required
+        `fafafa.ssl.winssl.certstore`
+        helper import
+      - absence of
+        `fafafa.ssl.base`
+        /
+        `fafafa.ssl.factory`
+        in active store-guide examples
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_store_usage_guide_current_public_import_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_store_usage_guide_current_public_import_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - `STORE_USAGE_GUIDE`
+        still taught
+        stale split imports
+        in active examples
+
+- repair STORE_USAGE_GUIDE current public import truth:
+  - `docs/guides/STORE_USAGE_GUIDE.md`
+  - change:
+    - rewrote
+      all generic store examples
+      to import
+      `fafafa.ssl`
+    - kept
+      the WinSSL-specific
+      `fafafa.ssl.winssl.certstore`
+      helper import
+      for
+      `OpenSystemStore(...)`
+      /
+      `SSL_STORE_*`
+    - preserved
+      the guide's
+      generic-vs-platform-specific
+      boundary
+
+- verify focused closeout:
+  - `bash tests/scripts/test_store_usage_guide_current_public_import_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### API_DOCUMENTATION Current Public Import Truth
 
 - inspect active API-documentation import drift before editing:

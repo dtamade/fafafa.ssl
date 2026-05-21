@@ -22,8 +22,7 @@
 ```pascal
 uses
   SysUtils,
-  fafafa.ssl.base,
-  fafafa.ssl.factory;
+  fafafa.ssl;
 
 var
   LContext: ISSLContext;
@@ -50,8 +49,7 @@ end;
 ```pascal
 uses
   SysUtils,
-  fafafa.ssl.base,
-  fafafa.ssl.factory;
+  fafafa.ssl;
 
 var
   LStore: ISSLCertificateStore;
@@ -82,7 +80,7 @@ end;
 {$IFDEF WINDOWS}
 uses
   SysUtils,
-  fafafa.ssl.base,
+  fafafa.ssl,
   fafafa.ssl.winssl.certstore;
 
 var
@@ -114,8 +112,7 @@ end;
 ```pascal
 uses
   SysUtils,
-  fafafa.ssl.base,
-  fafafa.ssl.factory;
+  fafafa.ssl;
 
 var
   LStore: ISSLCertificateStore;

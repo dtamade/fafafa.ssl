@@ -2,6 +2,79 @@
 
 ## 2026-05-21
 
+- store usage guide current public import truth
+  这一刀确认的
+  不是
+  `STORE_USAGE_GUIDE`
+  不该继续讲
+  WinSSL-specific
+  system-store helper，
+  而是
+  它在 generic store
+  用法
+  与
+  WinSSL helper
+  两条路径上
+  都还在教学：
+  - `fafafa.ssl.base`
+  - `fafafa.ssl.factory`
+  这组旧 split import
+
+- 当前更准确的收口是：
+  - generic
+    `ISSLCertificateStore`
+    /
+    `ISSLCertificate`
+    /
+    `ISSLContext`
+    /
+    `TSSLFactory`
+    /
+    `sslAutoDetect`
+    /
+    `sslOpenSSL`
+    /
+    `sslCtxClient`
+    /
+    `TSSLCertificateArray`
+    当前都已经能直接由
+    `fafafa.ssl`
+    提供
+  - 但
+    `OpenSystemStore(...)`
+    和
+    `SSL_STORE_*`
+    常量
+    仍然是
+    WinSSL-specific
+    helper，
+    必须继续显式来自
+    `fafafa.ssl.winssl.certstore`
+
+- 这说明
+  当前“文档完整”
+  这条线里，
+  不只是
+  把 generic 示例
+  全部切到
+  `fafafa.ssl`
+  就完了，
+  还要保住：
+  generic API
+  与
+  platform-specific helper
+  的分层边界
+
+- focused RED
+  首轮暴露的是：
+  - `STORE_USAGE_GUIDE`
+    四段 active 示例
+    仍然保留
+    `fafafa.ssl.base`
+  - 其中三段
+    还同时保留
+    `fafafa.ssl.factory`
+
 - api documentation current public import truth
   这一刀确认的
   不是

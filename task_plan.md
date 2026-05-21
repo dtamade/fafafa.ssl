@@ -10,6 +10,74 @@
 
 ## Current Status
 
+- [completed] `store usage guide current public import truth`
+  当前 focused 目标：
+  - 修复
+    `docs/guides/STORE_USAGE_GUIDE.md`
+    里仍保留的
+    `fafafa.ssl.base`
+    /
+    `fafafa.ssl.factory`
+    拆分导入示例，
+    让这份专题页
+    继续保持
+    generic store
+    用法
+    与
+    WinSSL-specific helper
+    分层，
+    但不再偏离
+    当前 public import truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-store-usage-guide-current-public-import-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_store_usage_guide_current_public_import_truth_contract.sh`
+  - 更新：
+    - `docs/guides/STORE_USAGE_GUIDE.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_store_usage_guide_current_public_import_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_store_usage_guide_current_public_import_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - `STORE_USAGE_GUIDE`
+    当前 generic 示例
+    应统一使用：
+    - `fafafa.ssl`
+  - WinSSL-specific
+    `OpenSystemStore(...)`
+    /
+    `SSL_STORE_*`
+    helper
+    仍应显式来自：
+    - `fafafa.ssl.winssl.certstore`
+  - 这份指南
+    继续保持
+    generic store flow
+    与
+    WinSSL concrete helper
+    的分层，
+    不会把
+    WinSSL helper
+    误写成 generic API
+  当前批收口后的默认下一步：
+  - `STORE_USAGE_GUIDE`
+    不再继续传播
+    `fafafa.ssl.base`
+    /
+    `fafafa.ssl.factory`
+    这组旧 split import
+  - 下一条 residual
+    继续优先挑
+    仍在传播
+    旧 import
+    或
+    stale header
+    的活跃 guide/reference
+
 - [completed] `api documentation current public import truth`
   当前 focused 目标：
   - 修复
