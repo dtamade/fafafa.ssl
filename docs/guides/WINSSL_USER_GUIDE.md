@@ -361,7 +361,7 @@ Conn := Ctx.CreateConnection(Socket);
 Ctx.SetVerifyMode([sslVerifyPeer]);
 
 // 测试环境：不验证证书
-Ctx.SetVerifyMode([]);
+Ctx.SetVerifyMode([]);  // 当前 direct-context no-verify 入口；builder 请改用 WithVerifyNone
 
 // 双向 TLS：要求客户端证书
 Ctx.SetVerifyMode([sslVerifyPeer, sslVerifyFailIfNoPeerCert]);

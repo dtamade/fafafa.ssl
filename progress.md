@@ -6,6 +6,104 @@
 
 ## 2026-05-21
 
+### Active Docs VerifyMode Guidance Truth Alignment
+
+- inspect active docs verify guidance truth before editing:
+  - `README.md`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/guides/TROUBLESHOOTING.md`
+  - `docs/guides/MBEDTLS_USER_GUIDE.md`
+  - `docs/guides/USER_GUIDE.md`
+  - `docs/guides/WINSSL_BEST_PRACTICES.md`
+  - `docs/guides/WINSSL_QUICKSTART.md`
+  - `docs/guides/WINSSL_USER_GUIDE.md`
+  - `docs/zh/FAQ.md`
+  - `docs/zh/快速入门.md`
+  - `docs/zh/API参考/概述.md`
+  - `src/fafafa.ssl.context.builder.pas`
+  - `src/fafafa.ssl.factory.pas`
+  - `src/fafafa.ssl.pas`
+  - change:
+    - confirmed builder public surface still uses:
+      - `.WithVerifyNone`
+    - confirmed config/direct-context runtime truth already treats:
+      - `VerifyMode := []`
+      - `SetVerifyMode([])`
+      as
+      no-verify
+    - confirmed runtime still also accepts:
+      - `[sslVerifyNone]`
+    - confirmed active docs had drifted into mixed guidance:
+      - some builder examples used `.WithVerifyNone`
+      - some direct-context examples used `[]`
+      - some active docs still taught `[sslVerifyNone]`
+      - high-entry docs did not explain the surface split clearly
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-active-docs-verifymode-guidance-truth-alignment.md`
+  - `tests/scripts/test_active_docs_verifymode_guidance_truth_contract.sh`
+  - change:
+    - documented the batch as active docs verify-mode guidance truth alignment
+    - added a focused docs contract
+      to guard:
+      - README/API reference high-entry wording
+      - active direct-context examples must stop teaching `[sslVerifyNone]`
+      - WinSSL/common guides must explain direct-context versus builder entrypoints
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_active_docs_verifymode_guidance_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_active_docs_verifymode_guidance_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - failed at:
+        `README must explain the builder-specific verify-disable entrypoint`
+      - important conclusion:
+        - high-entry docs still did not explain
+          builder
+          vs
+          config/direct-context
+          verify-disable guidance
+
+- repair active docs verify guidance truth:
+  - `README.md`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/guides/TROUBLESHOOTING.md`
+  - `docs/guides/MBEDTLS_USER_GUIDE.md`
+  - `docs/guides/USER_GUIDE.md`
+  - `docs/guides/WINSSL_BEST_PRACTICES.md`
+  - `docs/guides/WINSSL_QUICKSTART.md`
+  - `docs/guides/WINSSL_USER_GUIDE.md`
+  - `docs/zh/FAQ.md`
+  - `docs/zh/快速入门.md`
+  - `docs/zh/API参考/概述.md`
+  - change:
+    - added the explicit high-entry wording that:
+      - builder disable-verification guidance is `.WithVerifyNone`
+      - config/direct-context current public no-verify semantics use `[]`
+    - changed active direct-context examples from:
+      - `SetVerifyMode([sslVerifyNone])`
+      to:
+      - `SetVerifyMode([])`
+      with an explicit note that builder should use `WithVerifyNone`
+    - filled the same note into remaining active WinSSL/common direct-context guides
+      that still used a bare `SetVerifyMode([])` example
+
+- verify focused docs truth:
+  - `bash -n tests/scripts/test_active_docs_verifymode_guidance_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_active_docs_verifymode_guidance_truth_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed README/API reference now explain the builder/config split
+      - confirmed active direct-context examples no longer teach `[sslVerifyNone]`
+      - confirmed WinSSL/common direct-context guides now annotate `[]` with the builder hint
+  - `git diff --check`
+    - result: PASS
+  - `rg -n --glob '!docs/archive/**' --glob '!docs/history/**' --glob '!docs/plans/**' "SetVerifyMode\\(\\[sslVerifyNone\\]\\)|VerifyMode := \\[sslVerifyNone\\]" README.md docs`
+    - result:
+      - no matches
+
 ### Builder Merge Empty VerifyMode Clear Semantics
 
 - inspect merge verify-mode truth before editing:

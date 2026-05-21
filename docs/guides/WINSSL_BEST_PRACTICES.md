@@ -25,7 +25,7 @@
 
 ```pascal
 // 禁用证书验证（仅用于测试！）
-LContext.SetVerifyMode([]);
+LContext.SetVerifyMode([]);  // 当前 direct-context no-verify 入口；builder 请改用 WithVerifyNone
 ```
 
 **✅ 正确做法**:

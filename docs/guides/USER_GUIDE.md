@@ -411,7 +411,7 @@ LCert.VerifyEx(LStore, [sslCertVerifyCheckRevocation], LResult);
 **避免**:
 ```pascal
 // 不要跳过证书验证！
-LContext.SetVerifyMode([]); // 不安全！
+LContext.SetVerifyMode([]); // 当前 direct-context no-verify 入口；builder 请改用 WithVerifyNone
 ```
 
 ### 3. 密码套件配置

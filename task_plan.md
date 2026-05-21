@@ -10,6 +10,123 @@
 
 ## Current Status
 
+- [completed] `active docs VerifyMode guidance truth alignment`
+  当前 focused 目标：
+  - 把活跃文档里
+    关于禁用证书验证的
+    public guidance
+    收成一条清晰口径，
+    避免
+    builder /
+    config /
+    direct-context
+    继续混用
+    `.WithVerifyNone`
+    /
+    `[]`
+    /
+    `[sslVerifyNone]`
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-active-docs-verifymode-guidance-truth-alignment.md`
+  - 新增 docs contract：
+    - `tests/scripts/test_active_docs_verifymode_guidance_truth_contract.sh`
+  - 更新：
+    - `README.md`
+    - `docs/reference/API_REFERENCE.md`
+    - `docs/guides/TROUBLESHOOTING.md`
+    - `docs/guides/MBEDTLS_USER_GUIDE.md`
+    - `docs/guides/USER_GUIDE.md`
+    - `docs/guides/WINSSL_BEST_PRACTICES.md`
+    - `docs/guides/WINSSL_QUICKSTART.md`
+    - `docs/guides/WINSSL_USER_GUIDE.md`
+    - `docs/zh/FAQ.md`
+    - `docs/zh/快速入门.md`
+    - `docs/zh/API参考/概述.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_active_docs_verifymode_guidance_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_active_docs_verifymode_guidance_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  - active docs residual scan：
+    - `rg -n --glob '!docs/archive/**' --glob '!docs/history/**' --glob '!docs/plans/**' "SetVerifyMode\\(\\[sslVerifyNone\\]\\)|VerifyMode := \\[sslVerifyNone\\]" README.md docs`
+    - result:
+      - no matches
+  当前 truth：
+  - builder 当前公开入口仍是：
+    - `.WithVerifyNone`
+  - config/direct-context 当前 runtime truth 上：
+    - `VerifyMode := []`
+    - `SetVerifyMode([])`
+    都表示
+    no-verify
+  - 当前 runtime 上：
+    - `[]`
+    - `[sslVerifyNone]`
+    都会落成
+    no-verify
+  当前状态：
+  - focused RED
+    先失败在：
+    - `README must explain the builder-specific verify-disable entrypoint`
+  - 说明此前高入口文档
+    仍没有把
+    builder
+    与
+    config/direct-context
+    的 verify-disable 写法讲清楚
+  修复后：
+  - `README`
+    /
+    `API_REFERENCE`
+    现在都明确写出：
+    - builder 禁用验证请用 `.WithVerifyNone`
+    - config/direct-context 当前 no-verify 语义是 `[]`
+  - 原先仍把
+    `[sslVerifyNone]`
+    当作 active direct-context 示例的文档：
+    - `docs/guides/MBEDTLS_USER_GUIDE.md`
+    - `docs/zh/FAQ.md`
+    - `docs/zh/快速入门.md`
+    - `docs/zh/API参考/概述.md`
+    现在都改成了：
+    - `SetVerifyMode([])`
+      并补上
+      builder 入口提示
+  - `TROUBLESHOOTING`
+    /
+    `USER_GUIDE`
+    /
+    `WINSSL_*`
+    活跃指南里原本裸写
+    `SetVerifyMode([])`
+    的地方，
+    也统一补上了：
+    - direct-context 当前 no-verify 入口
+    - builder 请改用 `WithVerifyNone`
+  当前实施判断：
+  - verify 线的
+    活跃 public guidance
+    现在至少在
+    高入口 README /
+    API 参考 /
+    主要中英指南 /
+    WinSSL 指南
+    这几层上
+    已经不再互相打架
+  下一刀：
+  - 继续静态审查
+    server verify default
+    在不同高入口：
+    - `CreateDefaultConfig(sslCtxServer)`
+    - `CreateServerContext(...)`
+    - builder server path
+    之间是否还存在
+    public guidance / helper semantics
+    不够一致的问题
+
 - [completed] `builder Merge empty VerifyMode clear semantics`
   当前 focused 目标：
   - 修复

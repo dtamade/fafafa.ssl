@@ -406,7 +406,7 @@ LContext.LoadCAPath('/etc/ssl/certs');
 **自签名证书**:
 ```pascal
 // 方法 1: 禁用验证（仅用于测试！）
-LContext.SetVerifyMode([]);
+LContext.SetVerifyMode([]);  // 当前 direct-context no-verify 入口；builder 请改用 WithVerifyNone
 
 // 方法 2: 添加自签名证书到信任存储
 LStore := LLib.CreateCertificateStore;
@@ -688,7 +688,7 @@ end;
 3. **临时禁用验证（仅用于测试）**
 ```pascal
 // 仅用于开发/测试环境
-LContext.SetVerifyMode([]);  // 禁用证书验证
+LContext.SetVerifyMode([]);  // 当前 direct-context no-verify 入口；builder 请改用 WithVerifyNone
 ```
 
 **问题: 连接速度慢**

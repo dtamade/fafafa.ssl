@@ -158,7 +158,7 @@ begin
   LConfig.ContextType := sslCtxServer;
   LConfig.PreferredVersion := sslProtocolTLS13;
   LConfig.ProtocolVersions := [sslProtocolTLS13];
-  LConfig.VerifyMode := [];
+  LConfig.VerifyMode := [];  // config/direct-context 当前 public no-verify 语义
   LConfig.CertificateFile := 'tests/certificate/test_certs/signer_cert.pem';
   LConfig.PrivateKeyFile := 'tests/certificate/test_certs/signer_key.pem';
   LConfig.SessionCacheSize := 8;
@@ -171,6 +171,12 @@ begin
   Ctx := TSSLFactory.CreateContext(LConfig);
 end;
 ```
+
+当前口径：
+
+- builder 上如果要禁用验证，请显式使用 `.WithVerifyNone`；
+- config/direct-context 当前 public no-verify 语义是 `[]`；
+- 这两条都会落成 no-verify runtime truth，但生产环境仍应优先启用验证。
 
 这条 opt-in 只解决单机可控的 replay-store truth，不代表默认路径已经持久化，也不代表已经进入 distributed readiness。
 

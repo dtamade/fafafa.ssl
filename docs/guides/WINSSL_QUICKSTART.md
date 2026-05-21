@@ -393,7 +393,7 @@ Conn := Ctx.CreateConnection(Socket);
 ```pascal
 // 测试环境：不验证证书
 // ⚠️ 仅用于测试环境！
-Ctx.SetVerifyMode([]);
+Ctx.SetVerifyMode([]);  // 当前 direct-context no-verify 入口；builder 请改用 WithVerifyNone
 
 // 自动验证（推荐，生产环境）
 Ctx.SetVerifyMode([sslVerifyPeer]);

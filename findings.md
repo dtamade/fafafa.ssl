@@ -2,6 +2,77 @@
 
 ## 2026-05-21
 
+- active docs verify guidance
+  这一刀确认的
+  不是新的 runtime bug，
+  而是活跃文档在
+  verify-disable
+  public guidance
+  上已经开始偏离
+  最近几批刚修好的真相
+
+- 当前源码真相其实已经比较清楚：
+  - builder surface:
+    `.WithVerifyNone`
+  - config/direct-context runtime truth:
+    `[]`
+    表示
+    no-verify
+  - runtime 上
+    `[]`
+    与
+    `[sslVerifyNone]`
+    都会落成
+    no-verify
+
+- 但活跃文档此前同时存在：
+  - builder 示例用
+    `.WithVerifyNone`
+  - 一些 direct-context 示例写
+    `SetVerifyMode([])`
+  - 另一些 active 文档却继续写
+    `SetVerifyMode([sslVerifyNone])`
+  - `README`
+    /
+    `API_REFERENCE`
+    这类高入口又没有明确解释
+    builder
+    与
+    config/direct-context
+    的推荐写法差异
+
+- 这会让调用方很容易误读成：
+  - 三种写法都同等推荐
+  - 或者
+    `[sslVerifyNone]`
+    才是 direct-context/config
+    的 canonical guidance
+
+- 修复后，
+  活跃文档现在统一成：
+  - builder 禁用验证请显式用
+    `.WithVerifyNone`
+  - config/direct-context
+    当前 public no-verify 语义
+    统一写成：
+    `[]`
+  - 生产环境仍应优先启用验证
+
+- 这条文档线的重要意义在于：
+  最近 verify 相关批次
+  已经把
+  factory /
+  builder validation /
+  builder merge
+  的 runtime truth
+  拉平，
+  如果 high-entry docs
+  继续混讲，
+  调用方仍会回到
+  “接口看起来能用，
+  但不同入口语义像不是一套系统”
+  的感觉
+
 - builder merge verify semantics
   这一刀确认了
   builder verify

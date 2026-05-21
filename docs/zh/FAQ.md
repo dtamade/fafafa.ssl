@@ -40,7 +40,7 @@ LContext := TSSLContextBuilder.Create
 
 ```pascal
 // 方法1：禁用验证（不推荐用于生产）
-LContext.SetVerifyMode([sslVerifyNone]);
+LContext.SetVerifyMode([]);  // 当前 direct-context no-verify 入口；builder 请改用 WithVerifyNone
 
 // 方法2：添加自签名证书为可信（推荐）
 LContext.LoadCAFile('self-signed-ca.crt');

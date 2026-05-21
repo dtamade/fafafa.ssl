@@ -376,7 +376,7 @@ Context.SetVerifyMode([sslVerifyPeer]);
 Context.LoadCAFile('/etc/ssl/certs/ca-certificates.crt');
 
 // ❌ 不推荐: 禁用验证（仅用于测试）
-Context.SetVerifyMode([sslVerifyNone]);
+Context.SetVerifyMode([]);  // 当前 direct-context no-verify 入口；builder 请改用 WithVerifyNone
 ```
 
 ### 2. 协议版本
