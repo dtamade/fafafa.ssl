@@ -6,6 +6,79 @@
 
 ## 2026-05-21
 
+### Builder Merge Empty VerifyMode Clear Semantics
+
+- inspect merge verify-mode truth before editing:
+  - `src/fafafa.ssl.context.builder.pas`
+  - change:
+    - confirmed `ExportToJSON(...)`
+      always emits:
+      - `verify_modes`
+    - confirmed `ImportFromJSON(...)` and `ImportFromINI(...)`
+      can both produce:
+      - `FVerifyMode := []`
+    - confirmed `Merge(...)`
+      still only overwrote target verify mode when:
+      - `LVerify.Count > 0`
+    - important conclusion:
+      - source snapshots with explicit
+        `verify_modes = []`
+        were still unable to clear target
+        `[sslVerifyPeer]`
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-builder-merge-empty-verifymode-clear-semantics.md`
+  - `tests/contract/test_builder_merge_empty_verifymode_entry.pas`
+  - `tests/scripts/test_builder_merge_empty_verifymode_contract.sh`
+  - change:
+    - documented the batch as builder merge empty verify-mode clear semantics
+    - added a focused merge contract
+      to guard:
+      - JSON-imported source builder with
+        `verify_modes = []`
+      - INI-imported source builder with
+        `verify_modes=`
+      - merged builder warning parity with runtime no-verify truth
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_builder_merge_empty_verifymode_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_builder_merge_empty_verifymode_contract.sh`
+    - result: FAIL
+    - summary:
+      - script exited with code:
+        `2`
+      - important conclusion:
+        - merged builder did not report
+          `Certificate verification is disabled`
+        - source empty verify modes were still not clearing target
+          `[sslVerifyPeer]`
+
+- repair merge empty verify-mode clear semantics:
+  - `src/fafafa.ssl.context.builder.pas`
+  - change:
+    - removed the
+      `LVerify.Count > 0`
+      gate from
+      `Merge(...)`
+    - now `verify_modes`
+      is applied whenever the field exists in the source snapshot,
+      including an explicit empty array
+
+- verify focused merge empty verify-mode semantics:
+  - `bash -n tests/scripts/test_builder_merge_empty_verifymode_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_builder_merge_empty_verifymode_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed JSON-imported source empty verify modes now clear target into
+        `GetVerifyMode = []`
+      - confirmed INI-imported source empty verify modes now clear target into
+        `GetVerifyMode = []`
+      - confirmed both merged builders now emit the no-verify warning
+  - `git diff --check`
+    - result: PASS
+
 ### Builder Empty VerifyMode Validation Parity
 
 - inspect builder verify validation / import truth before editing:

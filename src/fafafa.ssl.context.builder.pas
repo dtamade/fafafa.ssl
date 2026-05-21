@@ -2619,12 +2619,9 @@ begin
     if LObj.IndexOfName('verify_modes') >= 0 then
     begin
       LVerify := LObj.Arrays['verify_modes'];
-      if LVerify.Count > 0 then
-      begin
-        FVerifyMode := [];
-        for I := 0 to LVerify.Count - 1 do
-          Include(FVerifyMode, TSSLVerifyMode(LVerify.Integers[I]));
-      end;
+      FVerifyMode := [];
+      for I := 0 to LVerify.Count - 1 do
+        Include(FVerifyMode, TSSLVerifyMode(LVerify.Integers[I]));
     end;
 
     // Merge other fields if non-empty

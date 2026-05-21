@@ -10,6 +10,117 @@
 
 ## Current Status
 
+- [completed] `builder Merge empty VerifyMode clear semantics`
+  当前 focused 目标：
+  - 修复
+    `Merge(...)`
+    在
+    source snapshot
+    显式携带
+    `verify_modes = []`
+    时仍把它当成“未覆盖”
+    而无法清空目标
+    verify mode
+    的语义 bug
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-builder-merge-empty-verifymode-clear-semantics.md`
+  - 新增 contract：
+    - `tests/contract/test_builder_merge_empty_verifymode_entry.pas`
+    - `tests/scripts/test_builder_merge_empty_verifymode_contract.sh`
+  - 更新：
+    - `src/fafafa.ssl.context.builder.pas`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_builder_merge_empty_verifymode_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_builder_merge_empty_verifymode_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前 truth：
+  - `ExportToJSON(...)`
+    当前总会导出：
+    - `verify_modes`
+  - `ImportFromJSON(...)`
+    /
+    `ImportFromINI(...)`
+    当前都可以把
+    builder 状态导成：
+    - `FVerifyMode = []`
+  - 但
+    `Merge(...)`
+    当前仍写成：
+    - `if LVerify.Count > 0 then`
+      才覆盖
+      `FVerifyMode`
+  当前状态：
+  - focused RED
+    已证明：
+    source builder
+    即便明确表达
+    `verify_modes = []`，
+    merge 后 target
+    仍会保留旧的
+    `[sslVerifyPeer]`
+  - 这会继续制造一条
+    builder 语义裂缝：
+    - import path
+      可以把 builder
+      变成
+      `[]`
+    - validation path
+      现在已经能识别
+      `[]`
+      是
+      no-verify
+    - 但 merge path
+      却还会把
+      这个显式空集合
+      当成“未覆盖”
+  修复后：
+  - `Merge(...)`
+    现在只要看到
+    `verify_modes`
+    字段存在，
+    就会按 source snapshot
+    覆盖：
+    - 非空数组
+    - 空数组 `[]`
+  - focused contract
+    现在已经同时证明：
+    - JSON 导入出的
+      empty verify modes
+      merge 后会触发
+      no-verify warning
+    - INI 导入出的
+      empty verify modes
+      merge 后会触发
+      no-verify warning
+    - 两条路径
+      merge 后 runtime
+      都真实落成：
+      `GetVerifyMode = []`
+  当前实施判断：
+  - builder verify
+    这条线
+    现在至少在：
+    - import
+    - merge
+    - validation
+    三个面上
+    已经不再把
+    `[]`
+    当成“空洞状态”
+  下一刀：
+  - 继续静态审查
+    active docs
+    是否仍把
+    `[]`
+    /
+    `[sslVerifyNone]`
+    混用成会误导调用方的
+    当前 public guidance
+
 - [completed] `builder empty VerifyMode validation parity`
   当前 focused 目标：
   - 修复

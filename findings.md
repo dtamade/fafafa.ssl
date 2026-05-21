@@ -2,6 +2,72 @@
 
 ## 2026-05-21
 
+- builder merge verify semantics
+  这一刀确认了
+  builder verify
+  线不只是
+  factory/config
+  与
+  validation
+  有裂缝，
+  `Merge(...)`
+  之前也还保留着
+  同类问题
+
+- 当前
+  `ExportToJSON(...)`
+  明明总会携带：
+  - `verify_modes`
+  但
+  `Merge(...)`
+  却只在
+  `LVerify.Count > 0`
+  时才覆盖目标
+  `FVerifyMode`
+
+- 这意味着：
+  source builder
+  即便已经显式表达：
+  - `verify_modes = []`
+  merge 后 target
+  仍会保留旧的
+  `[sslVerifyPeer]`
+
+- 这个问题之所以重要，
+  是因为它不是 isolated bug，
+  而是正好卡在
+  builder verify
+  语义对齐链的中间：
+  - import
+    能导入
+    `[]`
+  - validation
+    现在也能把
+    `[]`
+    识别成
+    no-verify
+  - 但 merge
+    却还会吞掉
+    这个空集合
+
+- 修复后，
+  `Merge(...)`
+  现在只要看到
+  `verify_modes`
+  字段存在，
+  就会按 source snapshot
+  覆盖目标 verify mode，
+  包括：
+  - 空数组 `[]`
+
+- 这使得 builder
+  在
+  import / merge / validation
+  三个关键面上，
+  对
+  `VerifyMode = []`
+  的解释终于进一步收敛成一致
+
 - builder verify validation
   这条线又暴露出一条
   runtime / validation
