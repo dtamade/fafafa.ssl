@@ -19737,6 +19737,135 @@
   - summary:
     - no whitespace or patch-format drift remains before commit
 
+### Facade Safety Surface Export Closure
+
+- inspect current type-safety surface continuity:
+  - `src/fafafa.ssl.safety.pas`
+  - `src/fafafa.ssl.pas`
+  - `tests/test_type_safety.pas`
+  - `README.md`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/guides/MIGRATION_GUIDE.md`
+  - change:
+    - confirmed the type-safety theme is still shipped:
+      - enums
+      - unit types
+      - generic patterns
+      - helper conversions
+    - confirmed the main facade previously did not explicitly absorb the
+      non-generic safety surface
+    - confirmed active docs barely described the current entrypoint truth
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-facade-safety-surface-export-closure.md`
+  - `tests/contract/test_facade_safety_surface_entry.pas`
+  - `tests/scripts/test_facade_safety_surface_export_contract.sh`
+  - change:
+    - recorded the batch as a bounded facade-closure repair
+    - added a compile-based probe for
+      `uses fafafa.ssl`
+      safety-surface access
+
+- verify first RED:
+  - `bash -n tests/scripts/test_facade_safety_surface_export_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_facade_safety_surface_export_contract.sh`
+    - result: RED
+    - summary:
+      - initial failure was:
+        `main facade must re-export TSSLVersion`
+      - this proved the issue was a real façade truth gap,
+        not just a documentation smell
+
+- first implementation attempt exposed a deeper boundary:
+  - `src/fafafa.ssl.pas`
+  - `tests/contract/test_facade_safety_surface_entry.pas`
+  - change:
+    - tried to mount
+      `TSecureData<T>`
+      /
+      `TResult<T, E>`
+      onto the facade as generic aliases
+  - verification:
+    - `fpc ... tests/contract/test_facade_safety_surface_entry.pas`
+      - result: RED
+      - summary:
+        - direct generic alias attempts failed with
+          FPC generic alias parsing/specialization errors
+        - important conclusion:
+          current truthful closure should be
+          non-generic façade export,
+          while generic patterns remain in
+          `fafafa.ssl.safety`
+
+- refine the batch from over-broad façade claim to source-truth closure:
+  - `src/fafafa.ssl.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - `README.md`
+  - `docs/guides/MIGRATION_GUIDE.md`
+  - `tests/contract/test_facade_safety_surface_entry.pas`
+  - `tests/scripts/test_facade_safety_surface_export_contract.sh`
+  - change:
+    - added explicit non-generic safety re-exports to the main facade:
+      - `TSSLVersion`
+      - `TSSLVersions`
+      - `TKeyType`
+      - `TCertificateFormat`
+      - `TCipherMode`
+      - `TVerificationMode`
+      - `TSessionCacheMode`
+      - `TCertificatePurpose`
+      - `TSignatureAlgorithm`
+      - `TEllipticCurve`
+      - `TKeySize`
+      - `TTimeoutDuration`
+      - `TBufferSize`
+    - added the corresponding safety enum constants to the main facade
+    - forwarded safety helper functions:
+      - `SSLVersionToString(...)`
+      - `StringToSSLVersion(...)`
+      - `KeyTypeToString(...)`
+      - `CertificateFormatToString(...)`
+      - `CipherModeToString(...)`
+      - `EllipticCurveToNID(...)`
+      - `EllipticCurveToString(...)`
+    - updated active docs to state the real boundary:
+      - façade re-exports non-generic safety surface
+      - generic `TSecureData<T>` / `TResult<T, E>`
+        still live in
+        `fafafa.ssl.safety`
+
+- verify compile/runtime truth:
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/test_facade_safety_surface_entry/units -FEtmp/test_facade_safety_surface_entry/bin -otmp/test_facade_safety_surface_entry/bin/test_facade_safety_surface_entry tests/contract/test_facade_safety_surface_entry.pas`
+    - result: PASS
+    - summary:
+      - `uses fafafa.ssl`
+        now compiles for the non-generic safety surface probe
+  - `tmp/test_facade_safety_surface_entry/bin/test_facade_safety_surface_entry`
+    - result: PASS
+    - summary:
+      - runtime checks for
+        `TSSLVersion`
+        /
+        `TKeyType`
+        /
+        `TCertificateFormat`
+        /
+        `TKeySize`
+        /
+        `TTimeoutDuration`
+        /
+        `TBufferSize`
+        all stayed green
+  - `bash tests/scripts/test_facade_safety_surface_export_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed source truth and active docs now describe the same entry boundary
+  - `git diff --check`
+    - result: PASS
+    - summary:
+      - no whitespace or patch-format drift remains before commit
+
 ### CODE_STYLE And Phase 2.4 Safety Doc Truth Alignment
 
 - inspect current active-style and historical-phase drift:

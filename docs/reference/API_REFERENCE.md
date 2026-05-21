@@ -26,6 +26,11 @@
 - `ISSLLibrary.SetDefaultConfig(...)` + `ISSLLibrary.CreateContext(AType)` 这条 direct-library path 现在也已对齐：client default-config 会 warning + ignore，server default-config 会 reject。
 - 新代码请优先使用 `TSSLConnectionBuilder.WithHostname(...)`、`ISSLClientConnection.SetServerName(...)`，或直接走 `TSSLConnector.Connect*(..., ServerName)`。
 
+## Type-Safety Surface Note
+
+`fafafa.ssl` 主门面当前也 re-export 这组 non-generic type-safety public surface（如 `TSSLVersion` / `TKeySize` / `TTimeoutDuration` / `TBufferSize`）；`TSecureData<T>` / `TResult<T, E>` 继续保留在 `fafafa.ssl.safety`。
+如果你只想单独使用这套类型安全工具而不引入 TLS bootstrap facade，也可以窄用 `fafafa.ssl.safety`。
+
 ---
 
 ## TSSLConfig Scope Buckets

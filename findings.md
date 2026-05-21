@@ -13334,3 +13334,72 @@
     但必须明确历史定位，
     且示例中的文件名 / 单元名
     仍要与当前源码说真话
+
+- `type-safety`
+  这条线这轮暴露的是
+  “feature 仍在，但 façade 吸收不完整”
+  的问题：
+  - `src/fafafa.ssl.safety.pas`
+    仍是活跃源码
+  - `tests/test_type_safety.pas`
+    仍是真实测试
+  - 但主门面之前没有显式收进
+    non-generic type-safety surface
+  - 活跃文档也没有把这个边界讲清楚
+
+- 这说明当前“接口设计完整”
+  不能只看：
+  - 有没有定义单元
+  - 有没有历史迁移稿
+  - 有没有孤立测试
+  还要看：
+  - 主门面是否真的把它吸收成当前 public surface
+  - 活跃 API 文档是否讲的是同一套入口
+
+- 这轮也给出了一个很重要的边界结论：
+  - `TSSLVersion`
+    /
+    `TKeySize`
+    /
+    `TTimeoutDuration`
+    /
+    `TBufferSize`
+    这组
+    non-generic safety surface
+    当前适合并入
+    `fafafa.ssl`
+  - 但
+    `TSecureData<T>`
+    /
+    `TResult<T, E>`
+    当前还不适合被说成
+    “已经稳定挂在主门面”
+
+- 这里不是主观保守，
+  而是被当前 FPC / 代码事实逼出来的真相：
+  - 我们尝试过把 generic pattern
+    做成 façade alias
+  - 编译期直接暴露出
+    generic alias 语法/解析障碍
+  - 所以当前更真实、更稳的 public truth
+    是：
+    - façade = non-generic safety surface
+    - `fafafa.ssl.safety` = generic pattern 窄入口
+
+- 当前更准确的文档与接口结论应明确保留：
+  - 普通调用方若要
+    `TSSLVersion`
+    /
+    `TKeySize`
+    /
+    `TTimeoutDuration`
+    /
+    `TBufferSize`
+    可直接
+    `uses fafafa.ssl`
+  - 若要
+    `TSecureData<T>`
+    /
+    `TResult<T, E>`
+    则继续
+    `uses fafafa.ssl.safety`

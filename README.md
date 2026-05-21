@@ -112,6 +112,7 @@ if Supports(Ctx, ISSLEarlyDataContext, EarlyDataCtx) then
 - **Rust 风格 Result**: TSSLDataResult, TSSLOperationResult
 - **流式 Builder**: TSSLContextBuilder, TSSLConnectionBuilder
 - **完整 Try 方法**: 无异常版本 API
+- `fafafa.ssl` 主门面当前也 re-export `TSSLVersion` / `TKeySize` / `TTimeoutDuration` / `TBufferSize` 这组 non-generic type-safety surface；`TSecureData<T>` / `TResult<T, E>` 继续保留在 `fafafa.ssl.safety`。
 
 ## Use replay-store opt-in for FreePascal early-data servers
 

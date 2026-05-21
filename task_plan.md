@@ -13996,3 +13996,83 @@
     `docs/reference/*`
     与其他活跃 guide
     里残留的旧 connection / type-safety surface drift
+
+### 2026-05-21 facade safety surface export closure
+
+- [completed] 当前新的 residual
+  已继续收窄到
+  `type-safety`
+  surface
+  与主门面的真实接缝：
+  - `src/fafafa.ssl.safety.pas`
+    和
+    `tests/test_type_safety.pas`
+    说明这套能力仍然是 shipped code
+  - 但 `src/fafafa.ssl.pas`
+    之前没有把
+    non-generic safety types / helpers
+    显式收进当前 facade truth
+  - 首轮探索也进一步确认：
+    `TSecureData<T>` /
+    `TResult<T, E>`
+    当前并不能稳定以 generic facade alias
+    形式挂进
+    `fafafa.ssl`
+- [completed] 最小正确修法已经落地：
+  - 新增
+    `docs/plans/2026-05-21-facade-safety-surface-export-closure.md`
+  - 新增
+    `tests/contract/test_facade_safety_surface_entry.pas`
+  - 新增
+    `tests/scripts/test_facade_safety_surface_export_contract.sh`
+  - `fafafa.ssl`
+    当前已补齐：
+    - `TSSLVersion`
+    - `TSSLVersions`
+    - `TKeyType`
+    - `TCertificateFormat`
+    - `TCipherMode`
+    - `TVerificationMode`
+    - `TSessionCacheMode`
+    - `TCertificatePurpose`
+    - `TSignatureAlgorithm`
+    - `TEllipticCurve`
+    - `TKeySize`
+    - `TTimeoutDuration`
+    - `TBufferSize`
+    - 对应 enum constants
+    - `SSLVersionToString(...)`
+      / `StringToSSLVersion(...)`
+      / `KeyTypeToString(...)`
+      / `CertificateFormatToString(...)`
+      / `CipherModeToString(...)`
+      / `EllipticCurveToNID(...)`
+      / `EllipticCurveToString(...)`
+  - 活跃文档当前也已明确：
+    - `fafafa.ssl`
+      当前只 re-export
+      non-generic type-safety surface
+    - `TSecureData<T>` /
+      `TResult<T, E>`
+      继续保留在
+      `fafafa.ssl.safety`
+- [completed] 当前批收口后的默认下一步：
+  - `bash -n tests/scripts/test_facade_safety_surface_export_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_facade_safety_surface_export_contract.sh`
+    - PASS
+  - `fpc ... tests/contract/test_facade_safety_surface_entry.pas`
+    - PASS
+  - `tmp/test_facade_safety_surface_entry/bin/test_facade_safety_surface_entry`
+    - PASS
+  - `git diff --check`
+    - PASS
+  - 当前已具备
+    commit / push
+    条件
+  - 收口后继续从
+    non-generic facade closure
+    转向
+    “哪些安全类型仍只停留在 isolated unit/tests，
+    尚未进入真实实现路径”
+    的下一刀

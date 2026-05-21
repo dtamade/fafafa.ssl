@@ -44,6 +44,7 @@ interface
 uses
   SysUtils, Classes,
   fafafa.ssl.base,
+  fafafa.ssl.safety,
   fafafa.ssl.exceptions,
   fafafa.ssl.factory,
   fafafa.ssl.tls,
@@ -98,6 +99,21 @@ type
   TSSLOperationResult = fafafa.ssl.base.TSSLOperationResult;
   TSSLDataResult = fafafa.ssl.base.TSSLDataResult;
   TSSLStringResult = fafafa.ssl.base.TSSLStringResult;
+
+  // 从 fafafa.ssl.safety 导出 - type-safety supporting surface
+  TSSLVersion = fafafa.ssl.safety.TSSLVersion;
+  TSSLVersions = fafafa.ssl.safety.TSSLVersions;
+  TKeyType = fafafa.ssl.safety.TKeyType;
+  TCertificateFormat = fafafa.ssl.safety.TCertificateFormat;
+  TCipherMode = fafafa.ssl.safety.TCipherMode;
+  TVerificationMode = fafafa.ssl.safety.TVerificationMode;
+  TSessionCacheMode = fafafa.ssl.safety.TSessionCacheMode;
+  TCertificatePurpose = fafafa.ssl.safety.TCertificatePurpose;
+  TSignatureAlgorithm = fafafa.ssl.safety.TSignatureAlgorithm;
+  TEllipticCurve = fafafa.ssl.safety.TEllipticCurve;
+  TKeySize = fafafa.ssl.safety.TKeySize;
+  TTimeoutDuration = fafafa.ssl.safety.TTimeoutDuration;
+  TBufferSize = fafafa.ssl.safety.TBufferSize;
   
   ESSLException = fafafa.ssl.exceptions.ESSLException;
   ESSLHandshakeException = fafafa.ssl.exceptions.ESSLHandshakeException;
@@ -217,6 +233,72 @@ const
   sslHashSHA3_256 = fafafa.ssl.base.sslHashSHA3_256;
   sslHashSHA3_512 = fafafa.ssl.base.sslHashSHA3_512;
   sslHashBLAKE2b = fafafa.ssl.base.sslHashBLAKE2b;
+
+  // type-safety enum constants
+  sslv_TLS10 = fafafa.ssl.safety.sslv_TLS10;
+  sslv_TLS11 = fafafa.ssl.safety.sslv_TLS11;
+  sslv_TLS12 = fafafa.ssl.safety.sslv_TLS12;
+  sslv_TLS13 = fafafa.ssl.safety.sslv_TLS13;
+
+  kt_RSA = fafafa.ssl.safety.kt_RSA;
+  kt_EC = fafafa.ssl.safety.kt_EC;
+  kt_DSA = fafafa.ssl.safety.kt_DSA;
+  kt_Ed25519 = fafafa.ssl.safety.kt_Ed25519;
+  kt_Ed448 = fafafa.ssl.safety.kt_Ed448;
+  kt_X25519 = fafafa.ssl.safety.kt_X25519;
+  kt_X448 = fafafa.ssl.safety.kt_X448;
+
+  cf_PEM = fafafa.ssl.safety.cf_PEM;
+  cf_DER = fafafa.ssl.safety.cf_DER;
+  cf_PKCS12 = fafafa.ssl.safety.cf_PKCS12;
+  cf_PKCS7 = fafafa.ssl.safety.cf_PKCS7;
+
+  cm_GCM = fafafa.ssl.safety.cm_GCM;
+  cm_CBC = fafafa.ssl.safety.cm_CBC;
+  cm_CTR = fafafa.ssl.safety.cm_CTR;
+  cm_CCM = fafafa.ssl.safety.cm_CCM;
+  cm_OCB = fafafa.ssl.safety.cm_OCB;
+
+  vm_None = fafafa.ssl.safety.vm_None;
+  vm_Peer = fafafa.ssl.safety.vm_Peer;
+  vm_FailIfNoPeerCert = fafafa.ssl.safety.vm_FailIfNoPeerCert;
+  vm_ClientOnce = fafafa.ssl.safety.vm_ClientOnce;
+  vm_PostHandshake = fafafa.ssl.safety.vm_PostHandshake;
+
+  scm_Off = fafafa.ssl.safety.scm_Off;
+  scm_Client = fafafa.ssl.safety.scm_Client;
+  scm_Server = fafafa.ssl.safety.scm_Server;
+  scm_Both = fafafa.ssl.safety.scm_Both;
+
+  cp_Any = fafafa.ssl.safety.cp_Any;
+  cp_ServerAuth = fafafa.ssl.safety.cp_ServerAuth;
+  cp_ClientAuth = fafafa.ssl.safety.cp_ClientAuth;
+  cp_CodeSigning = fafafa.ssl.safety.cp_CodeSigning;
+  cp_EmailProtection = fafafa.ssl.safety.cp_EmailProtection;
+  cp_TimeStamping = fafafa.ssl.safety.cp_TimeStamping;
+  cp_OCSPSigning = fafafa.ssl.safety.cp_OCSPSigning;
+
+  sa_RSA_PKCS1_SHA1 = fafafa.ssl.safety.sa_RSA_PKCS1_SHA1;
+  sa_RSA_PKCS1_SHA256 = fafafa.ssl.safety.sa_RSA_PKCS1_SHA256;
+  sa_RSA_PKCS1_SHA384 = fafafa.ssl.safety.sa_RSA_PKCS1_SHA384;
+  sa_RSA_PKCS1_SHA512 = fafafa.ssl.safety.sa_RSA_PKCS1_SHA512;
+  sa_RSA_PSS_SHA256 = fafafa.ssl.safety.sa_RSA_PSS_SHA256;
+  sa_RSA_PSS_SHA384 = fafafa.ssl.safety.sa_RSA_PSS_SHA384;
+  sa_RSA_PSS_SHA512 = fafafa.ssl.safety.sa_RSA_PSS_SHA512;
+  sa_ECDSA_SHA256 = fafafa.ssl.safety.sa_ECDSA_SHA256;
+  sa_ECDSA_SHA384 = fafafa.ssl.safety.sa_ECDSA_SHA384;
+  sa_ECDSA_SHA512 = fafafa.ssl.safety.sa_ECDSA_SHA512;
+  sa_Ed25519 = fafafa.ssl.safety.sa_Ed25519;
+  sa_Ed448 = fafafa.ssl.safety.sa_Ed448;
+
+  ec_P256 = fafafa.ssl.safety.ec_P256;
+  ec_P384 = fafafa.ssl.safety.ec_P384;
+  ec_P521 = fafafa.ssl.safety.ec_P521;
+  ec_X25519 = fafafa.ssl.safety.ec_X25519;
+  ec_X448 = fafafa.ssl.safety.ec_X448;
+  ec_BrainpoolP256 = fafafa.ssl.safety.ec_BrainpoolP256;
+  ec_BrainpoolP384 = fafafa.ssl.safety.ec_BrainpoolP384;
+  ec_BrainpoolP512 = fafafa.ssl.safety.ec_BrainpoolP512;
   
   // 协议版本常量
   sslProtocolSSL2 = fafafa.ssl.base.sslProtocolSSL2;
@@ -304,6 +386,15 @@ function SSLErrorToString(AError: TSSLErrorCode): string;
 function ProtocolVersionToString(AVersion: TSSLProtocolVersion): string;
 function LibraryTypeToString(ALibType: TSSLLibraryType): string;
 
+// type-safety supporting helper surface
+function SSLVersionToString(AVersion: TSSLVersion): string;
+function StringToSSLVersion(const AStr: string): TSSLVersion;
+function KeyTypeToString(AType: TKeyType): string;
+function CertificateFormatToString(AFormat: TCertificateFormat): string;
+function CipherModeToString(AMode: TCipherMode): string;
+function EllipticCurveToNID(ACurve: TEllipticCurve): Integer;
+function EllipticCurveToString(ACurve: TEllipticCurve): string;
+
 // capability / native-handle public helper surface
 function IsCipherSupported(const ACaps: TSSLBackendCapabilities;
                           ACipher: TSSLCipher): Boolean;
@@ -377,6 +468,41 @@ end;
 function LibraryTypeToString(ALibType: TSSLLibraryType): string;
 begin
   Result := fafafa.ssl.base.LibraryTypeToString(ALibType);
+end;
+
+function SSLVersionToString(AVersion: TSSLVersion): string;
+begin
+  Result := fafafa.ssl.safety.SSLVersionToString(AVersion);
+end;
+
+function StringToSSLVersion(const AStr: string): TSSLVersion;
+begin
+  Result := fafafa.ssl.safety.StringToSSLVersion(AStr);
+end;
+
+function KeyTypeToString(AType: TKeyType): string;
+begin
+  Result := fafafa.ssl.safety.KeyTypeToString(AType);
+end;
+
+function CertificateFormatToString(AFormat: TCertificateFormat): string;
+begin
+  Result := fafafa.ssl.safety.CertificateFormatToString(AFormat);
+end;
+
+function CipherModeToString(AMode: TCipherMode): string;
+begin
+  Result := fafafa.ssl.safety.CipherModeToString(AMode);
+end;
+
+function EllipticCurveToNID(ACurve: TEllipticCurve): Integer;
+begin
+  Result := fafafa.ssl.safety.EllipticCurveToNID(ACurve);
+end;
+
+function EllipticCurveToString(ACurve: TEllipticCurve): string;
+begin
+  Result := fafafa.ssl.safety.EllipticCurveToString(ACurve);
 end;
 
 function IsCipherSupported(const ACaps: TSSLBackendCapabilities;

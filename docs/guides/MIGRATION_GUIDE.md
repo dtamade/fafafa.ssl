@@ -17,6 +17,7 @@
 4. 可选能力要以后端 capability truth 为准，不要默认所有 backend 都完全同构。
 
 旧的 context-level SNI 写入口当前都只应视为 compatibility-only 兼容面；具体仍保留哪些 literal API 名称，以 `docs/reference/API_REFERENCE.md` 为准。
+如果你在新代码里要直接使用 `TSSLVersion` / `TKeySize` / `TTimeoutDuration` / `TBufferSize`，当前可以直接从 `fafafa.ssl` 取得；若你要使用 `TSecureData<T>` / `TResult<T, E>` 这组 generic pattern，则继续单独 `uses fafafa.ssl.safety`。
 
 ## 从旧版 fafafa.ssl 迁移
 
