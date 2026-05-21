@@ -27262,3 +27262,83 @@
     - result: PASS
   - `git diff --check`
     - result: PASS
+
+### Facade Builder/Diagnostic Supporting-Type Export Closure
+
+- inspect the next live main-facade supporting-type residual after the option-surface closeout:
+  - `src/fafafa.ssl.pas`
+  - `src/fafafa.ssl.context.builder.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - confirmed
+      the next high-value gap
+      is not another option/interface alias,
+      but supporting records already referenced by active public surfaces
+    - confirmed
+      builder validation methods
+      still depended on
+      `TBuildValidationResult`
+      while the main facade
+      still lacked the alias
+    - confirmed
+      `TSSLDiagnosticInfo.ErrorHistory`
+      still depended on
+      `TSSLErrorRecord`
+      while the main facade
+      still lacked that alias too
+
+- add a focused plan and compile-based contract for the builder/diagnostic supporting types:
+  - `docs/plans/2026-05-21-facade-builder-diagnostic-supporting-type-export-closure.md`
+  - `tests/contract/test_facade_builder_diagnostic_supporting_types_entry.pas`
+  - `tests/scripts/test_facade_builder_diagnostic_supporting_types_export_contract.sh`
+  - change:
+    - locked
+      source re-export truth for
+      `TBuildValidationResult`
+      and
+      `TSSLErrorRecord`
+    - locked
+      a
+      `uses fafafa.ssl, fafafa.ssl.context.builder`
+      compile-run proof
+      for the builder/diagnostic supporting surface
+
+- establish focused RED before repairing the main facade:
+  - `bash -n tests/scripts/test_facade_builder_diagnostic_supporting_types_export_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_facade_builder_diagnostic_supporting_types_export_contract.sh`
+    - result: FAIL
+    - summary:
+      - `src/fafafa.ssl.pas`
+        still lacked
+        `TBuildValidationResult = fafafa.ssl.base.TBuildValidationResult;`
+
+- repair the builder/diagnostic supporting-type surface:
+  - `src/fafafa.ssl.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - re-exported
+      `TBuildValidationResult`
+      and
+      `TSSLErrorRecord`
+      from the main facade
+    - recorded
+      in
+      `API_REFERENCE`
+      that ordinary builder/diagnostics callers
+      can keep using
+      the main facade
+      instead of falling back to
+      `fafafa.ssl.base`
+
+- verify the focused closeout:
+  - `bash tests/scripts/test_facade_builder_diagnostic_supporting_types_export_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_facade_option_surface_export_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_facade_certificate_supporting_types_export_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS

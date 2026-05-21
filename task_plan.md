@@ -17778,3 +17778,91 @@
     调用方静态编译踩坑的
     supporting type / const
     残口
+
+### 2026-05-21 facade builder/diagnostic supporting-type export closure
+
+- [completed] 当前新的 residual
+  已继续收窄到
+  主门面
+  `src/fafafa.ssl.pas`
+  的两条 supporting-type compile gap：
+  - `fafafa.ssl.context.builder`
+    的
+    `Validate*`
+    /
+    `Build*WithValidation(...)`
+    都依赖
+    `TBuildValidationResult`
+  - `TSSLDiagnosticInfo.ErrorHistory`
+    则依赖
+    `TSSLErrorRecord`
+  - 但主门面之前仍未 re-export：
+    - `TBuildValidationResult`
+    - `TSSLErrorRecord`
+
+- [completed] focused RED
+  已通过
+  新增的
+  `tests/scripts/test_facade_builder_diagnostic_supporting_types_export_contract.sh`
+  压实：
+  - 首轮结果：
+    - FAIL
+      `main facade must re-export TBuildValidationResult`
+  - 说明这不是
+    文档措辞
+    或
+    测试 mock
+    的问题，
+    而是主门面 supporting-type completeness
+    本身仍不闭合
+
+- [completed] 最小正确修法已经落地：
+  - 新增
+    `docs/plans/2026-05-21-facade-builder-diagnostic-supporting-type-export-closure.md`
+  - 新增
+    `tests/contract/test_facade_builder_diagnostic_supporting_types_entry.pas`
+  - 新增
+    `tests/scripts/test_facade_builder_diagnostic_supporting_types_export_contract.sh`
+  - 更新：
+    - `src/fafafa.ssl.pas`
+    - `docs/reference/API_REFERENCE.md`
+  - 当前主门面
+    已明确补齐：
+    - `TBuildValidationResult`
+    - `TSSLErrorRecord`
+  - `API_REFERENCE`
+    也已明确记录：
+    - builder validation
+      与
+      diagnostics error-history
+      supporting types
+      不需要再回退
+      `fafafa.ssl.base`
+
+- [completed] 当前批收口后的默认下一步：
+  - `bash -n tests/scripts/test_facade_builder_diagnostic_supporting_types_export_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_facade_builder_diagnostic_supporting_types_export_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_facade_option_surface_export_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_facade_optional_owner_surface_export_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_facade_certificate_supporting_types_export_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  - 当前已具备
+    commit / push
+    条件
+  - 收口后继续沿
+    main facade completeness
+    主线往前，
+    优先寻找
+    下一个仍会让
+    facade-only
+    或
+    facade+builder
+    调用方静态编译踩坑的
+    supporting type / helper
+    残口

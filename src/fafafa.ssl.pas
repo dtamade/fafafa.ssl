@@ -93,6 +93,7 @@ type
   PSSLConfig = fafafa.ssl.base.PSSLConfig;
   TSSLStatistics = fafafa.ssl.base.TSSLStatistics;
   PSSLStatistics = fafafa.ssl.base.PSSLStatistics;
+  TSSLErrorRecord = fafafa.ssl.base.TSSLErrorRecord;
   TSSLHealthStatus = fafafa.ssl.base.TSSLHealthStatus;
   TSSLPerformanceMetrics = fafafa.ssl.base.TSSLPerformanceMetrics;
   TSSLDiagnosticInfo = fafafa.ssl.base.TSSLDiagnosticInfo;
@@ -102,6 +103,7 @@ type
   TSSLOperationResult = fafafa.ssl.base.TSSLOperationResult;
   TSSLDataResult = fafafa.ssl.base.TSSLDataResult;
   TSSLStringResult = fafafa.ssl.base.TSSLStringResult;
+  TBuildValidationResult = fafafa.ssl.base.TBuildValidationResult;
 
   // 从 fafafa.ssl.safety 导出 - type-safety supporting surface
   TSSLVersion = fafafa.ssl.safety.TSSLVersion;

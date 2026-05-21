@@ -220,6 +220,7 @@ end;
 - config/direct-context 当前 public no-verify 语义是 `[]`；
 - 这两条都会落成 no-verify runtime truth，但生产环境仍应优先启用验证。
 - `ValidateClient` 会继续把未启用 `sslVerifyPeer` 视为 no-verify 并给出生产风险 warning；但 `ValidateServer` 不会再把显式 `.WithVerifyNone` / `VerifyMode := []` 的普通单向 TLS server 误报成这条 client-only 警告。
+- 主门面 `fafafa.ssl` 当前也 re-export `TBuildValidationResult`；使用 `fafafa.ssl.context.builder` 时不需要回退 `fafafa.ssl.base` 才能接住 `Validate*` / `Build*WithValidation(...)` 的结果。
 
 ### Use builder opt-ins for server contexts
 
@@ -1526,6 +1527,7 @@ end;
 
 - 用于错误历史跟踪
 - 连接维护最近 10 个错误的循环缓冲区
+- 主门面 `fafafa.ssl` 当前也 re-export `TSSLErrorRecord`；与 `TSSLDiagnosticInfo` 一起使用时不需要回退 `fafafa.ssl.base`。
 
 #### TSSLDiagnosticInfo
 

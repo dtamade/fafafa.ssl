@@ -16827,3 +16827,57 @@
     字段类型
     之前却还没一起导出
   - 这是比单纯文档漂移更直接的库设计闭环问题
+
+- 顺着同一条
+  main facade completeness
+  主线继续往下压后，
+  又确认了同类但更靠近推荐 builder/diagnostics 路径的两条真实 compile gap：
+  - `fafafa.ssl.context.builder`
+    的
+    `Validate*`
+    /
+    `Build*WithValidation(...)`
+    都明确依赖
+    `TBuildValidationResult`
+  - `TSSLDiagnosticInfo.ErrorHistory`
+    则明确依赖
+    `TSSLErrorRecord`
+  - 但主门面
+    `src/fafafa.ssl.pas`
+    之前仍未 re-export
+    这两个 supporting types
+
+- 这说明
+  当前主门面残口
+  不只是
+  “core/context option 常量没补齐”，
+  还包括
+  “推荐高入口路径已经把 supporting type 暴露给调用方，
+  但 facade 入口还没跟上”
+  ：
+  - builder validation
+    已经属于
+    `fafafa.ssl + fafafa.ssl.context.builder`
+    的 active public path
+  - diagnostics
+    则已经由
+    `ISSLDiagnostics`
+    /
+    `TSSLDiagnosticInfo`
+    主线公开
+
+- focused RED
+  已把这条判断压实：
+  - 新增
+    `tests/scripts/test_facade_builder_diagnostic_supporting_types_export_contract.sh`
+    首轮即报：
+    - `main facade must re-export TBuildValidationResult`
+
+- 这让当前路线又更清晰了一层：
+  - 继续做
+    main facade completeness
+    是对的
+  - 但应该优先补：
+    - 已被 public API 直接引用的 supporting types
+    - 而不是为了“看起来完整”
+      去泛化导出所有 base 内部辅助类型
