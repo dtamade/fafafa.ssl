@@ -17,6 +17,8 @@
 7. [工厂模式](#工厂模式)
 8. [扩展性设计](#扩展性设计)
 9. [v1.1 架构改进](#v11-架构改进)
+10. [当前路线与演进边界](#当前路线与演进边界)
+11. [参考资料](#参考资料)
 
 ---
 
@@ -574,25 +576,28 @@ fafafa.ssl 使用的设计模式：
 
 ---
 
-## 未来架构演进
+## 当前路线与演进边界
 
-### 短期（v1.2-v1.3）
+当前执行顺序与产品路线以 [ROADMAP.md](ROADMAP.md) 为准。
+当前 release/runtime 结论请看 [test_reports/RELEASE_READINESS_V1.5.0.md](test_reports/RELEASE_READINESS_V1.5.0.md)。
+当前下一条更大的 completeness 主线，继续以 [plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md](plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md) 为候选入口。
 
-- [ ] 添加更多可选接口（PKCS#11, DANE）
-- [ ] 增强能力矩阵系统
-- [ ] 改进错误处理机制
+这份根层 `ARCHITECTURE.md` 当前只负责：
 
-### 中期（v2.0）
+- 当前 public entrypoint 与 backend/layering 总览
+- connection-side owner surface 与 optional interface 的架构关系
+- backend file layout / factory / priority 这类当前 shipped truth
 
-- [ ] 继续提升 `FreePascal` backend 的 TLS 1.3 / cipher-suite parity 与 runtime proof 完整度
-- [ ] 异步 I/O 支持
-- [ ] 内存池优化
+这页不再继续承载：
 
-### 长期（v3.0）
+- `v1.2-v1.3` / `v2.0` / `v3.0` 这类 future-version 路线桶
+- 已发布项目的历史阶段待办清单
+- release/runtime 状态公告牌
 
-- [ ] 完整的纯 Pascal TLS 1.2/1.3 实现
-- [ ] 零依赖、单二进制部署
-- [ ] FIPS 140-2 认证支持
+如果后续要继续推进架构演进：
+
+- 架构分层真相继续回到本页与 `docs/reference/ARCHITECTURE.md`
+- 执行顺序、批次优先级、完成度判断继续回到 `ROADMAP.md` 与对应 `docs/plans/...`
 
 ---
 

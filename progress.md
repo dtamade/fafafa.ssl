@@ -27046,3 +27046,125 @@
     - result: PASS
   - `git diff --check`
     - result: PASS
+
+### ARCHITECTURE Current Route Truth Alignment
+
+- re-check whether `TSSLConfig` is still a live immediate next-step candidate:
+  - `bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_tsslconfig_migration_targets_contract.sh`
+    - result: PASS
+  - change:
+    - confirmed
+      `TSSLConfig`
+      current contracts
+      are still green
+    - dropped
+      the idea of
+      reopening
+      `TSSLConfig`
+      as an immediate
+      next batch
+
+- inspect the next live high-entry route drift instead of forcing an already-closed lane:
+  - `docs/ARCHITECTURE.md`
+  - `docs/guides/5_MINUTE_QUICKSTART.md`
+  - `docs/CAPABILITY_MATRIX_GUIDE.md`
+  - change:
+    - confirmed
+      root
+      `ARCHITECTURE.md`
+      still self-identifies as
+      current
+      `v1.5.0`
+      architecture overview
+    - confirmed
+      the same page
+      still carried
+      stale
+      `未来架构演进`
+      /
+      `v1.2-v1.3`
+      /
+      `v2.0`
+      /
+      `v3.0`
+      route buckets
+    - confirmed
+      the root page
+      is still linked
+      from active high-entry docs,
+      so this is
+      a live guidance drift,
+      not archive residue
+
+- add a focused batch record and route-truth contract:
+  - `docs/plans/2026-05-21-architecture-current-route-truth-alignment.md`
+  - `tests/scripts/test_architecture_current_route_truth_contract.sh`
+  - change:
+    - froze
+      that root
+      `ARCHITECTURE.md`
+      must point
+      route / release /
+      completeness follow-up
+      back to
+      current truth sources
+    - explicitly rejected
+      the old
+      future-version
+      route buckets
+
+- establish focused RED before editing the architecture overview:
+  - `bash -n tests/scripts/test_architecture_current_route_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_architecture_current_route_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - `ARCHITECTURE`
+        still lacked
+        the
+        `当前路线与演进边界`
+        section
+
+- repair the root architecture overview route boundary:
+  - `docs/ARCHITECTURE.md`
+  - change:
+    - updated
+      the table of contents
+      to include
+      the
+      current-route
+      section
+    - replaced
+      the stale
+      `未来架构演进`
+      version buckets
+      with
+      `当前路线与演进边界`
+    - explicitly pointed
+      route decisions
+      back to:
+      - `ROADMAP.md`
+      - `RELEASE_READINESS_V1.5.0.md`
+      - the
+        current backend
+        completeness roadmap
+    - clarified
+      that root
+      `ARCHITECTURE.md`
+      no longer carries
+      historical phase buckets
+      or release-status snapshots
+
+- verify the focused closeout:
+  - `bash tests/scripts/test_architecture_current_route_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_architecture_current_public_entrypoint_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_architecture_optional_owner_surface_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS

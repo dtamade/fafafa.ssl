@@ -10,6 +10,72 @@
 
 ## Current Status
 
+- [completed] `architecture current route truth alignment`
+  当前 focused 目标：
+  - 收掉
+    根层
+    `docs/ARCHITECTURE.md`
+    里
+    仍会把读者拉回
+    `v1.2-v1.3`
+    /
+    `v2.0`
+    /
+    `v3.0`
+    旧版本路线桶
+    的
+    live roadmap drift，
+    让这份
+    “当前架构总览”
+    重新只负责：
+    - 当前 public entrypoint
+    - owner-surface / layering
+    - backend layout / factory truth
+    - 当前路线指针
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-architecture-current-route-truth-alignment.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_architecture_current_route_truth_contract.sh`
+  - 更新：
+    - `docs/ARCHITECTURE.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_architecture_current_route_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_architecture_current_route_truth_contract.sh`
+    - RED -> PASS
+  - `bash tests/scripts/test_architecture_current_public_entrypoint_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_architecture_optional_owner_surface_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - 根层
+    `ARCHITECTURE.md`
+    必须：
+    - 指回
+      `ROADMAP.md`
+      与
+      `RELEASE_READINESS_V1.5.0.md`
+    - 指回当前
+      backend completeness
+      候选主线
+    - 不再继续承载
+      旧 future-version
+      路线桶
+  当前批收口后的默认下一步：
+  - 不再把
+    `TSSLConfig`
+    已绿合同
+    误当 immediate next step
+  - 继续优先寻找
+    真正仍活着的
+    implementation /
+    active-doc /
+    facade completeness
+    residual
+
 - [completed] `active guide convenience-helper truth alignment`
   当前 focused 目标：
   - 收掉

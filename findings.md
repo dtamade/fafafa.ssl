@@ -16685,3 +16685,94 @@
       /
       façade
       这类更大的 live debt
+
+- 继续按这个路线复核后，
+  这轮先确认了一条重要的
+  “不要误开批次”
+  结论：
+  - `TSSLConfig`
+    当前三条主合同
+    都继续 PASS：
+    - `test_tsslconfig_scope_bucket_truth_contract`
+    - `test_tsslconfig_active_guidance_truth_contract`
+    - `test_tsslconfig_migration_targets_contract`
+  - 这说明
+    `TSSLConfig`
+    当前已经不是
+    即时 live batch，
+    至少不该因为旧 handoff
+    再被默认当成
+    immediate next step
+
+- 同一轮顺着高入口总览页继续看后，
+  当前真正还活着的 route drift
+  出现在根层
+  `docs/ARCHITECTURE.md`
+  ：
+  - 页头已经写成：
+    - `v1.5.0`
+    - `当前架构总览（已对齐 v1.5.0 public truth）`
+  - 但尾部仍保留：
+    - `## 未来架构演进`
+    - `### 短期（v1.2-v1.3）`
+    - `### 中期（v2.0）`
+    - `### 长期（v3.0）`
+  - 这会把
+    当前架构总览
+    与
+    历史版本路线桶
+    混成一页
+
+- 这条 drift 的价值很高，
+  因为根层
+  `ARCHITECTURE.md`
+  仍被高入口页继续引用：
+  - `docs/guides/5_MINUTE_QUICKSTART.md`
+  - `docs/CAPABILITY_MATRIX_GUIDE.md`
+  - 也就是说，
+    这不是 archive-only
+    残影，
+    而是会继续影响
+    读者对当前路线、
+    当前完成度、
+    当前下一批工作的判断
+
+- 因而这批的最小正确修法
+  不是再重写整份架构页，
+  而是只做
+  current-route truth alignment：
+  - 保留当前
+    public entrypoint /
+    owner-surface /
+    backend layout
+    总览
+  - 去掉旧的
+    future-version
+    路线桶
+  - 明确把：
+    - 当前执行顺序
+      指回
+      `ROADMAP.md`
+    - 当前 release/runtime
+      指回
+      `RELEASE_READINESS_V1.5.0.md`
+    - 当前更大的
+      completeness 主线
+      指回
+      `2026-03-25`
+      那份 roadmap
+
+- 这也让当前 workflow
+  又收紧了一层：
+  - 现在不只是
+    “不要重开已关闭 concern”
+  - 还明确成：
+    - 当某条设计债
+      的 focused contracts
+      已全部绿色时，
+      不应再凭旧路线手感
+      把它继续排成下一批
+    - 下一批应改看
+      当前高入口文档
+      是否还在发布
+      过期路线 truth
