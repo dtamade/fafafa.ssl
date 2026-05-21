@@ -9,8 +9,7 @@ program certificate_verification_example;
 
 uses
   SysUtils, Classes, Math,
-  fafafa.ssl.factory,
-  fafafa.ssl.base;
+  fafafa.ssl;
 
 procedure VerifyCertificateExample;
 var

@@ -6,6 +6,146 @@
 
 ## 2026-05-21
 
+### Top-Level Active Examples Public Import Truth
+
+- confirm previous batch CI truth before opening the next focused example batch:
+  - `gh run list --branch master --limit 4`
+  - `gh run view 26232483105`
+  - `gh run view 26232483105 --log-failed`
+  - change:
+    - confirmed
+      `fa819c0`
+      first failed
+      on
+      `Minimal Gate (Linux)`
+      artifact finalize
+      `403 Forbidden`
+    - confirmed
+      source gate itself
+      was not the failure
+    - reran
+      `26232483105`
+      and rechecked
+      `gh run list`
+      until
+      result became
+      PASS
+
+- inspect remaining top-level example import residuals before editing:
+  - `src/fafafa.ssl.pas`
+  - `examples/example_factory_usage.pas`
+  - `examples/certificate_verification_example.pas`
+  - `examples/winssl_https_downloader.pas`
+  - `examples/05_https_server.pas`
+  - `examples/06_digital_signature.pas`
+  - `examples/08_mutual_tls.pas`
+  - change:
+    - confirmed
+      `ISSLLibrary`
+      /
+      `ISSLContext`
+      /
+      `ISSLConnection`
+      /
+      `ISSLClientConnection`
+      /
+      `ISSLCertificateStore`
+      /
+      `ISSLCertificate`
+      /
+      `ISSLSession`
+      /
+      `ISSLSessionResumption`
+      are already
+      re-exported by
+      `fafafa.ssl`
+    - confirmed
+      `example_factory_usage`
+      still touched
+      `SSL_LIBRARY_NAMES[...]`
+      from base-owner truth
+    - confirmed
+      `winssl_https_downloader`
+      has its own local
+      `ProtocolVersionToString`
+      helper,
+      so dropping
+      `fafafa.ssl.base`
+      there stays bounded
+
+- add focused batch record and create a dedicated top-level example import contract:
+  - `docs/plans/2026-05-21-top-level-active-examples-public-import-truth.md`
+  - `tests/scripts/test_top_level_active_examples_public_import_truth_contract.sh`
+  - change:
+    - froze
+      current top-level
+      example truth
+      around
+      `fafafa.ssl`
+      +
+      specialized units only where truly needed
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_top_level_active_examples_public_import_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_top_level_active_examples_public_import_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - `examples/example_factory_usage.pas`
+        still used
+        `fafafa.ssl.base`
+
+- repair top-level active examples public import truth:
+  - `examples/example_factory_usage.pas`
+  - `examples/certificate_verification_example.pas`
+  - `examples/winssl_https_downloader.pas`
+  - `examples/05_https_server.pas`
+  - `examples/06_digital_signature.pas`
+  - `examples/08_mutual_tls.pas`
+  - change:
+    - removed
+      obsolete
+      `fafafa.ssl.base`
+      /
+      `fafafa.ssl.factory`
+      imports
+      from all six top-level examples
+    - switched
+      `example_factory_usage`
+      from
+      `SSL_LIBRARY_NAMES[...]`
+      to
+      `LibraryTypeToString(...)`
+      so the file no longer reaches
+      base-owner constants directly
+
+- verify focused closeout:
+  - `bash -n tests/scripts/test_top_level_active_examples_public_import_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_top_level_active_examples_public_import_truth_contract.sh`
+    - result: PASS
+  - `fpc -B -Fu./src ... examples/example_factory_usage.pas`
+    - result: PASS
+  - `fpc -B -Fu./src ... examples/certificate_verification_example.pas`
+    - result: PASS
+  - `fpc -B -Fu./src ... examples/winssl_https_downloader.pas`
+    - result: PASS
+  - `fpc -B -Fu./src ... examples/05_https_server.pas`
+    - result: PASS
+  - `fpc -B -Fu./src ... examples/06_digital_signature.pas`
+    - result: PASS
+  - `fpc -B -Fu./src ... examples/08_mutual_tls.pas`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+  - note:
+    - compile logs
+      still contain
+      repo pre-existing
+      warnings/notes,
+      but no new failure
+      from this batch
+
 ### Security Entry Examples Public Import Truth
 
 - inspect remaining security-example import residuals before editing:

@@ -20,8 +20,7 @@ program digital_signature;
 
 uses
   SysUtils,
-  fafafa.ssl.base,
-  fafafa.ssl.factory,
+  fafafa.ssl,
   fafafa.ssl.openssl.api.types,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp;

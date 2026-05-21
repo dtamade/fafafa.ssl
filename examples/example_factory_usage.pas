@@ -14,8 +14,7 @@ program example_factory_usage;
 
 uses
   SysUtils, Classes, StrUtils,
-  fafafa.ssl.base,
-  fafafa.ssl.factory;
+  fafafa.ssl;
 
 procedure PrintSeparator(const Title: string = '');
 begin
@@ -57,7 +56,7 @@ begin
     begin
       try
         Lib := TSSLFactory.GetLibraryInstance(LibType);
-        WriteLn('  [', SSL_LIBRARY_NAMES[LibType], ']');
+        WriteLn('  [', LibraryTypeToString(LibType), ']');
         WriteLn('    版本: ', Lib.GetVersionString);
         WriteLn('    编译标志: ', Lib.GetCompileFlags);
         WriteLn('    支持 TLS 1.2: ', Lib.IsProtocolSupported(sslProtocolTLS12));
@@ -81,7 +80,7 @@ begin
 
   WriteLn('让 Factory 自动选择最佳库...');
   BestLib := TSSLFactory.DetectBestLibrary;
-  WriteLn('检测到: ', SSL_LIBRARY_NAMES[BestLib]);
+  WriteLn('检测到: ', LibraryTypeToString(BestLib));
 
   WriteLn('');
   WriteLn('使用自动检测创建库实例...');
@@ -90,7 +89,7 @@ begin
   if Assigned(Lib) then
   begin
     WriteLn('成功！');
-    WriteLn('  实际使用: ', SSL_LIBRARY_NAMES[Lib.GetLibraryType]);
+    WriteLn('  实际使用: ', LibraryTypeToString(Lib.GetLibraryType));
     WriteLn('  版本: ', Lib.GetVersionString);
   end
   else
@@ -206,7 +205,7 @@ begin
   Config.VerifyDepth := 10;
   Config.ALPNProtocols := 'h2,http/1.1';
   WriteLn('配置项:');
-  WriteLn('  库类型: ', SSL_LIBRARY_NAMES[Config.LibraryType]);
+  WriteLn('  库类型: ', LibraryTypeToString(Config.LibraryType));
   WriteLn('  上下文类型: 客户端');
   WriteLn('  协议版本: TLS 1.2 + 1.3');
   WriteLn('  验证深度: ', Config.VerifyDepth);

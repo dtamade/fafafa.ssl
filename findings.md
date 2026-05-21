@@ -2,6 +2,102 @@
 
 ## 2026-05-21
 
+- top-level active examples public import truth
+  这一刀确认的
+  不是
+  这批顶层活跃示例
+  真的还依赖
+  `fafafa.ssl.base`
+  /
+  `fafafa.ssl.factory`
+  才能工作，
+  而是
+  facade 导出面已经足够，
+  示例还在保留历史拆分入口
+
+- 当前更准确的收口是：
+  - `example_factory_usage`
+    唯一额外残留
+    不是接口缺口，
+    而是名称展示
+    仍直接读取
+    `SSL_LIBRARY_NAMES[...]`
+    这个
+    base-owner 常量；
+    当前应改走
+    `LibraryTypeToString(...)`
+  - `certificate_verification_example`
+    所需的
+    `ISSLCertificateStore`
+    /
+    `ISSLCertificate`
+    /
+    `TSSLCertVerifyResult`
+    当前都已可直接来自
+    `fafafa.ssl`
+  - `winssl_https_downloader`
+    /
+    `05_https_server`
+    /
+    `08_mutual_tls`
+    /
+    `06_digital_signature`
+    需要的
+    `ISSLLibrary`
+    /
+    `ISSLContext`
+    /
+    `TSSLFactory`
+    /
+    `sslOpenSSL`
+    /
+    `sslWinSSL`
+    等
+    也都已由主门面发布
+
+- 这说明
+  当前主线 residual
+  还在继续从
+  “高可见 examples 是否仍在教学旧入口”
+  收口，
+  而不是
+  新的 facade export 缺口
+
+- 这批还确认：
+  - `winssl_https_downloader`
+    自带本地
+    `ProtocolVersionToString`
+    helper，
+    所以这份示例
+    去掉
+    `fafafa.ssl.base`
+    后
+    不会再额外暴露
+    protocol owner-path 风险
+  - 顶层示例之外，
+    下一组更自然的收口面
+    是
+    `https_server/*`
+    /
+    `https_client/*`
+    这类 helper-linked examples
+
+- 当前外部 CI 真相也补了一条：
+  - 提交
+    `fa819c0`
+    的首轮 `CI`
+    红灯
+    不是源码回归，
+    而是
+    `Minimal Gate (Linux)` 的
+    `Upload evidence`
+    在 GitHub artifact finalize
+    阶段返回
+    `403 Forbidden`
+  - 同一 run
+    重跑后已转绿，
+    说明这是外部瞬时故障，
+    不是当前代码问题
 - security entry examples public import truth
   这一刀确认的
   不是

@@ -17,8 +17,7 @@ program https_server;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.base,
-  fafafa.ssl.factory;
+  fafafa.ssl;
 
 type
   { HTTP 方法枚举 }
@@ -441,4 +440,3 @@ end;
 begin
   DemonstrateHTTPSServer;
 end.
-

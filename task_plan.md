@@ -10,6 +10,83 @@
 
 ## Current Status
 
+- [completed] `top-level active examples public import truth`
+  当前 focused 目标：
+  - 收口
+    一组顶层活跃示例
+    仍在继续教学
+    `fafafa.ssl.base`
+    /
+    `fafafa.ssl.factory`
+    的旧入口漂移，
+    让这些高可见入口
+    回到
+    `fafafa.ssl`
+    为主的当前 public truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-top-level-active-examples-public-import-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_top_level_active_examples_public_import_truth_contract.sh`
+  - 更新：
+    - `examples/example_factory_usage.pas`
+    - `examples/certificate_verification_example.pas`
+    - `examples/winssl_https_downloader.pas`
+    - `examples/05_https_server.pas`
+    - `examples/06_digital_signature.pas`
+    - `examples/08_mutual_tls.pas`
+  当前预期 truth：
+  - 这批顶层活跃示例
+    普通入口
+    应回到
+    `fafafa.ssl`
+  - `example_factory_usage`
+    不应继续依赖
+    `SSL_LIBRARY_NAMES[...]`
+    ，而应走
+    `LibraryTypeToString(...)`
+  - `06_digital_signature`
+    仍保留
+    OpenSSL API specialized units，
+    但普通 SSL facade surface
+    不再拆回
+    `base`
+    /
+    `factory`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_top_level_active_examples_public_import_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_top_level_active_examples_public_import_truth_contract.sh`
+    - FAIL -> PASS
+    - RED summary:
+      - `examples/example_factory_usage.pas`
+        still used
+        `fafafa.ssl.base`
+  - focused compile proof：
+    - `examples/example_factory_usage.pas`
+      - PASS
+    - `examples/certificate_verification_example.pas`
+      - PASS
+    - `examples/winssl_https_downloader.pas`
+      - PASS
+    - `examples/05_https_server.pas`
+      - PASS
+    - `examples/06_digital_signature.pas`
+      - PASS
+    - `examples/08_mutual_tls.pas`
+      - PASS
+  - `git diff --check`
+    - PASS
+  当前批收口后的默认下一步：
+  - 若这组顶层活跃示例
+    拉绿，
+    继续收
+    `https_server/*`
+    /
+    `https_client/*`
+    helper-linked examples
+    的 residual import drift
+
 - [completed] `security entry examples public import truth`
   当前 focused 目标：
   - 收口
@@ -85,7 +162,6 @@
     其它 active examples / guides
     的 residual public-entry drift，
     不重开已关闭批次
-
 - [completed] `performance optimization guide public import truth`
   当前 focused 目标：
   - 收口
