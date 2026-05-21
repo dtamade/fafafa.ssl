@@ -10,6 +10,60 @@
 
 ## Current Status
 
+- [completed] `performance optimization guide public import truth`
+  当前 focused 目标：
+  - 收口
+    `PERFORMANCE_OPTIMIZATION_GUIDE`
+    中
+    owner-path 语义
+    已经是当前真相，
+    但示例导入
+    仍停在
+    `fafafa.ssl.base`
+    的 active import drift
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-performance-optimization-guide-public-import-truth.md`
+  - 新增 focused contract：
+    - `tests/contract/test_performance_optimization_guide_public_owner_surface_probe.pas`
+    - `tests/scripts/test_performance_optimization_guide_public_import_truth_contract.sh`
+  - 更新：
+    - `docs/guides/PERFORMANCE_OPTIMIZATION_GUIDE.md`
+  当前预期 truth：
+  - 性能优化指南
+    应继续保留
+    `ISSLSessionResumption`
+    /
+    `ISSLDiagnostics`
+    owner-path
+    语义
+  - 但普通导入
+    应回到
+    `fafafa.ssl`
+  当前 focused proof：
+  - `HEAD` snapshot
+    run
+    `tests/scripts/test_performance_optimization_guide_public_import_truth_contract.sh`
+    - FAIL
+    - summary:
+      - 性能指南示例
+        still used
+        `fafafa.ssl.base`
+  - `bash -n tests/scripts/test_performance_optimization_guide_public_import_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_performance_optimization_guide_public_import_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_mbedtls_session_resumption_doc_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前批收口后的默认下一步：
+  - 若这份高可见性能指南
+    拉绿，
+    再继续收口
+    其它 active guide/example
+    residual
+
 - [completed] `linux quickstart current public truth alignment`
   当前 focused 目标：
   - 收口

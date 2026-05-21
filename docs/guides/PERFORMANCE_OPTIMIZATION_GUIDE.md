@@ -26,7 +26,7 @@
 ```pascal
 uses
   SysUtils,
-  fafafa.ssl.base;
+  fafafa.ssl;
 
 var
   Conn1, Conn2: ISSLConnection;
@@ -66,7 +66,7 @@ mirror 保留；性能/诊断采样优先走 `ISSLDiagnostics`。
 
 ```pascal
 uses
-  fafafa.ssl.base;
+  fafafa.ssl;
 
 var
   Stream: TSSLStream;

@@ -6,6 +6,82 @@
 
 ## 2026-05-21
 
+### Performance Optimization Guide Public Import Truth
+
+- inspect active performance-guide import residual before editing:
+  - `docs/guides/PERFORMANCE_OPTIMIZATION_GUIDE.md`
+  - `src/fafafa.ssl.pas`
+  - `tests/scripts/test_active_owner_path_docs_alignment_contract.sh`
+  - `tests/scripts/test_mbedtls_session_resumption_doc_truth_contract.sh`
+  - change:
+    - confirmed
+      guide semantics
+      already prefer
+      `ISSLSessionResumption`
+      /
+      `ISSLDiagnostics`
+    - confirmed
+      remaining drift
+      is the sample import path
+      still using
+      `fafafa.ssl.base`
+    - confirmed
+      owner-surface types
+      used by the guide
+      are already re-exported
+      by
+      `fafafa.ssl`
+
+- add focused batch record and create a dedicated performance-guide import contract:
+  - `docs/plans/2026-05-21-performance-optimization-guide-public-import-truth.md`
+  - `tests/contract/test_performance_optimization_guide_public_owner_surface_probe.pas`
+  - `tests/scripts/test_performance_optimization_guide_public_import_truth_contract.sh`
+  - change:
+    - froze
+      the guide's current
+      public-import truth
+      around
+      `uses fafafa.ssl;`
+      while preserving
+      owner-path semantics
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_performance_optimization_guide_public_import_truth_contract.sh`
+    - result: PASS
+  - `HEAD` snapshot
+    temp-tree
+    run
+    `tests/scripts/test_performance_optimization_guide_public_import_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - guide samples
+        still used
+        `fafafa.ssl.base`
+
+- repair performance optimization guide public import truth:
+  - `docs/guides/PERFORMANCE_OPTIMIZATION_GUIDE.md`
+  - change:
+    - switched
+      both owner-path
+      samples
+      from
+      `fafafa.ssl.base`
+      to
+      `fafafa.ssl`
+    - kept
+      session-resumption
+      and diagnostics
+      owner-path wording
+      intact
+
+- verify focused closeout:
+  - `bash tests/scripts/test_performance_optimization_guide_public_import_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_mbedtls_session_resumption_doc_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### Linux Quickstart Current Public Truth Alignment
 
 - inspect active Linux quickstart residuals before editing:

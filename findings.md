@@ -2,6 +2,52 @@
 
 ## 2026-05-21
 
+- performance optimization guide public import truth
+  这一刀确认的
+  不是
+  性能指南还在讲错
+  owner-path 语义，
+  而是
+  它的语义已经回到当前真相，
+  但示例导入
+  仍停留在
+  `fafafa.ssl.base`
+
+- 当前更准确的收口是：
+  - `ISSLSessionResumption`
+    /
+    `ISSLDiagnostics`
+    /
+    `ISSLSession`
+    /
+    `TSSLPerformanceMetrics`
+    /
+    `TSSLStream`
+    当前都已可直接来自
+    `fafafa.ssl`
+  - 所以这份 active performance guide
+    当前残余
+    只是 public import truth
+    没有跟上
+    前面已经补齐的 façade surface
+
+- 这说明
+  当前 active docs
+  后续还要继续分层看：
+  - 有些残口是
+    语义错了
+  - 有些残口则是
+    语义已经对了，
+    但 public entry
+    还停在旧入口
+
+- focused RED
+  首轮暴露的是：
+  - `HEAD` 快照下
+    性能指南示例
+    仍未切回
+    `fafafa.ssl`
+
 - linux quickstart current public truth alignment
   这一刀确认的
   不是
