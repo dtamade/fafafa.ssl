@@ -10,6 +10,48 @@
 
 ## Current Status
 
+- [completed] `interface audit capability current-truth refresh`
+  当前 focused 目标：
+  - 把
+    `INTERFACE_DESIGN_AUDIT_V1.5.0`
+    里已经落后的
+    capability
+    结论
+    收回到当前真相
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-interface-audit-capability-current-truth-refresh.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_interface_audit_capability_current_truth_contract.sh`
+  - 目标更新：
+    - `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_interface_audit_capability_current_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_interface_audit_capability_current_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - capability runtime/source
+    当前已经
+    support-level-first
+  - legacy `Supports*`
+    当前更接近
+    compatibility projection baggage
+    而不是
+    live dual-truth blocker
+  当前批收口后的默认下一步：
+  - 总审查控制面
+    已不再被旧的 capability 结论误导
+  - 下一条更适合进入实现/设计决策的主残口
+    会更集中在：
+    `ISSLConnection` core-too-fat
+    /
+    `TSSLConfig` public-surface slimming
+    /
+    facade main-entry slimming
+
 - [completed] `active custom-cipher guidance truth alignment`
   当前 focused 目标：
   - 把 generic active docs 里

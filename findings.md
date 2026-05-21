@@ -2,6 +2,43 @@
 
 ## 2026-05-21
 
+- interface audit capability current-truth refresh
+  这一刀确认的
+  不是 capability runtime truth 还没收口，
+  而是
+  总审查报告
+  还停留在
+  更早一轮的
+  “dual-truth blocker”
+  口径
+
+- 当前更准确的分类是：
+  - paired capability
+    当前已经
+    support-level-first
+  - legacy `Supports*`
+    当前主要是
+    compatibility projection baggage
+  - 所以 capability 这条线
+    还保留 public-type debt，
+    但已经不是
+    “源码/serializer/diff/selector/docs
+    彼此不知道该信谁”
+    的状态
+
+- 这意味着
+  当前总路线图里
+  更值得优先投入的
+  已不再是
+  capability truth freeze
+  本身，
+  而是：
+  - `ISSLConnection`
+    core-too-fat
+  - `TSSLConfig`
+    mixed-scope public record
+  - facade 多历史路径并存
+
 - active custom-cipher guidance truth alignment
   这一刀确认的
   不是 runtime capability 又错了，

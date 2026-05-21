@@ -6,6 +6,80 @@
 
 ## 2026-05-21
 
+### Interface Audit Capability Current-Truth Refresh
+
+- inspect current audit/control-plane drift before editing:
+  - `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+  - `docs/BACKEND_CAPABILITY_MATRIX.md`
+  - `docs/MIGRATION_GUIDE_V1.1.md`
+  - `docs/reference/API_REFERENCE.md`
+  - `src/fafafa.ssl.base.pas`
+  - `tests/scripts/test_capability_precedence_docs_truth_contract.sh`
+  - change:
+    - confirmed current audit still listed
+      `能力矩阵仍然存在双真相`
+      as an active top-level problem
+    - confirmed this no longer matched current source/docs truth:
+      - support-level-first runtime/source comments
+      - support-level-first backend matrix
+      - support-level-first migration guide
+      - support-level-first API reference
+    - important conclusion:
+      - the remaining debt was now control-plane drift,
+        not unresolved capability precedence
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-interface-audit-capability-current-truth-refresh.md`
+  - `tests/scripts/test_interface_audit_capability_current_truth_contract.sh`
+  - change:
+    - documented the batch as interface-audit capability current-truth refresh
+    - added a focused contract to freeze:
+      - capability no longer classified as live dual-truth blocker
+      - audit must classify support-level as current truth
+      - audit must classify legacy `Supports*` as compatibility baggage
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_interface_audit_capability_current_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_interface_audit_capability_current_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - failed at:
+        `audit must explicitly state that capability runtime/source truth is no longer an unresolved dual-truth conflict`
+      - important conclusion:
+        - the stale control-plane classification was real current drift
+
+- repair focused contract quoting:
+  - `tests/scripts/test_interface_audit_capability_current_truth_contract.sh`
+  - change:
+    - converted backtick-bearing literal expectations to shell-safe quoting
+    - important conclusion:
+      - early failure at backend-matrix literal was a shell quoting bug,
+        not an evidence mismatch
+
+- repair audit current truth:
+  - `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+  - change:
+    - removed
+      `能力矩阵仍然存在双真相`
+      from the top active-problem summary
+    - reclassified capability from
+      live blocker
+      to
+      compatibility baggage with support-level-first truth already converged
+    - updated the capability section so it now points at:
+      - `NormalizeLegacyCapabilityBooleans(...)`
+      - support-level-first serializer / diff / selector
+      - current backend matrix / migration guide / API reference entry truth
+
+- verify focused closeout:
+  - `bash tests/scripts/test_interface_audit_capability_current_truth_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed audit capability section now matches current source/docs/contracts truth
+  - `git diff --check`
+    - result: PASS
+
 ### Active Custom-Cipher Guidance Truth Alignment
 
 - inspect active generic custom-cipher guidance before editing:

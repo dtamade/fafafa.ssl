@@ -8,15 +8,16 @@
 当前接口层不是“能不能用”的问题，而是“历史兼容表面和当前推荐路径并存，容易把设计判断带偏”。
 
 相比最初审计，context-level SNI 传播和 `ISSLServerConnection` 文档失真这两条 live drift 已明显收窄。
-当前最值得继续压的活跃问题，主要集中在四类：
+当前最值得继续压的活跃问题，主要集中在三类：
 - 核心 `ISSLConnection` 仍然太胖
 - `TSSLConfig` 仍然是 mixed-scope public record
-- 能力矩阵仍然存在双真相
 - 门面单元仍同时导出多条历史路径
 
-另外还有两条已经从 live drift 收成 compatibility / asymmetry baggage 的边界，仍需要在路线判断里明确记住：
+另外还有三条已经从 live drift 收成 compatibility / asymmetry baggage 的边界，仍需要在路线判断里明确记住：
 - context-level SNI 家族当前已经是 warning/reject/ignore 的 frozen compatibility surface
 - `ISSLServerConnection` 当前不再是活跃文档失真，但 server-side 对称扩展仍然缺位
+- capability public surface 的 runtime/source truth 已经不再是未分类的双真相冲突。
+- paired feature 当前已经收敛到 support-level-first；legacy `Supports*` 更接近 compatibility projection baggage。
 
 ## 主要问题
 
@@ -148,7 +149,7 @@
   - server-context
 - 当前最该避免的不是“所有字段立刻重构”，而是让 mixed-scope record 再次长出新的幻觉字段。
 
-### 5. 能力矩阵存在双真相
+### 5. capability public surface 仍带着 compatibility projection baggage，但主真相已收口
 **证据**
 - `src/fafafa.ssl.base.pas:623-694`
 - `src/fafafa.ssl.capability.serializer.pas:273-294, 488-526, 665-686, 823-861`
@@ -158,16 +159,29 @@
 - `src/fafafa.ssl.winssl.lib.pas:493-536`
 - `src/fafafa.ssl.mbedtls.lib.pas:471-506`
 - `src/fafafa.ssl.wolfssl.lib.pas:416-454`
+- `docs/BACKEND_CAPABILITY_MATRIX.md:34-45`
+- `docs/MIGRATION_GUIDE_V1.1.md:470-471`
+- `docs/reference/API_REFERENCE.md:1901-1902`
 
-既有布尔字段 `SupportsSNI` / `SupportsOCSPStapling` / `SupportsSessionTickets`，又有新字段 `SNISupport` / `OCSPStaplingSupport` / `SessionTicketsSupport`。
+public type 上仍然同时暴露：
+- legacy bool
+  - `SupportsSNI`
+  - `SupportsOCSPStapling`
+  - `SupportsSessionTickets`
+- support-level
+  - `SNISupport`
+  - `OCSPStaplingSupport`
+  - `SessionTicketsSupport`
 
 **影响**
-- 两套字段都能被序列化、diff、选择器消费，长期会漂移。
-- API 使用者不知道该信哪一套。
+- 类型表面仍然偏重，调用方第一次看到 record 时，仍可能疑惑为什么 paired feature 同时挂着 bool 和 support-level。
+- capability public surface 的 runtime/source truth 已经不再是未分类的双真相冲突。
+- serializer / diff / selector / 活跃文档入口 当前都已经按 support-level-first 收平。
 
 **建议**
-- 选一套作为真相源，另一套只做兼容派生。
-- 过渡期里至少在 serializer 和 selector 里明确 precedence。
+- 继续把 support-level 视为 paired feature 的主真相。
+- 继续把 legacy `Supports*` 视为 compatibility projection，而不是普通一等推荐读取面。
+- 如果未来要做 `v2` public-type slimming，再讨论是否把这组 legacy projection 从主 record 降级或拆出。
 
 ### 6. 门面单元还在同时导出多条历史路径
 **证据**
