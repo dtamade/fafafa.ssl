@@ -2,6 +2,86 @@
 
 ## 2026-05-21
 
+- tsslconfig timeout owner truth resync
+  这一刀确认的
+  不是
+  `HandshakeTimeout`
+  的 scope
+  又被写坏了，
+  而是
+  owner-path
+  已经在
+  `ISSLConnection`
+  主线里
+  收口之后，
+  factory /
+  direct-library
+  reject 文案
+  与
+  高入口 example
+  还停在
+  `ISSLConnection.SetTimeout(...)`
+  这条旧 mirror 说法
+
+- 当前更准确的收口是：
+  - 构建阶段
+    继续优先：
+    - `TSSLConnector.WithTimeout(...)`
+    - `TSSLAcceptor.WithTimeout(...)`
+  - 连接创建后若需要 runtime override，
+    当前默认 owner
+    应优先写成：
+    - `ISSLConnectionControl.SetTimeout(...)`
+  - `ISSLConnection.SetTimeout(...)`
+    继续只是
+    `v1.x`
+    convenience / compatibility mirror
+
+- 这说明
+  `TSSLConfig`
+  这条 mixed-scope 线
+  当前更容易反弹的
+  不是
+  主设计图，
+  而是
+  已经存在的 owner-path
+  没有回写到
+  reject wording
+  和活跃 example
+
+- focused RED
+  首轮暴露的就是
+  真实 drift：
+  - `src/fafafa.ssl.factory.pas`
+    仍提示
+    `ISSLConnection.SetTimeout`
+  - `src/fafafa.ssl.context.config.pas`
+    仍提示
+    `ISSLConnection.SetTimeout`
+  - `docs/reference/ARCHITECTURE.md`
+    仍把
+    connection-scoped timeout
+    导向旧 mirror
+  - `examples/example_factory_usage.pas`
+    仍把
+    握手超时
+    教成
+    `TSSLConnector.WithTimeout / ISSLConnection.SetTimeout`
+
+- 这批还顺手暴露并修掉了
+  一处 focused contract
+  自身的脚本质量问题：
+  - 新增断言字符串里
+    的反引号
+    被双引号包住，
+    `bash`
+    会把它误当成命令替换执行
+  - 虽然不会让合同 fail，
+    但会制造
+    `command not found`
+    噪音；
+    已一并修正
+
 - isslconnection convenience contract truth resync
   这一刀确认的
   不是

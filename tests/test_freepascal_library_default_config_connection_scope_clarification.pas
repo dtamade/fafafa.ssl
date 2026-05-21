@@ -105,7 +105,7 @@ begin
     'ISSLLibrary.CreateContext(AType) with custom library HandshakeTimeout',
     @SetLibraryHandshakeTimeout,
     'HandshakeTimeout',
-    'TSSLConnector.WithTimeout'
+    'ISSLConnectionControl.SetTimeout'
   );
 end;
 

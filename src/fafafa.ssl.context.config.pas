@@ -88,7 +88,7 @@ begin
     (AConfig.HandshakeTimeout <> SSL_DEFAULT_HANDSHAKE_TIMEOUT) then
     raise ESSLConfigurationException.CreateWithContext(
       'HandshakeTimeout is connection-scoped. Use TSSLConnector.WithTimeout, ' +
-      'TSSLAcceptor.WithTimeout, or ISSLConnection.SetTimeout instead of ' + ACallSite + '.',
+      'TSSLAcceptor.WithTimeout, or ISSLConnectionControl.SetTimeout instead of ' + ACallSite + '.',
       sslErrConfiguration,
       ACallSite,
       0,

@@ -176,7 +176,7 @@ begin
     ACreator,
     @SetLibraryHandshakeTimeout,
     'HandshakeTimeout',
-    'TSSLConnector.WithTimeout'
+    'ISSLConnectionControl.SetTimeout'
   );
 
   TestHeader(ABackendName + ' direct-library path rejects custom BufferSize');

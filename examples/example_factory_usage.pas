@@ -212,7 +212,7 @@ begin
   WriteLn('  验证深度: ', Config.VerifyDepth);
   WriteLn('  服务器名称: 在连接上单独设置');
   WriteLn('  ALPN: ', Config.ALPNProtocols);
-  WriteLn('  握手超时: 通过 TSSLConnector.WithTimeout / ISSLConnection.SetTimeout 配置');
+  WriteLn('  握手超时: 通过 TSSLConnector.WithTimeout / ISSLConnectionControl.SetTimeout 配置');
   WriteLn('  缓冲策略: 通过外围 socket / stream / transport 配置');
 
   WriteLn('');

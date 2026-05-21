@@ -326,7 +326,7 @@ end;
 - **connection-scoped**
   - `HandshakeTimeout`
   - `BufferSize`
-  - 这两个字段不属于 context/factory/direct-library config 主路径，应改走 `TSSLConnector.WithTimeout` / `ISSLConnection.SetTimeout` 或外围 IO/transport 配置。
+  - 这两个字段不属于 context/factory/direct-library config 主路径，应改走 `TSSLConnector.WithTimeout` / `ISSLConnectionControl.SetTimeout` 或外围 IO/transport 配置。
 - **compatibility-only**
   - `ServerName`
     - 当前是 deprecated context-level compatibility field；client 侧主路径应改走 per-connection SNI。

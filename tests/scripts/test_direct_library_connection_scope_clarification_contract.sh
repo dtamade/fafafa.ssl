@@ -17,11 +17,11 @@ require_fixed() {
   fi
 }
 
-require_fixed 'factory request path 和 direct-library context path 都不接受它们的自定义值；请改走 `TSSLConnector.WithTimeout` / `TSSLAcceptor.WithTimeout` / `ISSLConnection.SetTimeout` 或外围 transport / IO 配置。' \
+require_fixed 'factory request path 和 direct-library context path 都不接受它们的自定义值；请改走 `TSSLConnector.WithTimeout` / `TSSLAcceptor.WithTimeout`，连接创建后若需要 runtime override 则优先走 `ISSLConnectionControl.SetTimeout(...)`，其余 buffer 策略继续放在外围 transport / IO 配置。' \
   "$api_ref" \
   "API reference no longer states that direct-library context path rejects connection-scoped timeout/buffer defaults"
 
-require_fixed '这两个字段不属于 context/factory/direct-library config 主路径，应改走 `TSSLConnector.WithTimeout` / `ISSLConnection.SetTimeout` 或外围 IO/transport 配置。' \
+require_fixed '这两个字段不属于 context/factory/direct-library config 主路径，应改走 `TSSLConnector.WithTimeout` / `ISSLConnectionControl.SetTimeout` 或外围 IO/transport 配置。' \
   "$arch_ref" \
   "Architecture reference no longer states that direct-library context path rejects connection-scoped timeout/buffer defaults"
 
@@ -31,6 +31,9 @@ require_fixed 'procedure ValidateDirectLibraryConnectionScope(const AConfig: TSS
 require_fixed 'HandshakeTimeout is connection-scoped. Use TSSLConnector.WithTimeout, ' \
   "$shared_helper" \
   "shared direct-library validator no longer mentions HandshakeTimeout replacement path"
+require_fixed 'ISSLConnectionControl.SetTimeout instead of ' \
+  "$shared_helper" \
+  "shared direct-library validator no longer points to the current timeout runtime owner"
 require_fixed 'BufferSize is not a context-scoped direct-library option. Configure buffering in the surrounding ' \
   "$shared_helper" \
   "shared direct-library validator no longer mentions BufferSize replacement path"

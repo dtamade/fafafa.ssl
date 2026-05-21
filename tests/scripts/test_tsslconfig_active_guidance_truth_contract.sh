@@ -39,9 +39,9 @@ require_absent "Config.BufferSize :=" \
 require_absent "Config.HandshakeTimeout :=" \
   "$example_file" \
   "example_factory_usage should not keep teaching HandshakeTimeout as a factory/context config field"
-require_fixed "握手超时: 通过 TSSLConnector.WithTimeout / ISSLConnection.SetTimeout 配置" \
+require_fixed "握手超时: 通过 TSSLConnector.WithTimeout / ISSLConnectionControl.SetTimeout 配置" \
   "$example_file" \
-  "example_factory_usage no longer redirects handshake timeout to connection-level APIs"
+  "example_factory_usage no longer redirects handshake timeout to the current connection-control owner API"
 require_fixed "缓冲策略: 通过外围 socket / stream / transport 配置" \
   "$example_file" \
   "example_factory_usage no longer redirects buffering to transport-level configuration"
@@ -61,6 +61,9 @@ require_fixed "**context-scoped**" \
 require_fixed "**connection-scoped**" \
   "$arch_doc" \
   "reference/ARCHITECTURE no longer lists connection-scoped TSSLConfig fields"
+require_fixed '`TSSLConnector.WithTimeout` / `ISSLConnectionControl.SetTimeout`' \
+  "$arch_doc" \
+  "reference/ARCHITECTURE no longer points connection-scoped timeout fields at the current owner path"
 require_fixed "**compatibility-only**" \
   "$arch_doc" \
   "reference/ARCHITECTURE no longer lists compatibility-only TSSLConfig fields"

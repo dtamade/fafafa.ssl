@@ -10,6 +10,88 @@
 
 ## Current Status
 
+- [completed] `tsslconfig timeout owner truth resync`
+  当前 focused 目标：
+  - 把
+    `TSSLConfig.HandshakeTimeout`
+    这条线里
+    已经成立的
+    `ISSLConnectionControl`
+    owner-path
+    重新同步回
+    factory /
+    direct-library
+    reject 文案、
+    architecture 参考、
+    高入口 example
+    和 focused tests
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-tsslconfig-timeout-owner-truth-resync.md`
+  - 更新 source / docs：
+    - `src/fafafa.ssl.factory.pas`
+    - `src/fafafa.ssl.context.config.pas`
+    - `docs/reference/ARCHITECTURE.md`
+    - `examples/example_factory_usage.pas`
+  - 更新 focused contracts / targeted tests：
+    - `tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+    - `tests/scripts/test_direct_library_connection_scope_clarification_contract.sh`
+    - `tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+    - `tests/test_factory_connection_scope_clarification.pas`
+    - `tests/test_freepascal_library_default_config_connection_scope_clarification.pas`
+    - `tests/test_clibrary_library_default_config_connection_scope_clarification.pas`
+  当前 focused proof：
+  - `bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_direct_library_connection_scope_clarification_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+    - PASS
+  - `fpc ... tests/test_factory_connection_scope_clarification.pas`
+    + runtime
+    - PASS
+  - `fpc ... tests/test_freepascal_library_default_config_connection_scope_clarification.pas`
+    + runtime
+    - PASS
+  - `fpc ... tests/test_clibrary_library_default_config_connection_scope_clarification.pas`
+    + runtime
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - `HandshakeTimeout`
+    当前推荐路径
+    已重新统一为：
+    - 构建阶段：
+      `TSSLConnector.WithTimeout(...)`
+      /
+      `TSSLAcceptor.WithTimeout(...)`
+    - 连接创建后 runtime override：
+      优先通过
+      `ISSLConnectionControl.SetTimeout(...)`
+    - `ISSLConnection.SetTimeout(...)`
+      继续只是
+      `v1.x`
+      compatibility mirror
+  当前批收口后的默认下一步：
+  - `HandshakeTimeout`
+    这条 mixed-scope 迁移线
+    当前不再被旧 reject wording
+    和旧 example
+    拉回
+    `ISSLConnection`
+    core mirror
+  - 下一条更值得继续压的 residual
+    会继续集中在：
+    `TSSLConfig.ServerName`
+    compatibility-only
+    真相
+    与
+    option-bridge
+    booleans
+    的高入口 guidance / contract
+    一致性
+
 - [completed] `isslconnection convenience contract truth resync`
   当前 focused 目标：
   - 修复

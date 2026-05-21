@@ -6,6 +6,130 @@
 
 ## 2026-05-21
 
+### TSSLConfig Timeout Owner Truth Resync
+
+- inspect current timeout owner truth across source/docs/contracts before editing:
+  - `src/fafafa.ssl.factory.pas`
+  - `src/fafafa.ssl.context.config.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/ARCHITECTURE.md`
+  - `examples/example_factory_usage.pas`
+  - `tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+  - `tests/scripts/test_direct_library_connection_scope_clarification_contract.sh`
+  - `tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+  - change:
+    - confirmed
+      `API_REFERENCE`
+      and
+      `ISSLConnection`
+      source comments
+      had already moved
+      timeout runtime owner
+      to
+      `ISSLConnectionControl.SetTimeout(...)`
+    - confirmed
+      factory/direct-library reject wording
+      plus
+      active guidance/example
+      still pointed to
+      `ISSLConnection.SetTimeout(...)`
+    - important conclusion:
+      - this was a real owner-truth drift on active guidance / reject wording,
+        not a design rollback
+
+- add focused batch record and update focused tests first:
+  - `docs/plans/2026-05-21-tsslconfig-timeout-owner-truth-resync.md`
+  - `tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+  - `tests/scripts/test_direct_library_connection_scope_clarification_contract.sh`
+  - `tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+  - `tests/test_factory_connection_scope_clarification.pas`
+  - `tests/test_freepascal_library_default_config_connection_scope_clarification.pas`
+  - `tests/test_clibrary_library_default_config_connection_scope_clarification.pas`
+  - change:
+    - tightened focused checks to require
+      `ISSLConnectionControl.SetTimeout`
+      in
+      reject wording
+      and
+      active guidance
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+    - result: PASS
+  - `bash -n tests/scripts/test_direct_library_connection_scope_clarification_contract.sh`
+    - result: PASS
+  - `bash -n tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - factory reject wording
+        still did not mention
+        `ISSLConnectionControl.SetTimeout`
+  - `bash tests/scripts/test_direct_library_connection_scope_clarification_contract.sh`
+    - result: FAIL
+    - summary:
+      - `ARCHITECTURE`
+        still pointed
+        connection-scoped timeout
+        to old mirror wording
+  - `bash tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - `example_factory_usage`
+        still taught
+        `ISSLConnection.SetTimeout`
+
+- repair source/doc truth:
+  - `src/fafafa.ssl.factory.pas`
+  - `src/fafafa.ssl.context.config.pas`
+  - `docs/reference/ARCHITECTURE.md`
+  - `examples/example_factory_usage.pas`
+  - change:
+    - updated request-path / direct-library
+      `HandshakeTimeout`
+      reject wording
+      to point at
+      `ISSLConnectionControl.SetTimeout`
+    - updated architecture reference
+      and factory example
+      to teach the same owner path
+
+- fix a contract-script quality regression discovered during verification:
+  - `tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+  - change:
+    - replaced a double-quoted pattern containing backticks
+      with a single-quoted literal,
+      removing noisy
+      `command not found`
+      shell substitutions
+
+- verify focused closeout:
+  - `bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_direct_library_connection_scope_clarification_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+    - result: PASS
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_factory_connection_scope_clarification -FEtmp/test_factory_connection_scope_clarification -otmp/test_factory_connection_scope_clarification/test_factory_connection_scope_clarification tests/test_factory_connection_scope_clarification.pas && ./tmp/test_factory_connection_scope_clarification/test_factory_connection_scope_clarification`
+    - result: PASS
+    - summary:
+      - request path
+        and
+        library-default path
+        both reject
+        custom
+        `HandshakeTimeout`
+        /
+        `BufferSize`
+        and now point to the current owner/replacement surfaces
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_freepascal_library_default_config_connection_scope_clarification -FEtmp/test_freepascal_library_default_config_connection_scope_clarification -otmp/test_freepascal_library_default_config_connection_scope_clarification/test_freepascal_library_default_config_connection_scope_clarification tests/test_freepascal_library_default_config_connection_scope_clarification.pas && ./tmp/test_freepascal_library_default_config_connection_scope_clarification/test_freepascal_library_default_config_connection_scope_clarification`
+    - result: PASS
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_clibrary_library_default_config_connection_scope_clarification -FEtmp/test_clibrary_library_default_config_connection_scope_clarification -otmp/test_clibrary_library_default_config_connection_scope_clarification/test_clibrary_library_default_config_connection_scope_clarification tests/test_clibrary_library_default_config_connection_scope_clarification.pas && ./tmp/test_clibrary_library_default_config_connection_scope_clarification/test_clibrary_library_default_config_connection_scope_clarification`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### ISSLConnection Convenience Contract Truth Resync
 
 - inspect current convenience-source / design-doc / contract drift before editing:

@@ -96,6 +96,8 @@ require_fixed "LogCallback is library-scoped. Configure logging through ISSLLibr
   "$factory_file" "factory no longer rejects request-scoped LogCallback overrides as library-scoped"
 require_fixed "HandshakeTimeout is connection-scoped. Use TSSLConnector.WithTimeout, " \
   "$factory_file" "factory no longer names HandshakeTimeout as connection-scoped"
+require_fixed "ISSLConnectionControl.SetTimeout instead of " \
+  "$factory_file" "factory no longer points HandshakeTimeout callers at the current runtime owner"
 require_fixed "BufferSize is not a context-scoped factory option. Configure buffering in the surrounding " \
   "$factory_file" "factory no longer rejects BufferSize as a non-context-scoped option"
 require_fixed "received TSSLConfig.ServerName as deprecated context-level SNI compatibility" \

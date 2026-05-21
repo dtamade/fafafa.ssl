@@ -112,7 +112,7 @@ begin
     'CreateContext(AConfig) with custom HandshakeTimeout',
     Config,
     'HandshakeTimeout',
-    'TSSLConnector.WithTimeout'
+    'ISSLConnectionControl.SetTimeout'
   );
 end;
 
@@ -152,7 +152,7 @@ begin
     'CreateContext(AContextType, ALibType) with custom library HandshakeTimeout',
     @SetLibraryHandshakeTimeout,
     'HandshakeTimeout',
-    'TSSLConnector.WithTimeout'
+    'ISSLConnectionControl.SetTimeout'
   );
 end;
 
