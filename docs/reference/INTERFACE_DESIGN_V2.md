@@ -193,13 +193,23 @@ if Supports(LConn, ISSLConnectionControl, LControl) then
 ```pascal
 TBaseSSLConnection = class(TInterfacedObject,
   ISSLConnection,
-  ISSLClientConnection,
   ISSLConnectionControl,
-  ISSLConnectionInfo,
   ISSLDiagnostics,
   ISSLSessionResumption,
   ISSLCertificateVerification,
-  ISSLOCSPStapling)
+  ISSLConnectionInfo)
+```
+
+`TBaseSSLConnection` 当前不直接承载 `ISSLClientConnection` / `ISSLNativeHandleAccess` / `ISSLOCSPStapling`。
+`ISSLClientConnection` / `ISSLNativeHandleAccess` / `ISSLOCSPStapling` 改由 backend-specific subclasses 按 capability / runtime truth 显式挂载。
+
+```pascal
+TOpenSSLConnection = class(TBaseSSLConnection, ISSLClientConnection,
+  ISSLNativeHandleAccess)
+TOpenSSLOCSPConnection = class(TOpenSSLConnection, ISSLOCSPStapling)
+
+TFreePascalConnection = class(TBaseSSLConnection, ISSLClientConnection,
+  ISSLEarlyDataConnection, ISSLOCSPStapling, ...)
 ```
 
 ---
@@ -282,10 +292,10 @@ if Supports(FSSLConn, ISSLSessionResumption, LSession) then
 ## 实施计划
 
 1. **Phase 1**: 创建新的扩展接口定义
-2. **Phase 2**: 更新 TBaseSSLConnection 实现所有接口
-3. **Phase 3**: 更新所有后端实现
+2. **Phase 2**: 让 `TBaseSSLConnection` 承载 shared owner / mirror surfaces
+3. **Phase 3**: 由 backend connection subclasses 按 capability 挂上 `ISSLClientConnection` / `ISSLNativeHandleAccess` / `ISSLOCSPStapling`
 4. **Phase 4**: 更新测试和文档
-5. **Phase 5**: 标记旧方法为 deprecated（保持兼容）
+5. **Phase 5**: 对 residual core mirrors 做 deprecated alignment（保持兼容）
 
 ---
 

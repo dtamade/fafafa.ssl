@@ -16421,3 +16421,94 @@
   `ISSLConnection` 更像下一条真正还在前面的主残口：
   - 它直接决定 core/optional 分层是否继续失焦
   - 也比继续扫旧 proof 更接近“接口设计完整”这个总目标
+
+- 沿着这条
+  `ISSLConnection`
+  主残口继续往下看后，
+  当前最先暴露出来的
+  不是新的 runtime bug，
+  而是一个会直接扭曲后续设计判断的文档锚点漂移：
+  - `docs/reference/INTERFACE_DESIGN_V2.md`
+    的
+    `### 实现类`
+    区块
+    仍把
+    `TBaseSSLConnection`
+    画成直接实现：
+    - `ISSLClientConnection`
+    - `ISSLOCSPStapling`
+
+- 但当前 source truth
+  明确不是这样：
+  - `src/fafafa.ssl.connection.base.pas`
+    的 base class
+    只承载：
+    - `ISSLConnection`
+    - `ISSLConnectionControl`
+    - `ISSLDiagnostics`
+    - `ISSLSessionResumption`
+    - `ISSLCertificateVerification`
+    - `ISSLConnectionInfo`
+  - `ISSLClientConnection`
+    /
+    `ISSLNativeHandleAccess`
+    /
+    `ISSLOCSPStapling`
+    都是在 backend-specific subclasses
+    按 capability / runtime truth
+    显式追加
+
+- 这类 drift 的危险点在于：
+  - 它会把
+    “base 承载 shared owner / mirror，
+    subclass 承载 optional surface”
+    这条当前真实分层
+    讲胖
+  - 后续只要继续参考这份设计文档，
+    就会更容易把
+    optional interface
+    误解成
+    “本来就该全挂在 base 上”
+
+- focused RED
+  直接证明这里仍是 live drift：
+  - 更新后的
+    `tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+    首轮即报：
+    - `INTERFACE_DESIGN_V2 still describes TBaseSSLConnection as directly implementing client/native OCSP optional interfaces`
+
+- 因而这一刀的正确修法
+  不是去碰生产代码，
+  而是把设计锚点修回 current truth：
+  - `INTERFACE_DESIGN_V2`
+    的 base-class 代码块
+    改回 source truth
+  - 明确写出：
+    - `TBaseSSLConnection`
+      不直接承载
+      `ISSLClientConnection`
+      /
+      `ISSLNativeHandleAccess`
+      /
+      `ISSLOCSPStapling`
+    - 这三组 surface
+      改由 backend-specific subclasses
+      按 capability / runtime truth
+      显式挂载
+  - phase 说明
+    也同步改成
+    “base 承载 shared owner / mirror，
+    subclass 挂 optional surface”
+
+- 这批收口后，
+  `ISSLConnection`
+  主线的设计锚点又进一步回到了：
+  - 不先假设
+    base class
+    应该胖到把所有 optional interface
+    一次性吃进去
+  - 真正 remaining 的工作
+    继续是
+    哪些 surface
+    仍该留在 core，
+    哪些只应通过 owner / optional path 暴露

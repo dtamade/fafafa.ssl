@@ -17380,3 +17380,98 @@
       主线，
       而不是
       再回头做旧 closeout proof
+
+### 2026-05-21 INTERFACE_DESIGN_V2 base-connection owner truth
+
+- [completed] 当前新的 residual
+  已从
+  “README 入口会不会继续讲窄”
+  进一步收敛到
+  一个更关键的设计锚点漂移：
+  - `docs/reference/INTERFACE_DESIGN_V2.md`
+    的
+    `### 实现类`
+    区块
+    仍把
+    `TBaseSSLConnection`
+    画成直接实现：
+    - `ISSLClientConnection`
+    - `ISSLOCSPStapling`
+  - 但当前 source truth
+    实际是：
+    - base class
+      只承载
+      shared owner / mirror surfaces
+    - `ISSLClientConnection`
+      /
+      `ISSLNativeHandleAccess`
+      /
+      `ISSLOCSPStapling`
+      都由 backend-specific subclasses
+      显式追加
+
+- [completed] focused RED
+  已先通过
+  更新后的
+  `tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+  压实：
+  - 当前文档
+    仍在发布
+    “`TBaseSSLConnection` 直接实现 client/native/OCSP optional surface”
+    的旧心智
+  - 首轮结果：
+    - FAIL
+      `INTERFACE_DESIGN_V2 still describes TBaseSSLConnection as directly implementing client/native OCSP optional interfaces`
+
+- [completed] 最小正确修法已经落地：
+  - 新增
+    `docs/plans/2026-05-21-interface-design-v2-base-connection-owner-truth.md`
+  - 更新：
+    - `docs/reference/INTERFACE_DESIGN_V2.md`
+    - `tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+  - 当前 `INTERFACE_DESIGN_V2`
+    已明确改回：
+    - `TBaseSSLConnection`
+      只实现：
+      - `ISSLConnection`
+      - `ISSLConnectionControl`
+      - `ISSLDiagnostics`
+      - `ISSLSessionResumption`
+      - `ISSLCertificateVerification`
+      - `ISSLConnectionInfo`
+    - `ISSLClientConnection`
+      /
+      `ISSLNativeHandleAccess`
+      /
+      `ISSLOCSPStapling`
+      改由 backend subclasses
+      按 capability / runtime truth
+      显式挂载
+    - phase 说明
+      也同步回到
+      “base 承载 shared owner / mirror，
+      subclass 挂 optional surface”
+      的当前路线
+
+- [completed] 当前批收口后的默认下一步：
+  - `bash -n tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_native_handle_owner_surface_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_isslocspstapling_compiler_deprecated_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  - 当前已具备
+    commit / push
+    条件
+  - 收口后继续沿
+    `ISSLConnection`
+    主线往前，
+    优先寻找
+    下一个仍会把
+    core / optional 分层
+    讲歪的
+    高可见度 active surface

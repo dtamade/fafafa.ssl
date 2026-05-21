@@ -26799,3 +26799,99 @@
       `ISSLConnection`
       core-too-fat
       instead of another metadata/proof sweep
+
+### INTERFACE_DESIGN_V2 Base-Connection Owner Truth
+
+- inspect the next live `ISSLConnection` residual after the route refresh:
+  - `docs/reference/INTERFACE_DESIGN_V2.md`
+  - `src/fafafa.ssl.connection.base.pas`
+  - `src/fafafa.ssl.openssl.connection.pas`
+  - `src/fafafa.ssl.freepascal.connection.pas`
+  - `src/fafafa.ssl.mbedtls.connection.pas`
+  - `src/fafafa.ssl.wolfssl.connection.pas`
+  - `src/fafafa.ssl.winssl.connection.pas`
+  - `tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+  - change:
+    - confirmed
+      the current live drift
+      is not another runtime gap,
+      but the
+      `INTERFACE_DESIGN_V2`
+      implementation-class anchor
+    - confirmed
+      the doc still described
+      `TBaseSSLConnection`
+      as directly implementing
+      client/native/OCSP optionals,
+      while current source keeps those surfaces
+      on backend-specific subclasses
+
+- extend the focused migration-targets contract to guard base-vs-subclass truth:
+  - `docs/plans/2026-05-21-interface-design-v2-base-connection-owner-truth.md`
+  - `tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+  - change:
+    - added
+      source-vs-doc
+      base-class declaration checks
+    - added
+      stale-block rejection for the old
+      `TBaseSSLConnection + ISSLClientConnection + ISSLOCSPStapling`
+      diagram
+    - added
+      required design text for
+      backend-specific subclass mounting
+      and
+      current phase split
+
+- establish focused RED before repairing the design anchor:
+  - `bash -n tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+    - result: FAIL
+    - summary:
+      - `INTERFACE_DESIGN_V2`
+        still described
+        `TBaseSSLConnection`
+        as directly implementing
+        client/native/OCSP optional interfaces
+
+- repair the v2 design anchor to match the shipped source layering:
+  - `docs/reference/INTERFACE_DESIGN_V2.md`
+  - change:
+    - replaced the stale
+      base-class implementation example
+      with the current shared owner / mirror interface set:
+      - `ISSLConnection`
+      - `ISSLConnectionControl`
+      - `ISSLDiagnostics`
+      - `ISSLSessionResumption`
+      - `ISSLCertificateVerification`
+      - `ISSLConnectionInfo`
+    - added an explicit note that
+      `ISSLClientConnection`
+      /
+      `ISSLNativeHandleAccess`
+      /
+      `ISSLOCSPStapling`
+      are mounted by backend-specific subclasses,
+      not by the shared base
+    - added representative subclass snippets
+      for
+      `TOpenSSLConnection`
+      and
+      `TOpenSSLOCSPConnection`
+    - updated the implementation phases
+      from
+      “base implements all interfaces”
+      to
+      “base owns shared surfaces, subclasses add capability-scoped optionals”
+
+- verify the focused closeout:
+  - `bash tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_native_handle_owner_surface_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_isslocspstapling_compiler_deprecated_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
