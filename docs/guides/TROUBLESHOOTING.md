@@ -401,6 +401,8 @@ LContext.LoadCAFile('C:\Windows\curl-ca-bundle.crt');  // Windows
 
 // 或加载整个目录
 LContext.LoadCAPath('/etc/ssl/certs');
+
+// WinSSL / Windows: non-empty `LoadCAPath(...)` is unsupported; prefer `.WithSystemRoots`, `TSSLConfig.UseSystemRoots := True`, or explicit `LoadCAFile(...)`.
 ```
 
 **自签名证书**:

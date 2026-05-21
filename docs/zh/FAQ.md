@@ -179,6 +179,8 @@ LContext := TSSLContextBuilder.Create
   .BuildClient;
 ```
 
+Windows / WinSSL 不支持非空 `LoadCAPath(...)`；普通新代码请优先走 `.WithSystemRoots`，需要额外私有 CA 时再显式 `LoadCAFile(...)`。
+
 ### Q9: 如何检查证书是否即将过期？
 
 **A:** 检查有效期：

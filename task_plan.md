@@ -10,6 +10,64 @@
 
 ## Current Status
 
+- [completed] `winssl capath unsupported truth alignment`
+  当前 focused 目标：
+  - 把
+    `WinSSL + CAPath`
+    这条
+    backend-specific unsupported surface
+    的实现真相
+    /
+    active docs
+    /
+    capability truth
+    一次性收平
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-winssl-capath-unsupported-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_winssl_capath_unsupported_active_docs_truth_contract.sh`
+  - 目标更新：
+    - `docs/CA_CERTIFICATE_AUTO_LOADING.md`
+    - `docs/guides/TROUBLESHOOTING.md`
+    - `docs/guides/WINSSL_BEST_PRACTICES.md`
+    - `docs/reference/API_REFERENCE.md`
+    - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+    - `docs/zh/FAQ.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_winssl_capath_unsupported_active_docs_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_winssl_capath_unsupported_active_docs_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - WinSSL runtime
+    当前会消费
+    `CAPath`
+    字段，
+    但对非空路径会
+    fail-fast unsupported
+  - active docs
+    不应再把
+    `CAPath`
+    当成
+    Windows / WinSSL
+    的可移植 trust-root 方案
+  当前批收口后的默认下一步：
+  - 不要再把
+    “字段存在”
+    直接等同于
+    “所有 backend 都发布同一条 runtime 能力”
+  - 如果继续沿着
+    backend-specific unsupported surfaces
+    深挖，
+    更值得优先审查的下一批
+    仍然应该是：
+    其他
+    field-present-but-runtime-divergent
+    的 capability / fail-fast truth
+
 - [completed] `cafile capath trust-loading parity`
   当前 focused 目标：
   - 补齐

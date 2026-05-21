@@ -274,6 +274,7 @@ end.
 4. **API 限制**: 某些高级功能需要特定 Windows 版本
 5. **调试困难**: 错误信息不如 OpenSSL 详细
 6. **Capability truth**: `IsCipherSupported(...)` 现在只对 capability-matrix 中的已知 cipher family 返回 `True`；未知/fake cipher name 会被拒绝，而不是再以“系统握手期再决定”为由放行
+7. **`CAPath` 不支持**: 非空 `LoadCAPath(...)` / `TSSLConfig.CAPath` 在 WinSSL 上会 fail-fast unsupported；Windows trust roots 应优先走系统证书存储或显式 `CAFile`。
 
 ## 故障排除
 

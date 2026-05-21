@@ -2,6 +2,64 @@
 
 ## 2026-05-21
 
+- winssl capath unsupported truth alignment
+  这一刀确认的
+  不是新的 runtime bug，
+  而是
+  上一批
+  `CAPath`
+  被真正接线之后，
+  active docs
+  仍然沿用
+  “字段存在=跨 backend 可移植”
+  的旧口径
+
+- 当前真正的实现真相是：
+  - WinSSL path
+    会消费
+    `CAPath`
+  - 但 non-empty
+    `LoadCAPath(...)`
+    会明确抛
+    unsupported
+  - 这和
+    OpenSSL-family
+    的
+    CA-directory
+    语义
+    不是同一回事
+
+- 这说明
+  正确修法
+  不是继续改 runtime，
+  而是把
+  “字段对齐”
+  与
+  “runtime 语义对齐”
+  明确拆开记录：
+  - `CAFile` / `CAPath` / `UseSystemRoots`
+    已经都能进入
+    request/default-config path
+  - 但 backend 仍然可以对其中某些字段
+    fail-fast reject
+    或采用平台特定语义
+
+- 收口后，
+  当前 active docs
+  已统一表达：
+  - Linux / OpenSSL-family
+    可以继续使用
+    `CAPath`
+  - Windows / WinSSL
+    应优先走
+    system roots
+    或显式
+    `CAFile`
+  - `CAPath`
+    不应再被教成
+    WinSSL
+    的 portable trust-root recipe
+
 - system-roots public surface parity
   这一刀确认的
   不是单纯文档口径漂移，

@@ -6,6 +6,87 @@
 
 ## 2026-05-21
 
+### WinSSL CAPath Unsupported Truth Alignment
+
+- inspect current WinSSL `CAPath` truth before editing:
+  - `src/fafafa.ssl.winssl.context.pas`
+  - `docs/CA_CERTIFICATE_AUTO_LOADING.md`
+  - `docs/guides/TROUBLESHOOTING.md`
+  - `docs/guides/WINSSL_BEST_PRACTICES.md`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  - `docs/zh/FAQ.md`
+  - change:
+    - confirmed runtime already throws
+      `LoadCAPath is not supported on Windows.`
+      for non-empty path
+    - confirmed active docs still mixed
+      Linux/OpenSSL-style
+      `CAPath`
+      guidance
+      into WinSSL / Windows-facing pages
+    - confirmed the deeper seam was
+      field-consumption parity
+      vs
+      backend runtime-semantics parity
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-winssl-capath-unsupported-truth.md`
+  - `tests/scripts/test_winssl_capath_unsupported_active_docs_truth_contract.sh`
+  - change:
+    - documented the batch as WinSSL `CAPath` unsupported truth alignment
+    - added a focused source/docs contract
+      to freeze:
+      - runtime unsupported exception text
+      - CA auto-loading guidance caveat
+      - troubleshooting / WinSSL best-practices caveat
+      - API reference / capability matrix / zh FAQ truth
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_winssl_capath_unsupported_active_docs_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_winssl_capath_unsupported_active_docs_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - failed at:
+        `CA auto-loading guide must not describe CAPath as a portable cross-backend compose rule`
+      - important conclusion:
+        - the drift was current active docs truth
+        - runtime code did not need a new fix
+
+- repair active docs truth:
+  - `docs/CA_CERTIFICATE_AUTO_LOADING.md`
+  - `docs/guides/TROUBLESHOOTING.md`
+  - `docs/guides/WINSSL_BEST_PRACTICES.md`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  - `docs/zh/FAQ.md`
+  - change:
+    - removed the portable-compose wording that treated
+      `.WithCAPath`
+      as a cross-backend rule
+    - documented that
+      WinSSL rejects non-empty
+      `CAPath`
+      because Schannel uses the Windows certificate store
+    - removed Linux
+      `LoadCAPath(...)`
+      teaching from the WinSSL-specific best-practices page
+    - added the same caveat to troubleshooting,
+      API reference,
+      capability matrix,
+      and Chinese FAQ
+
+- verify focused closeout:
+  - `bash -n tests/scripts/test_winssl_capath_unsupported_active_docs_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_winssl_capath_unsupported_active_docs_truth_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed runtime exception text and active docs truth are now aligned
+  - `git diff --check`
+    - result: PASS
+
 ### System-Roots Public Surface Parity
 
 - inspect current system-roots seam before editing:

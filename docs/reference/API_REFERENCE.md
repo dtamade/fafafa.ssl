@@ -148,6 +148,8 @@
   - `SessionCacheSize`
   - `SessionTimeout`
   - `ALPNProtocols`
+  - 字段会被消费，不代表每个 backend 都接受相同的 runtime 语义。
+  - WinSSL 对非空 `CAPath` 会 fail-fast reject；Windows 上请优先使用 `UseSystemRoots` 或显式 `CAFile`。
   - `ClientEarlyDataEnabled`
   - `ServerEarlyDataPolicy`
   - `ServerMaxEarlyDataSize`

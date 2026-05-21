@@ -34,11 +34,18 @@ LContext.SetVerifyMode([]);  // 当前 direct-context no-verify 入口；builder
 // 启用完整的证书验证
 LContext.SetVerifyMode([sslVerifyPeer, sslVerifyFailIfNoPeerCert]);
 
-// 加载系统 CA 证书
-LContext.LoadCAFile('C:\Windows\curl-ca-bundle.crt');  // Windows
-// 或
-LContext.LoadCAPath('/etc/ssl/certs');  // Linux
+// 普通 WinSSL 客户端优先使用 Windows 系统根证书
+LContext := TSSLContextBuilder.Create
+  .WithBackend(sslWinSSL)
+  .WithVerifyPeer
+  .WithSystemRoots
+  .BuildClient;
+
+// 需要额外私有 CA 时，再显式叠加单个 CA 文件
+LContext.LoadCAFile('C:\path\internal-ca.pem');
 ```
+
+WinSSL 当前不支持 non-empty `LoadCAPath(...)`；Windows trust roots 请优先走系统证书存储。
 
 ### 2. 使用强密码套件
 

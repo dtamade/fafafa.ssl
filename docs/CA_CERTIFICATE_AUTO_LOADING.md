@@ -44,7 +44,9 @@ Explicit system-roots opt-in is the portable contract:
 - config/direct-library path: `TSSLConfig.UseSystemRoots := True`
 - both ask the selected backend to load its platform-appropriate trust source
 - both keep the trust-store setup explicit in user code
-- both compose cleanly with `.WithCAFile`, `.WithCAPath`, or `SetCertificateStore(...)`
+- both can layer explicit trust anchors through `.WithCAFile` or `SetCertificateStore(...)`
+- do not treat `.WithCAPath` as a portable cross-backend rule
+- WinSSL rejects non-empty `CAPath` because Schannel uses the Windows certificate store.
 
 ## What To Avoid Documenting
 
@@ -60,6 +62,8 @@ Explicit system-roots opt-in is the portable contract:
   implementation details.
 - WinSSL ultimately validates against Windows certificate-store semantics.
 - OpenSSL-family backends may rely on file/path-based trust loading.
+- `CAPath` remains backend-specific; do not assume a Linux/OpenSSL-style CA directory
+  is valid on WinSSL.
 - The common API surface is explicit opt-in plus the store abstraction, not an
   implicit "auto-loaded client context" guarantee.
 
