@@ -2,6 +2,84 @@
 
 ## 2026-05-21
 
+- `VerifyMode = []`
+  这条线最终暴露出的
+  不是单纯文档残留，
+  而是一个真实的
+  interface/implementation
+  语义 bug
+
+- 当前各 backend/context
+  默认 verify 基线
+  普遍仍是：
+  - `[sslVerifyPeer]`
+
+- 但 factory /
+  library-default
+  context creation path
+  之前普遍都写成：
+  - `if LConfig.VerifyMode <> [] then`
+    `Result.SetVerifyMode(LConfig.VerifyMode);`
+
+- 这会导致：
+  当调用方通过
+  one-shot config
+  或
+  library default config
+  明确写：
+  - `VerifyMode := []`
+  创建路径会把它误读成
+  “未设置”
+  而不是
+  “显式禁用验证”
+
+- 当前 public reality
+  却已经广泛把
+  `[]`
+  当成 direct-context
+  的禁用验证语义：
+  - 大量 tests
+  - 多份活跃文档
+  - 多个 backend guide
+  都如此使用
+
+- 因而此前的状态
+  实际是在同一公共接口族里
+  制造了一条危险分叉：
+  - direct context path:
+    `[]`
+    表示
+    no-verify
+  - factory / default-config creation path:
+    `[]`
+    却被吞掉，
+    退回默认
+    `[sslVerifyPeer]`
+
+- 修复后，
+  这条空集合语义
+  已在
+  `TSSLFactory`
+  与各 backend
+  `ISSLLibrary.CreateContext(...)`
+  默认配置路径上
+  收回一致：
+  - `VerifyMode := []`
+    会真实落成
+    `GetVerifyMode = []`
+
+- 这批也顺手把
+  `TVerificationMode`
+  的路线判断
+  往前推进了一步：
+  当前更急的不是
+  先补 typed verify builder seam，
+  而是先把现有
+  `TSSLVerifyModes`
+  / empty-set
+  语义在各创建路径上
+  完整收正
+
 - `TSessionCacheMode`
   这条线经过 current source truth
   复核后，

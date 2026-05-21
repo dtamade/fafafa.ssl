@@ -1101,8 +1101,7 @@ begin
     if LConfig.PreferredVersion <> sslProtocolUnknown then
       Result.SetPreferredVersion(LConfig.PreferredVersion);
 
-    if LConfig.VerifyMode <> [] then
-      Result.SetVerifyMode(LConfig.VerifyMode);
+    Result.SetVerifyMode(LConfig.VerifyMode);
 
     if LConfig.VerifyDepth > 0 then
       Result.SetVerifyDepth(LConfig.VerifyDepth);
@@ -1168,8 +1167,7 @@ begin
   if LConfig.CAFile <> '' then
     Result.LoadCAFile(LConfig.CAFile);
     
-  if LConfig.VerifyMode <> [] then
-    Result.SetVerifyMode(LConfig.VerifyMode);
+  Result.SetVerifyMode(LConfig.VerifyMode);
 
   if LConfig.VerifyDepth > 0 then
     Result.SetVerifyDepth(LConfig.VerifyDepth);

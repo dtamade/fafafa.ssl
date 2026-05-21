@@ -6,6 +6,100 @@
 
 ## 2026-05-21
 
+### Factory Config VerifyMode Empty-Set Semantics
+
+- inspect current verify-mode creation truth before editing:
+  - `src/fafafa.ssl.factory.pas`
+  - `src/fafafa.ssl.openssl.backed.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - `src/fafafa.ssl.context.builder.pas`
+  - `src/fafafa.ssl.pas`
+  - change:
+    - confirmed backend/context default verify baseline still commonly starts at:
+      - `[sslVerifyPeer]`
+    - confirmed `TSSLFactory.CreateContext(const AConfig)` skipped
+      `SetVerifyMode(...)`
+      when `LConfig.VerifyMode = []`
+    - confirmed the same empty-set skip also existed in:
+      - factory default-config path
+      - OpenSSL direct-library path
+      - WolfSSL direct-library path
+      - WinSSL direct-library path
+      - FreePascal direct-library path
+      - MbedTLS direct-library path
+    - confirmed active docs/tests already widely treat
+      `[]`
+      as direct-context no-verify semantics,
+      so the skip was a real public-semantic split
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-factory-config-verifymode-empty-set-semantics.md`
+  - `tests/contract/test_factory_config_verifymode_empty_set_entry.pas`
+  - `tests/scripts/test_factory_config_verifymode_empty_set_contract.sh`
+  - change:
+    - documented the batch as verify-mode empty-set semantics repair
+    - added a focused runtime contract
+      to guard:
+      - one-shot factory config
+        `VerifyMode := []`
+      - direct-library default config
+        `VerifyMode := []`
+      - source-level removal of the empty-set skip in backend create-context paths
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_factory_config_verifymode_empty_set_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_factory_config_verifymode_empty_set_contract.sh`
+    - result: FAIL
+    - summary:
+      - failed at:
+        `OpenSSL direct-library path must compare VerifyMode against current context value instead of treating empty set as unset`
+      - additional runtime proof before the fix:
+        - compiled contract binary exited with code `2`
+        - confirming one-shot factory config still did not land `GetVerifyMode = []`
+
+- repair factory / library-default verify-mode empty-set semantics:
+  - `src/fafafa.ssl.factory.pas`
+  - `src/fafafa.ssl.openssl.backed.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - change:
+    - removed the empty-set skip from
+      `TSSLFactory.CreateContext(const AConfig)`
+    - removed the same empty-set skip from
+      `TSSLFactory.CreateContext(AContextType, ALibType)`
+    - changed the OpenSSL direct-library path
+      from
+      `VerifyMode <> []`
+      gating
+      to
+      real value comparison against the current context mode
+    - changed WolfSSL / WinSSL / FreePascal / MbedTLS direct-library paths
+      to always apply caller-provided `LConfig.VerifyMode`
+
+- verify focused verify-mode semantics:
+  - `bash -n tests/scripts/test_factory_config_verifymode_empty_set_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_factory_config_verifymode_empty_set_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed the source no longer treats empty-set verify mode as “unset” on the guarded creation paths
+      - confirmed one-shot factory config now lands
+        `VerifyMode := []`
+        as
+        `GetVerifyMode = []`
+      - confirmed FreePascal direct-library default config now also lands
+        `VerifyMode := []`
+        as
+        `GetVerifyMode = []`
+  - `git diff --check`
+    - result: PASS
+
 ### zh FAQ Session Cache Mode Truth Alignment
 
 - inspect current session-cache mode truth before editing:

@@ -10,6 +10,115 @@
 
 ## Current Status
 
+- [completed] `factory config VerifyMode empty-set semantics`
+  当前 focused 目标：
+  - 修复
+    `VerifyMode = []`
+    在
+    factory / library-default
+    context creation path
+    上被错误当成“未设置”
+    而跳过
+    `SetVerifyMode(...)`
+    的语义 bug
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-factory-config-verifymode-empty-set-semantics.md`
+  - 新增 contract：
+    - `tests/contract/test_factory_config_verifymode_empty_set_entry.pas`
+    - `tests/scripts/test_factory_config_verifymode_empty_set_contract.sh`
+  - 更新：
+    - `src/fafafa.ssl.factory.pas`
+    - `src/fafafa.ssl.openssl.backed.pas`
+    - `src/fafafa.ssl.wolfssl.lib.pas`
+    - `src/fafafa.ssl.winssl.lib.pas`
+    - `src/fafafa.ssl.freepascal.lib.pas`
+    - `src/fafafa.ssl.mbedtls.lib.pas`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_factory_config_verifymode_empty_set_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_factory_config_verifymode_empty_set_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前状态：
+  - 重新核对后已确认，
+    当前各 backend/context
+    默认 verify 基线
+    普遍仍是：
+    - `[sslVerifyPeer]`
+  - 但此前
+    factory /
+    library-default
+    创建路径
+    普遍写成：
+    - `if LConfig.VerifyMode <> [] then`
+      `Result.SetVerifyMode(LConfig.VerifyMode);`
+  - 这会直接导致两类显式配置
+    被错误吞掉：
+    - one-shot factory config
+      `VerifyMode := []`
+    - library default config
+      `VerifyMode := []`
+  - 也就是说，
+    当前 public 面里
+    大量 direct-context/docs/tests
+    把
+    `[]`
+    当成“禁用验证”，
+    但创建路径
+    却把它误读成“未设置”
+  修复后：
+  - `TSSLFactory.CreateContext(const AConfig)`
+    现在会真实应用
+    调用方给的
+    `VerifyMode = []`
+  - `TSSLFactory.CreateContext(AContextType, ALibType)`
+    现在也不会再吞掉
+    library default config
+    中的空集合 verify mode
+  - `OpenSSL / WolfSSL / WinSSL / FreePascal / MbedTLS`
+    的
+    `ISSLLibrary.CreateContext(...)`
+    默认配置路径
+    也都同步收口
+  - focused runtime contract
+    现在已经同时证明：
+    - one-shot factory config
+      `VerifyMode := []`
+      -> `GetVerifyMode = []`
+    - direct-library default config
+      `VerifyMode := []`
+      -> `GetVerifyMode = []`
+  当前实施判断：
+  - 这批已经不是单纯文档 truth alignment，
+    而是一个真实的
+    interface/implementation
+    语义修复
+  - 它也给
+    `TVerificationMode`
+    后续路线
+    立了一个更稳的前提：
+    先把
+    `TSSLVerifyModes`
+    当前空集合语义
+    在创建路径上收正，
+    再判断是否值得做
+    typed adoption
+  下一刀：
+  - 继续检查
+    `[]`
+    与
+    `[sslVerifyNone]`
+    在 active docs
+    / builder validation
+    / import-export
+    里是否还存在
+    语义裂缝，
+    优先找
+    真正会影响调用行为
+    的残留
+
 - [completed] `zh FAQ session-cache mode truth alignment`
   当前 focused 目标：
   - 修复

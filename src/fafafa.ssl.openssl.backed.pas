@@ -1343,7 +1343,7 @@ begin
       (LConfig.PreferredVersion <> Result.GetPreferredVersion) then
       Result.SetPreferredVersion(LConfig.PreferredVersion);
 
-    if (LConfig.VerifyMode <> []) and (LConfig.VerifyMode <> Result.GetVerifyMode) then
+    if LConfig.VerifyMode <> Result.GetVerifyMode then
       Result.SetVerifyMode(LConfig.VerifyMode);
 
     if (LConfig.VerifyDepth > 0) and (LConfig.VerifyDepth <> Result.GetVerifyDepth) then
