@@ -20028,6 +20028,108 @@
   - summary:
     - no whitespace or patch-format drift remains after the zero-dependency batch
 
+- `mcp__ace_tool__.search_context`
+  - query:
+    - locate current dependencies doc truth around
+      FPC baseline,
+      backend-specific runtime dependencies,
+      removed public helpers,
+      and WinSSL/OpenSSL/FreePascal dependency paths
+  - result: PASS
+  - summary:
+    - confirmed
+      `docs/DEPENDENCIES.md`
+      still published:
+      - stale `FPC >= 3.3.1`
+      - removed helper examples
+      - over-narrow runtime dependency story
+      - stale WinSSL threshold row
+
+- `rg -n "CreateSSLLibrary\\(|OpenSSL|WinSSL|FreePascal|sslAutoDetect|TSSLFactory.GetLibraryInstance|依赖" docs/DEPENDENCIES.md`
+  - result: PASS
+  - summary:
+    - surfaced the concrete old-helper and missing-FreePascal dependency areas in
+      `DEPENDENCIES.md`
+
+- `rg -n "3\\.3\\.1|3\\.2\\.0|3\\.2\\.2|Free Pascal" README.md docs src`
+  - result: PASS
+  - summary:
+    - confirmed current active truth still anchors on
+      `FPC 3.2.0+`
+      and recommends
+      `3.2.2+`
+    - directly proved the dependencies doc baseline had drifted
+
+- `rg -n "18362|1903|20348|Windows 10" docs src`
+  - result: PASS
+  - summary:
+    - confirmed current WinSSL TLS 1.3 truth is
+      `Windows 10 build 18362+ / 1903+`
+    - directly proved the dependencies doc's
+      `Windows 10 (20348+)`
+      row was stale
+
+- update docs:
+  - `docs/DEPENDENCIES.md`
+  - `docs/plans/2026-05-21-dependencies-current-backend-and-public-entrypoint-truth-alignment.md`
+  - `tests/scripts/test_dependencies_current_backend_and_entrypoint_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - restored backend-specific dependency truth across Windows / Linux / macOS
+    - reintroduced
+      `FreePascal`
+      as a formal zero-external-SSL runtime path
+    - replaced removed helper examples with
+      `TSSLFactory.GetLibraryInstance(...)`
+    - repaired WinSSL threshold row, links, and doc footer drift
+
+- `bash -n tests/scripts/test_dependencies_current_backend_and_entrypoint_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - shell syntax for the new dependencies contract is clean
+
+- `bash tests/scripts/test_dependencies_current_backend_and_entrypoint_truth_contract.sh`
+  - result: GREEN after script-guard tightening
+  - summary:
+    - first pass exposed two script-only quoting issues around backtick literals
+      in link assertions
+    - after tightening those patterns, the full dependencies truth guard stayed green
+
+- `git diff --check`
+  - result: RED -> GREEN
+  - summary:
+    - first pass caught one trailing-whitespace residue in the markdown footer
+    - after removing it, patch-format and whitespace checks returned clean
+
+- final recheck after planning-file sync:
+  - `bash tests/scripts/test_dependencies_current_backend_and_entrypoint_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+  - summary:
+    - confirmed the
+      `DEPENDENCIES`
+      batch stayed green after the later
+      `task_plan.md`
+      /
+      `findings.md`
+      /
+      `progress.md`
+      updates
+    - current state is ready for
+      commit / push
+
+- pre-commit recheck:
+  - `bash tests/scripts/test_dependencies_current_backend_and_entrypoint_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+  - `git status --short`
+    - result: PASS
+  - summary:
+    - confirmed immediately before this final record sync that the batch still stayed green
+    - confirmed this batch remained the only active worktree delta
+
 ### Main Backends Ed25519 Certificate Algorithm Truth
 
 - add focused batch inputs:

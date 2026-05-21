@@ -13662,3 +13662,57 @@
   - 简短 review
   - commit / push
   - 继续扫下一份仍残留旧 helper / 旧导入面的高入口活跃文档
+
+### 2026-05-21 DEPENDENCIES 当前 backend 依赖与 public entrypoint 真相对齐
+
+- [completed] 当前新的 residual
+  已继续收窄到
+  `docs/DEPENDENCIES.md`
+  这份依赖文档：
+  - 编译依赖仍写
+    `Free Pascal >= 3.3.1`
+  - runtime 依赖叙事仍几乎只围绕
+    `WinSSL`
+    /
+    `OpenSSL`
+    展开，
+    静默漏掉
+    `FreePascal`
+    的无外部 SSL 依赖路径
+  - “如何切换后端” 仍教学
+    `CreateSSLLibrary(...)`
+  - WinSSL 兼容表仍写
+    `Windows 10 (20348+)`
+  - 底部链接与版本尾注也已过期
+- [completed] 最小正确修法已经落地：
+  - 新增
+    `docs/plans/2026-05-21-dependencies-current-backend-and-public-entrypoint-truth-alignment.md`
+  - 新增
+    `tests/scripts/test_dependencies_current_backend_and_entrypoint_truth_contract.sh`
+  - `DEPENDENCIES`
+    已切回：
+    - `FPC 3.2.0+`
+      /
+      推荐
+      `3.2.2+`
+    - Windows / Linux / macOS
+      都显式补回
+      `FreePascal`
+      backend 的无外部 SSL 动态库路径
+    - `TSSLFactory.GetLibraryInstance(...)`
+      的当前 public library-entrypoint
+    - WinSSL TLS 1.3 阈值：
+      `Windows 10 (>= 18362)`
+    - live getting-started / API-reference / issues links
+    - 当前文档版本尾注
+- [completed] 当前批最终复验已完成：
+  - `bash -n tests/scripts/test_dependencies_current_backend_and_entrypoint_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_dependencies_current_backend_and_entrypoint_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  - 当前已具备
+    commit / push
+    条件
+  - 收口后继续扫下一份高入口活跃文档里的旧 helper / 旧签名 / backend 依赖真相漂移

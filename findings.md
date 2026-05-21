@@ -13033,3 +13033,44 @@
     则必须解释成：
     工厂按当前注册优先级与可用性选择，
     而不是平台硬编码规则
+
+- `DEPENDENCIES.md`
+  这轮暴露出来的是“依赖真相写窄了”的另一类活跃文档问题：
+  - 它不再像前几页那样整页都在教旧 helper，
+    但它仍在用旧时代的依赖心智：
+    - 好像 runtime 只分
+      `WinSSL`
+      /
+      `OpenSSL`
+    - 好像 FPC baseline 还是
+      `3.3.1`
+
+- 这类 drift
+  的伤害和前几轮略不同：
+  - 它不会立刻把用户导到不存在的 helper
+  - 但会持续扭曲调用方对“当前后端依赖模型”的理解，
+    让人忽略：
+    `FreePascal`
+    已经是 shipped 且无外部 SSL 动态库依赖的一等路径
+
+- 当前更准确的依赖文档真相应明确保留：
+  - `FPC 3.2.0+`
+    是当前 shipped baseline，
+    推荐
+    `3.2.2+`
+  - `WinSSL`
+    是 Windows-native zero-dependency path
+  - `FreePascal`
+    在 Windows / Linux / macOS
+    都属于“无外部 SSL 动态库”的正式 backend 路径
+  - `OpenSSL`
+    仍是最常见 / 功能更完整的依赖路径，
+    但不该再被依赖文档写成各平台唯一 runtime 选择
+
+- 同页 WinSSL 兼容表里的
+  `Windows 10 (20348+)`
+  也再次说明：
+  - 版本阈值 drift
+    不只出现在 WinSSL 专题文档里
+  - 只要高入口依赖文档还留着旧数值，
+    后续路线判断就会反复被错误平台阈值干扰

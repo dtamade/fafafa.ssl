@@ -10,7 +10,7 @@
 
 | 依赖 | 版本要求 | 说明 |
 |------|---------|------|
-| **Free Pascal** | ≥ 3.3.1 | Pascal编译器 |
+| **Free Pascal** | ≥ 3.2.0 | Pascal编译器（推荐 3.2.2+） |
 
 ### 推荐（可选）
 
@@ -79,6 +79,19 @@ brew install fpc
 - 企业内部工具
 - 需要零依赖部署的场景
 
+#### 选项C：FreePascal后端
+**运行时依赖**: ✅ **无外部 SSL 动态库依赖**
+
+```
+部署文件：
+└── YourApp.exe  (无 OpenSSL DLL)
+```
+
+**说明**：
+- 适合 Pascal-first / 无外部 SSL 动态库部署
+- 不等于 WinSSL：它不自动接入 Windows 系统证书存储或企业策略
+- 如果你要 Windows-native 证书存储 / GPO / Schannel 集成，仍优先 WinSSL
+
 #### 选项B：OpenSSL后端
 
 **运行时依赖**：
@@ -117,6 +130,8 @@ YourApp目录：
 ---
 
 ### Linux平台
+
+#### 选项A：OpenSSL后端（最常见）
 
 **运行时依赖**：
 
@@ -159,9 +174,19 @@ openssl version
 - 应用程序会自动链接到系统OpenSSL
 - 无需手动部署DLL文件
 
+#### 选项B：FreePascal后端（无外部 SSL 动态库）
+
+**运行时依赖**: ✅ **无外部 SSL 动态库依赖**
+
+**说明**：
+- 适合 Pascal-first / 自带 TLS core 的部署路径
+- 如果你需要 OpenSSL-specific 功能或更完整 capability coverage，仍优先 OpenSSL backend
+
 ---
 
 ### macOS平台
+
+#### 选项A：OpenSSL后端（最常见）
 
 **运行时依赖**：
 
@@ -184,6 +209,14 @@ export DYLD_LIBRARY_PATH=/usr/local/opt/openssl@3/lib:$DYLD_LIBRARY_PATH
 - macOS可能预装LibreSSL而非OpenSSL
 - 建议使用Homebrew安装OpenSSL 3.x
 - 应用程序会自动查找系统OpenSSL库
+
+#### 选项B：FreePascal后端（无外部 SSL 动态库）
+
+**运行时依赖**: ✅ **无外部 SSL 动态库依赖**
+
+**说明**：
+- 适合不想额外携带 OpenSSL / Homebrew 依赖的 Pascal-first 场景
+- 如果你明确需要 OpenSSL-specific 能力，仍按上面的 OpenSSL 路径准备依赖
 
 ---
 
@@ -234,6 +267,12 @@ fpc -Fusrc MyApp.pas
 # 适用于跨发行版分发
 ```
 
+#### 方式4：FreePascal backend 最小依赖部署
+```bash
+# 走 FreePascal backend 时，无需额外准备 OpenSSL 动态库
+fpc -Fusrc MyApp.pas
+```
+
 ### macOS应用打包建议
 
 ```bash
@@ -270,7 +309,7 @@ MyApp.app/
 | Windows版本 | TLS 1.2 | TLS 1.3 | 状态 |
 |------------|---------|---------|------|
 | **Windows 11** | ✅ | ✅ | 完全支持 |
-| **Windows 10 (20348+)** | ✅ | ✅ | 完全支持 |
+| **Windows 10 (>= 18362)** | ✅ | ✅ | 完全支持 |
 | **Windows 10 (旧版本)** | ✅ | ❌ | 仅TLS 1.2 |
 | **Windows 8.1** | ✅ | ❌ | 仅TLS 1.2 |
 | **Windows 7** | ✅ | ❌ | 仅TLS 1.2 |
@@ -318,11 +357,15 @@ Get-Command openssl -ErrorAction SilentlyContinue
 # 检查FPC
 fpc -iV
 
-# 检查OpenSSL
+# Linux: 检查OpenSSL
 openssl version
 
-# 检查库文件
+# Linux: 检查库文件
 ldconfig -p | grep libssl
+
+# macOS: 检查 Homebrew OpenSSL（如使用 OpenSSL backend）
+ls /opt/homebrew/opt/openssl@3/lib/libssl*.dylib 2>/dev/null
+ls /usr/local/opt/openssl@3/lib/libssl*.dylib 2>/dev/null
 ```
 
 ---
@@ -348,27 +391,29 @@ sudo ln -s /usr/lib/x86_64-linux-gnu/libssl.so.3 /usr/lib/libssl.so.3
 ### Q: 如何切换后端？
 **A**: 
 ```pascal
+uses fafafa.ssl;
+
 // Windows上选择WinSSL
-Lib := CreateSSLLibrary(sslWinSSL);
+Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);
 
 // 或使用OpenSSL
-Lib := CreateSSLLibrary(sslOpenSSL);
+Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
 
 // 自动选择
-Lib := CreateSSLLibrary; // Windows默认WinSSL
+Lib := TSSLFactory.GetLibraryInstance(sslAutoDetect);  // 让工厂按当前可用性与优先级选择
 ```
 
 ---
 
 ## 📚 更多信息
 
-- 快速入门：`GETTING_STARTED.md`
-- API文档：`docs/`
+- 快速入门：`guides/GETTING_STARTED.md`
+- API 文档：`reference/API_REFERENCE.md`
+- 文档中心：`README.md`
 - 示例代码：`examples/`
-- 问题报告：GitHub Issues
+- 问题报告：https://github.com/dtamade/fafafa.ssl/issues
 
 ---
 
-**文档版本**: 1.0  
-**更新日期**: 2025-11-01
-
+**文档版本**: v1.5.0
+**更新日期**: 2026-05-21
