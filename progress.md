@@ -6,6 +6,70 @@
 
 ## 2026-05-21
 
+### ISSLConnection Convenience Contract Truth Resync
+
+- inspect current convenience-source / design-doc / contract drift before editing:
+  - `docs/plans/2026-05-19-isslconnection-convenience-surface-classification.md`
+  - `tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+  - `src/fafafa.ssl.base.pas`
+  - `docs/reference/INTERFACE_DESIGN_V2.md`
+  - change:
+    - confirmed
+      source comments
+      had already moved to
+      builder-first
+      +
+      `ISSLConnectionControl`
+      owner-path
+      +
+      convenience override
+    - confirmed
+      design doc
+      had already moved
+      timeout / blocking
+      to
+      `ISSLConnectionControl`
+    - important conclusion:
+      - the live failure was a stale focused contract,
+        not a source/doc regression
+
+- add focused batch record and resync the contract:
+  - `docs/plans/2026-05-21-isslconnection-convenience-contract-truth-resync.md`
+  - `tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+  - change:
+    - updated timeout / blocking source-comment assertions
+      to require the current
+      `ISSLConnectionControl`
+      owner-path wording
+    - updated design-doc assertions
+      to require
+      `ISSLConnectionControl`
+      as the migration location for
+      `SetTimeout` / `GetTimeout`
+      and
+      `SetBlocking` / `GetBlocking`
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+    - result: FAIL
+    - summary:
+      - first failed at the old timeout preferred-access wording
+      - important conclusion:
+        - the contract was still asserting the pre-owner-path text
+
+- verify focused closeout:
+  - `bash -n tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+    - result: PASS
+    - summary:
+      - focused source / design / audit / README truth
+        now all match the current shipped convenience classification
+  - `git diff --check`
+    - result: PASS
+
 ### Builder Import Guidance Closure
 
 - inspect current builder/public-unit guidance before editing:

@@ -22,8 +22,10 @@ declare -a source_patterns=(
   'procedure SetBlocking(ABlocking: Boolean);'
   'function GetBlocking: Boolean;'
   '@preferred-access 框架/transport 集成优先使用 Read/Write；ReadString/WriteString 继续作为 v1.x convenience-core 文本入口保留'
-  '@preferred-access 新代码优先在构建阶段使用 TSSLConnectionBuilder.WithTimeout / TSSLConnector.WithTimeout / TSSLAcceptor.WithTimeout；连接创建后仍可通过此入口做 per-connection convenience override'
-  '@preferred-access 新代码优先在构建阶段使用 TSSLConnectionBuilder.WithBlocking；连接创建后仍可通过此入口做 per-connection convenience override'
+  '@preferred-access 新代码优先在构建阶段使用 TSSLConnectionBuilder.WithTimeout / TSSLConnector.WithTimeout / TSSLAcceptor.WithTimeout；连接创建后若需要读取或覆盖 runtime control state，优先通过 ISSLConnectionControl.SetTimeout；此入口继续作为 per-connection convenience override 保留'
+  '@preferred-access 新代码优先在构建阶段使用 TSSLConnectionBuilder.WithTimeout / TSSLConnector.WithTimeout / TSSLAcceptor.WithTimeout；连接创建后若需要读取或覆盖 runtime control state，优先通过 ISSLConnectionControl.GetTimeout；此入口继续作为 per-connection convenience override 保留'
+  '@preferred-access 新代码优先在构建阶段使用 TSSLConnectionBuilder.WithBlocking；连接创建后若需要读取或覆盖 runtime control state，优先通过 ISSLConnectionControl.SetBlocking；此入口继续作为 per-connection convenience override 保留'
+  '@preferred-access 新代码优先在构建阶段使用 TSSLConnectionBuilder.WithBlocking；连接创建后若需要读取或覆盖 runtime control state，优先通过 ISSLConnectionControl.GetBlocking；此入口继续作为 per-connection convenience override 保留'
 )
 
 for pattern in "${source_patterns[@]}"; do
@@ -49,8 +51,8 @@ done
 declare -a design_doc_patterns=(
   '这份文档描述的是 **v2 最小 core 目标**，不是 `v1.5.0` 当前 shipped source 的逐行镜像。'
   '| ReadString, WriteString | ISSLConnection | `v1.x` convenience-core 文本 helper；框架/transport 集成优先使用 `Read` / `Write` |'
-  '| SetTimeout, GetTimeout | ISSLConnection | `v1.x` connection-adjacent convenience surface；builder-first，连接侧保留 override |'
-  '| SetBlocking, GetBlocking | ISSLConnection | `v1.x` connection-adjacent convenience surface；builder-first，连接侧保留 override |'
+  '| SetTimeout, GetTimeout | ISSLConnectionControl | 默认 owner 已切到 ISSLConnectionControl；core 侧继续作为 `v1.x` convenience mirror 保留 |'
+  '| SetBlocking, GetBlocking | ISSLConnectionControl | 默认 owner 已切到 ISSLConnectionControl；core 侧继续作为 `v1.x` convenience mirror 保留 |'
 )
 
 for pattern in "${design_doc_patterns[@]}"; do

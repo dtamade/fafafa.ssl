@@ -2,6 +2,71 @@
 
 ## 2026-05-21
 
+- isslconnection convenience contract truth resync
+  这一刀确认的
+  不是
+  `ISSLConnection`
+  convenience-surface
+  又发生了设计倒退，
+  而是
+  focused contract
+  还停在
+  owner-path
+  收口前的旧措辞
+
+- 当前更准确的收口是：
+  - `ReadString` / `WriteString`
+    继续是
+    `v1.x`
+    convenience-core
+    文本 helper
+  - `SetTimeout` / `GetTimeout`
+    与
+    `SetBlocking` / `GetBlocking`
+    当前的完整 truth
+    不是单纯
+    “builder-first”
+    而是：
+    - 默认 runtime owner
+      已切到
+      `ISSLConnectionControl`
+    - core 侧
+      继续保留
+      `ISSLConnection`
+      convenience mirror / override
+
+- 这说明
+  我们当前更需要防的
+  不是源码缺口，
+  而是
+  focused gate
+  跟不上后续真实收口
+  造成的
+  workflow 假红
+
+- focused RED
+  首轮暴露的就是
+  合同措辞陈旧：
+  - source comment
+    已经写成
+    builder-first
+    +
+    `ISSLConnectionControl`
+    owner-path
+    +
+    convenience override
+  - `INTERFACE_DESIGN_V2`
+    也已经把
+    timeout / blocking
+    的迁移位置
+    改成
+    `ISSLConnectionControl`
+  - 但 focused contract
+    还要求旧的
+    “仍可通过此入口做 per-connection convenience override”
+    简化表述，
+    所以把更完整的真相误判为失败
+
 - builder import guidance closure
   这一刀确认的
   不是

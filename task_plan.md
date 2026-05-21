@@ -10,6 +10,65 @@
 
 ## Current Status
 
+- [completed] `isslconnection convenience contract truth resync`
+  当前 focused 目标：
+  - 修复
+    `ISSLConnection`
+    convenience-surface
+    focused contract
+    在后续
+    `ISSLConnectionControl`
+    owner-path
+    收口之后
+    留下的假红，
+    让合同重新匹配当前源码 / 设计文档真相
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-isslconnection-convenience-contract-truth-resync.md`
+  - 更新 focused contract：
+    - `tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - `ReadString` / `WriteString`
+    继续是
+    `v1.x`
+    convenience-core
+    文本 helper
+  - `SetTimeout` / `GetTimeout`
+    与
+    `SetBlocking` / `GetBlocking`
+    当前不只是
+    builder-first，
+    还明确：
+    - 默认 runtime owner
+      已切到
+      `ISSLConnectionControl`
+    - `ISSLConnection`
+      core 侧
+      继续保留
+      convenience mirror / override
+  当前批收口后的默认下一步：
+  - 这条线
+    当前不再有
+    stale contract
+    反复制造假红
+  - 下一条更值得继续压的 residual
+    会继续集中在：
+    `TSSLConfig`
+    其余
+    mixed-scope
+    字段迁移目标的
+    additive extraction
+    与
+    facade / docs / contract
+    的一致性
+
 - [completed] `builder import guidance closure`
   当前 focused 目标：
   - 把高入口说明里
