@@ -18042,3 +18042,89 @@
       `TSSLConfig`
       mixed-scope public record
       这条并行主债
+
+### 2026-05-21 Facade zero-copy supporting-type export closure
+
+- [completed] 当前新的 live residual
+  已不再是
+  `ISSLConnection`
+  owner-path 空洞，
+  而是主门面
+  `fafafa.ssl`
+  对 utility supporting type
+  的真实 compile gap：
+  - `fafafa.ssl.encoding`
+    的
+    `Base64EncodeView(...)`
+  - `fafafa.ssl.crypto.utils`
+    的
+    `SHA256View(...)`
+    /
+    `SHA512View(...)`
+    /
+    `UpdateView(...)`
+  都公开依赖
+  `TBytesView`
+  但主门面此前还没有 re-export 它
+
+- [completed] focused RED
+  已通过新合同先压实：
+  - `tests/scripts/test_facade_zerocopy_supporting_type_export_contract.sh`
+    - 首轮 FAIL：
+      `main facade must re-export TBytesView`
+  - 说明这不是 utility docs wording 问题，
+    而是当前 public facade
+    本身不闭合
+
+- [completed] 最小正确修法已经落地：
+  - 新增
+    `docs/plans/2026-05-21-facade-zerocopy-supporting-type-export-closure.md`
+  - 新增
+    `tests/contract/test_facade_zerocopy_supporting_type_entry.pas`
+  - 新增
+    `tests/scripts/test_facade_zerocopy_supporting_type_export_contract.sh`
+  - 更新：
+    - `src/fafafa.ssl.pas`
+    - `docs/reference/API_REFERENCE.md`
+  - 当前 source 已明确补齐：
+    - `TBytesView`
+      主门面 re-export
+  - `API_REFERENCE`
+    也已明确记录：
+    - 使用
+      `fafafa.ssl.encoding`
+      /
+      `fafafa.ssl.crypto.utils`
+      的 zero-copy 入口时
+      不需要再回退
+      `fafafa.ssl.base`
+
+- [completed] 当前 focused proof：
+  - `bash -n tests/scripts/test_facade_zerocopy_supporting_type_export_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_facade_zerocopy_supporting_type_export_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_facade_certificate_supporting_types_export_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_facade_builder_diagnostic_supporting_types_export_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  - 当前已具备
+    review / commit / push
+    条件
+
+- [completed] 当前批收口后的默认下一步：
+  - 主门面 supporting-type completeness
+    仍值得继续按
+    “公开单元接口依赖了什么 supporting type，
+    facade 是否一起承接”
+    这个标准向前扫
+  - 但不要因为旧 handoff
+    回头重开
+    `TSSLConfig`
+    或
+    `ISSLConnection`
+    已收口的 owner-path lane；
+    只有出现新的 compile/runtime RED
+    再开新批

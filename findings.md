@@ -17012,3 +17012,71 @@
     不再是 owner-path 空洞，
     而是 compatibility baggage
     本身
+
+- 顺着主门面 completeness 再往 utility public surface 横查后，
+  这轮抓到了一条新的真实 compile gap：
+  - `fafafa.ssl.encoding`
+    的
+    `Base64EncodeView(...)`
+  - `fafafa.ssl.crypto.utils`
+    的
+    `SHA256View(...)`
+    /
+    `SHA512View(...)`
+    /
+    `UpdateView(...)`
+  都公开依赖
+  `TBytesView`
+  但主门面
+  `src/fafafa.ssl.pas`
+  此前还没有 re-export 它
+
+- 这条缺口的性质
+  不是
+  “zero-copy 功能没实现”，
+  而是主门面 public completeness
+  又出现了同类 supporting-type 漏口：
+  - 只写
+    `uses fafafa.ssl, fafafa.ssl.encoding`
+  - 再声明
+    `TBytesView`
+  - 当前就会直接编译失败
+
+- focused RED
+  已把这条判断压实：
+  - `tests/scripts/test_facade_zerocopy_supporting_type_export_contract.sh`
+    首轮即报：
+    - `main facade must re-export TBytesView`
+
+- 这说明
+  当前主门面残口
+  已不只集中在
+  core / builder / diagnostics supporting types，
+  也延伸到了
+  utility / zero-copy public surface
+  ：
+  - `TBytesView`
+    作为
+    `fafafa.ssl.base`
+    的非 generic public record，
+    已经被多条 active utility API
+    直接公开依赖
+  - 因而这类 supporting type
+    也应该像前几批证书 /
+    builder /
+    diagnostics supporting types 一样，
+    被主门面一起承接
+
+- 这刀落完后，
+  当前路线判断又更清晰了一层：
+  - 主门面 completeness
+    仍然是
+    有真实 compile 价值的主线
+  - 但开批标准应该继续保持克制：
+    - 先找到
+      “公开单元接口已经依赖，
+      facade 却没承接”
+      的硬缺口
+    - 再补 focused contract
+    - 不要为了“看起来更完整”
+      去泛化导出所有内部辅助类型

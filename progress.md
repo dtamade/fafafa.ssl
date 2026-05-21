@@ -27496,3 +27496,67 @@
     - result: PASS
   - `git diff --check`
     - result: PASS
+
+### Facade Zero-Copy Supporting-Type Export Closure
+
+- inspect the next live facade residual after the text-owner-path closeout:
+  - `rg -n "TBytesView|Base64EncodeView|SHA256View|SHA512View|UpdateView" src/fafafa.ssl.base.pas src/fafafa.ssl.pas src/fafafa.ssl.encoding.pas src/fafafa.ssl.crypto.utils.pas`
+  - `sed -n '1,120p' src/fafafa.ssl.pas`
+  - `sed -n '1,120p' docs/reference/API_REFERENCE.md`
+  - result:
+    - confirmed `TBytesView` is a non-generic public record declared in `fafafa.ssl.base`
+    - confirmed active zero-copy utility APIs in
+      `fafafa.ssl.encoding`
+      and
+      `fafafa.ssl.crypto.utils`
+      publicly depend on it
+    - confirmed the main facade still lacked a
+      `TBytesView`
+      re-export
+
+- add a focused plan and compile-based contract for the zero-copy supporting type:
+  - `docs/plans/2026-05-21-facade-zerocopy-supporting-type-export-closure.md`
+  - `tests/contract/test_facade_zerocopy_supporting_type_entry.pas`
+  - `tests/scripts/test_facade_zerocopy_supporting_type_export_contract.sh`
+  - change:
+    - locked the source re-export truth for
+      `TBytesView`
+    - locked a
+      `uses fafafa.ssl, fafafa.ssl.encoding, fafafa.ssl.crypto.utils`
+      compile/run probe
+      for the zero-copy supporting surface
+
+- establish focused RED before repairing the main facade:
+  - `bash -n tests/scripts/test_facade_zerocopy_supporting_type_export_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_facade_zerocopy_supporting_type_export_contract.sh`
+    - result: FAIL
+    - summary:
+      - `src/fafafa.ssl.pas`
+        still lacked
+        `TBytesView = fafafa.ssl.base.TBytesView;`
+
+- repair the zero-copy supporting-type surface:
+  - `src/fafafa.ssl.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - re-exported
+      `TBytesView`
+      from the main facade
+    - recorded in
+      `API_REFERENCE`
+      that ordinary zero-copy utility callers
+      no longer need to fall back to
+      `fafafa.ssl.base`
+
+- verify the focused closeout:
+  - `bash -n tests/scripts/test_facade_zerocopy_supporting_type_export_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_facade_zerocopy_supporting_type_export_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_facade_certificate_supporting_types_export_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_facade_builder_diagnostic_supporting_types_export_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS

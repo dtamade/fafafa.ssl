@@ -31,6 +31,10 @@
 `fafafa.ssl` 主门面当前也 re-export 这组 non-generic type-safety public surface（如 `TSSLVersion` / `TKeySize` / `TTimeoutDuration` / `TBufferSize`）；`TSecureData<T>` / `TResult<T, E>` 继续保留在 `fafafa.ssl.safety`。
 如果你只想单独使用这套类型安全工具而不引入 TLS bootstrap facade，也可以窄用 `fafafa.ssl.safety`。
 
+## Zero-Copy Surface Note
+
+主门面 `fafafa.ssl` 当前也 re-export `TBytesView`；使用 `fafafa.ssl.encoding` / `fafafa.ssl.crypto.utils` 的 zero-copy 入口时不需要回退 `fafafa.ssl.base`。
+
 ## Library Defaults Surface Note
 
 - `LogLevel` / `LogCallback` 这组 library-scoped defaults 当前更清晰的 additive surface 是 `TSSLLibraryDefaults` + `GetLibraryDefaults(...)` / `ApplyLibraryDefaults(...)`。

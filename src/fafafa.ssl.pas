@@ -80,6 +80,7 @@ type
   TSSLCipherSupport = fafafa.ssl.base.TSSLCipherSupport;
   TSSLHash = fafafa.ssl.base.TSSLHash;
   TSSLHashSupport = fafafa.ssl.base.TSSLHashSupport;
+  TBytesView = fafafa.ssl.base.TBytesView;
   
   TSSLStringArray = fafafa.ssl.base.TSSLStringArray;
   TSSLCertificateInfo = fafafa.ssl.base.TSSLCertificateInfo;
