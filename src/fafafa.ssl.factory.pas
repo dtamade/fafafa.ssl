@@ -281,6 +281,8 @@ type
     class function CreateCertificateStore(ALibType: TSSLLibraryType = sslAutoDetect): ISSLCertificateStore;
     
     // 快捷方法 - 简化的服务端上下文
+    // 保持当前 server default-config / raw context verify baseline；
+    // 如需 non-mTLS / no-verify，请由调用方显式设置 VerifyMode。
     class function CreateServerContext(const ACertFile, AKeyFile: string;
                                       ALibType: TSSLLibraryType = sslAutoDetect): ISSLContext;
     
@@ -1214,7 +1216,6 @@ begin
   Result := CreateContext(sslCtxServer, ALibType);
   Result.LoadCertificate(ACertFile);
   Result.LoadPrivateKey(AKeyFile);
-  Result.SetVerifyMode([sslVerifyNone]); // 服务端默认不验证客户端
 end;
 
 class function TSSLFactory.GetLibraryInstance(ALibType: TSSLLibraryType): ISSLLibrary;

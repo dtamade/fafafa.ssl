@@ -1675,6 +1675,10 @@ class function TSSLFactory.GetLibraryInstance(ALibType: TSSLLibraryType = sslAut
   它不代替 `TSSLFactory` / `TSSLContextBuilder` / `TSSLConnector` 这条主入口。
 - `QuickServer(...)` 当前只是 `TSSLFactory.CreateServerContext(...)` 的 convenience bootstrap。
   它只返回配置好的 `ISSLContext`，不负责 socket bind/listen/accept。
+- `CreateServerContext(...)` / `QuickServer(...)` 当前不会再隐式切到 no-verify；
+  它们保留当前 server default-config / raw context verify baseline。
+  如果你的服务端确实不做 client-certificate verification，请显式 `SetVerifyMode([])`，
+  或在 builder 上明确写 `.WithVerifyNone`。
 - `CreateOCSPClient(...)` / `CreateCRLManager(...)` 当前是证书工具 facade re-export，不是 TLS 连接/bootstrap 入口。
   只有在你显式需要 OCSP/CRL workflow 时，才直接走它们；普通 TLS client/server 建立流程仍然优先通过 context/builder/connector path。
 

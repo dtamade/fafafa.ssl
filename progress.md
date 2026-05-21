@@ -6,6 +6,88 @@
 
 ## 2026-05-21
 
+### Server Helper VerifyMode Default Alignment
+
+- inspect server verify baseline truth before editing:
+  - `src/fafafa.ssl.pas`
+  - `src/fafafa.ssl.factory.pas`
+  - `src/fafafa.ssl.context.builder.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/guides/OCSP_USAGE_GUIDE.md`
+  - change:
+    - confirmed `CreateDefaultConfig(sslCtxServer)`
+      still exposes:
+      - `VerifyMode = [sslVerifyPeer]`
+    - confirmed raw
+      `TSSLFactory.CreateContext(sslCtxServer, ...)`
+      applies that default-config verify baseline
+    - confirmed builder `BuildServer`
+      also writes its default
+      `[sslVerifyPeer]`
+      into runtime context
+    - confirmed `CreateServerContext(...)`
+      alone still hard-coded:
+      - `Result.SetVerifyMode([sslVerifyNone])`
+    - important conclusion:
+      - server convenience helper path had drifted into a silent policy override
+      - helper/default-config/builder no longer described one coherent interface family
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-server-helper-verifymode-default-alignment.md`
+  - `tests/contract/test_server_helper_verifymode_default_entry.pas`
+  - `tests/scripts/test_server_helper_verifymode_default_contract.sh`
+  - change:
+    - documented the batch as server helper verify-mode default alignment
+    - added a focused contract
+      to guard:
+      - helper source truth must stop forcing no-verify
+      - API reference must classify helper verify truth
+      - runtime verify mode parity across
+        default-config / raw server context / helper / QuickServer / builder
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_server_helper_verifymode_default_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_server_helper_verifymode_default_contract.sh`
+    - result: FAIL
+    - summary:
+      - failed at:
+        `CreateServerContext must stop silently forcing server helpers into no-verify mode`
+      - important conclusion:
+        - the helper-level verify split was real source truth
+        - this was not only a docs inconsistency
+
+- repair server helper verify baseline alignment:
+  - `src/fafafa.ssl.factory.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - removed the implicit
+      `SetVerifyMode([sslVerifyNone])`
+      override from
+      `CreateServerContext(...)`
+    - documented in API reference that
+      `CreateServerContext(...)` /
+      `QuickServer(...)`
+      no longer switch into no-verify automatically
+    - documented that non-mTLS/no-verify server setups now require explicit caller intent
+
+- verify focused helper alignment truth:
+  - `bash -n tests/scripts/test_server_helper_verifymode_default_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_server_helper_verifymode_default_contract.sh`
+    - result: PASS
+    - summary:
+      - confirmed helper source truth no longer forces no-verify
+      - confirmed API reference records the current helper verify semantics
+      - confirmed `CreateServerContext(...)`
+        /
+        `QuickServer(...)`
+        /
+        builder `BuildServer`
+        now match the raw server context verify baseline
+  - `git diff --check`
+    - result: PASS
+
 ### Active Docs VerifyMode Guidance Truth Alignment
 
 - inspect active docs verify guidance truth before editing:

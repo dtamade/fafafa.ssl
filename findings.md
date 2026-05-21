@@ -2,6 +2,76 @@
 
 ## 2026-05-21
 
+- server helper verify baseline
+  这一刀确认的是
+  helper-level
+  的真实接口设计裂缝：
+  `CreateServerContext(...)`
+  /
+  `QuickServer(...)`
+  之前不是单纯
+  “快捷包装”，
+  而是悄悄带着一条
+  no-verify
+  policy override
+
+- 当前更大的 server truth
+  其实已经相对一致：
+  - `CreateDefaultConfig(sslCtxServer)`
+    给出
+    `sslVerifyPeer`
+    baseline
+  - raw
+    `CreateContext(sslCtxServer, ...)`
+    套用这个 baseline
+  - builder
+    `BuildServer`
+    默认也走
+    `[sslVerifyPeer]`
+
+- 但 helper
+  `CreateServerContext(...)`
+  之前又单独补了一句：
+  - `Result.SetVerifyMode([sslVerifyNone])`
+
+- 这会把同一组高入口撕成两套语义：
+  - generic raw/builder/default-config
+    server path:
+    verify peer baseline
+  - convenience helper path:
+    silent no-verify
+
+- 这类分叉比单纯文档 drift
+  更危险，
+  因为 helper 名称本身并没有提示：
+  - 它会改变 verify policy
+  - 它不再只是 bootstrap convenience
+
+- 修复后，
+  `CreateServerContext(...)`
+  /
+  `QuickServer(...)`
+  现在不再隐式切到
+  no-verify；
+  如果调用方确实想做
+  non-mTLS/no-verify server，
+  必须显式写：
+  - direct-context/config:
+    `SetVerifyMode([])` /
+    `VerifyMode := []`
+  - builder:
+    `.WithVerifyNone`
+
+- 这使得 server 侧
+  至少在：
+  - default-config
+  - raw context
+  - convenience helper
+  - builder
+  这四个高入口上，
+  verify baseline
+  不再互相打架
+
 - active docs verify guidance
   这一刀确认的
   不是新的 runtime bug，

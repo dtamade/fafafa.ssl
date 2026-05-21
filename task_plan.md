@@ -10,6 +10,100 @@
 
 ## Current Status
 
+- [completed] `server helper VerifyMode default alignment`
+  当前 focused 目标：
+  - 把
+    `CreateServerContext(...)`
+    /
+    `QuickServer(...)`
+    这条高入口 helper
+    的默认 verify 语义
+    收回到和
+    `CreateDefaultConfig(sslCtxServer)`
+    /
+    `CreateContext(sslCtxServer, ...)`
+    /
+    builder `BuildServer`
+    一致
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-server-helper-verifymode-default-alignment.md`
+  - 新增 contract：
+    - `tests/contract/test_server_helper_verifymode_default_entry.pas`
+    - `tests/scripts/test_server_helper_verifymode_default_contract.sh`
+  - 更新：
+    - `src/fafafa.ssl.factory.pas`
+    - `docs/reference/API_REFERENCE.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_server_helper_verifymode_default_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_server_helper_verifymode_default_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前 truth：
+  - `CreateDefaultConfig(sslCtxServer)`
+    当前 fresh default-config
+    仍给出：
+    - `VerifyMode = [sslVerifyPeer]`
+  - `TSSLFactory.CreateContext(sslCtxServer, ...)`
+    会套用这个默认值
+  - builder `BuildServer`
+    当前也会把默认
+    `[sslVerifyPeer]`
+    写到 runtime context
+  - 但
+    `CreateServerContext(...)`
+    还额外硬编码：
+    - `Result.SetVerifyMode([sslVerifyNone])`
+  当前状态：
+  - focused RED
+    直接失败在：
+    - `CreateServerContext must stop silently forcing server helpers into no-verify mode`
+  - 说明这条 helper-level
+    分叉不是文档误读，
+    而是当前源码真的还在
+    silent override
+  修复后：
+  - `CreateServerContext(...)`
+    不再额外写：
+    - `[sslVerifyNone]`
+  - `QuickServer(...)`
+    作为 facade wrapper
+    也因此不再隐式切到
+    no-verify
+  - focused contract
+    现在已经同时证明：
+    - `CreateDefaultConfig(sslCtxServer)`
+      仍以
+      `sslVerifyPeer`
+      为 server baseline
+    - `CreateContext(sslCtxServer, sslFreePascal)`
+      的 runtime verify mode
+      与这个 baseline 一致
+    - `CreateServerContext(...)`
+      /
+      `QuickServer(...)`
+      /
+      builder `BuildServer`
+      现在都与 raw server baseline 对齐
+  当前实施判断：
+  - 这批把
+    convenience helper
+    从“藏着 policy override 的特殊入口”
+    收回到了
+    “和其它高入口一致的 server bootstrap”
+  下一刀：
+  - 继续静态审查
+    server-side verify guidance
+    在
+    helper / builder /
+    default-config / guides
+    之外，
+    是否还存在
+    preset / example / backend-guide
+    层面的残余分叉
+
 - [completed] `active docs VerifyMode guidance truth alignment`
   当前 focused 目标：
   - 把活跃文档里
