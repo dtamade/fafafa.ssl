@@ -5,8 +5,6 @@ program SecurityEnhancementsDemo;
 uses
   SysUtils, Classes,
   fafafa.ssl,
-  fafafa.ssl.base,
-  fafafa.ssl.factory,
   fafafa.ssl.context.builder,
   fafafa.ssl.cert.pinning,
   fafafa.ssl.cert.rotation;

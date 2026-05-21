@@ -6,6 +6,125 @@
 
 ## 2026-05-21
 
+### Security Entry Examples Public Import Truth
+
+- inspect remaining security-example import residuals before editing:
+  - `src/fafafa.ssl.pas`
+  - `src/fafafa.ssl.cert.pinning.pas`
+  - `src/fafafa.ssl.cert.rotation.pas`
+  - `examples/simple_test.pas`
+  - `examples/example_cert_pinning_simple.pas`
+  - `examples/security_enhancements_demo.pas`
+  - `tests/scripts/test_active_examples_public_import_truth_contract.sh`
+  - change:
+    - confirmed
+      `sslHashSHA256`
+      is already
+      re-exported by
+      `fafafa.ssl`
+    - confirmed
+      `ptPublicKey`
+      belongs to
+      `fafafa.ssl.cert.pinning`
+    - confirmed
+      `TRotationEventType`
+      /
+      `TRotationConfig`
+      /
+      `TCertificateRotationManager`
+      belong to
+      `fafafa.ssl.cert.rotation`
+    - confirmed
+      current drift
+      is example import guidance,
+      not a missing public surface
+
+- add focused batch record and create a dedicated security-example import contract:
+  - `docs/plans/2026-05-21-security-entry-examples-public-import-truth.md`
+  - `tests/scripts/test_security_entry_examples_public_import_truth_contract.sh`
+  - change:
+    - froze
+      current security-entry
+      example truth
+      around
+      façade
+      +
+      specialized owner units
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_security_entry_examples_public_import_truth_contract.sh`
+    - result: PASS
+  - first draft
+    `bash tests/scripts/test_security_entry_examples_public_import_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - specialized-unit
+        punctuation match
+        was too narrow
+  - refine contract
+    to require
+    owner-unit presence
+    +
+    `base` / `factory` absence
+  - `bash tests/scripts/test_security_entry_examples_public_import_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - `examples/simple_test.pas`
+        still used
+        `fafafa.ssl.base`
+
+- repair security entry examples public import truth:
+  - `examples/simple_test.pas`
+  - `examples/example_cert_pinning_simple.pas`
+  - `examples/security_enhancements_demo.pas`
+  - change:
+    - removed
+      obsolete
+      `fafafa.ssl.base`
+      import
+      from
+      `simple_test`
+      and switched
+      hash enum usage
+      to
+      façade-exported
+      `sslHashSHA256`
+    - removed
+      obsolete
+      `fafafa.ssl.base`
+      import
+      from
+      `example_cert_pinning_simple`
+    - removed
+      obsolete
+      `fafafa.ssl.base`
+      /
+      `fafafa.ssl.factory`
+      imports
+      from
+      `security_enhancements_demo`
+
+- verify focused closeout:
+  - `bash -n tests/scripts/test_security_entry_examples_public_import_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_security_entry_examples_public_import_truth_contract.sh`
+    - result: PASS
+  - `fpc -B -Fu./src ... examples/simple_test.pas`
+    - result: PASS
+  - `fpc -B -Fu./src ... examples/example_cert_pinning_simple.pas`
+    - result: PASS
+  - `fpc -B -Fu./src ... examples/security_enhancements_demo.pas`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+  - note:
+    - compile logs
+      still contain
+      repo pre-existing
+      warnings/notes,
+      but no new failure
+      from this batch
+
 ### Performance Optimization Guide Public Import Truth
 
 - inspect active performance-guide import residual before editing:

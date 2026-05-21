@@ -10,6 +10,82 @@
 
 ## Current Status
 
+- [completed] `security entry examples public import truth`
+  当前 focused 目标：
+  - 收口
+    三份安全相关示例
+    仍在继续教学
+    `fafafa.ssl.base`
+    /
+    `fafafa.ssl.factory`
+    的旧入口漂移，
+    让普通 facade surface
+    回到
+    `fafafa.ssl`
+    ，同时保留
+    pinning / rotation / builder
+    各自的 specialized unit truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-security-entry-examples-public-import-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_security_entry_examples_public_import_truth_contract.sh`
+  - 更新：
+    - `examples/simple_test.pas`
+    - `examples/example_cert_pinning_simple.pas`
+    - `examples/security_enhancements_demo.pas`
+  当前预期 truth：
+  - `simple_test`
+    应通过
+    `fafafa.ssl`
+    直接使用
+    `sslHashSHA256`
+  - `example_cert_pinning_simple`
+    应只保留
+    `fafafa.ssl.cert.pinning`
+    作为
+    `ptPublicKey`
+    owner unit
+  - `security_enhancements_demo`
+    应保留
+    `fafafa.ssl`
+    +
+    `fafafa.ssl.context.builder`
+    +
+    `fafafa.ssl.cert.pinning`
+    +
+    `fafafa.ssl.cert.rotation`
+    ，不再继续发布
+    `base`
+    /
+    `factory`
+    拆分入口
+  当前 focused proof：
+  - `bash -n tests/scripts/test_security_entry_examples_public_import_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_security_entry_examples_public_import_truth_contract.sh`
+    - FAIL -> PASS
+    - RED summary:
+      - `examples/simple_test.pas`
+        still used
+        `fafafa.ssl.base`
+  - focused compile proof：
+    - `examples/simple_test.pas`
+      - PASS
+    - `examples/example_cert_pinning_simple.pas`
+      - PASS
+    - `examples/security_enhancements_demo.pas`
+      - PASS
+  - `git diff --check`
+    - PASS
+  当前批收口后的默认下一步：
+  - 若这组 security entry examples
+    拉绿，
+    继续扫
+    其它 active examples / guides
+    的 residual public-entry drift，
+    不重开已关闭批次
+
 - [completed] `performance optimization guide public import truth`
   当前 focused 目标：
   - 收口

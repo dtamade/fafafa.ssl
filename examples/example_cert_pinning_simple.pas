@@ -4,8 +4,7 @@ program example_cert_pinning_simple;
 
 uses
   SysUtils,
-  fafafa.ssl.cert.pinning,
-  fafafa.ssl.base;
+  fafafa.ssl.cert.pinning;
 
 const
   // 证书固定类型常量

@@ -2,6 +2,70 @@
 
 ## 2026-05-21
 
+- security entry examples public import truth
+  这一刀确认的
+  不是
+  这些 security examples
+  真的还依赖
+  `fafafa.ssl.base`
+  /
+  `fafafa.ssl.factory`
+  才能工作，
+  而是
+  facade 和 specialized owner unit
+  早就已经足够，
+  示例还在保留历史拆分导入
+
+- 当前更准确的收口是：
+  - `examples/simple_test.pas`
+    对
+    `sslHashSHA256`
+    的使用
+    已可直接来自
+    `fafafa.ssl`
+  - `examples/example_cert_pinning_simple.pas`
+    的
+    `ptPublicKey`
+    owner unit
+    本来就是
+    `fafafa.ssl.cert.pinning`
+  - `examples/security_enhancements_demo.pas`
+    当前只需要
+    façade
+    +
+    builder
+    +
+    pinning
+    +
+    rotation
+    几个公开入口，
+    并不需要
+    `fafafa.ssl.factory`
+
+- 这说明
+  当前 residual
+  仍主要集中在
+  “活跃示例是否还在把调用方带回历史入口”，
+  而不是
+  新的 runtime surface 缺口
+
+- focused RED
+  最终暴露的是：
+  - `bash tests/scripts/test_security_entry_examples_public_import_truth_contract.sh`
+    在修复前
+    因
+    `simple_test`
+    仍残留
+    `fafafa.ssl.base`
+    而失败
+
+- 这批还确认：
+  - contract 首轮若把 specialized unit
+    的逗号/分号形态写死，
+    会掩盖真正的 drift；
+    对这种 import-truth contract，
+    更稳妥的是
+    “保留 owner unit + 禁止旧入口”
 - performance optimization guide public import truth
   这一刀确认的
   不是

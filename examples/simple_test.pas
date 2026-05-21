@@ -8,7 +8,6 @@ uses
   cthreads,
   {$ENDIF}
   fafafa.ssl,
-  fafafa.ssl.base,
   fafafa.ssl.utils,
   fafafa.ssl.encoding;
 
@@ -28,7 +27,7 @@ begin
   LData := TEncoding.UTF8.GetBytes('Hello, World!');
   
   try
-    LHash := TSSLHelper.HashData(LData, fafafa.ssl.base.sslHashSHA256);
+    LHash := TSSLHelper.HashData(LData, sslHashSHA256);
     WriteLn('  Input:  "Hello, World!"');
     WriteLn('  SHA256: ', LHash);
     if LHash <> '' then
@@ -87,5 +86,4 @@ begin
   ReadLn;
   {$ENDIF}
 end.
-
 
