@@ -2,6 +2,63 @@
 
 ## 2026-05-21
 
+- ocsp usage guide current public import truth
+  这一刀确认的
+  不是
+  `OCSP_USAGE_GUIDE`
+  不该继续保留
+  owner-surface
+  直连理由，
+  而是
+  它在这些 runtime /
+  guide
+  边界已经讲清楚的前提下，
+  仍继续教学：
+  - `fafafa.ssl.base`
+  这条旧 import
+
+- 当前更准确的收口是：
+  - `ISSLContext`
+    /
+    `ISSLConnection`
+    /
+    `ISSLCertificateVerification`
+    /
+    `ISSLOCSPStapling`
+    /
+    `ISSLServerOCSPStaplingContext`
+    /
+    `sslCertVerifyCheckOCSP`
+    当前都可以直接来自
+    `fafafa.ssl`
+  - `TSSLHTTPHooksScope`
+    仍然属于
+    `fafafa.ssl.net.hooks`
+  - OpenSSL helper
+    路径
+    继续属于
+    `fafafa.ssl.openssl.api.*`
+    低层工作流，
+    不需要被包装成 generic facade API
+
+- 这说明
+  当前“专题 guide 真相”
+  这条线里，
+  不只是
+  把 direct owner-path
+  的理由写清楚，
+  还要继续收紧：
+  示例导入
+  到底是不是
+  当前 public truth
+
+- focused RED
+  首轮暴露的是：
+  - `OCSP_USAGE_GUIDE`
+    三段 active 示例
+    仍在使用
+    `fafafa.ssl.base`
+
 - migration guide current public import truth
   这一刀确认的
   不是

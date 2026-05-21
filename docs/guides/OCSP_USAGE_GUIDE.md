@@ -20,7 +20,7 @@
 ```pascal
 uses
   SysUtils,
-  fafafa.ssl.base,
+  fafafa.ssl,
   fafafa.ssl.context.builder;
 
 var
@@ -185,7 +185,7 @@ Ctx := TSSLContextBuilder.Create
 ```pascal
 uses
   SysUtils,
-  fafafa.ssl.base,
+  fafafa.ssl,
   fafafa.ssl.context.builder;
 
 var
@@ -253,7 +253,6 @@ end;
 ```pascal
 uses
   SysUtils,
-  fafafa.ssl.base,
   fafafa.ssl.net.hooks,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ocsp,

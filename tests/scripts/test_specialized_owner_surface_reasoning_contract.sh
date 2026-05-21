@@ -21,9 +21,29 @@ require_fixed() {
   fi
 }
 
+require_absent() {
+  local needle="$1"
+  local file="$2"
+  local message="$3"
+
+  if rg -F -n --quiet -- "$needle" "$file"; then
+    echo "[FAIL] $message"
+    exit 1
+  fi
+}
+
 require_fixed '这里直接回到 `CreateConnection(...)`，是因为 stapled OCSP runtime state 通过 `ISSLOCSPStapling` 挂在连接对象上，握手失败时的 verify 结果也通过 `ISSLCertificateVerification` 从连接侧读取；如果你只是普通客户端接入而不需要这层 owner surface，握手入口仍可保持在 `TSSLConnector` / `TSSLStream`。' \
   "$ocsp_guide" \
   "OCSP_USAGE_GUIDE must explain why it intentionally uses the connection owner path"
+require_fixed "  fafafa.ssl," \
+  "$ocsp_guide" \
+  "OCSP_USAGE_GUIDE must use the current public facade unit in active OCSP examples"
+require_fixed "  fafafa.ssl.context.builder;" \
+  "$ocsp_guide" \
+  "OCSP_USAGE_GUIDE must keep the builder unit where TSSLContextBuilder is referenced"
+require_absent "  fafafa.ssl.base," \
+  "$ocsp_guide" \
+  "OCSP_USAGE_GUIDE must stop teaching split base-unit imports in active examples"
 
 require_fixed '这里直接回到 `CreateConnection(...)`，是因为 `ISSLCertificateTransparency` / `ISSLCertificateTransparencyValidation` 这组 CT runtime owner surface 挂在连接对象上；如果你只是普通客户端接入而不需要读取 CT owner surface，握手入口仍可保持在 `TSSLConnector` / `TSSLStream`。' \
   "$ct_guide" \

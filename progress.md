@@ -6,6 +6,107 @@
 
 ## 2026-05-21
 
+### OCSP_USAGE_GUIDE Current Public Import Truth
+
+- inspect active OCSP-guide import drift before editing:
+  - `docs/guides/OCSP_USAGE_GUIDE.md`
+  - `src/fafafa.ssl.pas`
+  - `src/fafafa.ssl.net.hooks.pas`
+  - `tests/scripts/test_specialized_owner_surface_reasoning_contract.sh`
+  - `docs/plans/2026-05-21-ocsp-usage-guide-current-public-import-truth.md`
+  - change:
+    - confirmed
+      this page
+      should keep
+      its specialized
+      owner-surface
+      reasoning intact
+    - confirmed
+      `ISSLContext`
+      /
+      `ISSLConnection`
+      /
+      `ISSLCertificateVerification`
+      /
+      `ISSLOCSPStapling`
+      /
+      `ISSLServerOCSPStaplingContext`
+      /
+      `sslCertVerifyCheckOCSP`
+      are already
+      available from
+      `fafafa.ssl`
+    - confirmed
+      `TSSLHTTPHooksScope`
+      still belongs to
+      `fafafa.ssl.net.hooks`
+    - confirmed
+      stale
+      `fafafa.ssl.base`
+      imports
+      remained in
+      three active OCSP-guide examples
+
+- add focused batch record and tighten the existing owner-surface reasoning contract:
+  - `docs/plans/2026-05-21-ocsp-usage-guide-current-public-import-truth.md`
+  - `tests/scripts/test_specialized_owner_surface_reasoning_contract.sh`
+  - change:
+    - froze:
+      - OCSP specialized
+        owner-surface reasoning
+        must remain
+      - active OCSP examples
+        must use
+        `fafafa.ssl`
+        where the public facade already covers the symbols
+      - active OCSP examples
+        must stop using
+        `fafafa.ssl.base`
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_specialized_owner_surface_reasoning_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_specialized_owner_surface_reasoning_contract.sh`
+    - result: FAIL
+    - summary:
+      - `OCSP_USAGE_GUIDE`
+        still taught
+        split
+        `fafafa.ssl.base`
+        imports
+        in active examples
+
+- repair OCSP_USAGE_GUIDE current public import truth:
+  - `docs/guides/OCSP_USAGE_GUIDE.md`
+  - change:
+    - rewrote
+      FreePascal client runtime
+      and
+      client online OCSP
+      imports
+      to
+      `fafafa.ssl`
+      +
+      `fafafa.ssl.context.builder`
+    - removed
+      the unnecessary
+      `fafafa.ssl.base`
+      import
+      from the
+      OpenSSL helper workflow
+    - preserved
+      the guide's
+      owner-surface
+      reasoning
+      and
+      OCSP boundary explanations
+
+- verify focused closeout:
+  - `bash tests/scripts/test_specialized_owner_surface_reasoning_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### MIGRATION_GUIDE Current Public Import Truth
 
 - inspect active migration-guide import drift before editing:

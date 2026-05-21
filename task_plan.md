@@ -10,6 +10,67 @@
 
 ## Current Status
 
+- [completed] `ocsp usage guide current public import truth`
+  当前 focused 目标：
+  - 修复
+    `docs/guides/OCSP_USAGE_GUIDE.md`
+    里仍残留的
+    `fafafa.ssl.base`
+    导入，
+    让这份
+    specialized owner-surface
+    guide
+    继续保留
+    FreePascal client runtime /
+    server-side stapling issuance /
+    client online OCSP /
+    OpenSSL helper
+    四条边界，
+    但不再偏离
+    当前 public import truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-ocsp-usage-guide-current-public-import-truth.md`
+  - 更新 focused contract：
+    - `tests/scripts/test_specialized_owner_surface_reasoning_contract.sh`
+  - 更新：
+    - `docs/guides/OCSP_USAGE_GUIDE.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_specialized_owner_surface_reasoning_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_specialized_owner_surface_reasoning_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - `OCSP_USAGE_GUIDE`
+    当前 generic/runtime
+    OCSP 示例
+    应统一回到：
+    - `fafafa.ssl`
+    - `fafafa.ssl.context.builder`
+  - `TSSLHTTPHooksScope`
+    仍继续来自：
+    - `fafafa.ssl.net.hooks`
+  - OpenSSL helper
+    workflow
+    继续保留
+    `fafafa.ssl.openssl.api.*`
+    低层边界，
+    但不再无谓引入
+    `fafafa.ssl.base`
+  当前批收口后的默认下一步：
+  - `OCSP_USAGE_GUIDE`
+    不再继续传播
+    `fafafa.ssl.base`
+  - 下一条 residual
+    继续优先挑
+    仍在传播
+    旧 import
+    或
+    stale header
+    的活跃 guide/reference
+
 - [completed] `migration guide current public import truth`
   当前 focused 目标：
   - 修复
