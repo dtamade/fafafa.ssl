@@ -10,6 +10,77 @@
 
 ## Current Status
 
+- [completed] `ct implementation guide current public import truth`
+  当前 focused 目标：
+  - 修复
+    `docs/guides/CT_IMPLEMENTATION_GUIDE.md`
+    里仍残留的
+    `fafafa.ssl.base`
+    导入
+    与旧版页头快照，
+    让这份
+    specialized CT guide
+    继续保留
+    CT runtime owner-surface
+    理由、
+    离线验证/API
+    与
+    日志集成边界，
+    但不再偏离
+    当前 active guide truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-ct-implementation-guide-current-public-import-truth.md`
+  - 更新 focused contract：
+    - `tests/scripts/test_specialized_owner_surface_reasoning_contract.sh`
+  - 更新：
+    - `docs/guides/CT_IMPLEMENTATION_GUIDE.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_specialized_owner_surface_reasoning_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_specialized_owner_surface_reasoning_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - `CT_IMPLEMENTATION_GUIDE`
+    当前 runtime
+    CT 示例
+    应统一回到：
+    - `fafafa.ssl`
+    - `fafafa.ssl.context.builder`
+  - `TSSLHTTPHooksScope`
+    仍继续来自：
+    - `fafafa.ssl.net.hooks`
+  - `TSCTValidator`
+    /
+    `TCTLogClient`
+    低层 API
+    继续保留：
+    - CT runtime
+      specialized guide
+    - validator / log-client
+      低层边界
+  - 页头
+    也应回到
+    当前 active guide
+    口径，
+    不再继续停在
+    `1.0 / 2026-01-30 / v1.0+`
+  当前批收口后的默认下一步：
+  - `CT_IMPLEMENTATION_GUIDE`
+    不再继续传播
+    `fafafa.ssl.base`
+    与
+    旧版页头快照
+  - 下一条 residual
+    继续优先挑
+    仍在传播
+    旧 import
+    或
+    stale header
+    的活跃 guide/reference
+
 - [completed] `ocsp usage guide current public import truth`
   当前 focused 目标：
   - 修复

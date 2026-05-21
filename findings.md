@@ -2,6 +2,78 @@
 
 ## 2026-05-21
 
+- ct implementation guide current public import truth
+  这一刀确认的
+  不是
+  `CT_IMPLEMENTATION_GUIDE`
+  不该继续保留
+  specialized
+  owner-surface
+  直连理由，
+  而是
+  它在
+  runtime CT /
+  validator /
+  log-client
+  三层边界已经存在的前提下，
+  仍继续发布：
+  - `fafafa.ssl.base`
+    这条旧 import
+  - `1.0 / 2026-01-30 / v1.0+`
+    这组旧页头快照
+
+- 当前更准确的收口是：
+  - `ISSLContext`
+    /
+    `ISSLConnection`
+    /
+    `ISSLClientConnection`
+    /
+    `ISSLCertificateVerification`
+    /
+    `ISSLCertificateTransparency`
+    /
+    `ISSLCertificateTransparencyValidation`
+    /
+    `sslFreePascal`
+    当前都可以直接来自
+    `fafafa.ssl`
+  - `TSSLHTTPHooksScope`
+    仍然属于
+    `fafafa.ssl.net.hooks`
+  - `TSCTValidator`
+    /
+    `TCTLogClient`
+    低层 API
+    仍然保留
+    specialized
+    validator / log-client
+    边界，
+    不应被误写成
+    generic facade
+
+- 这说明
+  当前“specialized guide 真相”
+  这条线里，
+  不只是
+  把 owner-surface
+  理由写清楚，
+  还要继续收紧：
+  - 示例导入
+  - 页头状态
+  这两个更容易把读者
+  带回旧快照的入口
+
+- focused RED
+  首轮暴露的是：
+  - `CT_IMPLEMENTATION_GUIDE`
+    仍停在
+    `1.0`
+    版本快照
+  - active 示例
+    仍在使用
+    `fafafa.ssl.base`
+
 - ocsp usage guide current public import truth
   这一刀确认的
   不是

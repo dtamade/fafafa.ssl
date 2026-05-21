@@ -1,8 +1,8 @@
 # Certificate Transparency (CT) 实现指南
 
-**版本**: 1.0  
-**创建日期**: 2026-01-30  
-**适用于**: fafafa.ssl v1.0+
+**版本**: rolling
+**最后更新**: 2026-05-21
+**适用范围**: 当前 fafafa.ssl active CT runtime / validator / log-client guidance
 
 ---
 
@@ -97,7 +97,6 @@ end;
 uses
   SysUtils,
   fafafa.ssl,
-  fafafa.ssl.base,
   fafafa.ssl.context.builder;
 
 var
@@ -271,7 +270,7 @@ end;
 
 ```pascal
 uses
-  fafafa.ssl.base,
+  fafafa.ssl,
   fafafa.ssl.net.hooks,
   fafafa.ssl.ct.log;
 

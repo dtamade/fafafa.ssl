@@ -6,6 +6,118 @@
 
 ## 2026-05-21
 
+### CT_IMPLEMENTATION_GUIDE Current Public Import Truth
+
+- inspect active CT-guide import/header drift before editing:
+  - `docs/guides/CT_IMPLEMENTATION_GUIDE.md`
+  - `src/fafafa.ssl.pas`
+  - `src/fafafa.ssl.net.hooks.pas`
+  - `tests/scripts/test_specialized_owner_surface_reasoning_contract.sh`
+  - `docs/plans/2026-05-21-ct-implementation-guide-current-public-import-truth.md`
+  - change:
+    - confirmed
+      this page
+      should keep
+      its specialized
+      CT owner-surface
+      reasoning intact
+    - confirmed
+      `ISSLContext`
+      /
+      `ISSLConnection`
+      /
+      `ISSLClientConnection`
+      /
+      `ISSLCertificateVerification`
+      /
+      `ISSLCertificateTransparency`
+      /
+      `ISSLCertificateTransparencyValidation`
+      /
+      `sslFreePascal`
+      are already
+      available from
+      `fafafa.ssl`
+    - confirmed
+      `TSSLHTTPHooksScope`
+      still belongs to
+      `fafafa.ssl.net.hooks`
+    - confirmed
+      stale drift
+      remained in:
+      - two active
+        `fafafa.ssl.base`
+        imports
+      - the old
+        `1.0 / 2026-01-30 / v1.0+`
+        header snapshot
+
+- add focused batch record and tighten the existing specialized-guide contract:
+  - `docs/plans/2026-05-21-ct-implementation-guide-current-public-import-truth.md`
+  - `tests/scripts/test_specialized_owner_surface_reasoning_contract.sh`
+  - change:
+    - froze:
+      - CT specialized
+        owner-surface reasoning
+        must remain
+      - CT active examples
+        must use
+        `fafafa.ssl`
+        +
+        `fafafa.ssl.context.builder`
+        where the public facade already covers the symbols
+      - CT active examples
+        must stop using
+        `fafafa.ssl.base`
+      - CT guide header
+        must stop advertising
+        the stale
+        `1.0 / 2026-01-30 / v1.0+`
+        snapshot
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_specialized_owner_surface_reasoning_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_specialized_owner_surface_reasoning_contract.sh`
+    - result: FAIL
+    - summary:
+      - `CT_IMPLEMENTATION_GUIDE`
+        still advertised
+        a stale header snapshot
+        and still taught
+        `fafafa.ssl.base`
+        in active examples
+
+- repair CT_IMPLEMENTATION_GUIDE current public import truth:
+  - `docs/guides/CT_IMPLEMENTATION_GUIDE.md`
+  - change:
+    - refreshed
+      the guide header
+      to
+      current active
+      rolling guidance
+    - rewrote
+      CT runtime
+      and
+      CT log-client
+      imports
+      to remove
+      unnecessary
+      `fafafa.ssl.base`
+    - preserved
+      the guide's
+      CT owner-surface
+      reasoning
+      and
+      validator / log-client
+      boundary
+
+- verify focused closeout:
+  - `bash tests/scripts/test_specialized_owner_surface_reasoning_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### OCSP_USAGE_GUIDE Current Public Import Truth
 
 - inspect active OCSP-guide import drift before editing:

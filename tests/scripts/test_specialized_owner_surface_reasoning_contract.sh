@@ -48,5 +48,32 @@ require_absent "  fafafa.ssl.base," \
 require_fixed '这里直接回到 `CreateConnection(...)`，是因为 `ISSLCertificateTransparency` / `ISSLCertificateTransparencyValidation` 这组 CT runtime owner surface 挂在连接对象上；如果你只是普通客户端接入而不需要读取 CT owner surface，握手入口仍可保持在 `TSSLConnector` / `TSSLStream`。' \
   "$ct_guide" \
   "CT_IMPLEMENTATION_GUIDE must explain why it intentionally uses the connection owner path"
+require_fixed "**版本**: rolling" \
+  "$ct_guide" \
+  "CT_IMPLEMENTATION_GUIDE must declare rolling version instead of a stale 1.0 snapshot"
+require_fixed "**最后更新**: 2026-05-21" \
+  "$ct_guide" \
+  "CT_IMPLEMENTATION_GUIDE must refresh its active update date"
+require_fixed "**适用范围**: 当前 fafafa.ssl active CT runtime / validator / log-client guidance" \
+  "$ct_guide" \
+  "CT_IMPLEMENTATION_GUIDE must classify itself as current active CT guidance instead of a frozen v1.0 page"
+require_fixed "  fafafa.ssl," \
+  "$ct_guide" \
+  "CT_IMPLEMENTATION_GUIDE must use the current public facade unit in active CT examples"
+require_fixed "  fafafa.ssl.context.builder;" \
+  "$ct_guide" \
+  "CT_IMPLEMENTATION_GUIDE must keep the builder unit where TSSLContextBuilder is referenced"
+require_absent "**版本**: 1.0" \
+  "$ct_guide" \
+  "CT_IMPLEMENTATION_GUIDE must stop advertising stale 1.0 version"
+require_absent "**创建日期**: 2026-01-30" \
+  "$ct_guide" \
+  "CT_IMPLEMENTATION_GUIDE must stop advertising stale creation-date snapshot as current guidance"
+require_absent "**适用于**: fafafa.ssl v1.0+" \
+  "$ct_guide" \
+  "CT_IMPLEMENTATION_GUIDE must stop advertising stale v1.0 applicability as current guidance"
+require_absent "  fafafa.ssl.base," \
+  "$ct_guide" \
+  "CT_IMPLEMENTATION_GUIDE must stop teaching split base-unit imports in active examples"
 
 echo "[PASS] specialized guides explain why they intentionally use connection owner paths"
