@@ -20,7 +20,7 @@ program https_client_session;
 
 uses
   SysUtils, Classes, DateUtils,
-  fafafa.ssl, fafafa.ssl.base,
+  fafafa.ssl,
   fafafa.examples.tcp;
 
 const
@@ -411,4 +411,3 @@ end;
 begin
   Main;
 end.
-

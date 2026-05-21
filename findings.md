@@ -2,6 +2,99 @@
 
 ## 2026-05-21
 
+- production HTTPS examples public import truth
+  这一刀确认的
+  不是
+  production
+  client/server
+  示例真的还依赖
+  `fafafa.ssl.base`
+  才能成立，
+  而是
+  当前 façade
+  已经足够覆盖
+  这批普通 TLS
+  public surface，
+  示例还在保留
+  历史入口
+
+- 当前更准确的收口是：
+  - `https_client_auth`
+    /
+    `https_client_simple`
+    /
+    `https_client_post`
+    /
+    `https_client_session`
+    真正依赖的
+    `TSocketHandle`
+    /
+    `INVALID_SOCKET`
+    /
+    `ConnectTCP`
+    /
+    `CloseSocket`
+    /
+    `InitNetwork`
+    都来自
+    `fafafa.examples.tcp`
+  - `https_server_simple`
+    的本地 server-side
+    socket 语义
+    真实 owner
+    是
+    `Sockets`
+  - `ISSLContext`
+    /
+    `ISSLConnection`
+    /
+    `ISSLClientConnection`
+    /
+    `ISSLCertificateStore`
+    /
+    `ISSLSessionResumption`
+    /
+    `TSSLFactory`
+    /
+    `sslCtxClient`
+    /
+    `sslCtxServer`
+    /
+    `sslOpenSSL`
+    /
+    `sslVerifyPeer`
+    /
+    `sslVerifyNone`
+    当前都已可直接来自
+    `fafafa.ssl`
+
+- 这说明
+  当前 production
+  residual
+  同样属于
+  guidance drift，
+  不是新的
+  backend capability
+  或 façade export
+  缺口
+
+- 这也让当前主线更清楚：
+  - 非-production
+    active examples
+    之外，
+    production examples
+    source-level residual
+    也已经收口
+  - examples 层下一步
+    更值得继续压的
+    已不再是
+    运行时代码，
+    而是
+    `.lpi`
+    metadata
+    与活跃入口文档
+    是否还在发布旧 unit truth
+
 - specialized / utility examples public import truth
   这一刀确认的
   不是

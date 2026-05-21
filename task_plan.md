@@ -10,6 +10,129 @@
 
 ## Current Status
 
+- [completed] `production https examples public import truth`
+  当前 focused 目标：
+  - 收口
+    `examples/production/*`
+    这组仍然活跃可见的
+    production HTTPS
+    client/server
+    示例里残留的
+    `fafafa.ssl.base`
+    导入，
+    让普通 TLS
+    public surface
+    回到
+    `fafafa.ssl`
+    ，同时保留
+    `fafafa.examples.tcp`
+    /
+    `Sockets`
+    作为真实
+    helper / socket owner
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-production-https-examples-public-import-truth.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_production_https_examples_public_import_truth_contract.sh`
+  - 更新：
+    - `examples/production/https_client_auth.pas`
+    - `examples/production/https_client_simple.pas`
+    - `examples/production/https_client_post.pas`
+    - `examples/production/https_server_simple.pas`
+    - `examples/production/https_client_session.pas`
+  当前预期 truth：
+  - `ISSLContext`
+    /
+    `ISSLConnection`
+    /
+    `ISSLClientConnection`
+    /
+    `ISSLCertificateStore`
+    /
+    `ISSLSessionResumption`
+    /
+    `TSSLFactory`
+    /
+    `sslCtxClient`
+    /
+    `sslCtxServer`
+    /
+    `sslOpenSSL`
+    /
+    `sslVerifyPeer`
+    /
+    `sslVerifyNone`
+    当前都应直接来自
+    `fafafa.ssl`
+  - `https_client_auth`
+    /
+    `https_client_simple`
+    /
+    `https_client_post`
+    /
+    `https_client_session`
+    真正的 socket helper owner
+    应继续是
+    `fafafa.examples.tcp`
+  - `https_server_simple`
+    的 server-side socket
+    语义 owner
+    应继续是
+    `Sockets`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_production_https_examples_public_import_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_production_https_examples_public_import_truth_contract.sh`
+    - FAIL -> PASS
+    - RED summary:
+      - `https_server_simple`
+        still retained
+        historical
+        `fafafa.ssl.base`
+  - focused compile proof：
+    - `examples/production/https_client_auth.pas`
+      - PASS
+    - `examples/production/https_client_simple.pas`
+      - PASS
+    - `examples/production/https_client_post.pas`
+      - PASS
+    - `examples/production/https_server_simple.pas`
+      - PASS
+    - `examples/production/https_client_session.pas`
+      - PASS
+  - `git diff --check`
+    - PASS
+  - note:
+    - compile logs
+      still contain
+      repo pre-existing
+      warnings/notes,
+      but no new failure
+      from this batch
+  当前批收口后的默认下一步：
+  - `examples/`
+    的 non-metadata
+    source-level
+    public-entry drift
+    已进一步逼近闭环；
+    下一刀更自然的是：
+    - `.lpi`
+      project metadata
+      residual
+      (`test_winssl.lpi`
+      /
+      `test_openssl.lpi`)
+    - 或
+      活跃根文档 / 索引页
+      里的
+      source-truth drift
+      (`README.md`
+      /
+      `docs/README.md`
+      /
+      `docs/DOCUMENTATION_INDEX.md`)
+
 - [completed] `specialized / utility examples public import truth`
   当前 focused 目标：
   - 收口

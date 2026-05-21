@@ -20,7 +20,7 @@ program https_client_auth;
 
 uses
   SysUtils, Classes, DateUtils, Math,
-  fafafa.ssl, fafafa.ssl.base,
+  fafafa.ssl,
   fafafa.examples.tcp;
 
 const

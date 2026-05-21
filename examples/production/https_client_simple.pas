@@ -21,7 +21,7 @@ program https_client_simple;
 
 uses
   SysUtils, Classes, DateUtils, Math,
-  fafafa.ssl, fafafa.ssl.base,
+  fafafa.ssl,
   fafafa.examples.tcp;
 
 const
@@ -411,5 +411,4 @@ end;
 begin
   Main;
 end.
-
 

@@ -6,6 +6,120 @@
 
 ## 2026-05-21
 
+### Production HTTPS Examples Public Import Truth
+
+- inspect production HTTPS example residuals before closeout:
+  - `src/fafafa.ssl.pas`
+  - `examples/production/https_client_auth.pas`
+  - `examples/production/https_client_simple.pas`
+  - `examples/production/https_client_post.pas`
+  - `examples/production/https_server_simple.pas`
+  - `examples/production/https_client_session.pas`
+  - `examples/fafafa.examples.tcp.pas`
+  - change:
+    - confirmed
+      façade already re-exports
+      `ISSLContext`
+      /
+      `ISSLConnection`
+      /
+      `ISSLClientConnection`
+      /
+      `ISSLCertificateStore`
+      /
+      `ISSLSessionResumption`
+      /
+      `TSSLFactory`
+      /
+      `sslCtxClient`
+      /
+      `sslCtxServer`
+      /
+      `sslOpenSSL`
+      /
+      `sslVerifyPeer`
+      /
+      `sslVerifyNone`
+    - confirmed
+      client-side helper owner
+      remains
+      `fafafa.examples.tcp`
+    - confirmed
+      `https_server_simple`
+      keeps
+      `Sockets`
+      as its real
+      server-side socket owner
+
+- add focused batch record and create a dedicated production HTTPS import contract:
+  - `docs/plans/2026-05-21-production-https-examples-public-import-truth.md`
+  - `tests/scripts/test_production_https_examples_public_import_truth_contract.sh`
+  - change:
+    - froze
+      production HTTPS
+      example import truth
+      around
+      façade-first imports
+      while preserving
+      helper-owner boundaries
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_production_https_examples_public_import_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_production_https_examples_public_import_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - `https_server_simple`
+        still lacked
+        public facade truth
+
+- repair production HTTPS examples public import truth:
+  - `examples/production/https_client_auth.pas`
+  - `examples/production/https_client_simple.pas`
+  - `examples/production/https_client_post.pas`
+  - `examples/production/https_server_simple.pas`
+  - `examples/production/https_client_session.pas`
+  - change:
+    - removed
+      obsolete
+      `fafafa.ssl.base`
+      imports
+      from all target files
+    - kept
+      `fafafa.examples.tcp`
+      and
+      `Sockets`
+      as the true
+      helper / socket owners
+    - left
+      runtime logic
+      unchanged
+
+- verify focused closeout:
+  - `bash -n tests/scripts/test_production_https_examples_public_import_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_production_https_examples_public_import_truth_contract.sh`
+    - result: PASS
+  - `fpc -B -Fu./src ... examples/production/https_client_auth.pas`
+    - result: PASS
+  - `fpc -B -Fu./src ... examples/production/https_client_simple.pas`
+    - result: PASS
+  - `fpc -B -Fu./src ... examples/production/https_client_post.pas`
+    - result: PASS
+  - `fpc -B -Fu./src ... examples/production/https_server_simple.pas`
+    - result: PASS
+  - `fpc -B -Fu./src ... examples/production/https_client_session.pas`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+  - note:
+    - compile logs
+      still contain
+      repo pre-existing
+      warnings/notes,
+      but no new failure
+      from this batch
+
 ### Specialized / Utility Examples Public Import Truth
 
 - confirm current repo truth before opening the next residual example batch:

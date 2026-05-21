@@ -20,7 +20,7 @@ program https_server_simple;
 
 uses
   SysUtils, Classes, Sockets,
-  fafafa.ssl, fafafa.ssl.base;
+  fafafa.ssl;
 
 const
   BUFFER_SIZE = 16384;
@@ -259,5 +259,4 @@ end;
 begin
   Main;
 end.
-
 
