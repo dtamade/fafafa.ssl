@@ -1,7 +1,7 @@
 # fafafa.ssl 用户指南
 
 > **版本**: rolling
-> **最后更新**: 2026-05-19
+> **最后更新**: 2026-05-21
 
 本指南详细介绍如何使用 fafafa.ssl 库构建安全的 SSL/TLS 应用程序。
 
@@ -133,69 +133,68 @@ fpc -Fusrc myapp.pas
 
 ## 常见场景
 
+本节前两个主场景优先展示当前普通新代码入口：`uses fafafa.ssl, fafafa.ssl.context.builder;` + `TSSLContextBuilder` / `TSSLConnector` / `TSSLAcceptor` / `TSSLStream`。
+如果你要固定 backend、或直接读取挂在连接对象上的 low-level owner surface，再回到 `ISSLLibrary` / `ISSLContext` / `CreateConnection(...)`。
+
 ### 场景 1: HTTPS 客户端
 
 ```pascal
 program https_client;
 
 uses
-  SysUtils, fafafa.ssl;
+  SysUtils,
+  fafafa.ssl,
+  fafafa.ssl.context.builder;
 
 var
-  LLib: ISSLLibrary;
   LContext: ISSLContext;
+  LTLS: TSSLConnector;
+  LStream: TSSLStream;
   LConn: ISSLConnection;
-  LClientConn: ISSLClientConnection;
   LResponse: string;
 begin
-  // 1. 初始化库
-  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
-  if not LLib.Initialize then
-    raise Exception.Create('Failed to initialize SSL');
-  
+  // 1. 创建客户端上下文
+  LContext := TSSLContextBuilder.Create
+    .WithTLS12And13
+    .WithVerifyPeer
+    .WithSystemRoots
+    .BuildClient;
+
   try
-    // 2. 创建客户端上下文
-    LContext := LLib.CreateContext(sslCtxClient);
-    
-    // 3. 配置 TLS 1.2+
-    LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
-    
-    // 4. 加载系统 CA 证书（自动）
-    // LContext.LoadCAFile('/etc/ssl/certs/ca-bundle.crt'); // Linux
-    // LContext.LoadCAFile('C:\Windows\System32\curl-ca-bundle.crt'); // Windows
-    
-    // 5. 启用证书验证
-    LContext.SetVerifyMode([sslVerifyPeer]);
-    
-    // 6. 连接到服务器，并在连接级配置 SNI/hostname
-    LConn := LContext.CreateConnection(ConnectToServer('example.com', 443));
-    LClientConn := LConn as ISSLClientConnection;
-    LClientConn.SetServerName('example.com');
-    if LConn.Connect then
-    begin
-      // 7. 如需额外检查，可显式验证证书主机名
+    // 2. 使用 Connector 建立 TLS（hostname/SNI 由连接器负责）
+    LTLS := TSSLConnector.FromContext(LContext);
+    LStream := LTLS.ConnectSocket(ConnectToServer('example.com', 443), 'example.com');
+    try
+      LConn := LStream.Connection;
+
+      // 3. 如需额外检查，可显式验证证书主机名
       if LConn.GetPeerCertificate.VerifyHostname('example.com') then
       begin
-        // 8. 发送 HTTP 请求
+        // 4. 发送 HTTP 请求
         LConn.WriteString('GET / HTTP/1.1'#13#10 +
                           'Host: example.com'#13#10 +
                           'Connection: close'#13#10#13#10);
-        
-        // 9. 接收响应
+
+        // 5. 接收响应
         if LConn.ReadString(LResponse) then
           WriteLn('Response:', LResponse);
       end;
-      
-      // 10. 优雅关闭
-      LConn.Shutdown;
+    finally
+      // 6. TSSLStream 负责连接收口
+      LStream.Free;
     end;
-  finally
-    LLib.Finalize;
+  except
+    on E: Exception do
+    begin
+      WriteLn('TLS failed: ', E.Message);
+      raise;
+    end;
   end;
 end.
 ```
 
-上面为了快速演示 HTTP 文本往返，使用了 `ReadString` / `WriteString`。它们仍是 `v1.x` convenience-core 文本 helper；如果你在框架、事件循环或分帧协议里集成，优先使用 `Read` / `Write` 或 `TSSLStream`。
+上面为了快速演示 HTTP 文本往返，使用了 `ReadString` / `WriteString`。它们仍是 `v1.x` convenience-core 文本 helper；如果你在框架、事件循环或分帧协议里集成，优先使用 `Read` / `Write` 或直接把 `TSSLStream` 交给上层协议。
+如果你要固定 backend、或直接读取挂在连接对象上的 low-level owner surface，再回到 `ISSLLibrary` / `ISSLContext` / `CreateConnection(...)`。
 
 ### 场景 2: HTTPS 服务器
 
@@ -203,55 +202,53 @@ end.
 program https_server;
 
 uses
-  SysUtils, fafafa.ssl;
+  SysUtils,
+  fafafa.ssl,
+  fafafa.ssl.context.builder;
 
 var
-  LLib: ISSLLibrary;
   LContext: ISSLContext;
+  LAcceptor: TSSLAcceptor;
+  LStream: TSSLStream;
   LConn: ISSLConnection;
   LRequest: string;
 begin
-  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
-  LLib.Initialize;
-  
+  // 1. 构建服务端上下文
+  LContext := TSSLContextBuilder.Create
+    .WithCertificate('server.crt')
+    .WithPrivateKey('server.key')
+    .WithVerifyNone  // 普通单向 TLS server；如需 mTLS 改用 WithMutualTLS(...)
+    .BuildServer;
+
   try
-    // 创建服务端上下文
-    LContext := LLib.CreateContext(sslCtxServer);
-    
-    // 加载服务器证书和私钥
-    LContext.LoadCertificate('server.crt');
-    LContext.LoadPrivateKey('server.key');
-    
-    // 可选：要求客户端证书
-    // LContext.LoadCAFile('client-ca.crt');
-    // LContext.SetVerifyMode([sslVerifyPeer, sslVerifyFailIfNoPeerCert]);
-    
-    // 接受客户端连接
+    // 2. 使用 Acceptor 接受 TLS 连接
+    LAcceptor := TSSLAcceptor.FromContext(LContext);
     while True do
     begin
-      LConn := LContext.CreateConnection(AcceptClient);
-      if LConn.Accept then
-      begin
-        // 读取请求
+      LStream := LAcceptor.AcceptSocket(AcceptClient);
+      try
+        LConn := LStream.Connection;
+
+        // 3. 读取请求
         if LConn.ReadString(LRequest) then
           WriteLn('Request: ', LRequest);
-        
-        // 发送响应
+
+        // 4. 发送响应
         LConn.WriteString('HTTP/1.1 200 OK'#13#10 +
                           'Content-Type: text/plain'#13#10 +
                           'Connection: close'#13#10#13#10 +
                           'Hello, SSL!');
-        
-        LConn.Shutdown;
+      finally
+        // 5. TSSLStream 负责连接收口
+        LStream.Free;
       end;
     end;
-  finally
-    LLib.Finalize;
   end;
 end.
 ```
 
-服务端示例同理：这里保留 `ReadString` / `WriteString` 是为了让文本请求/响应示例更直观；真正接入 HTTP/SMTP/自定义 framed protocol 时，建议让上层协议自己管理边界，并改走 `Read` / `Write` 或 `TSSLStream`。
+服务端示例同理：这里保留 `ReadString` / `WriteString` 是为了让文本请求/响应示例更直观；真正接入 HTTP/SMTP/自定义 framed protocol 时，建议让上层协议自己管理边界，并改走 `Read` / `Write` 或直接使用 `TSSLStream`。
+如果你要固定 backend、或直接读取挂在连接对象上的 low-level owner surface，再回到 `ISSLLibrary` / `ISSLContext` / `CreateConnection(...)`。
 
 ### 场景 3: 证书验证与管理
 

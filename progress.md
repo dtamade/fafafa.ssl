@@ -6,6 +6,124 @@
 
 ## 2026-05-21
 
+### USER_GUIDE Ordinary Entrypoint Truth Alignment
+
+- inspect ordinary-user entrypoint drift before editing:
+  - `docs/guides/USER_GUIDE.md`
+  - `docs/guides/GETTING_STARTED.md`
+  - `docs/ARCHITECTURE.md`
+  - `docs/guides/FAQ.md`
+  - `src/fafafa.ssl.tls.pas`
+  - `tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - `tests/scripts/test_readstring_active_example_signature_truth_contract.sh`
+  - `tests/scripts/test_active_server_example_verify_intent_truth_contract.sh`
+  - change:
+    - confirmed
+      current ordinary-user
+      main entry
+      is
+      `fafafa.ssl`
+      +
+      `fafafa.ssl.context.builder`
+      +
+      `TSSLContextBuilder`
+      /
+      `TSSLConnector`
+      /
+      `TSSLAcceptor`
+      /
+      `TSSLStream`
+    - confirmed
+      `USER_GUIDE`
+      first two
+      HTTPS client/server
+      scenarios
+      still taught
+      `GetLibraryInstance(sslOpenSSL)`
+      +
+      `Lib.CreateContext(...)`
+      +
+      direct
+      `CreateConnection(...)`
+      as default
+    - confirmed
+      `TSSLAcceptor.FromContext(...)`
+      +
+      `AcceptSocket(...)`
+      is the current shipped server-side facade path
+
+- add focused batch record and new USER_GUIDE contract:
+  - `docs/plans/2026-05-21-user-guide-ordinary-entrypoint-truth-alignment.md`
+  - `tests/scripts/test_user_guide_ordinary_entrypoint_truth_contract.sh`
+  - change:
+    - froze:
+      - explicit ordinary-entrypoint note
+      - client builder + connector path
+      - server builder + acceptor path
+      - absence of stale low-level fixed-backend bootstrap in the first two scenarios
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_user_guide_ordinary_entrypoint_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_user_guide_ordinary_entrypoint_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - `USER_GUIDE`
+        still lacked
+        explicit ordinary-entrypoint guidance
+        and still taught
+        low-level fixed-backend bootstrap
+        in the first two scenarios
+
+- repair USER_GUIDE ordinary main-entry truth:
+  - `docs/guides/USER_GUIDE.md`
+  - change:
+    - added explicit
+      ordinary-user
+      entrypoint note
+      before the first two scenarios
+    - rewrote
+      HTTPS client
+      scenario
+      to
+      builder +
+      connector +
+      stream
+      flow
+    - rewrote
+      HTTPS server
+      scenario
+      to
+      builder +
+      acceptor +
+      stream
+      flow
+    - kept
+      `ReadString` /
+      `WriteString`
+      examples
+      while moving
+      TLS bootstrap
+      back to current facade path
+    - made
+      ordinary one-way
+      TLS server
+      verify intent
+      explicit via
+      `.WithVerifyNone`
+
+- verify focused closeout:
+  - `bash tests/scripts/test_user_guide_ordinary_entrypoint_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_readstring_active_example_signature_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_active_server_example_verify_intent_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### Native Handle Quick Ref Current Public Entrypoint Truth
 
 - inspect current native-handle quick-ref drift before editing:

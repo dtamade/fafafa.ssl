@@ -10,6 +10,71 @@
 
 ## Current Status
 
+- [completed] `user guide ordinary entrypoint truth alignment`
+  当前 focused 目标：
+  - 把
+    `docs/guides/USER_GUIDE.md`
+    前两个普通用户主场景
+    从
+    low-level fixed-backend /
+    direct `CreateConnection(...)`
+    路径
+    收回到
+    builder /
+    connector /
+    acceptor /
+    stream
+    主入口
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-user-guide-ordinary-entrypoint-truth-alignment.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_user_guide_ordinary_entrypoint_truth_contract.sh`
+  - 更新：
+    - `docs/guides/USER_GUIDE.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_user_guide_ordinary_entrypoint_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_user_guide_ordinary_entrypoint_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_readstring_active_example_signature_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_active_server_example_verify_intent_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - `USER_GUIDE`
+    前两个普通主场景
+    默认入口
+    应是：
+    - `uses fafafa.ssl, fafafa.ssl.context.builder;`
+    - `TSSLContextBuilder`
+    - `TSSLConnector`
+    - `TSSLAcceptor`
+    - `TSSLStream`
+  - fixed-backend /
+    direct `ISSLLibrary` /
+    `ISSLContext` /
+    `CreateConnection(...)`
+    路径
+    仍然 shipped，
+    但不再占据普通用户第一屏主入口
+  当前批收口后的默认下一步：
+  - `USER_GUIDE`
+    不再把普通接入
+    带回
+    low-level
+    fixed-backend
+    心智
+  - 下一条 residual
+    继续优先挑
+    还会影响
+    普通用户默认接入路线
+    的活跃文档
+
 - [completed] `native handle quick ref current public entrypoint truth`
   当前 focused 目标：
   - 收掉

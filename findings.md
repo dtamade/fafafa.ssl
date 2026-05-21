@@ -2,6 +2,80 @@
 
 ## 2026-05-21
 
+- user guide ordinary entrypoint truth alignment
+  这一刀确认的
+  不是
+  `USER_GUIDE`
+  缺少
+  low-level path，
+  而是
+  这份
+  面向普通用户的指南
+  把
+  `GetLibraryInstance(sslOpenSSL)`
+  +
+  `Lib.CreateContext(...)`
+  +
+  `CreateConnection(...)`
+  教成了
+  前两个主场景的默认入口
+
+- 当前更准确的收口是：
+  - 普通新代码
+    当前主入口
+    应是：
+    - `uses fafafa.ssl, fafafa.ssl.context.builder;`
+    - `TSSLContextBuilder`
+    - `TSSLConnector`
+    - `TSSLAcceptor`
+    - `TSSLStream`
+  - fixed-backend /
+    direct connection
+    路径
+    仍然 shipped，
+    但应退回：
+    - 高级场景
+    - backend-specific guide
+    - owner-surface reasoning
+  - `USER_GUIDE`
+    前两个
+    HTTPS client/server
+    主场景
+    不该继续承担
+    low-level fixed-backend
+    教学职责
+
+- 这说明
+  我们当前“接口设计没问题”
+  这条主线里，
+  真实高价值收口点
+  不只是
+  helper / factory
+  名称对齐，
+  还包括：
+  普通用户第一屏
+  学到的
+  到底是不是
+  当前推荐 public path
+
+- focused RED
+  首轮暴露的是：
+  - `USER_GUIDE`
+    缺少
+    前两个主场景
+    的 ordinary-entrypoint
+    显式说明
+  - client/server
+    主场景
+    仍然保留
+    `GetLibraryInstance(sslOpenSSL)`
+    +
+    `Lib.CreateContext(...)`
+    +
+    direct
+    `CreateConnection(...)`
+    这条默认教学路径
+
 - native handle quick ref current public entrypoint truth
   这一刀确认的
   不是
