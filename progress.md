@@ -29171,3 +29171,53 @@
       `backend-specific runtime residuals`
       to
       `backend-specific semantic truth proofs`
+
+### v1.5.0 Static Audit Inventory Refresh
+
+- probe the next static/release-facing red after the stale ISSLConnection contracts:
+  - `bash tests/scripts/test_v1_5_0_static_pascal_audit_contract.sh`
+    - result: FAIL
+    - summary:
+      - contract still expected
+        `197`
+        Pascal units,
+        but current head already has
+        `198`
+
+- inspect current inventory truth instead of patching the number blindly:
+  - `find src -maxdepth 1 -name 'fafafa.ssl*.pas' | sort | nl -ba | tail -n 20`
+  - `python3` inventory probe using the current
+    `scripts/compile_all_modules.py`
+    skip rules
+  - `git ls-tree -r --name-only v1.5.0 src`
+  - change:
+    - confirmed
+      current head:
+      - total `198`
+      - compile `186`
+      - skip `12`
+    - confirmed published
+      `v1.5.0`
+      tag:
+      - total `197`
+    - identified the added active unit:
+      - `src/fafafa.ssl.context.config.pas`
+
+- refresh static audit truth on both the report and the contract:
+  - `docs/plans/2026-05-22-v1-5-0-static-audit-inventory-refresh.md`
+  - `docs/test_reports/STATIC_AUDIT_V1.5.0.md`
+  - `tests/scripts/test_v1_5_0_static_pascal_audit_contract.sh`
+  - change:
+    - updated static audit wording from the stale
+      `197 / 185 / 12`
+      release-time inventory
+      to current-head truth
+      `198 / 186 / 12`
+    - recorded explicitly that
+      `src/fafafa.ssl.context.config.pas`
+      is the post-release added Pascal unit
+    - strengthened the static audit contract so it now checks:
+      - total Pascal units
+      - Linux compile-sieve count
+      - intentional skip count
+      - static audit page mention of the added unit

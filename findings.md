@@ -18084,3 +18084,49 @@
   所以修 focused contract 本身
   也是当前这个 goal
   的一部分
+
+- v1.5.0 static audit inventory refresh
+  这次新的静态红灯
+  说明另一个需要持续盯住的 truth surface
+  不是源码接口本身，
+  而是 release-facing 审计台账
+  会不会随 head 漂移而过期。
+
+- 当前更准确的事实是：
+  - `v1.5.0` published tag
+    的 `src/fafafa.ssl*.pas`
+    inventory
+    是 `197`
+  - current head
+    已经变成 `198`
+  - 新增单元是：
+    `src/fafafa.ssl.context.config.pas`
+  - 同时，
+    当前 `scripts/compile_all_modules.py`
+    这条 Linux compile sieve
+    真相也已经变成：
+    - compile `186`
+    - skip `12`
+
+- 这意味着
+  `STATIC_AUDIT_V1.5.0.md`
+  如果还继续写
+  `197 tracked src/*.pas files`
+  /
+  `185 core modules`
+  就不再只是“旧快照”，
+  而会在当前工作流里
+  直接制造 release-facing false-green / false-red 混淆。
+
+- 更重要的是，
+  这次新增的并不是随便一个 archive 文件，
+  而是活跃生产单元
+  `src/fafafa.ssl.context.config.pas`。
+  所以正确修法也不该只是
+  改 total count，
+  而应该把：
+  - total
+  - compile
+  - skip
+  - added-since-tag unit
+  一起冻结到 focused static contract 里

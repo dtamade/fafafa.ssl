@@ -63,12 +63,38 @@ printf '[TEST] v1.5.0 static Pascal audit contract\n'
 require_file "docs/test_reports/STATIC_AUDIT_V1.5.0.md" "static audit report exists"
 require_file "docs/test_reports/RELEASE_READINESS_V1.5.0.md" "release readiness report exists"
 
-source_count="$(find src -maxdepth 1 -name 'fafafa.ssl*.pas' | wc -l | tr -d ' ')"
-if [[ "$source_count" == "197" ]]; then
-  pass "source inventory contains 197 Pascal units"
+read -r source_count compile_count skipped_count <<EOF
+$(python3 - <<'PY'
+from pathlib import Path
+src = Path('src')
+all_files = sorted(src.glob('fafafa.ssl*.pas'))
+patterns = ('fafafa.ssl.winssl', 'rand_old.pas', 'fafafa.ssl.http.simple')
+compile_files = [f for f in all_files if not any(p in f.name for p in patterns)]
+skipped = [f for f in all_files if any(p in f.name for p in patterns)]
+print(len(all_files), len(compile_files), len(skipped))
+PY
+)
+EOF
+
+if [[ "$source_count" == "198" ]]; then
+  pass "source inventory contains 198 Pascal units"
 else
-  fail "source inventory contains 197 Pascal units" \
-    "expected 197 src/fafafa.ssl*.pas files, found $source_count"
+  fail "source inventory contains 198 Pascal units" \
+    "expected 198 src/fafafa.ssl*.pas files, found $source_count"
+fi
+
+if [[ "$compile_count" == "186" ]]; then
+  pass "Linux compile sieve contains 186 Pascal units"
+else
+  fail "Linux compile sieve contains 186 Pascal units" \
+    "expected 186 Linux-compilable src/fafafa.ssl*.pas files, found $compile_count"
+fi
+
+if [[ "$skipped_count" == "12" ]]; then
+  pass "Linux compile sieve skip inventory stays at 12 WinSSL-only units"
+else
+  fail "Linux compile sieve skip inventory stays at 12 WinSSL-only units" \
+    "expected 12 intentionally skipped src/fafafa.ssl*.pas files, found $skipped_count"
 fi
 
 skeleton_count="$(find tests/winssl -maxdepth 1 -name '*skeleton*.pas' | wc -l | tr -d ' ')"
@@ -81,6 +107,12 @@ fi
 
 require_fixed "docs/test_reports/STATIC_AUDIT_V1.5.0.md" 'Status: `PASS`' \
   "static audit report records PASS"
+require_fixed "docs/test_reports/STATIC_AUDIT_V1.5.0.md" "198 tracked \`src/*.pas\` files" \
+  "static audit report records the current total source inventory"
+require_fixed "docs/test_reports/STATIC_AUDIT_V1.5.0.md" "186 core modules" \
+  "static audit report records the current Linux compile inventory"
+require_fixed "docs/test_reports/STATIC_AUDIT_V1.5.0.md" "src/fafafa.ssl.context.config.pas" \
+  "static audit report records the post-release added Pascal unit"
 require_fixed "docs/test_reports/STATIC_AUDIT_V1.5.0.md" "TSSLFactory" \
   "static audit report mentions the public facade"
 require_fixed "docs/test_reports/STATIC_AUDIT_V1.5.0.md" "WinSSL skeleton harnesses" \

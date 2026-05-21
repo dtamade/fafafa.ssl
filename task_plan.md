@@ -19315,3 +19315,75 @@
       `TSSLConfig` mixed-scope
       的下一条 live 切片，
       而不是再回头修这组 stale contract
+
+### 2026-05-22 v1.5.0 static audit inventory refresh
+
+- [completed] 当前新的 live RED
+  已从更广的门面 / 接口候选线里
+  收缩成一个
+  真正 release-facing 的静态红灯：
+  - `bash tests/scripts/test_v1_5_0_static_pascal_audit_contract.sh`
+    首轮 FAIL：
+    - `source inventory contains 197 Pascal units`
+    - current head 实际是 `198`
+  - 当前进一步核对后已确认：
+    - `v1.5.0` published tag
+      的确是 `197`
+    - current head
+      新增的是：
+      `src/fafafa.ssl.context.config.pas`
+    - 当前 Linux compile sieve
+      真相是：
+      - total `198`
+      - compile `186`
+      - skip `12`
+
+- [completed] 最小正确修法
+  不是回避这条红灯，
+  也不是只把合同里的
+  `197`
+  改成
+  `198`，
+  而是一起刷新：
+  - 新增
+    `docs/plans/2026-05-22-v1-5-0-static-audit-inventory-refresh.md`
+  - 更新：
+    - `docs/test_reports/STATIC_AUDIT_V1.5.0.md`
+    - `tests/scripts/test_v1_5_0_static_pascal_audit_contract.sh`
+  - 其中：
+    - static audit page
+      改为明确记录
+      current head
+      的 inventory drift
+    - static audit contract
+      从只盯 total count
+      收紧成同时验证：
+      - total = `198`
+      - compile = `186`
+      - skip = `12`
+      - 新增单元
+        `src/fafafa.ssl.context.config.pas`
+        已写进 static audit page
+
+- [completed] 当前 focused proof：
+  - `bash tests/scripts/test_v1_5_0_static_pascal_audit_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+
+- [completed] 当前批收口后的默认下一步：
+  - 当前这条 release-facing
+    static audit drift
+    已被收平，
+    说明
+    “源码没坏，
+    但审计台账过期”
+    也属于
+    当前总 goal
+    必须持续修复的部分
+  - 后续继续推进时，
+    仍优先寻找：
+    - 真正新的 source/runtime/interface RED
+    - 或新的 public facade completeness compile gap
+  - 不再回头把这条 inventory drift
+    当成未分类旧问题
