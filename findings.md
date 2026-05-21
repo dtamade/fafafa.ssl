@@ -13135,3 +13135,71 @@
   - `sslFreePascal`
     已是 shipped backend，
     不是未来占位描述
+
+- `ARCHITECTURE.md`
+  这轮暴露的是“总览架构文档继续发布旧实现路线”的问题：
+  - 它不只是一个旧 helper 漂移，
+    而是会同时误导：
+    - public entrypoint
+    - backend 选择心智
+    - backend 文件布局
+    - `FreePascal`
+      backend 的当前状态判断
+
+- 这类 drift
+  比单页 API 示例更危险：
+  - 因为架构文档天然会被当成
+    “设计路线与实现结构的权威图”
+  - 一旦这里继续写
+    `CreateLibrary`
+    /
+    旧 priority
+    /
+    “纯 FreePascal backend 未来才有”，
+    后续设计讨论、
+    新 backend 文档、
+    甚至测试路线
+    都会被带偏
+
+- 这页当前最关键的错位有 4 组：
+  - 普通入口仍没切到
+    `TSSLContextBuilder`
+    /
+    `TSSLConnector`
+  - 工厂段还把
+    `CreateLibrary`
+    当作当前公开入口
+  - 优先级仍停留在旧值，
+    没反映当前注册真相：
+    - `WinSSL=200`
+    - `MbedTLS=175`
+    - `WolfSSL=150`
+    - `OpenSSL=100`
+    - `FreePascal=50`
+  - backend 布局还在发布不存在的
+    `fafafa.ssl.openssl.lib.pas`
+    并静默漏掉
+    `fafafa.ssl.freepascal.*`
+
+- 当前更准确的架构文档真相应明确保留：
+  - 普通新代码：
+    `fafafa.ssl`
+    +
+    `TSSLContextBuilder`
+    /
+    `TSSLConnector`
+  - fixed-backend / advanced：
+    `TSSLFactory.GetLibraryInstance(...)`
+    +
+    `Lib.CreateContext(...)`
+  - `TSSLFactory.CreateContext(...)`
+    仍存在，
+    但定位是 core / factory surface，
+    不是取代 builder 的普通推荐入口
+  - `FreePascal`
+    backend
+    已存在且 shipped；
+    后续要继续推进的是
+    capability parity
+    和 runtime proof，
+    不是再把它写回“未来才有”

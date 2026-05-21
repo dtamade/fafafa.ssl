@@ -20248,6 +20248,127 @@
       sync
     - confirmed the active worktree delta is scoped to this batch only
 
+### Architecture Current Public Entrypoint And Backend Truth Alignment
+
+- `mcp__ace_tool__.search_context`
+  - query:
+    - locate current architecture-doc truth around
+      public entrypoints,
+      `GetLibraryInstance`,
+      `CreateLibrary`,
+      current backend priorities,
+      shipped `sslFreePascal`,
+      file-layout truth,
+      and `ISSLServerConnection` wording
+  - result: PASS
+  - summary:
+    - confirmed
+      `docs/ARCHITECTURE.md`
+      still published:
+      - `Factory.CreateContext(...)`
+      - `CreateLibrary`
+      - stale backend priorities
+      - stale file-layout entry
+        `fafafa.ssl.openssl.lib.pas`
+      - future-state wording for shipped
+        `FreePascal`
+        backend
+
+- inspect current source/backend truth:
+  - `src/fafafa.ssl.factory.pas`
+  - `src/fafafa.ssl.pas`
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.openssl.backed.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - result: PASS
+  - summary:
+    - confirmed current public factory truth is:
+      - `TSSLFactory.GetLibraryInstance(...)`
+      - `TSSLFactory.CreateContext(...)`
+    - confirmed current registered priorities are:
+      - `WinSSL=200`
+      - `MbedTLS=175`
+      - `WolfSSL=150`
+      - `OpenSSL=100`
+      - `FreePascal=50`
+    - confirmed current file truth is
+      `fafafa.ssl.openssl.backed.pas`
+      not
+      `fafafa.ssl.openssl.lib.pas`
+
+- add focused batch inputs:
+  - `docs/plans/2026-05-21-architecture-current-public-entrypoint-and-backend-truth-alignment.md`
+  - `tests/scripts/test_architecture_current_public_entrypoint_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - documented the batch as architecture-doc truth repair
+    - added a static guard for current entrypoint / priority / file-layout truth
+
+- `bash -n tests/scripts/test_architecture_current_public_entrypoint_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - shell syntax for the new architecture contract is clean
+
+- `bash tests/scripts/test_architecture_current_public_entrypoint_truth_contract.sh`
+  - result: RED
+  - summary:
+    - first run failed immediately on missing
+      `TSSLContextBuilder`
+    - confirmed the architecture doc still had real current-entrypoint drift
+
+- update docs:
+  - `docs/ARCHITECTURE.md`
+  - `tests/scripts/test_architecture_current_public_entrypoint_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - switched the standard path to
+      `fafafa.ssl`
+      +
+      `TSSLContextBuilder`
+      /
+      `TSSLConnector`
+    - switched factory guidance to current
+      `GetLibraryInstance(...)`
+      /
+      `CreateContext(...)`
+      truth
+    - restored current backend priorities and file-layout truth
+    - restated shipped
+      `FreePascal`
+      backend as current state instead of future placeholder
+    - tightened one contract pattern so
+      `TSSLFactory.CreateContext(...)`
+      is not falsely treated as the old
+      `Factory.CreateContext(...)`
+
+- `bash tests/scripts/test_architecture_current_public_entrypoint_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - confirmed the architecture doc now keeps:
+      - current standard entrypoint truth
+      - current factory/public surface truth
+      - current backend priority and file-layout truth
+
+- final recheck after planning-file sync:
+  - `bash tests/scripts/test_architecture_current_public_entrypoint_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+  - `git status --short`
+    - result: PASS
+  - summary:
+    - confirmed the architecture batch stayed green after later
+      `task_plan.md`
+      /
+      `findings.md`
+      /
+      `progress.md`
+      sync
+    - confirmed the active worktree delta is scoped to this batch only
+
 ### Main Backends Ed25519 Certificate Algorithm Truth
 
 - add focused batch inputs:

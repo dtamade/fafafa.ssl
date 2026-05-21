@@ -1,8 +1,8 @@
 # fafafa.ssl 架构设计文档
 
-**版本**: 1.1.0
-**最后更新**: 2026-02-05
-**状态**: 稳定 (Production Ready)
+**版本**: v1.5.0
+**最后更新**: 2026-05-21
+**状态**: 当前架构总览（已对齐 v1.5.0 public truth）
 
 ---
 
@@ -22,7 +22,7 @@
 
 ## 概述
 
-fafafa.ssl 是一个多后端 TLS/SSL 库，为 Free Pascal 提供统一的高级 API，同时支持多种底层 TLS 实现（OpenSSL, WinSSL, MbedTLS, WolfSSL）。
+fafafa.ssl 是一个多后端 TLS/SSL 库，为 Free Pascal 提供统一的高级 API，同时支持多种底层 TLS 实现（OpenSSL, WinSSL, MbedTLS, WolfSSL, FreePascal）。
 
 ### 核心特性
 
@@ -33,6 +33,14 @@ fafafa.ssl 是一个多后端 TLS/SSL 库，为 Free Pascal 提供统一的高�
 - **零依赖部署** - 可静态链接所有依赖
 - **跨平台** - Linux, Windows, macOS, FreeBSD
 
+> 当前入口说明：
+> - 普通新代码优先使用 `uses fafafa.ssl;` + `TSSLContextBuilder` / `TSSLConnector`
+> - 需要固定 backend 或做更低层控制时，再使用
+>   `TSSLFactory.GetLibraryInstance(...)`
+>   或
+>   `TSSLFactory.CreateContext(...)`
+> - `CreateLibrary` 这类旧 helper / 旧入口不再是当前 public truth
+
 ---
 
 ## 设计原则
@@ -42,13 +50,20 @@ fafafa.ssl 是一个多后端 TLS/SSL 库，为 Free Pascal 提供统一的高�
 **原则**: 用户代码仅依赖接口，不依赖具体实现。
 
 ```pascal
-// ✅ 好的设计 - 依赖接口
+uses
+  fafafa.ssl,
+  fafafa.ssl.context.builder;
+
+// ✅ 好的设计 - 依赖统一入口与接口
 var
   Ctx: ISSLContext;
-  Conn: ISSLConnection;
+  TLS: TSSLConnector;
 begin
-  Ctx := Factory.CreateContext(...);
-  Conn := Ctx.CreateConnection(...);
+  Ctx := TSSLContextBuilder.Create
+    .WithTLS12And13
+    .WithVerifyPeer
+    .BuildClient;
+  TLS := TSSLConnector.FromContext(Ctx);
 end;
 
 // ❌ 差的设计 - 依赖具体类
@@ -106,25 +121,28 @@ end;
                          ↓
 ┌─────────────────────────────────────────────────────┐
 │                  统一 API 层                         │
+│ fafafa.ssl / TSSLContextBuilder / TSSLConnector    │
 │   ISSLLibrary, ISSLContext, ISSLConnection, ...    │
 └─────────────────────────────────────────────────────┘
                          │
                          ↓
 ┌─────────────────────────────────────────────────────┐
 │                  工厂模式层                          │
-│        TSSLFactory (自动检测和加载后端)             │
+│ TSSLFactory (GetLibraryInstance / CreateContext /   │
+│              DetectBestLibrary)                     │
 └─────────────────────────────────────────────────────┘
                          │
         ┌────────────────┼────────────────┐
         ↓                ↓                ↓
-┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-│ OpenSSL 后端 │  │ WinSSL 后端  │  │ MbedTLS 后端 │
-└──────────────┘  └──────────────┘  └──────────────┘
-        ↓                ↓                ↓
-┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-│  libssl.so   │  │  schannel    │  │ libmbedtls   │
-│  libcrypto   │  │  (Windows)   │  │              │
-└──────────────┘  └──────────────┘  └──────────────┘
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│ OpenSSL 后端 │  │ WinSSL 后端  │  │ MbedTLS 后端 │  │ FreePascal   │
+└──────────────┘  └──────────────┘  └──────────────┘  │   后端       │
+        ↓                ↓                ↓           └──────────────┘
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐          ↓
+│  libssl.so   │  │  schannel    │  │ libmbedtls   │  ┌──────────────┐
+│  libcrypto   │  │  (Windows)   │  │              │  │ pure Pascal   │
+└──────────────┘  └──────────────┘  └──────────────┘  │ TLS core/data │
+                                                      └──────────────┘
 ```
 
 ---
@@ -145,7 +163,7 @@ IInterface (FreePascal 内置)
     └─ ISSLSession          (会话管理)
 ```
 
-> 当前 public Pascal surface 只声明了 `ISSLClientConnection`；
+> 当前 public Pascal source 只声明了 `ISSLClientConnection`；
 > 服务端特有能力目前主要通过可选 context 扩展接口暴露，
 > 而不是通过单独的 `ISSLServerConnection` 公开接口。
 
@@ -239,7 +257,8 @@ var
   Ctx: ISSLContext;
   NativeAccess: ISSLNativeHandleAccess;
 begin
-  Ctx := Factory.CreateContext(...);
+  Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
+  Ctx := Lib.CreateContext(sslCtxClient);
 
   // 运行时检查是否支持
   if Supports(Ctx, ISSLNativeHandleAccess, NativeAccess) then
@@ -315,19 +334,24 @@ end;
 
 ```
 src/
+├── fafafa.ssl.pas                   # 主门面 re-export
 ├── fafafa.ssl.base.pas              # 核心接口定义
-├── fafafa.ssl.factory.pas           # 工厂模式
+├── fafafa.ssl.factory.pas           # 工厂模式 / core factory surface
+├── fafafa.ssl.context.builder.pas   # 推荐 context builder 入口
+├── fafafa.ssl.tls.pas               # TSSLConnector / TSSLAcceptor / TSSLStream
+├── fafafa.ssl.native_handle.pas     # 当前统一 native-handle helper
 │
 ├── fafafa.ssl.openssl.base.pas      # OpenSSL 基础定义
 ├── fafafa.ssl.openssl.api.*.pas     # OpenSSL API 绑定
-├── fafafa.ssl.openssl.lib.pas       # ISSLLibrary 实现
+├── fafafa.ssl.openssl.backed.pas    # OpenSSL ISSLLibrary 实现 / 注册入口
 ├── fafafa.ssl.openssl.context.pas   # ISSLContext 实现
 ├── fafafa.ssl.openssl.connection.pas# ISSLConnection 实现
 ├── fafafa.ssl.openssl.certificate.pas# ISSLCertificate 实现
-├── fafafa.ssl.openssl.native_handle.pas # 辅助函数
+├── fafafa.ssl.openssl.native_handle.pas # backend-specific helper
 │
 ├── fafafa.ssl.winssl.*.pas          # WinSSL 后端
 ├── fafafa.ssl.mbedtls.*.pas         # MbedTLS 后端
+├── fafafa.ssl.freepascal.*.pas      # FreePascal 后端
 └── fafafa.ssl.wolfssl.*.pas         # WolfSSL 后端
 ```
 
@@ -342,40 +366,51 @@ TSSLFactory = class
 public
   // 后端注册
   class procedure RegisterLibrary(
-    AType: TSSLLibraryType;
-    AClass: TSSLLibraryClass;
-    const AName: string;
-    APriority: Integer
-  );
+    ALibType: TSSLLibraryType;
+    ACreateFunc: TSSLLibraryCreateFunc;
+    const ADescription: string = '';
+    APriority: Integer = 0
+  ); overload;
 
   // 自动检测
   class function DetectBestLibrary: TSSLLibraryType;
 
-  // 创建实例
-  class function CreateLibrary(
-    AType: TSSLLibraryType = sslAutoDetect
+  // 当前公开库入口
+  class function GetLibraryInstance(
+    ALibType: TSSLLibraryType = sslAutoDetect
   ): ISSLLibrary;
 
+  // core / factory surface
   class function CreateContext(
     AContextType: TSSLContextType;
     ALibType: TSSLLibraryType = sslAutoDetect
-  ): ISSLContext;
+  ): ISSLContext; overload;
+
+  class function GetAvailableLibraries: TSSLLibraryTypes;
+  class function IsLibraryAvailable(ALibType: TSSLLibraryType): Boolean;
 end;
 ```
 
 ### 后端优先级
 
-```
-优先级顺序（Linux）:
-1. OpenSSL (优先级 10) - 最成熟
-2. MbedTLS (优先级 7)  - 轻量级
-3. WolfSSL (优先级 5)  - 嵌入式优化
+当前注册优先级（数字越大越优先）：
 
-优先级顺序（Windows）:
-1. WinSSL  (优先级 10) - 系统原生
-2. OpenSSL (优先级 9)  - 兼容性好
-3. MbedTLS (优先级 7)  - 备选
-```
+- `WinSSL=200`
+- `MbedTLS=175`
+- `WolfSSL=150`
+- `OpenSSL=100`
+- `FreePascal=50`
+
+`DetectBestLibrary()` / `GetLibraryInstance(sslAutoDetect)` 的当前核心逻辑是：
+
+1. 扫描已注册 backend
+2. 对每个 backend 调用 `IsLibraryAvailable(...)`
+3. 选择 **优先级最高且真正可用** 的实现
+
+也就是说，
+当前主叙事不是“Linux 固定 OpenSSL / Windows 固定 WinSSL”，
+而是“注册表 + availability + priority”。
+平台分支只是在没有候选命中时的兜底路径。
 
 ---
 
@@ -405,9 +440,9 @@ end;
    initialization
      TSSLFactory.RegisterLibrary(
        sslNewBackend,
-       TNewBackendSSLLibrary,
+       @CreateNewBackendLibrary,
        'NewBackend TLS',
-       8  // 优先级
+       80  // 优先级示例
      );
    ```
 
@@ -520,7 +555,7 @@ fafafa.ssl 使用的设计模式：
 
 ### 中期（v2.0）
 
-- [ ] 纯 FreePascal TLS 后端（Phase 1: 密码学原语）
+- [ ] 继续提升 `FreePascal` backend 的 TLS 1.3 / cipher-suite parity 与 runtime proof 完整度
 - [ ] 异步 I/O 支持
 - [ ] 内存池优化
 

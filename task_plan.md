@@ -13776,3 +13776,67 @@
     commit / push
     条件
   - 收口后继续扫下一份高入口活跃文档里的旧 public entrypoint / backend / helper truth drift
+
+### 2026-05-21 ARCHITECTURE 当前 public entrypoint 与 backend 真相对齐
+
+- [completed] 当前新的 residual
+  已继续收窄到
+  `docs/ARCHITECTURE.md`
+  这份高入口架构文档：
+  - 入口示例仍写
+    `Factory.CreateContext(...)`
+  - 工厂段仍把
+    `CreateLibrary`
+    当作公开入口
+  - backend 优先级仍停在旧值：
+    - `OpenSSL=10`
+    - `MbedTLS=7`
+    - `WolfSSL=5`
+    - `WinSSL=10`
+  - backend 文件组织仍写不存在的
+    `fafafa.ssl.openssl.lib.pas`
+    且漏掉
+    `fafafa.ssl.freepascal.*`
+  - “未来架构演进” 仍把
+    `FreePascal`
+    backend
+    写成未来态
+- [completed] 最小正确修法已经落地：
+  - 新增
+    `docs/plans/2026-05-21-architecture-current-public-entrypoint-and-backend-truth-alignment.md`
+  - 新增
+    `tests/scripts/test_architecture_current_public_entrypoint_truth_contract.sh`
+  - `ARCHITECTURE`
+    已切回：
+    - 普通新代码：
+      `fafafa.ssl`
+      +
+      `TSSLContextBuilder`
+      /
+      `TSSLConnector`
+    - 当前工厂公开入口：
+      `TSSLFactory.GetLibraryInstance(...)`
+    - `TSSLFactory.CreateContext(...)`
+      仅保留为 core / factory surface
+    - 当前注册优先级：
+      `WinSSL=200, MbedTLS=175, WolfSSL=150, OpenSSL=100, FreePascal=50`
+    - 当前文件布局：
+      `fafafa.ssl.openssl.backed.pas`
+      /
+      `fafafa.ssl.freepascal.*.pas`
+      /
+      `fafafa.ssl.native_handle`
+    - `FreePascal`
+      backend
+      改回“已 shipped，继续补能力/证明”
+- [completed] 当前批收口后的默认下一步：
+  - `bash -n tests/scripts/test_architecture_current_public_entrypoint_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_architecture_current_public_entrypoint_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  - 当前已具备
+    commit / push
+    条件
+  - 收口后继续扫下一份高入口活跃文档里的旧 public entrypoint / backend / helper truth drift
