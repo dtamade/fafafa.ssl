@@ -16,8 +16,7 @@ uses
   Windows, WinSock2,
   {$ENDIF}
   SysUtils, Classes, DateUtils,
-  fafafa.ssl.factory,
-  fafafa.ssl.base;
+  fafafa.ssl;
 
 type
   THTTPMethod = (hmGET, hmPOST, hmPUT, hmDELETE, hmPATCH);

@@ -21,8 +21,7 @@ program certificate_chain;
 
 uses
   SysUtils,
-  fafafa.ssl.base,
-  fafafa.ssl.factory;
+  fafafa.ssl;
 
 procedure ExplainCertificateChain;
 begin
@@ -261,4 +260,3 @@ begin
     end;
   end;
 end.
-

@@ -2,6 +2,83 @@
 
 ## 2026-05-21
 
+- active examples public import truth alignment
+  这一刀确认的
+  不是
+  examples
+  真正还依赖
+  `fafafa.ssl.base`
+  /
+  `fafafa.ssl.factory`
+  才能工作，
+  而是
+  主门面
+  已经补齐多轮 supporting types
+  之后，
+  一批活跃示例
+  还在保留
+  历史拆分导入
+
+- 当前更准确的收口是：
+  - `TSSLFactory`
+    /
+    `ISSLLibrary`
+    /
+    `ISSLContext`
+    /
+    `ISSLConnection`
+    /
+    `ISSLCertificateVerification`
+    /
+    `TSSLDataResult`
+    当前都已可直接来自
+    `fafafa.ssl`
+  - 所以这些 examples
+    继续写
+    `base`
+    /
+    `factory`
+    已经属于
+    public import guidance drift，
+    不是实现缝隙
+
+- 这说明
+  我们前面把
+  facade completeness
+  做绿之后，
+  下一层真实残余
+  会落在：
+  - 活跃 examples
+    是否继续教学旧入口
+  - helper unit
+    是否继续把旧入口
+    扩散到下游示例
+
+- focused RED
+  首轮暴露的是：
+  - `HEAD` 快照下
+    新 contract
+    第一条就因
+    `04_https_rest_client`
+    仍未使用
+    `fafafa.ssl`
+    而失败
+
+- 这批还确认：
+  - `examples/fafafa.examples.tcp.pas`
+    只是一个
+    helper amplifier
+    它本身并不需要
+    `fafafa.ssl.base`
+  - `real_world_test`
+    对
+    `fafafa.ssl.base`
+    的依赖
+    也只是被 helper
+    和历史 imports
+    连带留下
+    的噪音
+
 - active reference metadata truth alignment
   这一刀确认的
   不是

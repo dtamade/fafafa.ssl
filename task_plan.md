@@ -10,6 +10,78 @@
 
 ## Current Status
 
+- [completed] `active examples public import truth alignment`
+  当前 focused 目标：
+  - 收口
+    一批仍在活跃
+    examples/helper
+    中继续教学
+    `fafafa.ssl.base`
+    /
+    `fafafa.ssl.factory`
+    的 public import drift，
+    让这些示例重新回到
+    当前主门面
+    `fafafa.ssl`
+    已补齐 supporting types 之后的
+    current truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-active-examples-public-import-truth-alignment.md`
+  - 新增 focused contract：
+    - `tests/scripts/test_active_examples_public_import_truth_contract.sh`
+  - 更新：
+    - `examples/04_https_rest_client.pas`
+    - `examples/07_certificate_chain.pas`
+    - `examples/demo_fluent_api.pas`
+    - `examples/winssl_health_checker.pas`
+    - `examples/winssl_rest_client.pas`
+    - `examples/fafafa.examples.tcp.pas`
+    - `examples/validation/real_world_test.pas`
+  当前预期 truth：
+  - 活跃 examples
+    优先直接使用
+    `fafafa.ssl`
+  - helper unit
+    `fafafa.examples.tcp`
+    不再继续把
+    `fafafa.ssl.base`
+    传播给下游测试示例
+  当前 focused proof：
+  - `HEAD` snapshot
+    run
+    `tests/scripts/test_active_examples_public_import_truth_contract.sh`
+    - FAIL
+    - summary:
+      - `examples/04_https_rest_client.pas`
+        仍未使用
+        `fafafa.ssl`
+        主门面
+  - `bash -n tests/scripts/test_active_examples_public_import_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_active_examples_public_import_truth_contract.sh`
+    - PASS
+  - focused compile proof：
+    - `examples/04_https_rest_client.pas`
+      - PASS
+    - `examples/07_certificate_chain.pas`
+      - PASS
+    - `examples/demo_fluent_api.pas`
+      - PASS
+    - `examples/validation/real_world_test.pas`
+      - PASS
+  - `git diff --check`
+    - PASS
+  当前批收口后的默认下一步：
+  - 若 examples import truth
+    完全拉绿，
+    再继续寻找
+    仍活着的
+    facade completeness
+    /
+    active docs/examples
+    residual
+
 - [completed] `architecture current route truth alignment`
   当前 focused 目标：
   - 收掉

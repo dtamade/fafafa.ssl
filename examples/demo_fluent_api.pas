@@ -13,7 +13,7 @@ program demo_fluent_api;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.base,
+  fafafa.ssl,
   fafafa.ssl.crypto.utils,
   fafafa.ssl.encoding;
 

@@ -6,6 +6,113 @@
 
 ## 2026-05-21
 
+### Active Examples Public Import Truth Alignment
+
+- inspect current example-import residuals before editing:
+  - `src/fafafa.ssl.pas`
+  - `tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - `examples/04_https_rest_client.pas`
+  - `examples/07_certificate_chain.pas`
+  - `examples/demo_fluent_api.pas`
+  - `examples/winssl_health_checker.pas`
+  - `examples/winssl_rest_client.pas`
+  - `examples/fafafa.examples.tcp.pas`
+  - `examples/validation/real_world_test.pas`
+  - change:
+    - confirmed
+      current drift
+      is no longer
+      facade completeness,
+      but active examples
+      still teaching
+      split
+      `fafafa.ssl.base`
+      /
+      `fafafa.ssl.factory`
+      imports
+    - confirmed
+      `fafafa.examples.tcp`
+      only uses
+      facade-exported
+      connection/cert-verification
+      surfaces
+    - confirmed
+      `real_world_test`
+      can drop
+      `fafafa.ssl.base`
+      once helper/import truth
+      is resynced
+
+- add focused batch record and create a dedicated examples-import contract:
+  - `docs/plans/2026-05-21-active-examples-public-import-truth-alignment.md`
+  - `tests/scripts/test_active_examples_public_import_truth_contract.sh`
+  - change:
+    - froze
+      the target active-example set
+      and required them
+      to stop importing
+      `fafafa.ssl.base`
+      /
+      `fafafa.ssl.factory`
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_active_examples_public_import_truth_contract.sh`
+    - result: PASS
+  - `HEAD` snapshot
+    temp-tree
+    run
+    `tests/scripts/test_active_examples_public_import_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - `04_https_rest_client`
+        still used
+        old split import truth
+
+- repair active examples public import truth:
+  - `examples/04_https_rest_client.pas`
+  - `examples/07_certificate_chain.pas`
+  - `examples/demo_fluent_api.pas`
+  - `examples/winssl_health_checker.pas`
+  - `examples/winssl_rest_client.pas`
+  - `examples/fafafa.examples.tcp.pas`
+  - `examples/validation/real_world_test.pas`
+  - change:
+    - unified
+      the target active examples
+      back to
+      current facade-first
+      import truth
+    - removed
+      stale
+      `fafafa.ssl.base`
+      /
+      `fafafa.ssl.factory`
+      imports
+      from the helper path
+      too
+
+- verify focused closeout:
+  - `bash tests/scripts/test_active_examples_public_import_truth_contract.sh`
+    - result: PASS
+  - `fpc -B -Fu./src ... examples/04_https_rest_client.pas`
+    - result: PASS
+  - `fpc -B -Fu./src ... examples/07_certificate_chain.pas`
+    - result: PASS
+  - `fpc -B -Fu./src ... examples/demo_fluent_api.pas`
+    - result: PASS
+  - `fpc -B -Fu./src -Fu./examples ... examples/validation/real_world_test.pas`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+  - note:
+    - compile logs
+      still contain
+      pre-existing
+      warnings/notes
+      from the repo,
+      but no new failure
+      from this import-truth batch
+
 ### Active Reference Metadata Truth Alignment
 
 - inspect active reference-metadata residuals before editing:

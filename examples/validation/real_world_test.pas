@@ -22,7 +22,7 @@ program real_world_test;
 
 uses
   SysUtils, Classes, DateUtils, Math, StrUtils,
-  fafafa.ssl, fafafa.ssl.base,
+  fafafa.ssl,
   fafafa.examples.tcp;
 
 const

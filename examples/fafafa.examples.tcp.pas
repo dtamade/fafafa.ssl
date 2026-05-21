@@ -13,7 +13,7 @@ uses
   BaseUnix, Unix, Sockets, NetDB,
   {$ENDIF}
   Classes,
-  fafafa.ssl.base;
+  fafafa.ssl;
 
 type
   TSocketHandle = {$IFDEF MSWINDOWS}TSocket{$ELSE}TSocket{$ENDIF};
