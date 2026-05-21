@@ -10,6 +10,77 @@
 
 ## Current Status
 
+- [completed] `api reference current public import truth`
+  当前 focused 目标：
+  - 修复
+    `docs/reference/API_REFERENCE.md`
+    里 canonical
+    capability 示例
+    仍在使用的
+    `fafafa.ssl.base`
+    /
+    `fafafa.ssl.factory`
+    split import
+    与
+    `SSL_LIBRARY_NAMES`
+    旧常量直取问题，
+    让主参考页
+    继续保持
+    canonical public reference
+    定位，
+    但不再偏离
+    当前 façade
+    已公开的 import truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-api-reference-current-public-import-truth.md`
+  - 更新 focused contract：
+    - `tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - 更新：
+    - `docs/reference/API_REFERENCE.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - `API_REFERENCE`
+    capability canonical
+    示例
+    当前应统一回到：
+    - `uses fafafa.ssl;`
+  - backend name
+    输出
+    当前应使用：
+    - `LibraryTypeToString(...)`
+  - `SSL_LIBRARY_NAMES`
+    仍可留在
+    `fafafa.ssl.base`
+    作为 source-level
+    常量，
+    但不再出现在
+    façade-only
+    canonical 示例里
+  当前批收口后的默认下一步：
+  - `API_REFERENCE`
+    不再继续教学
+    `fafafa.ssl.base`
+    /
+    `fafafa.ssl.factory`
+    这组旧 split import
+    或
+    `SSL_LIBRARY_NAMES`
+    这类 base-only 常量
+  - 下一条 residual
+    继续优先挑
+    仍在传播
+    旧 import
+    或
+    stale header
+    的活跃 guide/reference
+
 - [completed] `ct implementation guide current public import truth`
   当前 focused 目标：
   - 修复

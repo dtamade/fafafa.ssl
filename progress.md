@@ -6,6 +6,110 @@
 
 ## 2026-05-21
 
+### API_REFERENCE Current Public Import Truth
+
+- inspect active API-reference import drift before editing:
+  - `docs/reference/API_REFERENCE.md`
+  - `src/fafafa.ssl.pas`
+  - `tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - `docs/plans/2026-05-21-api-reference-current-public-import-truth.md`
+  - change:
+    - confirmed
+      the canonical
+      capability example
+      should route façade-only callers
+      back to
+      `fafafa.ssl`
+    - confirmed
+      `ISSLLibrary`
+      /
+      `TSSLFactory`
+      /
+      `TSSLBackendCapabilities`
+      /
+      `LibraryTypeToString(...)`
+      are already
+      available from
+      `fafafa.ssl`
+    - confirmed
+      `SSL_LIBRARY_NAMES`
+      is still a
+      `fafafa.ssl.base`
+      constant
+      and should not remain
+      in façade-only
+      canonical examples
+    - confirmed
+      stale drift
+      remained in:
+      - the split
+        `base/factory`
+        uses clause
+      - multiple
+        `SSL_LIBRARY_NAMES[...]`
+        calls
+
+- add focused batch record and tighten the existing public-unit/import contract:
+  - `docs/plans/2026-05-21-api-reference-current-public-import-truth.md`
+  - `tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - change:
+    - froze:
+      - `API_REFERENCE`
+        capability examples
+        must use
+        `uses fafafa.ssl;`
+      - backend name
+        output
+        must use
+        `LibraryTypeToString(...)`
+      - active canonical examples
+        must stop using
+        `fafafa.ssl.base`
+        /
+        `fafafa.ssl.factory`
+        and
+        `SSL_LIBRARY_NAMES[...]`
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - `API_REFERENCE`
+        capability examples
+        still taught
+        split imports
+        and base-only
+        backend-name constants
+
+- repair API_REFERENCE current public import truth:
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - rewrote
+      the canonical
+      capability example
+      imports
+      to
+      `uses fafafa.ssl;`
+    - replaced
+      `SSL_LIBRARY_NAMES[...]`
+      with
+      `LibraryTypeToString(...)`
+      in both
+      the simple capability snippet
+      and the full example
+    - preserved
+      the section's
+      canonical capability
+      reference role
+
+- verify focused closeout:
+  - `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### CT_IMPLEMENTATION_GUIDE Current Public Import Truth
 
 - inspect active CT-guide import/header drift before editing:

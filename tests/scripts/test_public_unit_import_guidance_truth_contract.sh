@@ -90,6 +90,12 @@ require_fixed "$api_reference" "backend-specific low-level creators" \
   "API_REFERENCE must classify backend-specific creators as low-level entrypoints"
 require_fixed "$api_reference" "LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);" \
   "API_REFERENCE examples must use the current public library-entrypoint truth"
+require_fixed "$api_reference" "SysUtils, fafafa.ssl;" \
+  "API_REFERENCE capability examples must use the current public facade unit"
+require_fixed "$api_reference" "WriteLn('Backend not available: ', LibraryTypeToString(ABackend));" \
+  "API_REFERENCE capability examples must use the public LibraryTypeToString helper for backend names"
+require_fixed "$api_reference" "WriteLn('Backend: ', LibraryTypeToString(Caps.BackendType));" \
+  "API_REFERENCE capability examples must use the public LibraryTypeToString helper for capability backend names"
 
 for file in \
   "$integration_guide" \
@@ -123,6 +129,10 @@ require_absent "$troubleshooting" "fafafa.ssl.openssl;" \
   "TROUBLESHOOTING must stop recommending nonexistent fafafa.ssl.openssl facade unit"
 require_absent "$api_reference" "fafafa.ssl.openssl," \
   "API_REFERENCE examples must stop using nonexistent fafafa.ssl.openssl facade unit"
+require_absent "$api_reference" "SysUtils, fafafa.ssl.base, fafafa.ssl.factory;" \
+  "API_REFERENCE capability examples must stop teaching split base/factory imports"
+require_absent "$api_reference" "SSL_LIBRARY_NAMES[" \
+  "API_REFERENCE capability examples must stop teaching base-only SSL_LIBRARY_NAMES in facade-only examples"
 
 for file in \
   "$integration_guide" \

@@ -2,6 +2,73 @@
 
 ## 2026-05-21
 
+- api reference current public import truth
+  这一刀确认的
+  不是
+  `API_REFERENCE`
+  不该继续给出
+  capability canonical
+  示例，
+  而是
+  它在 canonical
+  位置上
+  仍继续教学：
+  - `fafafa.ssl.base`
+  - `fafafa.ssl.factory`
+  这组旧 split import
+  - `SSL_LIBRARY_NAMES[...]`
+    这类
+    base-only
+    常量直取
+
+- 当前更准确的收口是：
+  - `ISSLLibrary`
+    /
+    `TSSLFactory`
+    /
+    `TSSLBackendCapabilities`
+    /
+    `LibraryTypeToString(...)`
+    /
+    capability helper
+    当前都可以直接来自
+    `fafafa.ssl`
+  - `SSL_LIBRARY_NAMES`
+    仍然可以留在
+    `fafafa.ssl.base`
+    作为 source-level
+    常量，
+    但不该再出现在
+    façade-only
+    canonical 示例里
+
+- 这说明
+  当前“canonical docs”
+  这条线里，
+  不能只满足于
+  helper
+  和
+  library-entrypoint
+  名称对齐，
+  还要继续收紧：
+  示例是否会把调用方
+  逼回
+  base-only
+  常量和 split import
+
+- focused RED
+  首轮暴露的是：
+  - `API_REFERENCE`
+    capability 示例
+    仍未使用
+    `uses fafafa.ssl;`
+  - 搜索继续暴露出
+    另一处
+    `SSL_LIBRARY_NAMES[...]`
+    residual，
+    说明 canonical page
+    已经不只是单点示例漂移
+
 - ct implementation guide current public import truth
   这一刀确认的
   不是

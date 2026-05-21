@@ -1942,7 +1942,7 @@ begin
   Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   Caps := Lib.GetCapabilities;
 
-  WriteLn('Backend: ', SSL_LIBRARY_NAMES[Caps.BackendType]);
+  WriteLn('Backend: ', LibraryTypeToString(Caps.BackendType));
   WriteLn('Version: ', Caps.BackendVersion);
   WriteLn('TLS 1.3: ', Caps.SupportsTLS13);
 end;
@@ -2251,7 +2251,7 @@ end;
 program capability_example;
 
 uses
-  SysUtils, fafafa.ssl.base, fafafa.ssl.factory;
+  SysUtils, fafafa.ssl;
 
 procedure PrintBackendInfo(ABackend: TSSLLibraryType);
 var
@@ -2262,14 +2262,14 @@ begin
     Lib := TSSLFactory.GetLibraryInstance(ABackend);
     if not Assigned(Lib) then
     begin
-      WriteLn('Backend not available: ', SSL_LIBRARY_NAMES[ABackend]);
+      WriteLn('Backend not available: ', LibraryTypeToString(ABackend));
       Exit;
     end;
 
     Caps := Lib.GetCapabilities;
 
     WriteLn('========================================');
-    WriteLn('Backend: ', SSL_LIBRARY_NAMES[Caps.BackendType]);
+    WriteLn('Backend: ', LibraryTypeToString(Caps.BackendType));
     WriteLn('========================================');
     WriteLn;
 
