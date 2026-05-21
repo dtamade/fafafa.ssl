@@ -10,6 +10,65 @@
 
 ## Current Status
 
+- [completed] `migration guide v1.1 facade backend-name truth`
+  当前 focused 目标：
+  - 修复
+    `docs/MIGRATION_GUIDE_V1.1.md`
+    里 façade-only
+    capability 示例
+    仍在使用的
+    `SSL_LIBRARY_NAMES[...]`
+    直取，
+    让这份
+    迁移指南
+    继续保留
+    runtime-aware
+    capability
+    叙事
+    与
+    backend score
+    示例，
+    但不再偏离
+    当前 façade
+    已公开的
+    backend-name
+    truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-21-migration-guide-v11-backend-name-truth.md`
+  - 更新 focused contract：
+    - `tests/scripts/test_active_capability_docs_runtime_truth_contract.sh`
+  - 更新：
+    - `docs/MIGRATION_GUIDE_V1.1.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_active_capability_docs_runtime_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_active_capability_docs_runtime_truth_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  当前预期 truth：
+  - `MIGRATION_GUIDE_V1.1`
+    façade-only
+    backend-name
+    输出
+    应统一回到：
+    - `LibraryTypeToString(...)`
+  - `SSL_LIBRARY_NAMES[...]`
+    不再继续出现在
+    façade-only
+    capability 示例里
+  当前批收口后的默认下一步：
+  - `MIGRATION_GUIDE_V1.1`
+    不再继续传播
+    `SSL_LIBRARY_NAMES[...]`
+  - 下一条 residual
+    继续优先挑
+    旧页头快照
+    /
+    占位链接
+    的 active guide/reference
+
 - [completed] `winssl backend capability matrix current public import truth`
   当前 focused 目标：
   - 修复

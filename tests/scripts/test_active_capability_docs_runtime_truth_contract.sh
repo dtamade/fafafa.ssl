@@ -2,7 +2,7 @@
 set -euo pipefail
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-migration_doc="$root_dir/docs/MIGRATION_GUIDE_V1.1.md"
+migration_doc="${MIGRATION_GUIDE_V11_DOC:-$root_dir/docs/MIGRATION_GUIDE_V1.1.md}"
 selection_doc="$root_dir/docs/BACKEND_SELECTION_GUIDE.md"
 capability_guide="$root_dir/docs/CAPABILITY_MATRIX_GUIDE.md"
 
@@ -46,6 +46,10 @@ require_present "$migration_doc" "OpenSSL 的 PKCS#11 capability 取决于 Provi
   "Migration guide no longer records the runtime-aware OpenSSL PKCS#11/FIPS note"
 require_present "$migration_doc" 'WinSSL 的 `fafafa.ssl.winssl.enterprise` 当前只提供系统 FIPS policy/helper 检测，不等于已发布 `SupportsFIPSMode=True` capability。' \
   "Migration guide no longer records the WinSSL FIPS helper-vs-capability boundary"
+require_present "$migration_doc" "WriteLn('Selected backend: ', LibraryTypeToString(Result)," \
+  "Migration guide must use the public LibraryTypeToString helper for facade-only backend-name output"
+require_absent "$migration_doc" "SSL_LIBRARY_NAMES[" \
+  "Migration guide must stop teaching base-only SSL_LIBRARY_NAMES in facade-only capability examples"
 
 require_absent "$selection_doc" "- SupportsPKCS11: Yes" \
   "Backend selection guide still presents OpenSSL PKCS#11 as unconditional truth"

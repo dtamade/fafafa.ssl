@@ -2,6 +2,74 @@
 
 ## 2026-05-21
 
+- migration guide v1.1 facade backend-name truth
+  这一刀确认的
+  不是
+  `MIGRATION_GUIDE_V1.1`
+  不该继续保留
+  runtime-aware
+  capability
+  叙事，
+  而是
+  它在
+  capability
+  /
+  selector
+  真相
+  已经收紧的前提下，
+  façade-only
+  backend-name
+  输出
+  仍继续教学：
+  - `SSL_LIBRARY_NAMES[...]`
+
+- 当前更准确的收口是：
+  - `LibraryTypeToString(...)`
+    当前已由
+    `fafafa.ssl`
+    主门面公开
+  - `SSL_LIBRARY_NAMES`
+    仍然只是
+    `fafafa.ssl.base`
+    的 source-level
+    常量
+  - 所以这类
+    façade-only
+    capability 示例
+    该保留的
+    是
+    capability/back-end
+    评分逻辑，
+    不是
+    base-only
+    常量入口
+
+- 这说明
+  当前 capability
+  文档线里，
+  不只是
+  要冻结
+  runtime-aware
+  真相，
+  还要继续收紧：
+  façade-only
+  backend-name
+  输出
+  是否仍在把调用方
+  带回
+  `SSL_LIBRARY_NAMES[...]`
+
+- focused RED
+  首轮暴露的是：
+  - `MIGRATION_GUIDE_V1.1`
+    `HEAD`
+    snapshot
+    里这段
+    backend-name
+    输出
+    仍在使用
+    `SSL_LIBRARY_NAMES[...]`
+
 - winssl backend capability matrix current public import truth
   这一刀确认的
   不是

@@ -6,6 +6,120 @@
 
 ## 2026-05-21
 
+### MIGRATION_GUIDE_V1.1 Facade Backend-Name Truth
+
+- inspect active migration-v1.1 backend-name drift before editing:
+  - `docs/MIGRATION_GUIDE_V1.1.md`
+  - `src/fafafa.ssl.pas`
+  - `tests/scripts/test_active_capability_docs_runtime_truth_contract.sh`
+  - `docs/plans/2026-05-21-capability-matrix-guide-facade-backend-name-truth.md`
+  - change:
+    - confirmed
+      the guide
+      already keeps
+      the current
+      runtime-aware
+      PKCS#11
+      /
+      FIPS
+      capability
+      truth
+    - confirmed
+      current drift
+      is now
+      the façade-only
+      backend-name
+      output path,
+      not the
+      capability
+      semantics
+    - confirmed
+      `LibraryTypeToString(...)`
+      is already
+      exported by
+      `fafafa.ssl`
+    - confirmed
+      `SSL_LIBRARY_NAMES`
+      remains a
+      `fafafa.ssl.base`
+      source-level
+      constant
+    - confirmed
+      the active
+      backend-scoring
+      example
+      still used
+      `SSL_LIBRARY_NAMES[...]`
+
+- add focused batch record and tighten the existing active capability-doc contract:
+  - `docs/plans/2026-05-21-migration-guide-v11-backend-name-truth.md`
+  - `tests/scripts/test_active_capability_docs_runtime_truth_contract.sh`
+  - change:
+    - froze:
+      - existing
+        runtime-aware
+        capability
+        truth
+      - façade-only
+        backend-name
+        output
+        must use
+        `LibraryTypeToString(Result)`
+      - active example
+        must stop using
+        `SSL_LIBRARY_NAMES[...]`
+    - added
+      `MIGRATION_GUIDE_V11_DOC`
+      override support
+      so the same
+      focused contract
+      can prove RED
+      against a
+      pre-fix
+      guide snapshot
+
+- establish focused RED before implementation:
+  - `bash -n tests/scripts/test_active_capability_docs_runtime_truth_contract.sh`
+    - result: PASS
+  - `MIGRATION_GUIDE_V11_DOC=/tmp/fafafa_ssl_migration_guide_v11_head.md bash tests/scripts/test_active_capability_docs_runtime_truth_contract.sh`
+    - result: FAIL
+    - summary:
+      - `MIGRATION_GUIDE_V1.1`
+        `HEAD`
+        snapshot
+        still used
+        `SSL_LIBRARY_NAMES[...]`
+        in the
+        active
+        backend-scoring
+        example
+
+- repair MIGRATION_GUIDE_V1.1 facade backend-name truth:
+  - `docs/MIGRATION_GUIDE_V1.1.md`
+  - change:
+    - rewrote
+      the active
+      backend-name
+      output
+      from
+      `SSL_LIBRARY_NAMES[...]`
+      to
+      `LibraryTypeToString(...)`
+    - preserved
+      the guide's
+      runtime-aware
+      capability
+      scoring
+      and
+      migration
+      narrative
+
+- verify focused closeout:
+  - `bash tests/scripts/test_active_capability_docs_runtime_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### WINSSL_BACKEND_CAPABILITY_MATRIX Current Public Import Truth
 
 - inspect active WinSSL matrix import drift before editing:

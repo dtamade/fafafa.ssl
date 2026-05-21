@@ -632,7 +632,7 @@ begin
     end;
   end;
 
-  WriteLn('Selected backend: ', SSL_LIBRARY_NAMES[Result],
+  WriteLn('Selected backend: ', LibraryTypeToString(Result),
           ' (score: ', BestScore, ')');
 end;
 ```
