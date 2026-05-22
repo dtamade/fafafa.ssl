@@ -172,7 +172,7 @@ IInterface (FreePascal 内置)
     └─ ISSLSession          (会话管理)
 ```
 
-> 当前 public Pascal source 只声明了 `ISSLClientConnection`；
+> 当前 public Pascal surface 只声明了 `ISSLClientConnection`；
 > 服务端特有能力目前主要通过可选 context 扩展接口暴露，
 > 而不是通过单独的 `ISSLServerConnection` 公开接口。
 >

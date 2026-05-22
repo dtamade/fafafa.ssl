@@ -2,6 +2,30 @@
 
 ## 2026-05-22
 
+- the current contract guards are now aligned with the current truth:
+  - `docs/ARCHITECTURE.md` says the current public surface only declares `ISSLClientConnection`
+  - the WinSSL PSK quick-reference guard now checks semantic unsupported truth instead of exact markdown column width
+  - the focused contracts returned to green without changing runtime behavior
+
+- interface audit current truth and backend capability quick-reference fix
+  这次两个红点里，
+  一个是文档措辞需要再压实，
+  另一个是 contract 自己太吃 markdown 列宽：
+  - `docs/ARCHITECTURE.md`
+    已经表达了当前只声明 `ISSLClientConnection` 的事实，
+    但写成了 `source`，而当前 contract 要求的是更直接的 `surface` 句式
+  - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+    已经明确写了
+    `PSK | ❌ 不支持 | Schannel 限制`
+    的真相，
+    但 `test_backend_capability_matrix_quick_reference_truth_contract.sh`
+    之前用的是 literal spacing 匹配，
+    于是把正确 truth 误判成了 FAIL
+
+- 当前更准确的收口是：
+  - 架构文档应该直接说当前 public surface 只声明了 `ISSLClientConnection`
+  - WinSSL PSK guard 应该验证语义，不该依赖手工对齐出来的列宽
+
 - repository guidance entrypoint classification truth
   这一刀把
   “真正的 public import drift”

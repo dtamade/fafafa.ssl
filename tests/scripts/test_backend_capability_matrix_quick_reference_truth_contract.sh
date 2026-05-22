@@ -18,6 +18,15 @@ require_fixed() {
   fi
 }
 
+require_regex() {
+  local file="$1"
+  local pattern="$2"
+  local message="$3"
+  if ! rg -n --quiet -e "$pattern" "$file"; then
+    fail "$message"
+  fi
+}
+
 backend_matrix="docs/BACKEND_CAPABILITY_MATRIX.md"
 freepascal_lib="src/fafafa.ssl.freepascal.lib.pas"
 winssl_lib="src/fafafa.ssl.winssl.lib.pas"
@@ -31,7 +40,7 @@ require_fixed "$freepascal_lib" "Result.ALPNSupport := sslSupportExperimental;" 
   "FreePascal source must continue to publish experimental ALPN support level"
 require_fixed "$winssl_lib" "Result.SupportsTLS13 := (FWindowsVersion.Major >= 10) and (FWindowsVersion.Build >= 18362);" \
   "WinSSL source must continue to gate TLS 1.3 by Windows/Schannel version"
-require_fixed "$winssl_matrix" "| PSK | ❌ 不支持 | Schannel 限制 |" \
+require_regex "$winssl_matrix" '^\|[[:space:]]*PSK[[:space:]]*\|[[:space:]]*❌ 不支持[[:space:]]*\|[[:space:]]*Schannel 限制[[:space:]]*\|$' \
   "WinSSL backend matrix must continue to classify PSK as unsupported"
 
 require_fixed "$backend_matrix" '`TLS 1.3` 这一行对 `WinSSL` 按条件 capability truth 汇总：' \
@@ -40,7 +49,7 @@ require_fixed "$backend_matrix" '- `SupportsTLS13=True` 取决于运行时 Windo
   "Top-level backend matrix must mention WinSSL TLS 1.3 version gate"
 require_fixed "$backend_matrix" '`ALPN` / `SNI` 这两行对 `FreePascal` 按当前 published capability truth 汇总：' \
   "Top-level backend matrix must explain FreePascal ALPN/SNI support-level truth"
-require_fixed "$backend_matrix" '- 但 `ALPNSupport` / `SNISupport` 当前仍发布为 `sslSupportExperimental`' \
+require_fixed "$backend_matrix" '- `ALPNSupport` / `SNISupport` 当前仍发布为 `sslSupportExperimental`' \
   "Top-level backend matrix must mention FreePascal experimental ALPN/SNI support levels"
 require_fixed "$backend_matrix" '`PSK` 这一行对 `WinSSL` 当前按 unsupported 汇总：' \
   "Top-level backend matrix must explain WinSSL PSK unsupported truth"

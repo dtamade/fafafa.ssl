@@ -10,6 +10,30 @@
 
 ## Current Status
 
+- [completed] `interface audit current truth and backend capability quick-reference fix`
+  当前 focused 目标：
+  - 把 `docs/ARCHITECTURE.md` 的 current-surface 句子写得更明确，避免再被 contract 误判成没说明当前只有 `ISSLClientConnection`
+  - 把 WinSSL PSK quick-reference guard 改成不依赖 markdown 列宽的正则，保住 unsupported truth，同时消除假红
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-22-interface-audit-current-truth-and-backend-capability-quick-reference-fix.md`
+  - 更新：
+    - `docs/ARCHITECTURE.md`
+    - `tests/scripts/test_backend_capability_matrix_quick_reference_truth_contract.sh`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_backend_capability_matrix_quick_reference_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_interface_audit_current_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_backend_capability_matrix_quick_reference_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_interface_audit_capability_current_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_optional_interface_capability_alignment_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+
 - [completed] `repository guidance entrypoint classification truth`
   当前 focused 目标：
   - 收平

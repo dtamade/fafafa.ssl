@@ -6,6 +6,27 @@
 
 ## 2026-05-22
 
+### Interface Audit Current Truth And Backend Capability Quick Reference Fix
+
+- rerun the next two focused contracts after the TSSLConfig sweep:
+  - `bash -n tests/scripts/test_backend_capability_matrix_quick_reference_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_interface_audit_current_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_backend_capability_matrix_quick_reference_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_interface_audit_capability_current_truth_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_optional_interface_capability_alignment_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
+- repair the false-reds without changing runtime truth:
+  - `docs/ARCHITECTURE.md`
+  - `tests/scripts/test_backend_capability_matrix_quick_reference_truth_contract.sh`
+  - `docs/plans/2026-05-22-interface-audit-current-truth-and-backend-capability-quick-reference-fix.md`
+
 ### Repository Guidance Entrypoint Classification Truth
 
 - inspect the remaining repo-structure residuals after closing CODE_STYLE:
