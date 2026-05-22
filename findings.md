@@ -18311,3 +18311,8 @@
   - skip
   - added-since-tag unit
   一起冻结到 focused static contract 里
+
+- current turn revalidation confirmed the FreePascal early-data caveat is still the intended final experimental boundary:
+  - runtime `KnownIssues` stays on the persistent replay-store fail-closed wording
+  - roadmap and focused docs contracts still agree
+  - no fresh RED was needed and no new drift appeared

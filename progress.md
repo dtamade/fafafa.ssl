@@ -29429,3 +29429,20 @@
       - Linux compile-sieve count
       - intentional skip count
       - static audit page mention of the added unit
+
+### FreePascal Early-Data Final Caveat Revalidation
+
+- current turn rechecked the final caveat closeout on current HEAD:
+  - `bash -n tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_early_data_docs_truth_contract.sh`
+    - result: PASS
+  - `mkdir -p tmp/capability_cache_units && fpc -B -Fu./src -Fu./tests -FUtmp/capability_cache_units -FEtmp/capability_cache_units -otmp/capability_cache_units/test_capability_cache tests/test_capability_cache.pas && ./tmp/capability_cache_units/test_capability_cache`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+- conclusion:
+  - `KnownIssues`, `ROADMAP`, README / API / Integration / guide wording, and the focused contracts still agree on the persistent replay-store fail-closed `experimental` boundary
+  - no fresh drift or code change was needed in this turn
