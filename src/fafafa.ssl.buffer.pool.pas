@@ -22,6 +22,7 @@
 unit fafafa.ssl.buffer.pool;
 
 {$mode ObjFPC}{$H+}
+{$WARN 5093 off}  // Function result variable of managed type does not seem initialized
 {$modeswitch advancedrecords}
 
 interface

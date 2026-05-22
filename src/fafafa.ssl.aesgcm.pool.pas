@@ -1,6 +1,7 @@
 unit fafafa.ssl.aesgcm.pool;
 
 {$mode objfpc}{$H+}{$J-}
+{$WARN 5093 off}  // Function result variable of managed type does not seem initialized
 
 interface
 

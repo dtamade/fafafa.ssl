@@ -17,6 +17,7 @@ unit fafafa.ssl.openssl.cert.builder;
 
 {$mode ObjFPC}{$H+}
 {$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
+{$WARN 5066 off}  // Symbol is deprecated - self-referencing deprecated symbols
 
 interface
 

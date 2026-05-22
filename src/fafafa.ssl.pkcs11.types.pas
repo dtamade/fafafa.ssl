@@ -1,6 +1,7 @@
 unit fafafa.ssl.pkcs11.types;
 
 {$mode ObjFPC}{$H+}
+{$WARN 5093 off}  // Function result variable of managed type does not seem initialized
 {$modeswitch advancedrecords}
 
 {******************************************************************************}

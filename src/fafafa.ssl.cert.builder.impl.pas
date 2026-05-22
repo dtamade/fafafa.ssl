@@ -11,6 +11,7 @@ unit fafafa.ssl.cert.builder.impl;
 {$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
 
 { 禁用函数结果未初始化警告 - SetLength 已经初始化 TBytes }
+{$WARN 6018 off}  // Unreachable code - defensive else in case statement
 {$WARN 5093 off}  // Function result variable of managed type does not seem initialized
 
 interface

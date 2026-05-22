@@ -3719,7 +3719,6 @@ var
   LTranscriptData: TBytes;
   LKeyScheduleError: string;
   LError: string;
-  LEncryptedExtensionsBody: TBytes;
   LEncryptedExtensionsMessage: TBytes;
   LFinishedMessage: TBytes;
   LServerFlightMessages: TBytes;

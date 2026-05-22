@@ -15,7 +15,7 @@ unit fafafa.ssl.cert.advanced;
 { 禁用函数结果未初始化警告 - SetLength 已经初始化 TBytes }
 {$WARN 5093 off}  // Function result variable of managed type does not seem initialized
 { 禁用弃用 API 警告 - 这些弃用 API 仍在内部使用 }
-{$WARN 6058 off}  // Symbol is deprecated
+{$WARN 5066 off}  // Symbol is deprecated: "message"
 
 interface
 

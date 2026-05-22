@@ -190,7 +190,7 @@ begin
   if FindFirst(AFilePath, faAnyFile, SearchRec) = 0 then
   begin
     try
-      Result := FileDateToDateTime(SearchRec.Time);
+      Result := SearchRec.TimeStamp;
     finally
       FindClose(SearchRec);
     end;

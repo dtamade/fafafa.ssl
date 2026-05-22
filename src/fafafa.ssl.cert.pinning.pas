@@ -24,6 +24,7 @@
 unit fafafa.ssl.cert.pinning;
 
 {$mode objfpc}{$H+}
+{$WARN 5093 off}  // Function result variable of managed type does not seem initialized
 {$modeswitch advancedrecords}
 
 interface

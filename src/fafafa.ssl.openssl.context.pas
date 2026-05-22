@@ -13,6 +13,7 @@
 unit fafafa.ssl.openssl.context;
 
 {$mode ObjFPC}{$H+}
+{$WARN 5093 off}  // Function result variable of managed type does not seem initialized
 {$IFDEF UNIX}{$CODEPAGE UTF8}{$ENDIF}
 
 interface

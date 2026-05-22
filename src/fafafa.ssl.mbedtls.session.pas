@@ -13,6 +13,7 @@
 unit fafafa.ssl.mbedtls.session;
 
 {$mode objfpc}{$H+}
+{$WARN 5093 off}  // Function result variable of managed type does not seem initialized
 
 interface
 
@@ -378,7 +379,7 @@ var
   LData: TStringList;
   LCreatedUnix: Int64;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   if Length(ANativeData) = 0 then
     Exit;
 

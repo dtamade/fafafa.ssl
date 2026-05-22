@@ -14,6 +14,7 @@
 unit fafafa.ssl.mbedtls.connection;
 
 {$mode objfpc}{$H+}
+{$WARN 5093 off}  // Function result variable of managed type does not seem initialized
 
 interface
 

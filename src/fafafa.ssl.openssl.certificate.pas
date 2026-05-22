@@ -7,6 +7,7 @@
 unit fafafa.ssl.openssl.certificate;
 
 {$mode ObjFPC}{$H+}
+{$WARN 5093 off}  // Function result variable of managed type does not seem initialized
 
 interface
 
