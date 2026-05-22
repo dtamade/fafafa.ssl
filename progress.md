@@ -6,6 +6,40 @@
 
 ## 2026-05-22
 
+### Backend Optional/Connection Revalidation Receipt Closeout
+
+- inspect revalidation wrapper plans:
+  - `docs/plans/2026-05-18-backend-optional-surface-completion-audit-revalidation.md`
+    - result:
+      - missing focused execution receipt
+  - `docs/plans/2026-05-18-backend-connection-surface-completion-audit-revalidation.md`
+    - result:
+      - missing focused execution receipt
+
+- run focused backend contract:
+  - `mkdir -p tmp/backend_contract_units`
+    - result: PASS
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas`
+    - result: PASS
+    - summary:
+      - `94263 lines compiled`
+      - `138 warning(s) issued`
+      - `31 note(s) issued`
+  - `./tmp/backend_contract_units/test_backend_contract`
+    - result: PASS
+    - summary:
+      - `Total Tests: 135`
+      - `Passed: 111`
+      - `Failed: 0`
+      - `Skipped: 24`
+
+- close the receipt gap:
+  - updated:
+    - `docs/plans/2026-05-18-backend-optional-surface-completion-audit-revalidation.md`
+    - `docs/plans/2026-05-18-backend-connection-surface-completion-audit-revalidation.md`
+  - `git diff --check`
+    - result: PASS
+
 ### VerifyMode Guard And C-Library Runtime Proof Sync
 
 - inspect the current truth after the previous batch:

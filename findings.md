@@ -2,6 +2,38 @@
 
 ## 2026-05-22
 
+- backend optional/connection revalidation receipt closeout
+  这次找到的是一个真实 workflow 缺口：
+  - `docs/plans/2026-05-18-backend-optional-surface-completion-audit-revalidation.md`
+  - `docs/plans/2026-05-18-backend-connection-surface-completion-audit-revalidation.md`
+  两份 wrapper plan
+  仍停在
+  `Expected Outcome`，
+  没有自己的
+  focused execution receipt。
+
+- 当前复验结果：
+  - `tests/contract/test_backend_contract.pas`
+    当前仍然通过：
+    - `Total Tests: 135`
+    - `Passed: 111`
+    - `Failed: 0`
+    - `Skipped: 24`
+  - Contracts 8 / 10 / 11
+    覆盖 connection-surface truth
+  - Contracts 12-18
+    覆盖 backend optional public-surface truth
+  - OpenSSL / WolfSSL / MbedTLS / FreePascal
+    当前均通过相关检查
+  - WinSSL 行在本地 Linux focused run 中继续走当前平台 skip 路径
+
+- 当前更准确的收口是：
+  - 这不是 implementation drift
+  - 而是 revalidation wrapper
+    没把已经成立的 contract 结果写回文档，
+    容易让后续审查误以为这些 interface/backend surface
+    仍未验证
+
 - verifymode contract guard and c-library runtime proof sync
   这次两条红灯都属于
   “契约文本守着旧实现细节”

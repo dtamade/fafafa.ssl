@@ -10,6 +10,36 @@
 
 ## Current Status
 
+- [completed] `backend optional/connection revalidation receipt closeout`
+  当前 focused 目标：
+  - 把两份仍停在 `Expected Outcome` 的 backend revalidation wrapper plan 补上当前执行 receipt
+  - 确认已有 `tests/contract/test_backend_contract.pas` 仍覆盖并通过连接层 / optional public-surface truth
+  当前 batch 范围：
+  - 更新：
+    - `docs/plans/2026-05-18-backend-optional-surface-completion-audit-revalidation.md`
+    - `docs/plans/2026-05-18-backend-connection-surface-completion-audit-revalidation.md`
+    - `task_plan.md`
+    - `findings.md`
+    - `progress.md`
+  当前 focused proof：
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas`
+    - PASS
+    - `94263 lines compiled`
+    - `138 warning(s) issued`
+    - `31 note(s) issued`
+  - `./tmp/backend_contract_units/test_backend_contract`
+    - PASS
+    - `Total Tests: 135`
+    - `Passed: 111`
+    - `Failed: 0`
+    - `Skipped: 24`
+  - `git diff --check`
+    - PASS
+  当前结论：
+  - Contracts 8 / 10 / 11 / 12-18 在当前 Linux focused run 下成立
+  - 没有打出 production implementation drift
+  - 这批修的是 receipt 缺口，不是 runtime 语义
+
 - [completed] `verifymode guard and c-library runtime proof truth sync`
   当前 focused 目标：
   - 把 `tests/scripts/test_factory_config_verifymode_empty_set_contract.sh` 从旧的 `LConfig.VerifyMode` 守卫修成当前 `LVerifyMode` truth

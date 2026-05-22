@@ -60,3 +60,26 @@ git diff --check
 - backend optional public surface 的“计划存在但结果缺席”状态被消掉
 - 相关文档不再给人“这些接口也许还没真的验证过”的信号
 - 总路线图可以更安心地抬回 broader interface debt，而不是继续怀疑这些已写入 contract 的 optional surface
+
+## Focused Revalidation Result (2026-05-22)
+
+- `fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas`
+  - PASS
+  - compiled `tests/contract/test_backend_contract.pas`
+  - compiler summary:
+    - `94263 lines compiled`
+    - `138 warning(s) issued`
+    - `31 note(s) issued`
+- `./tmp/backend_contract_units/test_backend_contract`
+  - PASS
+  - summary:
+    - `Total Tests: 135`
+    - `Passed: 111`
+    - `Failed: 0`
+    - `Skipped: 24`
+- Contracts 12-18 current truth:
+  - OpenSSL / WolfSSL / MbedTLS / FreePascal all passed the optional public-surface checks covered by this plan
+  - WinSSL rows followed the current platform-skip path in this local focused contract run
+  - no production implementation drift was found
+
+This revalidation wrapper now has its own execution receipt; it should no longer be treated as a receipt-missing plan.
