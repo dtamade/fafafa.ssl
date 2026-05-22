@@ -238,7 +238,7 @@ begin
         LoadFromDER(Data)
       else
         // 假设是 PEM 格式
-        LoadFromPEM(TEncoding.UTF8.GetString(Data));
+        LoadFromPEM(AnsiString(TEncoding.UTF8.GetString(Data)));
     end;
   finally
     Stream.Free;

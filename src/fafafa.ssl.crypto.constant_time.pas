@@ -175,8 +175,8 @@ var
   CompResult: Integer;
 begin
   // Convert to UTF-8 bytes
-  ABytes := TEncoding.UTF8.GetBytes(A);
-  BBytes := TEncoding.UTF8.GetBytes(B);
+  ABytes := TEncoding.UTF8.GetBytes(UnicodeString(A));
+  BBytes := TEncoding.UTF8.GetBytes(UnicodeString(B));
   
   try
     // Constant-time comparison

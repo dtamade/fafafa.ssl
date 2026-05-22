@@ -490,7 +490,7 @@ begin
   if AStream.Size > 0 then
   begin
     AStream.ReadBuffer(Data[0], AStream.Size);
-    LoadFromString(TEncoding.UTF8.GetString(Data));
+    LoadFromString(AnsiString(TEncoding.UTF8.GetString(Data)));
   end;
 end;
 
@@ -708,7 +708,7 @@ var
   Stream: TFileStream;
   Data: TBytes;
 begin
-  Data := TEncoding.UTF8.GetBytes(APEMText);
+  Data := TEncoding.UTF8.GetBytes(UnicodeString(APEMText));
   Stream := TFileStream.Create(AFileName, fmCreate);
   try
     if Length(Data) > 0 then
@@ -733,7 +733,7 @@ begin
   end;
 
   // 检查是否以 "-----BEGIN" 开头
-  S := TEncoding.ASCII.GetString(Copy(AData, 0, 11));
+  S := AnsiString(TEncoding.ASCII.GetString(Copy(AData, 0, 11)));
   Result := (S = '-----BEGIN ');
 end;
 

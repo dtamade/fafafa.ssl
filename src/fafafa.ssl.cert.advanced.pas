@@ -485,9 +485,9 @@ begin
   
   // Prepare password and name
   if AOptions.Password <> '' then
-    LPassBytes := TEncoding.UTF8.GetBytes(AOptions.Password);
+    LPassBytes := TEncoding.UTF8.GetBytes(UnicodeString(AOptions.Password));
   if AOptions.FriendlyName <> '' then
-    LNameBytes := TEncoding.UTF8.GetBytes(AOptions.FriendlyName);
+    LNameBytes := TEncoding.UTF8.GetBytes(UnicodeString(AOptions.FriendlyName));
   
   // Create PKCS#12 structure
   LP12 := fafafa.ssl.openssl.api.pkcs12.PKCS12_create(
@@ -586,7 +586,7 @@ begin
     if not Assigned(LP12) then Exit;
     
     try
-      LPassBytes := TEncoding.UTF8.GetBytes(APassword);
+      LPassBytes := TEncoding.UTF8.GetBytes(UnicodeString(APassword));
       LCertPtr := nil;
       LKeyPtr := nil;
       LCAStack := nil;

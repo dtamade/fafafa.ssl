@@ -265,7 +265,7 @@ begin
   Result := nil;
   if not Assigned(OSSL_PROVIDER_load) then Exit;
   
-  NameBytes := TEncoding.UTF8.GetBytes(Name);
+  NameBytes := TEncoding.UTF8.GetBytes(UnicodeString(Name));
   Result := OSSL_PROVIDER_load(LibCtx, PAnsiChar(NameBytes));
 end;
 
@@ -284,7 +284,7 @@ begin
   Result := False;
   if not Assigned(OSSL_PROVIDER_available) then Exit;
   
-  NameBytes := TEncoding.UTF8.GetBytes(Name);
+  NameBytes := TEncoding.UTF8.GetBytes(UnicodeString(Name));
   Result := OSSL_PROVIDER_available(LibCtx, PAnsiChar(NameBytes)) = 1;
 end;
 
@@ -324,7 +324,7 @@ begin
   Result := False;
   if not Assigned(OSSL_LIB_CTX_load_config) or not Assigned(LibCtx) then Exit;
   
-  FileBytes := TEncoding.UTF8.GetBytes(ConfigFile);
+  FileBytes := TEncoding.UTF8.GetBytes(UnicodeString(ConfigFile));
   Result := OSSL_LIB_CTX_load_config(LibCtx, PAnsiChar(FileBytes)) = 1;
 end;
 

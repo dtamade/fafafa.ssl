@@ -659,7 +659,7 @@ begin
     raise ESSLCertError.Create('wolfSSL_CTX_use_certificate_buffer not available');
 
   // 转换 PEM 字符串为字节数组
-  LBuffer := TEncoding.UTF8.GetBytes(APEM);
+  LBuffer := TEncoding.UTF8.GetBytes(UnicodeString(APEM));
 
   LRet := wolfSSL_CTX_use_certificate_buffer(FWolfSSLCtx, @LBuffer[0],
     Length(LBuffer), WOLFSSL_FILETYPE_PEM);
@@ -682,7 +682,7 @@ begin
     raise ESSLCertError.Create('wolfSSL_CTX_use_PrivateKey_buffer not available');
 
   // 转换 PEM 字符串为字节数组
-  LBuffer := TEncoding.UTF8.GetBytes(APEM);
+  LBuffer := TEncoding.UTF8.GetBytes(UnicodeString(APEM));
 
   if APassword <> '' then
     RejectUnsupportedPasswordProtectedKey('TWolfSSLContext.LoadPrivateKeyPEM');

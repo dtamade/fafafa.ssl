@@ -542,7 +542,7 @@ begin
     Move(OIDBytes[0], AttrType[2], Length(OIDBytes));
 
     // 编码值 (使用 UTF8String)
-    ValueBytes := TEncoding.UTF8.GetBytes(AName.Attributes[I].Value);
+    ValueBytes := TEncoding.UTF8.GetBytes(UnicodeString(AName.Attributes[I].Value));
     StringTag := $0C;  // UTF8String
 
     if Length(ValueBytes) < 128 then

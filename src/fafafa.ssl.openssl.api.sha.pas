@@ -351,7 +351,7 @@ function SHA1HashString(const S: string): string;
 var
   Data: TBytes;
 begin
-  Data := TEncoding.UTF8.GetBytes(S);
+  Data := TEncoding.UTF8.GetBytes(UnicodeString(S));
   Result := BytesToHex(SHA1Hash(Data));
 end;
 
@@ -359,7 +359,7 @@ function SHA256HashString(const S: string): string;
 var
   Data: TBytes;
 begin
-  Data := TEncoding.UTF8.GetBytes(S);
+  Data := TEncoding.UTF8.GetBytes(UnicodeString(S));
   Result := BytesToHex(SHA256Hash(Data));
 end;
 
@@ -367,7 +367,7 @@ function SHA384HashString(const S: string): string;
 var
   Data: TBytes;
 begin
-  Data := TEncoding.UTF8.GetBytes(S);
+  Data := TEncoding.UTF8.GetBytes(UnicodeString(S));
   Result := BytesToHex(SHA384Hash(Data));
 end;
 
@@ -375,7 +375,7 @@ function SHA512HashString(const S: string): string;
 var
   Data: TBytes;
 begin
-  Data := TEncoding.UTF8.GetBytes(S);
+  Data := TEncoding.UTF8.GetBytes(UnicodeString(S));
   Result := BytesToHex(SHA512Hash(Data));
 end;
 
