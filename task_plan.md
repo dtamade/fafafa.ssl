@@ -57,20 +57,22 @@
     - PASS
   当前结论：
   - 当前没有新的 production implementation drift
-  - 真正的 workflow 缺口
-    是：
+  - 原先发现的 workflow gap
+    已经收口：
     - `ROADMAP`
-      还没有把这条 caveat
-      明说成
+      现已明确把这条 caveat
+      定位成
       post-release 阶段
       有意保留的最终 experimental boundary
     - focused docs contract
-      也还没有冻结
+      现已冻结
       `ROADMAP`
       /
       `BACKEND_CAPABILITY_MATRIX`
       /
       `EARLY_DATA_GUIDE`
+      /
+      README / API / Integration / security guide
       上的 FreePascal caveat truth
   - 这批修的是
     final-boundary guard coverage，

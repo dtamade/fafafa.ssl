@@ -80,6 +80,26 @@
   - `git diff --check`
     - result: PASS
 
+- post-commit completion audit on current HEAD:
+  - `git status --short`
+    - result: CLEAN
+  - `bash -n tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_early_data_docs_truth_contract.sh`
+    - result: PASS
+  - `mkdir -p tmp/capability_cache_units && fpc -B -Fu./src -Fu./tests -FUtmp/capability_cache_units -FEtmp/capability_cache_units -otmp/capability_cache_units/test_capability_cache tests/test_capability_cache.pas && ./tmp/capability_cache_units/test_capability_cache`
+    - result: PASS
+    - summary:
+      - FreePascal `KnownIssues`
+        still outputs:
+        `0-RTT / early data is experimental and currently relies on a local persistent anti-replay replay-store path; if the path is unavailable or unwritable, resumed early data is rejected fail-closed.`
+      - `ZeroRTTSupport = sslSupportExperimental`
+      - `EarlyDataSupport = sslSupportExperimental`
+  - `git diff --check`
+    - result: PASS
+
 ### Backend Optional/Connection Revalidation Receipt Closeout
 
 - inspect revalidation wrapper plans:

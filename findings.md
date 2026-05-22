@@ -68,6 +68,23 @@
     - security guide
     - source truth
 
+- post-commit completion audit
+  继续证明这条线已经闭环：
+  - worktree clean
+  - focused docs contract
+    继续 PASS
+  - `test_early_data_docs_truth_contract.sh`
+    继续 PASS
+  - `tests/test_capability_cache.pas`
+    继续输出
+    FreePascal
+    `KnownIssues = local persistent anti-replay replay-store ... fail-closed`
+  - 当前已经没有
+    “文档/contract 说一套，
+    roadmap 或 capability wording
+    又说另一套”
+    的 active drift
+
 - backend optional/connection revalidation receipt closeout
   这次找到的是一个真实 workflow 缺口：
   - `docs/plans/2026-05-18-backend-optional-surface-completion-audit-revalidation.md`
