@@ -73,6 +73,7 @@ type
     FCurrentSession: ISSLSession;
     FConfiguredSession: ISSLSession;
     FSessionReused: Boolean;
+    FSessionBoundServerName: string;
     FPeerCertificate: ISSLCertificate;
     FPeerCertificateChain: TSSLCertificateArray;
     FOCSPResponse: TBytes;
@@ -817,6 +818,7 @@ begin
   FCurrentSession := nil;
   FConfiguredSession := nil;
   FSessionReused := False;
+  FSessionBoundServerName := '';
   FPeerCertificate := nil;
   SetLength(FPeerCertificateChain, 0);
   SetLength(FOCSPResponse, 0);
@@ -868,6 +870,7 @@ begin
   FCurrentSession := nil;
   FConfiguredSession := nil;
   FSessionReused := False;
+  FSessionBoundServerName := '';
   FPeerCertificate := nil;
   SetLength(FPeerCertificateChain, 0);
   SetLength(FOCSPResponse, 0);
@@ -1133,6 +1136,7 @@ begin
             LTimeout,
             LTicket.MaxEarlyDataSize
           );
+          LSession.BoundServerName := FServerName;
           FCurrentSession := LSession;
           FLastSessionTicket := LTicket;
           Inc(FSessionTicketCount);
@@ -1868,7 +1872,30 @@ begin
     Exit(True);
 
   if FSessionReused then
+  begin
+    { PSK resumption: skip certificate chain verification but still verify
+      that the current connection server name matches the name bound to the
+      resumed session. This prevents cross-host session ticket misuse. }
+    LVerifyFlags := FContext.GetCertVerifyFlags;
+    if not (sslCertVerifyIgnoreHostname in LVerifyFlags) then
+    begin
+      LNormalizedHost := NormalizeHostForVerify(FServerName);
+      if LNormalizedHost = '' then
+      begin
+        SetHandshakeError(sslErrHostnameMismatch,
+          'Resumed session hostname verification requires a non-empty server name');
+        Exit;
+      end;
+      if not SameText(NormalizeHostForVerify(FSessionBoundServerName), LNormalizedHost) then
+      begin
+        SetHandshakeError(sslErrHostnameMismatch,
+          Format('Resumed session was bound to "%s" but current connection targets "%s"',
+            [FSessionBoundServerName, FServerName]));
+        Exit;
+      end;
+    end;
     Exit(True);
+  end;
 
   if FPeerCertificate = nil then
   begin
@@ -3385,6 +3412,11 @@ begin
             end;
 
             FSessionReused := True;
+            if (FConfiguredSession <> nil) and
+              ((FConfiguredSession as TObject) is TFreePascalSession) then
+              FSessionBoundServerName := (FConfiguredSession as TObject as TFreePascalSession).BoundServerName
+            else
+              FSessionBoundServerName := FServerName;
           end
           else
           begin

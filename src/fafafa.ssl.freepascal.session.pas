@@ -94,6 +94,7 @@ type
     FTicketNonce: TBytes;
     FTicket: TBytes;
     FResumptionPSK: TBytes;
+    FBoundServerName: string;
 
     function ComputeEffectiveTimeout: Integer;
     procedure RefreshSessionID;
@@ -132,6 +133,7 @@ type
     function GetTicketNonce: TBytes;
     function GetTicket: TBytes;
     function GetResumptionPSK: TBytes;
+    property BoundServerName: string read FBoundServerName write FBoundServerName;
   end;
 
 implementation
@@ -238,6 +240,7 @@ begin
   SetLength(FTicketNonce, 0);
   SetLength(FTicket, 0);
   SetLength(FResumptionPSK, 0);
+  FBoundServerName := '';
 end;
 
 procedure TFreePascalSession.ConfigureResumption(
@@ -374,6 +377,7 @@ begin
   AppendVector16(Result, FResumptionPSK);
   LCipherBytes := BytesOf(FCipherName);
   AppendVector16(Result, LCipherBytes);
+  AppendVector16(Result, BytesOf(FBoundServerName));
 end;
 
 function TFreePascalSession.Deserialize(const AData: TBytes): Boolean;
@@ -435,6 +439,17 @@ begin
   else
     FCipherName := '';
 
+  { BoundServerName: optional trailing field for backward compatibility }
+  if LOffset < Length(AData) then
+  begin
+    LCipherBytes := ReadVector16(AData, LOffset);
+    if Length(LCipherBytes) > 0 then
+      SetString(FBoundServerName, PAnsiChar(@LCipherBytes[0]), Length(LCipherBytes))
+    else
+      FBoundServerName := '';
+  end
+  else
+    FBoundServerName := '';
   RefreshSessionID;
   Result := True;
 end;
@@ -456,6 +471,7 @@ begin
   LClone.FTicketNonce := Copy(FTicketNonce);
   LClone.FTicket := Copy(FTicket);
   LClone.FResumptionPSK := Copy(FResumptionPSK);
+  LClone.FBoundServerName := FBoundServerName;
   Result := LClone;
 end;
 
