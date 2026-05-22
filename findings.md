@@ -2,6 +2,16 @@
 
 ## 2026-05-22
 
+- direct-library default-config parity contract refresh
+  这条线最后证明是
+  guard 过死，不是实现有缺：
+  - contract 现在改成盯 `LVerifyMode`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+    以及另外三个 backend 的 direct-library path
+    都已经把 verify-mode truth 应用到新建 context
+  - 这批没有引入 runtime 行为改动，
+    只是让守卫真正跟当前实现语义对齐
+
 - the current contract guards are now aligned with the current truth:
   - `docs/ARCHITECTURE.md` says the current public surface only declares `ISSLClientConnection`
   - the WinSSL PSK quick-reference guard now checks semantic unsupported truth instead of exact markdown column width

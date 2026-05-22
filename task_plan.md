@@ -10,6 +10,27 @@
 
 ## Current Status
 
+- [completed] `direct-library default-config parity contract refresh`
+  当前 focused 目标：
+  - 把 `tests/scripts/test_direct_library_default_config_parity_contract.sh` 从盯死 `LConfig.VerifyMode` 变量名修成盯住当前 direct-library `VerifyMode` truth
+  - 先把 guard 对齐到 `LVerifyMode`，再判断这条线还有没有真实 backend parity gap
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-22-direct-library-default-config-parity-contract-refresh.md`
+  - 更新：
+    - `tests/scripts/test_direct_library_default_config_parity_contract.sh`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_direct_library_default_config_parity_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_direct_library_default_config_parity_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+  - `bash tests/scripts/test_direct_library_servername_compatibility_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_direct_library_early_data_replay_store_parity_contract.sh`
+    - PASS
+
 - [completed] `interface audit current truth and backend capability quick-reference fix`
   当前 focused 目标：
   - 把 `docs/ARCHITECTURE.md` 的 current-surface 句子写得更明确，避免再被 contract 误判成没说明当前只有 `ISSLClientConnection`

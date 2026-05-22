@@ -6,6 +6,24 @@
 
 ## 2026-05-22
 
+### Direct-Library Default-Config Parity Contract Refresh
+
+- inspect the direct-library parity contract after the previous verification batch:
+  - `bash tests/scripts/test_direct_library_default_config_parity_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_direct_library_servername_compatibility_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_direct_library_early_data_replay_store_parity_contract.sh`
+    - result: PASS
+  - `bash -n tests/scripts/test_direct_library_default_config_parity_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
+- refresh the guard to match current truth:
+  - `tests/scripts/test_direct_library_default_config_parity_contract.sh`
+  - `docs/plans/2026-05-22-direct-library-default-config-parity-contract-refresh.md`
+
 ### Interface Audit Current Truth And Backend Capability Quick Reference Fix
 
 - rerun the next two focused contracts after the TSSLConfig sweep:

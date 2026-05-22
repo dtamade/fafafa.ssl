@@ -26,7 +26,7 @@ check_file() {
     exit 1
   fi
 
-  if ! rg -n --quiet 'Result\.SetVerifyMode\(LConfig\.VerifyMode\);' "$file"; then
+  if ! rg -n --quiet 'Result\.SetVerifyMode\(LVerifyMode\);' "$file"; then
     echo "[FAIL] $file does not apply VerifyMode on the direct-library context path"
     exit 1
   fi
