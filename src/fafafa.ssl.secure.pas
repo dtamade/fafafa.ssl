@@ -11,6 +11,7 @@
 unit fafafa.ssl.secure;
 
 {$mode objfpc}{$H+}
+{$WARN 5093 off} // Suppress false-positive "Function result not initialized" for managed types
 {$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
 {$modeswitch advancedrecords}
 

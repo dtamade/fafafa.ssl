@@ -1,6 +1,7 @@
 unit fafafa.ssl.asn1;
 
 {$mode objfpc}{$H+}
+{$WARN 5093 off} // Suppress false-positive "Function result not initialized" for managed types
 {$modeswitch advancedrecords}
 
 {

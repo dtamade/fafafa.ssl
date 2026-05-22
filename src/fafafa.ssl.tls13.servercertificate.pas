@@ -10,6 +10,7 @@
 unit fafafa.ssl.tls13.servercertificate;
 
 {$mode ObjFPC}{$H+}
+{$WARN 5093 off} // Suppress false-positive "Function result not initialized" for managed types
 
 interface
 

@@ -1,6 +1,7 @@
 unit fafafa.ssl.http.client;
 
 {$mode ObjFPC}{$H+}
+{$WARN 5093 off} // Suppress false-positive "Function result not initialized" for managed types
 
 {
   简单的 HTTP 客户端
