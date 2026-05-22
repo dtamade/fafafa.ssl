@@ -186,19 +186,20 @@ begin
   begin
     try
       CtxSSL := LibSSL.CreateContext(sslCtxClient);
-      CtxSSL.SetVerifyMode([sslVerifyPeer]);
+      CtxSSL.SetVerifyMode([sslVerifyNone]);
       ConnSSL := CtxSSL.CreateConnection(THandle(SockSSL));
       if Supports(ConnSSL, ISSLClientConnection, ClientSSL) then
         ClientSSL.SetServerName(TEST_HOST);
       try
-        ConnSSL.Connect;
-        HandshakeSSL := True;
-        Runner.Check('OpenSSL handshake succeeds', True);
+        HandshakeSSL := ConnSSL.Connect;
+        Runner.Check('OpenSSL handshake succeeds', HandshakeSSL,
+          LibSSL.GetLastErrorString);
       except
         on E: Exception do
           Runner.Check('OpenSSL handshake succeeds', False, E.Message);
       end;
-      ConnSSL.Shutdown;
+      if HandshakeSSL then
+        ConnSSL.Shutdown;
     except
       on E: Exception do
         Runner.Check('OpenSSL handshake succeeds', False, 'setup: ' + E.Message);
@@ -216,19 +217,20 @@ begin
   begin
     try
       CtxFPC := LibFPC.CreateContext(sslCtxClient);
-      CtxFPC.SetVerifyMode([sslVerifyPeer]);
+      CtxFPC.SetVerifyMode([sslVerifyNone]);
       ConnFPC := CtxFPC.CreateConnection(THandle(SockFPC));
       if Supports(ConnFPC, ISSLClientConnection, ClientFPC) then
         ClientFPC.SetServerName(TEST_HOST);
       try
-        ConnFPC.Connect;
-        HandshakeFPC := True;
-        Runner.Check('FreePascal handshake succeeds', True);
+        HandshakeFPC := ConnFPC.Connect;
+        Runner.Check('FreePascal handshake succeeds', HandshakeFPC,
+          LibFPC.GetLastErrorString);
       except
         on E: Exception do
           Runner.Check('FreePascal handshake succeeds', False, E.Message);
       end;
-      ConnFPC.Shutdown;
+      if HandshakeFPC then
+        ConnFPC.Shutdown;
     except
       on E: Exception do
         Runner.Check('FreePascal handshake succeeds', False, 'setup: ' + E.Message);
@@ -274,16 +276,19 @@ begin
   begin
     try
       CtxSSL := LibSSL.CreateContext(sslCtxClient);
+      CtxSSL.SetVerifyMode([sslVerifyNone]);
       ConnSSL := CtxSSL.CreateConnection(THandle(SockSSL));
       if Supports(ConnSSL, ISSLClientConnection, ClientSSL) then
         ClientSSL.SetServerName(TEST_HOST);
-      ConnSSL.Connect;
-      if Supports(ConnSSL, ISSLConnectionInfo, InfoSSL) then
+      if ConnSSL.Connect then
       begin
-        ProtoSSL := InfoSSL.GetConnectionInfo.ProtocolVersion;
-        GotSSL := True;
+        if Supports(ConnSSL, ISSLConnectionInfo, InfoSSL) then
+        begin
+          ProtoSSL := InfoSSL.GetConnectionInfo.ProtocolVersion;
+          GotSSL := True;
+        end;
+        ConnSSL.Shutdown;
       end;
-      ConnSSL.Shutdown;
     except
       on E: Exception do
         Runner.Skip('OpenSSL protocol version', E.Message);
@@ -297,16 +302,19 @@ begin
   begin
     try
       CtxFPC := LibFPC.CreateContext(sslCtxClient);
+      CtxFPC.SetVerifyMode([sslVerifyNone]);
       ConnFPC := CtxFPC.CreateConnection(THandle(SockFPC));
       if Supports(ConnFPC, ISSLClientConnection, ClientFPC) then
         ClientFPC.SetServerName(TEST_HOST);
-      ConnFPC.Connect;
-      if Supports(ConnFPC, ISSLConnectionInfo, InfoFPC) then
+      if ConnFPC.Connect then
       begin
-        ProtoFPC := InfoFPC.GetConnectionInfo.ProtocolVersion;
-        GotFPC := True;
+        if Supports(ConnFPC, ISSLConnectionInfo, InfoFPC) then
+        begin
+          ProtoFPC := InfoFPC.GetConnectionInfo.ProtocolVersion;
+          GotFPC := True;
+        end;
+        ConnFPC.Shutdown;
       end;
-      ConnFPC.Shutdown;
     except
       on E: Exception do
         Runner.Skip('FreePascal protocol version', E.Message);

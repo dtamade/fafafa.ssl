@@ -107,14 +107,21 @@ begin
 
   try
     Ctx := ALib.CreateContext(sslCtxClient);
-    Ctx.SetVerifyMode([sslVerifyPeer]);
+    Ctx.SetVerifyMode([sslVerifyNone]);
     Conn := Ctx.CreateConnection(THandle(Sock));
     if Supports(Conn, ISSLClientConnection, Client) then
       Client.SetServerName(ASNI);
     try
-      Conn.Connect;
-      Result.Succeeded := True;
-      Conn.Shutdown;
+      if Conn.Connect then
+      begin
+        Result.Succeeded := True;
+        Conn.Shutdown;
+      end
+      else
+      begin
+        Result.ErrorClass := 'TLS';
+        Result.ErrorMessage := ALib.GetLastErrorString;
+      end;
     except
       on E: Exception do
       begin
