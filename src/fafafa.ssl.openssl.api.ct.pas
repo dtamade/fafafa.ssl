@@ -413,8 +413,6 @@ begin
 end;
 
 function EnableCertificateTransparency(SSLCtx: PSSL_CTX): Boolean;
-var
-  LogStore: PCTLOG_STORE;
 begin
   Result := False;
   

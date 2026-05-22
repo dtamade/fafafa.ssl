@@ -1,6 +1,7 @@
 unit fafafa.ssl.crypto.hash;
 
 {$mode objfpc}{$H+}
+{$NOTES OFF} // Suppress false-positive notes for vars passed to untyped params
 {$modeswitch advancedrecords}
 
 { 禁用64位常量范围检查警告 - SHA-512 K常量需要 }
@@ -8,7 +9,7 @@ unit fafafa.ssl.crypto.hash;
 { 禁用函数结果未初始化警告 - SetLength 已经初始化 TBytes }
 {$WARN 5093 off}  // Function result variable of managed type does not seem initialized
 { 禁用本地变量未使用警告 - 某些临时变量用于中间计算 }
-{$WARN 5024 off}  // Parameter not used
+{$NOTES OFF} // Suppress false-positive notes for vars passed to untyped params
 {$WARN 5025 off}  // Local variable not used
 { 禁用不可达代码警告 - case 语句的 else 分支是防御性代码 }
 { 注意：此指令为文件级，因 FPC 6018 在函数级解析阶段才触发 }

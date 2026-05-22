@@ -584,7 +584,7 @@ class function TPEMWriter.EncodeBase64(const AData: TBytes): string;
 const
   Base64Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 var
-  I, J, Len: Integer;
+  I, Len: Integer;
   B1, B2, B3: Byte;
 begin
   Result := '';
@@ -655,7 +655,7 @@ end;
 function TPEMWriter.WriteBlockWithType(const ATypeString: string; const AData: TBytes): string;
 var
   Base64: string;
-  I, LineStart: Integer;
+  LineStart: Integer;
 begin
   Base64 := EncodeBase64(AData);
 

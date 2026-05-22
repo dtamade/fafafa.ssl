@@ -65,7 +65,7 @@ begin
     (UInt32(AData[AOffset + 3]) shl 24);
 end;
 
-function Load32LEFromBytes(const AData: array of Byte; AOffset: Integer): UInt32; inline;
+function Load32LEFromBytes(const AData: array of Byte; AOffset: Integer): UInt32;
 begin
   Result :=
     UInt32(AData[AOffset]) or

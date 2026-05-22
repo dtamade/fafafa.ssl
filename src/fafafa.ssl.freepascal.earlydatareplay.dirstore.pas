@@ -6,6 +6,7 @@
 unit fafafa.ssl.freepascal.earlydatareplay.dirstore;
 
 {$mode ObjFPC}{$H+}
+{$NOTES OFF} // Suppress false-positive notes for vars passed to untyped params
 
 interface
 

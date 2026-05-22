@@ -277,7 +277,7 @@ function WrapInSequence(const AContent: TBytes): TBytes;
 var
   LenBytes: TBytes;
   ContentLen, TotalLen: Integer;
-  I, Offset: Integer;
+  Offset: Integer;
 begin
   ContentLen := Length(AContent);
 
@@ -750,8 +750,8 @@ end;
 function TOCSPRequest.Encode: TBytes;
 var
   I: Integer;
-  RequestList, TBSRequest, OCSPRequestBytes: TBytes;
-  SingleRequest, CertIDBytes: TBytes;
+  RequestList, TBSRequest: TBytes;
+  CertIDBytes: TBytes;
   Requests: array of TBytes;
   NonceExt, NonceOID, NonceValue, ExtContent, Extensions: TBytes;
 begin
@@ -853,7 +853,6 @@ procedure TOCSPResponse.LoadFromDER(const AData: TBytes);
 var
   Reader: TASN1Reader;
   Root, StatusNode, BytesNode, ResponseNode: TASN1Node;
-  ResponseBytes: TBytes;
   ResponseOID: string;
 begin
   FRawResponse := Copy(AData, 0, Length(AData));
@@ -901,7 +900,6 @@ begin
             ResponseOID := ResponseNode.GetChild(0).AsOID;
             if ResponseOID = OID_OCSP_BASIC then
             begin
-              ResponseBytes := ResponseNode.GetChild(1).AsOctetString;
               // 解析 BasicOCSPResponse
               ParseBasicOCSPResponse(ResponseNode.GetChild(1));
             end;
@@ -1311,8 +1309,8 @@ var
   I, J: Integer;
   Ext: TX509Extension;
   Reader: TASN1Reader;
-  Node, SeqNode, AccessNode: TASN1Node;
-  AccessMethod, AccessLocation: string;
+  Node, AccessNode: TASN1Node;
+  AccessMethod: string;
 begin
   Result := '';
 

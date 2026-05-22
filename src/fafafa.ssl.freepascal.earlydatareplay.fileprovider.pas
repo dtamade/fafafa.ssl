@@ -5,6 +5,7 @@
 
 unit fafafa.ssl.freepascal.earlydatareplay.fileprovider;
 
+{$NOTES OFF} // Suppress false-positive notes for vars passed to untyped params
 {$mode ObjFPC}{$H+}
 
 interface

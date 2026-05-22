@@ -11,13 +11,13 @@ unit fafafa.ssl.x509;
   支持 DER 和 PEM 格式。
 
   X.509 证书结构 (RFC 5280):
-  Certificate ::= SEQUENCE {
+  Certificate ::= SEQUENCE [
     tbsCertificate       TBSCertificate,
     signatureAlgorithm   AlgorithmIdentifier,
     signatureValue       BIT STRING
-  }
+  ]
 
-  TBSCertificate ::= SEQUENCE {
+  TBSCertificate ::= SEQUENCE [
     version         [0]  EXPLICIT Version DEFAULT v1,
     serialNumber         CertificateSerialNumber,
     signature            AlgorithmIdentifier,
@@ -28,7 +28,7 @@ unit fafafa.ssl.x509;
     issuerUniqueID  [1]  IMPLICIT UniqueIdentifier OPTIONAL,
     subjectUniqueID [2]  IMPLICIT UniqueIdentifier OPTIONAL,
     extensions      [3]  EXPLICIT Extensions OPTIONAL
-  }
+  ]
 
   @author fafafa.ssl team
   @version 1.0.0
@@ -528,7 +528,7 @@ var
   StartPos, EndPos: Integer;
   Base64Data: string;
   DERData: TBytes;
-  I, J: Integer;
+  I: Integer;
   Line: string;
   Lines: TStringList;
 begin
@@ -886,7 +886,6 @@ end;
 procedure TX509Certificate.ParseExtensions(AExtNode: TASN1Node);
 var
   I: Integer;
-  Ext: TX509Extension;
 begin
   if not AExtNode.IsSequence then
     Exit;

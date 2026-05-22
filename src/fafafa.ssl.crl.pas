@@ -223,7 +223,6 @@ procedure TX509CRL.LoadFromFile(const AFileName: string);
 var
   Stream: TFileStream;
   Data: TBytes;
-  FirstByte: Byte;
 begin
   Stream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
   try

@@ -1,6 +1,7 @@
 unit fafafa.ssl.asn1;
 
 {$mode objfpc}{$H+}
+{$NOTES OFF} // Suppress false-positive notes for vars passed to untyped params
 {$WARN 5093 off} // Suppress false-positive "Function result not initialized" for managed types
 {$modeswitch advancedrecords}
 
@@ -568,8 +569,7 @@ begin
 end;
 
 function TASN1Node.AsString: string;
-var
-  Encoding: TEncoding;
+
 begin
   if Length(FRawData) = 0 then
   begin
@@ -648,8 +648,6 @@ begin
 end;
 
 function TASN1Node.AsBitString: TBytes;
-var
-  UnusedBits: Byte;
 begin
   if Length(FRawData) < 1 then
   begin
@@ -657,7 +655,6 @@ begin
     Exit;
   end;
 
-  UnusedBits := FRawData[0];
   // 返回实际的位串数据（跳过第一个未使用位数字节）
   Result := Copy(FRawData, 1, Length(FRawData) - 1);
 end;
@@ -899,7 +896,6 @@ end;
 function TASN1Reader.ParseNode: TASN1Node;
 var
   StartPos: Int64;
-  ContentEnd: Int64;
   Child: TASN1Node;
   NodeStack: array of record
     Node: TASN1Node;
@@ -1084,7 +1080,7 @@ end;
 
 procedure TASN1Writer.PopAndWriteLength;
 var
-  Len, StackLen: Integer;
+  StackLen: Integer;
   StartPos, EndPos, ContentLen: Int64;
   LengthBytes: array[0..4] of Byte;
   LengthSize: Integer;
@@ -1449,7 +1445,6 @@ var
   I: Integer;
   First, Second, Value: Cardinal;
   TempBytes: array of Byte;
-  TempLen: Integer;
   ResultStream: TMemoryStream;
 
   procedure EncodeComponent(AValue: Cardinal);
