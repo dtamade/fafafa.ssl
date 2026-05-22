@@ -6,6 +6,47 @@
 
 ## 2026-05-22
 
+### VerifyMode Guard And C-Library Runtime Proof Sync
+
+- inspect the current truth after the previous batch:
+  - `bash tests/scripts/test_factory_config_verifymode_empty_set_contract.sh`
+    - result: FAIL
+    - summary:
+      - factory one-shot config guard still expected `Result.SetVerifyMode(LConfig.VerifyMode);`
+  - `bash tests/scripts/test_clibrary_direct_library_runtime_parity_contract.sh`
+    - result: FAIL
+    - summary:
+      - runtime parity guard still expected `TSSLConnector.WithTimeout`
+      - current runtime proof uses `ISSLConnectionControl.SetTimeout`
+
+- confirm current source truth:
+  - `src/fafafa.ssl.factory.pas`
+  - `src/fafafa.ssl.openssl.backed.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - `tests/test_clibrary_library_default_config_connection_scope_clarification.pas`
+
+- add a focused batch record for the guard refresh:
+  - `docs/plans/2026-05-22-verifymode-contract-guard-and-clibrary-runtime-proof-sync.md`
+  - update:
+    - `task_plan.md`
+    - `findings.md`
+    - `progress.md`
+
+- rerun focused contracts after the guard refresh:
+  - `bash -n tests/scripts/test_factory_config_verifymode_empty_set_contract.sh`
+    - result: PASS
+  - `bash -n tests/scripts/test_clibrary_direct_library_runtime_parity_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_factory_config_verifymode_empty_set_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_clibrary_direct_library_runtime_parity_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### Direct-Library Default-Config Parity Contract Refresh
 
 - inspect the direct-library parity contract after the previous verification batch:

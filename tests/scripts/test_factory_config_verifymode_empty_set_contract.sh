@@ -32,17 +32,17 @@ binary="$bin_dir/test_factory_config_verifymode_empty_set_entry"
 
 printf '[TEST] factory config verify-mode empty-set semantics contract\n'
 
-require_fixed "$factory_file" "Result.SetVerifyMode(LConfig.VerifyMode);" \
+require_fixed "$factory_file" "Result.SetVerifyMode(LVerifyMode);" \
   "factory one-shot config path must apply caller-provided VerifyMode even when it is an empty set"
-require_fixed "$openssl_file" "if LConfig.VerifyMode <> Result.GetVerifyMode then" \
+require_fixed "$openssl_file" "if LVerifyMode <> Result.GetVerifyMode then" \
   "OpenSSL direct-library path must compare VerifyMode against current context value instead of treating empty set as unset"
-require_fixed "$wolfssl_file" "Result.SetVerifyMode(LConfig.VerifyMode);" \
+require_fixed "$wolfssl_file" "Result.SetVerifyMode(LVerifyMode);" \
   "WolfSSL direct-library path must apply caller-provided VerifyMode even when it is an empty set"
-require_fixed "$winssl_file" "Result.SetVerifyMode(LConfig.VerifyMode);" \
+require_fixed "$winssl_file" "Result.SetVerifyMode(LVerifyMode);" \
   "WinSSL direct-library path must apply caller-provided VerifyMode even when it is an empty set"
-require_fixed "$freepascal_file" "Result.SetVerifyMode(LConfig.VerifyMode);" \
+require_fixed "$freepascal_file" "Result.SetVerifyMode(LVerifyMode);" \
   "FreePascal direct-library path must apply caller-provided VerifyMode even when it is an empty set"
-require_fixed "$mbedtls_file" "Result.SetVerifyMode(LConfig.VerifyMode);" \
+require_fixed "$mbedtls_file" "Result.SetVerifyMode(LVerifyMode);" \
   "MbedTLS direct-library path must apply caller-provided VerifyMode even when it is an empty set"
 
 mkdir -p "$units_dir" "$bin_dir"

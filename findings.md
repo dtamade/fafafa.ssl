@@ -2,6 +2,38 @@
 
 ## 2026-05-22
 
+- verifymode contract guard and c-library runtime proof sync
+  这次两条红灯都属于
+  “契约文本守着旧实现细节”
+  而不是 runtime 语义回退：
+  - `src/fafafa.ssl.factory.pas`
+    的 one-shot / default-config 路径
+    当前都已经通过
+    `LVerifyMode`
+    落地 verify-mode truth
+  - `src/fafafa.ssl.openssl.backed.pas`
+    `src/fafafa.ssl.wolfssl.lib.pas`
+    `src/fafafa.ssl.winssl.lib.pas`
+    `src/fafafa.ssl.freepascal.lib.pas`
+    `src/fafafa.ssl.mbedtls.lib.pas`
+    也都已经统一到
+    `LVerifyMode`
+  - `tests/test_clibrary_library_default_config_connection_scope_clarification.pas`
+    当前用的是
+    `ISSLConnectionControl.SetTimeout`
+    /
+    `transport/IO`
+    /
+    safe-default build path
+    来表达连接作用域替换指导，
+    不再直接写旧的
+    `TSSLConnector.WithTimeout`
+
+- 当前更准确的收口是：
+  - factory verify-mode 守卫应该盯 `LVerifyMode`
+  - C-library runtime proof 守卫应该盯 `ISSLConnectionControl.SetTimeout`
+  - 这批已经验证为纯守卫漂移，不需要动 runtime 实现
+
 - direct-library default-config parity contract refresh
   这条线最后证明是
   guard 过死，不是实现有缺：

@@ -45,7 +45,7 @@ require_fixed "SetLogCallback visibleizes callback in GetDefaultConfig" "$loggin
 require_fixed "Log dispatches messages at configured LogLevel" "$logging_runtime" \
   "C-library logging runtime proof no longer asserts filtered log dispatch"
 
-require_fixed "TSSLConnector.WithTimeout" "$connection_runtime" \
+require_fixed "ISSLConnectionControl.SetTimeout" "$connection_runtime" \
   "C-library connection-scope runtime proof no longer asserts HandshakeTimeout replacement guidance"
 require_fixed "transport/IO" "$connection_runtime" \
   "C-library connection-scope runtime proof no longer asserts BufferSize replacement guidance"

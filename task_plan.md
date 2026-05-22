@@ -10,6 +10,31 @@
 
 ## Current Status
 
+- [completed] `verifymode guard and c-library runtime proof truth sync`
+  当前 focused 目标：
+  - 把 `tests/scripts/test_factory_config_verifymode_empty_set_contract.sh` 从旧的 `LConfig.VerifyMode` 守卫修成当前 `LVerifyMode` truth
+  - 把 `tests/scripts/test_clibrary_direct_library_runtime_parity_contract.sh` 从旧的 `TSSLConnector.WithTimeout` 守卫修成当前 `ISSLConnectionControl.SetTimeout` truth
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-22-verifymode-contract-guard-and-clibrary-runtime-proof-sync.md`
+  - 更新：
+    - `tests/scripts/test_factory_config_verifymode_empty_set_contract.sh`
+    - `tests/scripts/test_clibrary_direct_library_runtime_parity_contract.sh`
+  当前已知 truth：
+  - factory / direct-library verify-mode application path 当前都先计算 `LVerifyMode`，再把它应用到 context
+  - C-library 连接作用域运行证明当前使用 `ISSLConnectionControl.SetTimeout` 作为 HandshakeTimeout 替换指导
+  当前 focused proof：
+  - `bash tests/scripts/test_factory_config_verifymode_empty_set_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_clibrary_direct_library_runtime_parity_contract.sh`
+    - PASS
+  - `bash -n tests/scripts/test_factory_config_verifymode_empty_set_contract.sh`
+    - PASS
+  - `bash -n tests/scripts/test_clibrary_direct_library_runtime_parity_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+
 - [completed] `direct-library default-config parity contract refresh`
   当前 focused 目标：
   - 把 `tests/scripts/test_direct_library_default_config_parity_contract.sh` 从盯死 `LConfig.VerifyMode` 变量名修成盯住当前 direct-library `VerifyMode` truth
