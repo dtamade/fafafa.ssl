@@ -2,6 +2,47 @@
 
 ## 2026-05-22
 
+- freepascal early-data readme contradiction guard closeout
+  这次真正补上的
+  是一个
+  completion-audit blind spot：
+  - `README.md`
+    这一节开头
+    已经明确说
+    默认 shipped path
+    会把 replay truth
+    落到本地持久化 replay-store
+  - 但结尾
+    还残留一句
+    “这条 opt-in
+    不代表默认路径已经持久化”
+  - 现有 focused contract
+    又只检查了
+    正向关键词存在，
+    没有拦截
+    这种反向自我否定
+
+- 当前更准确的收口是：
+  - 没有新的 implementation drift
+  - 真实缺口是
+    active docs
+    仍有一处 self-contradiction，
+    以及 contract
+    没有对这类反向漂移设 guard
+  - README
+    现在明确成：
+    - 默认 shipped path
+      已经持久化
+    - public opt-in
+      只负责
+      caller-controlled path placement
+    - distributed readiness
+      仍未承诺
+  - `tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+    现在也会直接拦
+    `不代表默认路径已经持久化`
+    这类回退
+
 - freepascal early-data final caveat closeout
   这次确认下来的
   不是新的实现缺口，

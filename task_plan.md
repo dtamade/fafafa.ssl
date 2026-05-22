@@ -10,6 +10,67 @@
 
 ## Current Status
 
+- [completed] `freepascal early-data readme contradiction guard closeout`
+  当前 focused 目标：
+  - 对同日
+    `final caveat closeout`
+    做真正的 completion audit
+  - 修掉 README
+    仍残留的
+    “默认 shipped path 已持久化”
+    /
+    “opt-in 不代表默认路径已经持久化”
+    自相矛盾
+  - 把 focused contract
+    补成会拦截这类反向表述，
+    避免再把
+    “contract 绿了”
+    直接当成
+    active docs
+    已完全对齐
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-22-freepascal-early-data-readme-contradiction-guard-closeout.md`
+  - 更新：
+    - `README.md`
+    - `tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+    - `task_plan.md`
+    - `findings.md`
+    - `progress.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_early_data_docs_truth_contract.sh`
+    - PASS
+  - `mkdir -p tmp/capability_cache_units && fpc -B -Fu./src -Fu./tests -FUtmp/capability_cache_units -FEtmp/capability_cache_units -otmp/capability_cache_units/test_capability_cache tests/test_capability_cache.pas && ./tmp/capability_cache_units/test_capability_cache`
+    - PASS
+    - summary:
+      - FreePascal `KnownIssues`
+        继续输出：
+        `0-RTT / early data is experimental and currently relies on a local persistent anti-replay replay-store path; if the path is unavailable or unwritable, resumed early data is rejected fail-closed.`
+      - `ZeroRTTSupport = sslSupportExperimental`
+      - `EarlyDataSupport = sslSupportExperimental`
+  - `git diff --check`
+    - PASS
+  当前结论：
+  - 没有新的 production implementation drift
+  - 但先前“已完成”记录
+    漏掉了一处
+    active docs drift：
+    - README
+      末句仍否认
+      默认 shipped path
+      已持久化
+  - 现已把 README
+    改回
+    persistent-by-default +
+    distributed-not-ready
+    的一致口径，
+    并由 focused contract
+    冻结住
+
 - [completed] `freepascal early-data final caveat closeout`
   当前 focused 目标：
   - 围绕 post-release 阶段唯一剩余的

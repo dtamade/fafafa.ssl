@@ -6,6 +6,83 @@
 
 ## 2026-05-22
 
+### FreePascal Early-Data README Contradiction Guard Closeout
+
+- rerun current focused contracts against current HEAD before touching files:
+  - `bash tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_early_data_docs_truth_contract.sh`
+    - result: PASS
+  - result:
+    - current guards were still green
+      even though
+      `README.md`
+      still contained
+      a self-contradictory
+      default replay-store sentence
+
+- inspect the active truth sources behind that false-green:
+  - `README.md`
+  - `docs/ROADMAP.md`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/INTEGRATION_GUIDE.md`
+  - `docs/guides/EARLY_DATA_GUIDE.md`
+  - `docs/guides/security-best-practices.md`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.freepascal.context.pas`
+  - result:
+    - source/runtime truth
+      still matches:
+      - persistent-by-default replay-store
+      - fail-closed default-path behavior
+      - `experimental` capability wording
+    - the only active drift found
+      in this follow-up audit
+      was
+      `README.md`
+      ending the section with
+      “不代表默认路径已经持久化”
+
+- close the README contradiction and the missing guard:
+  - updated:
+    - `README.md`
+    - `tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+    - `docs/plans/2026-05-22-freepascal-early-data-readme-contradiction-guard-closeout.md`
+    - `task_plan.md`
+    - `findings.md`
+    - `progress.md`
+  - change:
+    - README
+      now says the opt-in
+      only controls
+      caller-chosen replay-store placement
+      while the default shipped path
+      remains persistent-by-default
+    - focused contract
+      now fails
+      if README
+      reintroduces
+      `不代表默认路径已经持久化`
+      这类反向表述
+
+- verify the follow-up closeout:
+  - `bash -n tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_early_data_docs_truth_contract.sh`
+    - result: PASS
+  - `mkdir -p tmp/capability_cache_units && fpc -B -Fu./src -Fu./tests -FUtmp/capability_cache_units -FEtmp/capability_cache_units -otmp/capability_cache_units/test_capability_cache tests/test_capability_cache.pas && ./tmp/capability_cache_units/test_capability_cache`
+    - result: PASS
+    - summary:
+      - `KnownIssues`
+        still outputs
+        `0-RTT / early data is experimental and currently relies on a local persistent anti-replay replay-store path; if the path is unavailable or unwritable, resumed early data is rejected fail-closed.`
+      - `ZeroRTTSupport = sslSupportExperimental`
+      - `EarlyDataSupport = sslSupportExperimental`
+  - `git diff --check`
+    - result: PASS
+
 ### FreePascal Early-Data Final Caveat Closeout
 
 - inspect the current active truth surfaces for the remaining FreePascal caveat:

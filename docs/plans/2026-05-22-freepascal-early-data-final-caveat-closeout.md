@@ -132,3 +132,17 @@ git diff --check
   focused-contract
   的防回退覆盖，
   不是功能扩线
+
+## Follow-up
+
+- 同日的后续 completion audit
+  发现
+  `README.md`
+  仍残留一处
+  “默认 shipped path 已持久化”
+  /
+  “opt-in 不代表默认路径已经持久化”
+  的自相矛盾
+- 对应修复与补充 guard
+  已单独记录在：
+  - `docs/plans/2026-05-22-freepascal-early-data-readme-contradiction-guard-closeout.md`

@@ -178,7 +178,7 @@ end;
 - config/direct-context 当前 public no-verify 语义是 `[]`；
 - 这两条都会落成 no-verify runtime truth，但生产环境仍应优先启用验证。
 
-这条 opt-in 只解决单机可控的 replay-store truth，不代表默认路径已经持久化，也不代表已经进入 distributed readiness。
+这条 opt-in 只解决单机可控的 replay-store truth / caller-controlled path placement；默认 shipped path 已经会把 replay truth 落到本地持久化 replay-store，但这仍不代表已经进入 distributed readiness。
 
 ## 快速开始
 

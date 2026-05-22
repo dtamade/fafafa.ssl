@@ -51,6 +51,10 @@ require_fixed "README.md" "默认 replay truth 落到本地持久化 replay-stor
   "README.md must record the durable default replay-store truth"
 require_fixed "README.md" "fail-closed reject" \
   "README.md must record the fail-closed default-path behavior"
+if grep -Fq -- "不代表默认路径已经持久化" "README.md"; then
+  echo "[FAIL] README.md must stop contradicting the durable default replay-store truth"
+  exit 1
+fi
 
 require_fixed "docs/reference/API_REFERENCE.md" "TSSLConfig.ServerEarlyDataReplayStoreFile" \
   "API reference must mention the file-backed early-data replay-store config field"
