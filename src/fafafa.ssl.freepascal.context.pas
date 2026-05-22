@@ -648,8 +648,6 @@ end;
 
 procedure TFreePascalContext.SetCipherSuites(const ACipherSuites: string);
 begin
-  if IsCustomCipherSuitesOverride(ACipherSuites) then
-    RejectUnsupportedCustomCipherAssignment('Cipher suites', 'TFreePascalContext.SetCipherSuites');
   FCipherSuites := ACipherSuites;
 end;
 

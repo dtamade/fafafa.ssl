@@ -129,6 +129,7 @@ begin
     7200,
     0
   );
+  LSession.BoundServerName := 'example.com';
   Result := LSession;
 end;
 

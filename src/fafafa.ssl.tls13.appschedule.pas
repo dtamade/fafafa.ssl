@@ -27,6 +27,7 @@ type
     IVLength: Integer;
 
     TranscriptHash: TBytes;
+    ResumptionTranscriptHash: TBytes;  { Hash(CH..CF) for resumption_master_secret }
     DerivedSecret: TBytes;
     MasterSecret: TBytes;
 
@@ -99,6 +100,7 @@ procedure InitTLS13ApplicationSecrets(out ASecrets: TTLS13ApplicationSecrets);
 begin
   FillChar(ASecrets, SizeOf(ASecrets), 0);
   SetLength(ASecrets.TranscriptHash, 0);
+  SetLength(ASecrets.ResumptionTranscriptHash, 0);
   SetLength(ASecrets.DerivedSecret, 0);
   SetLength(ASecrets.MasterSecret, 0);
   SetLength(ASecrets.ClientApplicationTrafficSecret, 0);

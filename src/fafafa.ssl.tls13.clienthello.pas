@@ -14,6 +14,8 @@ uses
   fafafa.ssl.base;
 
 type
+  TTLS13CipherSuiteList = array of Word;
+
   TTLS13ClientHelloPSKOffer = record
     Valid: Boolean;
     AllowEarlyData: Boolean;
@@ -72,6 +74,32 @@ function BuildTLS13ClientHelloRecordWithPSK(
   AIncludeSignedCertificateTimestamp: Boolean = False
 ): TBytes;
 
+function BuildTLS13ClientHelloHandshakeWithCiphers(
+  const AServerName: string;
+  const AALPNProtocols: string;
+  const AKeyShare: TBytes;
+  const ACipherSuites: TTLS13CipherSuiteList;
+  AIncludeStatusRequest: Boolean = False;
+  AIncludeSignedCertificateTimestamp: Boolean = False
+): TBytes;
+
+function BuildTLS13ClientHelloHandshakeWithComputedPSKBinderAndCiphers(
+  const AServerName: string;
+  const AALPNProtocols: string;
+  const AKeyShare: TBytes;
+  ACipherSuite: Word;
+  const APSKIdentity: TBytes;
+  AObfuscatedTicketAge: Cardinal;
+  const AResumptionPSK: TBytes;
+  const ACipherSuites: TTLS13CipherSuiteList;
+  out APartialHandshake: TBytes;
+  AAllowEarlyData: Boolean = False;
+  AIncludeStatusRequest: Boolean = False;
+  AIncludeSignedCertificateTimestamp: Boolean = False
+): TBytes;
+
+function ParseTLS13CipherSuiteString(const ACipherSuiteStr: string): TTLS13CipherSuiteList;
+
 implementation
 
 uses
@@ -96,6 +124,14 @@ begin
   AppendUInt16(ADest, TLS13_CIPHER_AES_256_GCM_SHA384);
   AppendUInt16(ADest, TLS13_CIPHER_CHACHA20_POLY1305_SHA256);
   AppendUInt16(ADest, TLS13_CIPHER_AES_128_GCM_SHA256);
+end;
+
+procedure AppendTLS13CipherSuites(var ADest: TBytes; const ACipherSuites: TTLS13CipherSuiteList);
+var
+  I: Integer;
+begin
+  for I := 0 to High(ACipherSuites) do
+    AppendUInt16(ADest, ACipherSuites[I]);
 end;
 
 function BytesFromAnsi(const AValue: AnsiString): TBytes;
@@ -619,6 +655,11 @@ begin
   AppendUInt24(APartialHandshake, Length(LPartialBody));
   AppendBytes(APartialHandshake, LPartialBody);
 
+  { RFC 8446 Section 4.2.11.2: truncate partial handshake to exclude binder entries
+    but include the binders list length field }
+  if APSKOffer.Valid and (Length(APSKOffer.Binder) > 0) then
+    SetLength(APartialHandshake, Length(APartialHandshake) - (1 + Length(APSKOffer.Binder)));
+
   Result := nil;
   AppendByte(Result, TLS_HANDSHAKE_TYPE_CLIENT_HELLO);
   AppendUInt24(Result, Length(LBody));
@@ -673,6 +714,10 @@ begin
   AppendUInt24(APartialHandshake, Length(LPartialBody));
   AppendBytes(APartialHandshake, LPartialBody);
 
+
+  { RFC 8446 Section 4.2.11.2: truncate partial handshake to exclude binder entries
+    but include the binders list length field }
+  SetLength(APartialHandshake, Length(APartialHandshake) - (1 + Length(AResumptionPSK)));
   LOffer.Binder := TLS13ComputePSKBinderForCipherSuite(
     ACipherSuite,
     AResumptionPSK,
@@ -720,4 +765,347 @@ begin
   Result := BuildTLSPlaintext(TLS_CONTENT_TYPE_HANDSHAKE, LHandshake);
 end;
 
+
+function BuildTLS13ClientHelloBodyWithCiphers(
+  const AServerName: string;
+  const AALPNProtocols: string;
+  const AKeyShare: TBytes;
+  const ACipherSuites: TTLS13CipherSuiteList;
+  AIncludeStatusRequest: Boolean;
+  AIncludeSignedCertificateTimestamp: Boolean
+): TBytes;
+var
+  LRandom, LSessionId: TBytes;
+  LCipherSuites: TBytes;
+  LCompressionMethods: TBytes;
+  LExtensions: TBytes;
+  LExt: TBytes;
+begin
+  LRandom := GenerateSecureRandomBytes(32);
+  LSessionId := GenerateSecureRandomBytes(32);
+
+  SetLength(LCipherSuites, 0);
+  if Length(ACipherSuites) > 0 then
+    AppendTLS13CipherSuites(LCipherSuites, ACipherSuites)
+  else
+    AppendDefaultTLS13CipherSuites(LCipherSuites);
+
+  SetLength(LCompressionMethods, 0);
+  AppendByte(LCompressionMethods, 1);
+  AppendByte(LCompressionMethods, 0);
+
+  SetLength(LExtensions, 0);
+
+  LExt := BuildExtensionServerName(AServerName);
+  AppendBytes(LExtensions, LExt);
+
+  if AIncludeStatusRequest then
+  begin
+    LExt := BuildExtensionStatusRequest;
+    AppendBytes(LExtensions, LExt);
+  end;
+
+  if AIncludeSignedCertificateTimestamp then
+  begin
+    LExt := BuildExtensionSignedCertificateTimestamp;
+    AppendBytes(LExtensions, LExt);
+  end;
+
+  LExt := BuildExtensionSupportedVersions;
+  AppendBytes(LExtensions, LExt);
+
+  LExt := BuildExtensionSupportedGroups;
+  AppendBytes(LExtensions, LExt);
+
+  LExt := BuildExtensionSignatureAlgorithms;
+  AppendBytes(LExtensions, LExt);
+
+  LExt := BuildExtensionPSKKeyExchangeModes;
+  AppendBytes(LExtensions, LExt);
+
+  LExt := BuildExtensionKeyShare(AKeyShare);
+  AppendBytes(LExtensions, LExt);
+
+  LExt := BuildExtensionALPN(AALPNProtocols);
+  AppendBytes(LExtensions, LExt);
+
+  Result := nil;
+  AppendUInt16(Result, TLS_LEGACY_VERSION);
+  AppendBytes(Result, LRandom);
+  AppendByte(Result, Byte(Length(LSessionId)));
+  AppendBytes(Result, LSessionId);
+  AppendUInt16(Result, Word(Length(LCipherSuites)));
+  AppendBytes(Result, LCipherSuites);
+  AppendBytes(Result, LCompressionMethods);
+  AppendUInt16(Result, Word(Length(LExtensions)));
+  AppendBytes(Result, LExtensions);
+end;
+
+function BuildTLS13ClientHelloHandshakeWithCiphers(
+  const AServerName: string;
+  const AALPNProtocols: string;
+  const AKeyShare: TBytes;
+  const ACipherSuites: TTLS13CipherSuiteList;
+  AIncludeStatusRequest: Boolean;
+  AIncludeSignedCertificateTimestamp: Boolean
+): TBytes;
+var
+  LBody: TBytes;
+begin
+  LBody := BuildTLS13ClientHelloBodyWithCiphers(
+    AServerName,
+    AALPNProtocols,
+    AKeyShare,
+    ACipherSuites,
+    AIncludeStatusRequest,
+    AIncludeSignedCertificateTimestamp
+  );
+
+  Result := nil;
+  AppendByte(Result, TLS_HANDSHAKE_TYPE_CLIENT_HELLO);
+  AppendUInt24(Result, Length(LBody));
+  AppendBytes(Result, LBody);
+end;
+
+function BuildTLS13ClientHelloBodyWithPSKCoreAndCiphers(
+  const AServerName: string;
+  const AALPNProtocols: string;
+  const AKeyShare: TBytes;
+  const APSKOffer: TTLS13ClientHelloPSKOffer;
+  const ARandom: TBytes;
+  const ASessionId: TBytes;
+  const ACipherSuites: TTLS13CipherSuiteList;
+  out APartialBody: TBytes;
+  AIncludeStatusRequest: Boolean;
+  AIncludeSignedCertificateTimestamp: Boolean
+): TBytes;
+var
+  LCipherSuites: TBytes;
+  LCompressionMethods: TBytes;
+  LBaseExtensions: TBytes;
+  LExt: TBytes;
+  LZeroBinder: TBytes;
+  LPartialPSKExtension: TBytes;
+  LFinalPSKExtension: TBytes;
+begin
+  SetLength(LCipherSuites, 0);
+  if Length(ACipherSuites) > 0 then
+    AppendTLS13CipherSuites(LCipherSuites, ACipherSuites)
+  else
+    AppendDefaultTLS13CipherSuites(LCipherSuites);
+
+  SetLength(LCompressionMethods, 0);
+  AppendByte(LCompressionMethods, 1);
+  AppendByte(LCompressionMethods, 0);
+
+  SetLength(LBaseExtensions, 0);
+
+  LExt := BuildExtensionServerName(AServerName);
+  AppendBytes(LBaseExtensions, LExt);
+
+  if AIncludeStatusRequest then
+  begin
+    LExt := BuildExtensionStatusRequest;
+    AppendBytes(LBaseExtensions, LExt);
+  end;
+
+  if AIncludeSignedCertificateTimestamp then
+  begin
+    LExt := BuildExtensionSignedCertificateTimestamp;
+    AppendBytes(LBaseExtensions, LExt);
+  end;
+
+  LExt := BuildExtensionSupportedVersions;
+  AppendBytes(LBaseExtensions, LExt);
+
+  LExt := BuildExtensionSupportedGroups;
+  AppendBytes(LBaseExtensions, LExt);
+
+  LExt := BuildExtensionSignatureAlgorithms;
+  AppendBytes(LBaseExtensions, LExt);
+
+  LExt := BuildExtensionPSKKeyExchangeModes;
+  AppendBytes(LBaseExtensions, LExt);
+
+  LExt := BuildExtensionKeyShare(AKeyShare);
+  AppendBytes(LBaseExtensions, LExt);
+
+  LExt := BuildExtensionALPN(AALPNProtocols);
+  AppendBytes(LBaseExtensions, LExt);
+
+  if APSKOffer.Valid and APSKOffer.AllowEarlyData then
+  begin
+    LExt := BuildExtensionEarlyData;
+    AppendBytes(LBaseExtensions, LExt);
+  end;
+
+  SetLength(APartialBody, 0);
+  AppendUInt16(APartialBody, TLS_LEGACY_VERSION);
+  AppendBytes(APartialBody, ARandom);
+  AppendByte(APartialBody, Byte(Length(ASessionId)));
+  AppendBytes(APartialBody, ASessionId);
+  AppendUInt16(APartialBody, Word(Length(LCipherSuites)));
+  AppendBytes(APartialBody, LCipherSuites);
+  AppendBytes(APartialBody, LCompressionMethods);
+
+  if APSKOffer.Valid then
+  begin
+    SetLength(LZeroBinder, Length(APSKOffer.Binder));
+    if Length(LZeroBinder) > 0 then
+      FillChar(LZeroBinder[0], Length(LZeroBinder), 0);
+    LPartialPSKExtension := BuildExtensionPreSharedKey(APSKOffer, LZeroBinder);
+    LFinalPSKExtension := BuildExtensionPreSharedKey(APSKOffer, APSKOffer.Binder);
+
+    AppendUInt16(APartialBody, Word(Length(LBaseExtensions) + Length(LPartialPSKExtension)));
+    AppendBytes(APartialBody, LBaseExtensions);
+    AppendBytes(APartialBody, LPartialPSKExtension);
+
+    Result := nil;
+    AppendUInt16(Result, TLS_LEGACY_VERSION);
+    AppendBytes(Result, ARandom);
+    AppendByte(Result, Byte(Length(ASessionId)));
+    AppendBytes(Result, ASessionId);
+    AppendUInt16(Result, Word(Length(LCipherSuites)));
+    AppendBytes(Result, LCipherSuites);
+    AppendBytes(Result, LCompressionMethods);
+    AppendUInt16(Result, Word(Length(LBaseExtensions) + Length(LFinalPSKExtension)));
+    AppendBytes(Result, LBaseExtensions);
+    AppendBytes(Result, LFinalPSKExtension);
+    Exit;
+  end;
+
+  AppendUInt16(APartialBody, Word(Length(LBaseExtensions)));
+  AppendBytes(APartialBody, LBaseExtensions);
+  Result := Copy(APartialBody);
+end;
+
+function BuildTLS13ClientHelloHandshakeWithComputedPSKBinderAndCiphers(
+  const AServerName: string;
+  const AALPNProtocols: string;
+  const AKeyShare: TBytes;
+  ACipherSuite: Word;
+  const APSKIdentity: TBytes;
+  AObfuscatedTicketAge: Cardinal;
+  const AResumptionPSK: TBytes;
+  const ACipherSuites: TTLS13CipherSuiteList;
+  out APartialHandshake: TBytes;
+  AAllowEarlyData: Boolean;
+  AIncludeStatusRequest: Boolean;
+  AIncludeSignedCertificateTimestamp: Boolean
+): TBytes;
+var
+  LOffer: TTLS13ClientHelloPSKOffer;
+  LPartialBody: TBytes;
+  LBody: TBytes;
+  LRandom: TBytes;
+  LSessionId: TBytes;
+begin
+  FillChar(LOffer, SizeOf(LOffer), 0);
+  LOffer.Valid := True;
+  LOffer.Identity := Copy(APSKIdentity);
+  LOffer.ObfuscatedTicketAge := AObfuscatedTicketAge;
+  LOffer.AllowEarlyData := AAllowEarlyData;
+  SetLength(LOffer.Binder, Length(AResumptionPSK));
+  if Length(LOffer.Binder) > 0 then
+    FillChar(LOffer.Binder[0], Length(LOffer.Binder), 0);
+
+  LRandom := GenerateSecureRandomBytes(32);
+  LSessionId := GenerateSecureRandomBytes(32);
+  LBody := BuildTLS13ClientHelloBodyWithPSKCoreAndCiphers(
+    AServerName,
+    AALPNProtocols,
+    AKeyShare,
+    LOffer,
+    LRandom,
+    LSessionId,
+    ACipherSuites,
+    LPartialBody,
+    AIncludeStatusRequest,
+    AIncludeSignedCertificateTimestamp
+  );
+
+  SetLength(APartialHandshake, 0);
+  AppendByte(APartialHandshake, TLS_HANDSHAKE_TYPE_CLIENT_HELLO);
+  AppendUInt24(APartialHandshake, Length(LPartialBody));
+  AppendBytes(APartialHandshake, LPartialBody);
+
+  { RFC 8446 Section 4.2.11.2: truncate partial handshake to exclude binder entries
+    but include the binders list length field }
+  SetLength(APartialHandshake, Length(APartialHandshake) - (1 + Length(AResumptionPSK)));
+
+  LOffer.Binder := TLS13ComputePSKBinderForCipherSuite(
+    ACipherSuite,
+    AResumptionPSK,
+    APartialHandshake
+  );
+  LBody := BuildTLS13ClientHelloBodyWithPSKCoreAndCiphers(
+    AServerName,
+    AALPNProtocols,
+    AKeyShare,
+    LOffer,
+    LRandom,
+    LSessionId,
+    ACipherSuites,
+    LPartialBody,
+    AIncludeStatusRequest,
+    AIncludeSignedCertificateTimestamp
+  );
+
+  Result := nil;
+  AppendByte(Result, TLS_HANDSHAKE_TYPE_CLIENT_HELLO);
+  AppendUInt24(Result, Length(LBody));
+  AppendBytes(Result, LBody);
+end;
+
+function ParseTLS13CipherSuiteString(const ACipherSuiteStr: string): TTLS13CipherSuiteList;
+var
+  I: Integer;
+  LStart, LStop: Integer;
+  LValue: string;
+  LCount: Integer;
+  LUpper: string;
+begin
+  Result := nil;
+  LCount := 0;
+  LStart := 1;
+
+  for I := 1 to Length(ACipherSuiteStr) + 1 do
+  begin
+    if (I <= Length(ACipherSuiteStr)) and (ACipherSuiteStr[I] <> ':') then
+      Continue;
+
+    LStop := I - 1;
+    while (LStart <= LStop) and ((ACipherSuiteStr[LStart] = ' ') or (ACipherSuiteStr[LStart] = #9)) do
+      Inc(LStart);
+    while (LStop >= LStart) and ((ACipherSuiteStr[LStop] = ' ') or (ACipherSuiteStr[LStop] = #9)) do
+      Dec(LStop);
+
+    if LStop >= LStart then
+    begin
+      LValue := Copy(ACipherSuiteStr, LStart, LStop - LStart + 1);
+      LUpper := UpperCase(LValue);
+
+      if (LUpper = 'TLS_AES_256_GCM_SHA384') or (LUpper = 'AES_256_GCM_SHA384') then
+      begin
+        SetLength(Result, LCount + 1);
+        Result[LCount] := TLS13_CIPHER_AES_256_GCM_SHA384;
+        Inc(LCount);
+      end
+      else if (LUpper = 'TLS_CHACHA20_POLY1305_SHA256') or (LUpper = 'CHACHA20_POLY1305_SHA256') then
+      begin
+        SetLength(Result, LCount + 1);
+        Result[LCount] := TLS13_CIPHER_CHACHA20_POLY1305_SHA256;
+        Inc(LCount);
+      end
+      else if (LUpper = 'TLS_AES_128_GCM_SHA256') or (LUpper = 'AES_128_GCM_SHA256') then
+      begin
+        SetLength(Result, LCount + 1);
+        Result[LCount] := TLS13_CIPHER_AES_128_GCM_SHA256;
+        Inc(LCount);
+      end;
+    end;
+
+    LStart := I + 1;
+  end;
+end;
 end.

@@ -1100,7 +1100,7 @@ begin
 
           if (not FApplicationSecrets.Valid) or
             (Length(FApplicationSecrets.MasterSecret) <> FApplicationSecrets.HashSize) or
-            (Length(FApplicationSecrets.TranscriptHash) <> FApplicationSecrets.HashSize) then
+            (Length(FApplicationSecrets.ResumptionTranscriptHash) <> FApplicationSecrets.HashSize) then
           begin
             SetHandshakeError(sslErrProtocol, 'Application transcript state is not ready for NewSessionTicket');
             Exit;
@@ -1109,7 +1109,7 @@ begin
           LResumptionPSK := TLS13DeriveResumptionPSKFromTranscriptHash(
             FApplicationSecrets.CipherSuite,
             FApplicationSecrets.MasterSecret,
-            FApplicationSecrets.TranscriptHash,
+            FApplicationSecrets.ResumptionTranscriptHash,
             LTicket.TicketNonce
           );
           if Length(LResumptionPSK) <> FApplicationSecrets.HashSize then
@@ -3148,6 +3148,7 @@ var
   LWantEarlyData: Boolean;
   LWantOCSPStapling: Boolean;
   LWantCertificateTransparency: Boolean;
+  LConfiguredCipherSuites: TTLS13CipherSuiteList;
 begin
   Result := False;
   FSelectedALPNProtocol := '';
@@ -3214,13 +3215,18 @@ begin
     (FContext <> nil) and
     (sslVerifyPeer in FContext.GetVerifyMode);
 
+
+  if (FContext <> nil) and (FContext.GetCipherSuites <> '') then
+    LConfiguredCipherSuites := ParseTLS13CipherSuiteString(FContext.GetCipherSuites)
+  else
+    SetLength(LConfiguredCipherSuites, 0);
   if LUseConfiguredSession then
   begin
     LSessionAgeMs := MilliSecondsBetween(Now, FConfiguredSession.GetCreationTime);
     if LSessionAgeMs < 0 then
       LSessionAgeMs := 0;
 
-    LClientHelloHandshake := BuildTLS13ClientHelloHandshakeWithComputedPSKBinder(
+    LClientHelloHandshake := BuildTLS13ClientHelloHandshakeWithComputedPSKBinderAndCiphers(
       FServerName,
       FALPNProtocols,
       FX25519PublicKey,
@@ -3228,6 +3234,7 @@ begin
       LConfiguredResumption.GetTicket,
       Cardinal((QWord(LSessionAgeMs) + QWord(LConfiguredResumption.GetTicketAgeAdd)) and $FFFFFFFF),
       LConfiguredResumption.GetResumptionPSK,
+      LConfiguredCipherSuites,
       LPartialClientHello,
       LWantEarlyData,
       LWantOCSPStapling,
@@ -3242,10 +3249,11 @@ begin
   end;
 
   if not LUseConfiguredSession then
-    LClientHelloHandshake := BuildTLS13ClientHelloHandshake(
+    LClientHelloHandshake := BuildTLS13ClientHelloHandshakeWithCiphers(
       FServerName,
       FALPNProtocols,
       FX25519PublicKey,
+      LConfiguredCipherSuites,
       LWantOCSPStapling,
       LWantCertificateTransparency
     );
@@ -3491,6 +3499,11 @@ begin
 
           if not SendClientFinished(LServerHello.SelectedCipherSuite, LTranscriptData) then
             Exit;
+
+          { RFC 8446 Section 7.1: resumption_master_secret uses Hash(CH..CF) }
+          FApplicationSecrets.ResumptionTranscriptHash := HashTLS13TranscriptForSuite(
+            LServerHello.SelectedCipherSuite, LTranscriptData
+          );
 
           FClientApplicationSeq := 0;
           FServerApplicationSeq := 0;
@@ -3767,6 +3780,7 @@ var
   LIssuedSession: TFreePascalSession;
   LEarlyDataBuffer: TBytes;
   LClientRequestedOCSPStapling: Boolean;
+  LServerCipherSuites: TTLS13CipherSuiteList;
 begin
   Result := False;
   FSelectedALPNProtocol := '';
@@ -3974,12 +3988,31 @@ begin
 
   if not LResumedHandshake then
   begin
-    if TLS13ClientHelloOffersCipherSuite(LClientHello, TLS13_CIPHER_AES_256_GCM_SHA384) then
-      LSelectedCipherSuite := TLS13_CIPHER_AES_256_GCM_SHA384
-    else if TLS13ClientHelloOffersCipherSuite(LClientHello, TLS13_CIPHER_CHACHA20_POLY1305_SHA256) then
-      LSelectedCipherSuite := TLS13_CIPHER_CHACHA20_POLY1305_SHA256
-    else if TLS13ClientHelloOffersCipherSuite(LClientHello, TLS13_CIPHER_AES_128_GCM_SHA256) then
-      LSelectedCipherSuite := TLS13_CIPHER_AES_128_GCM_SHA256;
+    if (FContext <> nil) and (FContext.GetCipherSuites <> '') then
+      LServerCipherSuites := ParseTLS13CipherSuiteString(FContext.GetCipherSuites)
+    else
+      SetLength(LServerCipherSuites, 0);
+
+    if Length(LServerCipherSuites) > 0 then
+    begin
+      { Select first server-preferred cipher that client also offers }
+      for LRecordIndex := 0 to High(LServerCipherSuites) do
+        if TLS13ClientHelloOffersCipherSuite(LClientHello, LServerCipherSuites[LRecordIndex]) then
+        begin
+          LSelectedCipherSuite := LServerCipherSuites[LRecordIndex];
+          Break;
+        end;
+    end
+    else
+    begin
+      { Default preference order }
+      if TLS13ClientHelloOffersCipherSuite(LClientHello, TLS13_CIPHER_AES_256_GCM_SHA384) then
+        LSelectedCipherSuite := TLS13_CIPHER_AES_256_GCM_SHA384
+      else if TLS13ClientHelloOffersCipherSuite(LClientHello, TLS13_CIPHER_CHACHA20_POLY1305_SHA256) then
+        LSelectedCipherSuite := TLS13_CIPHER_CHACHA20_POLY1305_SHA256
+      else if TLS13ClientHelloOffersCipherSuite(LClientHello, TLS13_CIPHER_AES_128_GCM_SHA256) then
+        LSelectedCipherSuite := TLS13_CIPHER_AES_128_GCM_SHA256;
+    end;
   end;
 
   if LSelectedCipherSuite = 0 then
@@ -4621,6 +4654,11 @@ begin
   end;
 
 
+  { RFC 8446 Section 7.1: resumption_master_secret uses Hash(CH..CF) }
+  FApplicationSecrets.ResumptionTranscriptHash := HashTLS13TranscriptForSuite(
+    LSelectedCipherSuite, LTranscriptData
+  );
+
   FClientApplicationSeq := 0;
   FServerApplicationSeq := 0;
   SetLength(FPostHandshakeBuffer, 0);
@@ -4647,7 +4685,7 @@ begin
     LVerifyData := TLS13DeriveResumptionPSKFromTranscriptHash(
       FApplicationSecrets.CipherSuite,
       FApplicationSecrets.MasterSecret,
-      FApplicationSecrets.TranscriptHash,
+      FApplicationSecrets.ResumptionTranscriptHash,
       LTicketNonce
     );
     if Length(LVerifyData) <> FApplicationSecrets.HashSize then

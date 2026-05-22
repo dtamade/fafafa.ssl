@@ -543,6 +543,7 @@ var
   LTicketEncrypted: TBytes;
   LTicketRecord: TBytes;
   LResumptionPSK: TBytes;
+  LResumptionTranscript: TBytes;
   LSession: TFreePascalSession;
 begin
   if not ParseTLSRecordHeader(AData, LHeader) then
@@ -649,10 +650,17 @@ begin
             LTicketRecord := BuildTLSPlaintext(TLS_CONTENT_TYPE_APPLICATION_DATA, LTicketEncrypted);
             Enqueue(LTicketRecord);
 
+
+            { RFC 8446: resumption_master_secret uses Hash(CH..CF) }
+            LResumptionTranscript := Copy(FTranscriptData, 0, Length(FTranscriptData));
+            AppendHandshakeBytes(LResumptionTranscript, LMessage);
+            FApplicationSecrets.ResumptionTranscriptHash := HashTranscriptForSuite(
+              FCipherSuite, LResumptionTranscript
+            );
             LResumptionPSK := TLS13DeriveResumptionPSKFromTranscriptHash(
               FApplicationSecrets.CipherSuite,
               FApplicationSecrets.MasterSecret,
-              FApplicationSecrets.TranscriptHash,
+              FApplicationSecrets.ResumptionTranscriptHash,
               LTicketNonce
             );
             LSession := TFreePascalSession.Create;
@@ -1043,6 +1051,11 @@ begin
   if (FMode <> scmInitial) and (Length(FEarlyData) > 0) and FObservedServerAcceptedEarlyData then
     AppendHandshakeBytes(FTranscriptData, BuildTLS13EndOfEarlyDataHandshake);
   AppendHandshakeBytes(FTranscriptData, LFinishedMessage);
+
+  { RFC 8446 Section 7.1: resumption_master_secret uses Hash(CH..CF) }
+  FApplicationSecrets.ResumptionTranscriptHash := HashTranscriptForSuite(
+    FHandshakeSecrets.CipherSuite, FTranscriptData
+  );
 end;
 
 procedure TScriptedEarlyDataClientStream.HandleServerPostHandshake(const AData: TBytes);
@@ -1085,7 +1098,7 @@ begin
   LResumptionPSK := TLS13DeriveResumptionPSKFromTranscriptHash(
     FApplicationSecrets.CipherSuite,
     FApplicationSecrets.MasterSecret,
-    FApplicationSecrets.TranscriptHash,
+    FApplicationSecrets.ResumptionTranscriptHash,
     LTicket.TicketNonce
   );
 

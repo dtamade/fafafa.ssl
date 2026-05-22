@@ -836,7 +836,8 @@ begin
         AError := 'pre_shared_key binders vector must not be empty';
         Exit;
       end;
-
+      { RFC 8446 Section 4.2.11.2: partial transcript includes up to and
+        including the binders list length but not the binder entries }
       while LBinderOffset < LBindersEnd do
       begin
         if LBinderOffset + 1 > LBindersEnd then
@@ -853,10 +854,11 @@ begin
           Exit;
         end;
 
-        if LBinderLen > 0 then
-          FillChar(APartialHandshake[LBinderOffset], LBinderLen, 0);
         Inc(LBinderOffset, LBinderLen);
       end;
+
+      { Truncate to exclude binder entries (keep binders list length field) }
+      SetLength(APartialHandshake, LIdentitiesEnd + 2);
 
       LFoundPSK := True;
       Break;

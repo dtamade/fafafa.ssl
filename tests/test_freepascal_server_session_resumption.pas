@@ -465,6 +465,11 @@ begin
     raise Exception.Create('Failed to derive scripted client application secrets: ' + LError);
 
   AppendHandshakeBytes(FTranscriptData, LClientFinished);
+
+  { RFC 8446 Section 7.1: resumption_master_secret uses Hash(CH..CF) }
+  FApplicationSecrets.ResumptionTranscriptHash := HashTranscriptForSuite(
+    FNegotiatedCipherSuite, FTranscriptData
+  );
 end;
 
 procedure TOfflineTLS13ClientStream.HandleServerPostHandshake(const AData: TBytes);
@@ -510,7 +515,7 @@ begin
   LResumptionPSK := TLS13DeriveResumptionPSKFromTranscriptHash(
     FApplicationSecrets.CipherSuite,
     FApplicationSecrets.MasterSecret,
-    FApplicationSecrets.TranscriptHash,
+    FApplicationSecrets.ResumptionTranscriptHash,
     LTicket.TicketNonce
   );
 
