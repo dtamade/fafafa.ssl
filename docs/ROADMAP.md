@@ -99,7 +99,7 @@ bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local
 
 1. `release-control / v1.5.0 formalization` 这条线已经完成，不再建议重开；当前默认工作是从 product mainline 里选下一条实现线，而不是继续围绕 `v1.5.0` 做重复发布验证。
 2. 如果还要继续扩 early-data，不再建议无 fresh RED 地继续开 directory-store family；当前 blocker queue 已经收口，剩余只有更深的 crash-window / write-interruption drift 值得在 fresh failing evidence 出现时再重开，而不是现在回头重开现有 file-backed `.bak` family、managed boundary 或现有 parity 接线。
-3. capability 等级继续保持 `experimental`；当前剩余 caveat 已经收口到 local persistent 路径、fail-closed 行为，以及尚未承诺 distributed / cross-host replay coordination。
+3. capability 等级继续保持 `experimental`；当前剩余 caveat 已经收口到 local persistent 路径、fail-closed 行为，以及尚未承诺 distributed / cross-host replay coordination。在没有 fresh RED 前，这条 caveat 应视为 post-release 阶段有意保留的最终 experimental boundary，而不是默认 future queue。
 4. OCSP / CT / validation 只在 fresh failing evidence 出现时重开，不再作为默认 future queue。
 
 相关计划：

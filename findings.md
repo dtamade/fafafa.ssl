@@ -2,6 +2,72 @@
 
 ## 2026-05-22
 
+- freepascal early-data final caveat closeout
+  这次确认下来的
+  不是新的实现缺口，
+  而是一个
+  很典型的 workflow 漏洞：
+  - runtime/source truth
+    已经成立
+  - active docs
+    也基本已经收平
+  - 但 focused contract
+    还没有把
+    `ROADMAP`
+    /
+    `docs/BACKEND_CAPABILITY_MATRIX.md`
+    /
+    `docs/guides/EARLY_DATA_GUIDE.md`
+    上的
+    final caveat
+    一起冻结住
+
+- 当前 runtime/source truth：
+  - `src/fafafa.ssl.freepascal.context.pas`
+    server path
+    默认创建
+    `TFreePascalDefaultPersistentEarlyDataReplayLedger`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+    `KnownIssues`
+    当前继续发布：
+    `0-RTT / early data is experimental and currently relies on a local persistent anti-replay replay-store path; if the path is unavailable or unwritable, resumed early data is rejected fail-closed.`
+  - `tests/test_capability_cache.pas`
+    focused run
+    也继续证明：
+    - `ZeroRTTSupport = sslSupportExperimental`
+    - `EarlyDataSupport = sslSupportExperimental`
+    - `KnownIssues`
+      不再回退到
+      `in-memory single-process`
+
+- 当前更准确的收口是：
+  - FreePascal early-data
+    这条 caveat
+    现在应被理解成
+    post-release 阶段
+    有意保留的最终 experimental boundary
+  - 没有 fresh RED 时，
+    不该默认回头重开：
+    - old release-control
+    - directory-store family
+    - historical early-data plans
+
+- 这也意味着
+  最有价值的修复
+  不是再扩 production 代码，
+  而是：
+  - 在 `docs/ROADMAP.md`
+    明写这条 boundary 的定位
+  - 把 focused docs contract
+    扩到：
+    - README
+    - API / Integration
+    - `ROADMAP`
+    - `BACKEND_CAPABILITY_MATRIX`
+    - `EARLY_DATA_GUIDE`
+    - security guide
+    - source truth
+
 - backend optional/connection revalidation receipt closeout
   这次找到的是一个真实 workflow 缺口：
   - `docs/plans/2026-05-18-backend-optional-surface-completion-audit-revalidation.md`

@@ -10,6 +10,72 @@
 
 ## Current Status
 
+- [completed] `freepascal early-data final caveat closeout`
+  当前 focused 目标：
+  - 围绕 post-release 阶段唯一剩余的
+    FreePascal early-data / replay-store caveat
+    做最终真相校验
+  - 如果没有 fresh implementation drift，
+    就把
+    `ROADMAP`
+    /
+    active docs
+    /
+    focused contracts
+    对
+    “最终 experimental boundary”
+    的口径统一冻结住，
+    避免后续再把
+    historical early-data family
+    或旧 release 路线
+    拉回来
+  当前 batch 范围：
+  - 新增计划：
+    - `docs/plans/2026-05-22-freepascal-early-data-final-caveat-closeout.md`
+  - 更新：
+    - `docs/ROADMAP.md`
+    - `tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+    - `task_plan.md`
+    - `findings.md`
+    - `progress.md`
+  当前 focused proof：
+  - `bash -n tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_early_data_docs_truth_contract.sh`
+    - PASS
+  - `mkdir -p tmp/capability_cache_units && fpc -B -Fu./src -Fu./tests -FUtmp/capability_cache_units -FEtmp/capability_cache_units -otmp/capability_cache_units/test_capability_cache tests/test_capability_cache.pas && ./tmp/capability_cache_units/test_capability_cache`
+    - PASS
+    - summary:
+      - FreePascal `KnownIssues`
+        继续输出：
+        `0-RTT / early data is experimental and currently relies on a local persistent anti-replay replay-store path; if the path is unavailable or unwritable, resumed early data is rejected fail-closed.`
+      - `ZeroRTTSupport = sslSupportExperimental`
+      - `EarlyDataSupport = sslSupportExperimental`
+  - `git diff --check`
+    - PASS
+  当前结论：
+  - 当前没有新的 production implementation drift
+  - 真正的 workflow 缺口
+    是：
+    - `ROADMAP`
+      还没有把这条 caveat
+      明说成
+      post-release 阶段
+      有意保留的最终 experimental boundary
+    - focused docs contract
+      也还没有冻结
+      `ROADMAP`
+      /
+      `BACKEND_CAPABILITY_MATRIX`
+      /
+      `EARLY_DATA_GUIDE`
+      上的 FreePascal caveat truth
+  - 这批修的是
+    final-boundary guard coverage，
+    不是实现扩线
+
 - [completed] `backend optional/connection revalidation receipt closeout`
   当前 focused 目标：
   - 把两份仍停在 `Expected Outcome` 的 backend revalidation wrapper plan 补上当前执行 receipt

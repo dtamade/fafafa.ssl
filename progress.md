@@ -6,6 +6,80 @@
 
 ## 2026-05-22
 
+### FreePascal Early-Data Final Caveat Closeout
+
+- inspect the current active truth surfaces for the remaining FreePascal caveat:
+  - `docs/ROADMAP.md`
+  - `README.md`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/INTEGRATION_GUIDE.md`
+  - `docs/BACKEND_CAPABILITY_MATRIX.md`
+  - `docs/guides/EARLY_DATA_GUIDE.md`
+  - `docs/guides/security-best-practices.md`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.freepascal.context.pas`
+  - `tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+  - result:
+    - active docs and runtime wording were already largely aligned on:
+      - persistent-by-default replay-store truth
+      - fail-closed default-path behavior
+      - `experimental` capability wording
+    - the remaining gap was workflow coverage:
+      - `ROADMAP`
+        did not yet classify the caveat as the intended final post-release boundary
+      - the focused FreePascal docs contract
+        did not yet freeze
+        `ROADMAP`
+        /
+        `BACKEND_CAPABILITY_MATRIX`
+        /
+        `EARLY_DATA_GUIDE`
+
+- capture baseline proof before editing:
+  - `bash -n tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+    - result: PASS
+  - `mkdir -p tmp/capability_cache_units && fpc -B -Fu./src -Fu./tests -FUtmp/capability_cache_units -FEtmp/capability_cache_units -otmp/capability_cache_units/test_capability_cache tests/test_capability_cache.pas && ./tmp/capability_cache_units/test_capability_cache`
+    - result: PASS
+    - summary:
+      - FreePascal `KnownIssues`
+        output:
+        `0-RTT / early data is experimental and currently relies on a local persistent anti-replay replay-store path; if the path is unavailable or unwritable, resumed early data is rejected fail-closed.`
+      - `ZeroRTTSupport = sslSupportExperimental`
+      - `EarlyDataSupport = sslSupportExperimental`
+
+- harden the final-boundary workflow truth:
+  - updated:
+    - `docs/ROADMAP.md`
+    - `tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+    - `docs/plans/2026-05-22-freepascal-early-data-final-caveat-closeout.md`
+  - change:
+    - `ROADMAP`
+      now explicitly says the remaining caveat
+      should be treated as the intended final
+      post-release experimental boundary
+    - focused FreePascal docs contract
+      now also freezes:
+      - README experimental wording
+      - API / Integration experimental wording
+      - `ROADMAP`
+        caveat + no-reopen guidance
+      - `BACKEND_CAPABILITY_MATRIX`
+        FreePascal early-data status / limitations
+      - `EARLY_DATA_GUIDE`
+        persistent replay-store + fail-closed wording
+
+- verify the new guard coverage:
+  - `bash -n tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_freepascal_early_data_public_optin_docs_contract.sh`
+    - result: PASS
+  - `bash tests/scripts/test_early_data_docs_truth_contract.sh`
+    - result: PASS
+  - `git diff --check`
+    - result: PASS
+
 ### Backend Optional/Connection Revalidation Receipt Closeout
 
 - inspect revalidation wrapper plans:
