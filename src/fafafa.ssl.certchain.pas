@@ -280,35 +280,40 @@ end;
 function TSSLCertificateChainVerifier.ValidatePathLength(const AChain: TSSLCertificateArray): Boolean;
 var
   i: Integer;
-  MaxPathLength: Integer;
+  RemainingPath: Integer;
   CertInfo: TSSLCertificateInfo;
 begin
   Result := True;
-  MaxPathLength := -1; // 无限制
-  
-  // 从根证书开始检查路径长度约束
-  for i := High(AChain) downto 0 do
+  if Length(AChain) <= 1 then
+    Exit;
+
+  RemainingPath := -1;
+
+  for i := High(AChain) downto 1 do
   begin
     CertInfo := AChain[i].GetInfo;
-    
-    // 检查是否是CA证书
+
     if CertInfo.IsCA then
     begin
-      // 如果有路径长度限制
       if CertInfo.PathLenConstraint >= 0 then
       begin
-        if MaxPathLength < 0 then
-          MaxPathLength := CertInfo.PathLenConstraint
-        else
-          MaxPathLength := Min(MaxPathLength, CertInfo.PathLenConstraint);
+        if (RemainingPath < 0) or (CertInfo.PathLenConstraint < RemainingPath) then
+          RemainingPath := CertInfo.PathLenConstraint;
       end;
-      
-      // 检查当前深度是否超过限制
-      if (MaxPathLength >= 0) and (i < High(AChain) - MaxPathLength) then
+    end;
+
+    if RemainingPath >= 0 then
+    begin
+      if RemainingPath = 0 then
       begin
-        Result := False;
-        Break;
-      end;
+        if (i - 1 > 0) and AChain[i - 1].GetInfo.IsCA then
+        begin
+          Result := False;
+          Exit;
+        end;
+      end
+      else
+        Dec(RemainingPath);
     end;
   end;
 end;

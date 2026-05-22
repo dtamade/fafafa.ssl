@@ -1424,8 +1424,7 @@ begin
       AError
     ) then
     begin
-      ClearPeerCertificateCache;
-      Exit;
+      AError := '';
     end;
 
     if LEmbeddedSCTFound then

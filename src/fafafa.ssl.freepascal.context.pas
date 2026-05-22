@@ -117,6 +117,7 @@ type
     procedure LoadPrivateKeyPEM(const APEM: string; const APassword: string = '');
     procedure LoadCAFile(const AFileName: string);
     procedure LoadCAPath(const APath: string);
+    function LoadSystemCertificates: Boolean;
     procedure SetCertificateStore(AStore: ISSLCertificateStore);
 
     procedure SetVerifyMode(AMode: TSSLVerifyModes);
@@ -528,6 +529,22 @@ begin
     );
 
   FCAPath := APath;
+end;
+
+function TFreePascalContext.LoadSystemCertificates: Boolean;
+var
+  LStore: ISSLCertificateStore;
+begin
+  Result := False;
+  if FLibrary = nil then
+    Exit;
+  LStore := FLibrary.CreateCertificateStore;
+  if LStore = nil then
+    Exit;
+  if not LStore.LoadSystemStore then
+    Exit;
+  FCertificateStore := LStore;
+  Result := True;
 end;
 
 procedure TFreePascalContext.SetCertificateStore(AStore: ISSLCertificateStore);
