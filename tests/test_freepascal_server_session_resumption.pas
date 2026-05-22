@@ -452,8 +452,9 @@ begin
 
   LRecord := BuildTLSPlaintext(TLS_CONTENT_TYPE_APPLICATION_DATA, LEncrypted);
   Enqueue(LRecord);
-  AppendHandshakeBytes(FTranscriptData, LClientFinished);
 
+  { Derive application secrets BEFORE appending Client Finished to transcript
+    because RFC 8446 requires Transcript-Hash(CH..SF) only. }
   if not TryDeriveTLS13ApplicationSecrets(
     FNegotiatedCipherSuite,
     FHandshakeSecrets.HandshakeSecret,
@@ -462,6 +463,8 @@ begin
     LError
   ) then
     raise Exception.Create('Failed to derive scripted client application secrets: ' + LError);
+
+  AppendHandshakeBytes(FTranscriptData, LClientFinished);
 end;
 
 procedure TOfflineTLS13ClientStream.HandleServerPostHandshake(const AData: TBytes);

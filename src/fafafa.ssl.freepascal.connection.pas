@@ -3474,9 +3474,9 @@ begin
           if not ValidateClientCertificateTransparency then
             Exit;
 
-          if not SendClientFinished(LServerHello.SelectedCipherSuite, LTranscriptData) then
-            Exit;
-
+          { Derive application secrets BEFORE SendClientFinished because
+            RFC 8446 Section 7.1 requires Transcript-Hash(CH..SF) — the
+            transcript must NOT include Client Finished. }
           if not TryDeriveTLS13ApplicationSecrets(
             LServerHello.SelectedCipherSuite,
             FHandshakeSecrets.HandshakeSecret,
@@ -3488,6 +3488,9 @@ begin
             SetHandshakeError(sslErrUnsupported, 'TLS 1.3 application key schedule derivation failed: ' + LKeyScheduleError);
             Exit;
           end;
+
+          if not SendClientFinished(LServerHello.SelectedCipherSuite, LTranscriptData) then
+            Exit;
 
           FClientApplicationSeq := 0;
           FServerApplicationSeq := 0;
@@ -4360,6 +4363,21 @@ begin
     Exit;
   end;
 
+
+  { Derive application secrets BEFORE receiving Client Finished because
+    RFC 8446 Section 7.1 requires Transcript-Hash(CH..SF) — the
+    transcript must NOT include Client Finished. }
+  if not TryDeriveTLS13ApplicationSecrets(
+    LSelectedCipherSuite,
+    FHandshakeSecrets.HandshakeSecret,
+    LTranscriptData,
+    FApplicationSecrets,
+    LKeyScheduleError
+  ) then
+  begin
+    SetHandshakeError(sslErrUnsupported, 'TLS 1.3 application key schedule derivation failed: ' + LKeyScheduleError);
+    Exit;
+  end;
   SetLength(LHandshakeBuffer, 0);
   LClientFinishedReceived := False;
 
@@ -4603,17 +4621,6 @@ begin
     Exit;
   end;
 
-  if not TryDeriveTLS13ApplicationSecrets(
-    LSelectedCipherSuite,
-    FHandshakeSecrets.HandshakeSecret,
-    LTranscriptData,
-    FApplicationSecrets,
-    LKeyScheduleError
-  ) then
-  begin
-    SetHandshakeError(sslErrUnsupported, 'TLS 1.3 application key schedule derivation failed: ' + LKeyScheduleError);
-    Exit;
-  end;
 
   FClientApplicationSeq := 0;
   FServerApplicationSeq := 0;

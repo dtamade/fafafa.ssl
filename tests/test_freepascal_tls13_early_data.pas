@@ -618,8 +618,9 @@ begin
             LVerifyData
           ) then
             raise Exception.Create('Client Finished verification failed');
-          AppendHandshakeBytes(FTranscriptData, LMessage);
 
+          { Derive application secrets BEFORE appending Client Finished
+            because RFC 8446 requires Transcript-Hash(CH..SF) only. }
           if FMode = ssmInitial then
           begin
             if not TryDeriveTLS13ApplicationSecrets(
@@ -669,6 +670,7 @@ begin
             );
             FCapturedSession := LSession;
           end;
+          AppendHandshakeBytes(FTranscriptData, LMessage);
         end;
     else
       AppendHandshakeBytes(FTranscriptData, LMessage);
@@ -1027,10 +1029,8 @@ begin
   LRecord := BuildTLSPlaintext(TLS_CONTENT_TYPE_APPLICATION_DATA, LEncrypted);
   Enqueue(LRecord);
 
-  if (FMode <> scmInitial) and (Length(FEarlyData) > 0) and FObservedServerAcceptedEarlyData then
-    AppendHandshakeBytes(FTranscriptData, BuildTLS13EndOfEarlyDataHandshake);
-  AppendHandshakeBytes(FTranscriptData, LFinishedMessage);
-
+  { Derive application secrets BEFORE appending Client Finished to transcript
+    because RFC 8446 requires Transcript-Hash(CH..SF) only. }
   if not TryDeriveTLS13ApplicationSecrets(
     FHandshakeSecrets.CipherSuite,
     FHandshakeSecrets.HandshakeSecret,
@@ -1039,6 +1039,10 @@ begin
     LError
   ) then
     raise Exception.Create('Failed to derive scripted client application secrets: ' + LError);
+
+  if (FMode <> scmInitial) and (Length(FEarlyData) > 0) and FObservedServerAcceptedEarlyData then
+    AppendHandshakeBytes(FTranscriptData, BuildTLS13EndOfEarlyDataHandshake);
+  AppendHandshakeBytes(FTranscriptData, LFinishedMessage);
 end;
 
 procedure TScriptedEarlyDataClientStream.HandleServerPostHandshake(const AData: TBytes);

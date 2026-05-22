@@ -463,10 +463,10 @@ begin
     LVerifyData
   ) then
     raise Exception.Create('Client Finished verification failed in offline server');
-
   LFinishedMessage := LInnerFragment;
-  AppendBytes(FTranscriptData, LFinishedMessage);
 
+  { Derive application secrets BEFORE appending Client Finished to transcript
+    because RFC 8446 requires Transcript-Hash(CH..SF) only. }
   if not TryDeriveTLS13ApplicationSecrets(
     FCipherSuite,
     FHandshakeSecrets.HandshakeSecret,
@@ -475,6 +475,8 @@ begin
     LError
   ) then
     raise Exception.Create('Failed to derive application secrets: ' + LError);
+
+  AppendBytes(FTranscriptData, LFinishedMessage);
 
   if FMode = ohmInitial then
   begin
