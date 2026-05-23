@@ -41,7 +41,6 @@ tests/test_freepascal_client_ct_sct_surface.pas
 tests/test_freepascal_client_ocsp_stapling_runtime.pas
 tests/test_freepascal_client_online_ocsp_runtime.pas
 tests/test_freepascal_server_accept_skeleton.pas
-tests/test_mbedtls_framework.pas
 tests/test_openssl_connection_verify_result_contract.pas
 tests/test_wolfssl_framework.pas
 EOF
@@ -59,7 +58,6 @@ declare -a residual_files=(
   "tests/test_freepascal_client_ocsp_stapling_runtime.pas"
   "tests/test_freepascal_client_online_ocsp_runtime.pas"
   "tests/test_freepascal_server_accept_skeleton.pas"
-  "tests/test_mbedtls_framework.pas"
   "tests/test_openssl_connection_verify_result_contract.pas"
   "tests/test_wolfssl_framework.pas"
 )
@@ -88,8 +86,6 @@ require_pattern "tests/test_freepascal_client_ct_sct_surface.pas" "GetVerifyResu
 require_pattern "tests/test_freepascal_client_ocsp_stapling_runtime.pas" "GetVerifyResultString"
 require_pattern "tests/test_freepascal_client_online_ocsp_runtime.pas" "GetVerifyResultString"
 require_pattern "tests/test_freepascal_server_accept_skeleton.pas" "GetVerifyResultString"
-require_pattern "tests/test_mbedtls_framework.pas" "GetVerifyResult"
-require_pattern "tests/test_mbedtls_framework.pas" "GetVerifyResultString"
 require_pattern "tests/test_openssl_connection_verify_result_contract.pas" "GetVerifyResult"
 require_pattern "tests/test_openssl_connection_verify_result_contract.pas" "GetVerifyResultString"
 require_pattern "tests/test_wolfssl_framework.pas" "GetVerifyResult"

@@ -1,25 +1,27 @@
-# Task Plan: Docs Truth Closeout
+# Task Plan: MbedTLS Framework Owner-Surface Warning Closeout
 
 ## Goal
-Close the already-verified truth batches for `CAFile` / `CAPath` trust loading, `CODE_STYLE` public import guidance, and the `v1.5.0` static audit inventory.
+Close the deprecated-warning drift in `tests/test_mbedtls_framework.pas` by moving its active framework checks onto owner-path SNI / verify-result surfaces and freezing the new truth with focused contracts.
 
 ## Status
 Complete
 
 ## Current Plan
-- [docs/plans/2026-05-21-cafile-capath-trust-loading-parity.md](docs/plans/2026-05-21-cafile-capath-trust-loading-parity.md)
-- [docs/plans/2026-05-22-code-style-public-import-truth-hardening.md](docs/plans/2026-05-22-code-style-public-import-truth-hardening.md)
-- [docs/plans/2026-05-22-v1-5-0-static-audit-inventory-refresh.md](docs/plans/2026-05-22-v1-5-0-static-audit-inventory-refresh.md)
+- [docs/plans/2026-05-24-mbedtls-framework-owner-surface-warning-closeout.md](docs/plans/2026-05-24-mbedtls-framework-owner-surface-warning-closeout.md)
 
 ## Done
-- Confirmed the `CAFile` / `CAPath` trust-loading parity contract remains green on current head.
-- Confirmed the `CODE_STYLE` public import truth contract remains green on current head.
-- Confirmed the `v1.5.0` static audit contract remains green on current head.
-- Added closeout outcomes to the corresponding plan docs.
+- Migrated `tests/test_mbedtls_framework.pas` from context-level SNI and direct core verify-result mirrors to `ISSLClientConnection` / `ISSLCertificateVerification`.
+- Fixed the helper-loss contract's interface lifetime regression by letting the interface own the connection instead of mixing interface refs with manual `Free`.
+- Removed `tests/test_mbedtls_framework.pas` from the direct-core verify-result residual allowlists and direct context-SNI classification allowlists.
+- Added `tests/scripts/test_mbedtls_framework_owner_surface_contract.sh` to compile the framework test and fail on the exact deprecated warnings that triggered this batch.
 
 ## Verification
-- `bash tests/scripts/test_cafile_capath_trust_loading_parity_contract.sh`
-- `bash tests/scripts/test_direct_library_default_config_parity_contract.sh`
-- `bash tests/scripts/test_code_style_and_phase24_safety_doc_truth_contract.sh`
-- `bash tests/scripts/test_v1_5_0_static_pascal_audit_contract.sh`
+- `bash tests/scripts/test_active_direct_context_servername_surface_classification_contract.sh`
+- `bash tests/scripts/test_backend_framework_context_level_sni_labels_contract.sh`
+- `bash tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
+- `bash tests/scripts/test_isslcertificateverification_mbedtls_residual_contract.sh`
+- `bash tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+- `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+- `bash tests/scripts/test_mbedtls_framework_owner_surface_contract.sh`
+- `bash scripts/run_minimal_ci_gate.sh --fast-local`
 - `git diff --check`

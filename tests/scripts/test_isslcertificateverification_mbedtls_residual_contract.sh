@@ -40,11 +40,10 @@ tests/mbedtls/test_mbedtls_cert_verify_flags.pas
 tests/mbedtls/test_mbedtls_lowlevel.pas
 tests/mbedtls/test_mbedtls_safe.pas
 tests/mbedtls/test_mbedtls_simple_connection.pas
-tests/test_mbedtls_framework.pas
 EOF
 )"
 
-actual_hits="$(rg -lP '\b(?:Conn|LConn|LConnection)\.GetVerifyResult(?:String)?\b' tests/mbedtls tests/test_mbedtls_framework.pas | sort || true)"
+actual_hits="$(rg -lP '\b(?:Conn|LConn|LConnection)\.GetVerifyResult(?:String)?\b' tests/mbedtls | sort || true)"
 compare_file_list "MbedTLS direct-core verify-result residual file set" "$actual_hits" "$expected_hits"
 
 declare -a residual_files=(
@@ -55,7 +54,6 @@ declare -a residual_files=(
   "tests/mbedtls/test_mbedtls_cert_chain.pas"
   "tests/mbedtls/test_mbedtls_cert_errors.pas"
   "tests/mbedtls/test_mbedtls_cert_verify_flags.pas"
-  "tests/test_mbedtls_framework.pas"
 )
 
 declare -a required_comment_patterns=(
@@ -82,7 +80,5 @@ require_pattern "tests/mbedtls/test_mbedtls_cert_errors.pas" "GetVerifyResult"
 require_pattern "tests/mbedtls/test_mbedtls_cert_errors.pas" "GetVerifyResultString"
 require_pattern "tests/mbedtls/test_mbedtls_cert_verify_flags.pas" "GetVerifyResult"
 require_pattern "tests/mbedtls/test_mbedtls_cert_verify_flags.pas" "GetVerifyResultString"
-require_pattern "tests/test_mbedtls_framework.pas" "GetVerifyResult"
-require_pattern "tests/test_mbedtls_framework.pas" "GetVerifyResultString"
 
 echo "[PASS] MbedTLS verify-result residual cluster stays intentionally frozen"

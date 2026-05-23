@@ -46,12 +46,6 @@ var
   GStubMbedTLSVersionTLS13: AnsiString = 'TLSv1.3';
   GStubMbedTLSCipherTLS13: AnsiString = 'TLS_AES_128_GCM_SHA256';
 
-// INTENTIONAL_VERIFY_RESULT_CORE_SURFACE: this MbedTLS-specific contract
-// file intentionally keeps direct core GetVerifyResult/GetVerifyResultString
-// coverage as backend proof. Generic ISSLCertificateVerification owner-path
-// guidance is frozen elsewhere.
-{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-
 type
   TTestMbedTLSConnection = class(TMbedTLSConnection)
   public
@@ -240,6 +234,20 @@ begin
     WriteLn('FAIL');
     Inc(GFailCount);
   end;
+end;
+
+procedure RequireClientConnection(const AConn: ISSLConnection;
+  out AClientConn: ISSLClientConnection; const AWhere: string);
+begin
+  if not Supports(AConn, ISSLClientConnection, AClientConn) then
+    raise Exception.Create(AWhere + ' requires ISSLClientConnection');
+end;
+
+procedure RequireCertificateVerification(const AConn: ISSLConnection;
+  out ACertVerify: ISSLCertificateVerification; const AWhere: string);
+begin
+  if not Supports(AConn, ISSLCertificateVerification, ACertVerify) then
+    raise Exception.Create(AWhere + ' requires ISSLCertificateVerification');
 end;
 
 procedure TestMbedTLSConstants;
@@ -1439,6 +1447,8 @@ var
   LLib: ISSLLibrary;
   LCtx: ISSLContext;
   LConn: ISSLConnection;
+  LClientConn: ISSLClientConnection;
+  LCertVerify: ISSLCertificateVerification;
   LErrMsg: string;
   LRaised: Boolean;
 begin
@@ -1461,12 +1471,6 @@ begin
       LCtx.SetVerifyDepth(5);
       Test('Verify depth set to 5', LCtx.GetVerifyDepth = 5);
 
-      // INTENTIONAL_API_SURFACE: context-level SNI setter coverage. This
-      // backend framework test validates MbedTLS context configuration, not
-      // recommended per-connection handshake guidance.
-      LCtx.SetServerName('example.com');
-      Test('Server name set', LCtx.GetServerName = 'example.com');
-
       LCtx.SetSessionCacheMode(False);
       Test('Session cache disabled', not LCtx.GetSessionCacheMode);
       LCtx.SetSessionCacheMode(True);
@@ -1483,10 +1487,17 @@ begin
 
       // Renegotiation explicit unsupported semantics
       LConn := LCtx.CreateConnection(0);
+      RequireClientConnection(LConn, LClientConn,
+        'TestMbedTLSContextConfiguration');
+      LClientConn.SetServerName('example.com');
+      Test('Server name set on connection',
+        LClientConn.GetServerName = 'example.com');
       Test('Renegotiate returns false before handshake', not LConn.Renegotiate);
       Test('Renegotiate reports unsupported error class',
         LConn.GetError(-1) = sslErrUnsupported);
-      LErrMsg := LConn.GetVerifyResultString;
+      RequireCertificateVerification(LConn, LCertVerify,
+        'TestMbedTLSContextConfiguration');
+      LErrMsg := LCertVerify.GetVerifyResultString;
       Test('Renegotiate exposes non-empty diagnostic message',
         Pos('renegotiation', LowerCase(LErrMsg)) > 0);
 
@@ -1521,6 +1532,8 @@ var
   LLib: ISSLLibrary;
   LCtx: ISSLContext;
   LConn: TTestMbedTLSConnection;
+  LConnIntf: ISSLConnection;
+  LCertVerify: ISSLCertificateVerification;
   LStream: TMemoryStream;
   LVerifyResult: Integer;
   LVerifyText: string;
@@ -1536,6 +1549,7 @@ begin
     LCtx := LLib.CreateContext(sslCtxClient);
     LStream := TMemoryStream.Create;
     LConn := nil;
+    LConnIntf := nil;
     try
       LConn := TTestMbedTLSConnection.Create(
         LCtx,
@@ -1544,12 +1558,16 @@ begin
         LStream
       );
       LConn.MarkHandshakeCompleteForTest;
+      LConnIntf := LConn as ISSLConnection;
+      LConn := nil;
       LOriginalGetVerifyResult := mbedtls_ssl_get_verify_result;
       try
         mbedtls_ssl_get_verify_result := nil;
 
-        LVerifyResult := LConn.GetVerifyResult;
-        LVerifyText := LowerCase(LConn.GetVerifyResultString);
+        RequireCertificateVerification(LConnIntf, LCertVerify,
+          'TestMbedTLSVerifyResultHelperLossContract');
+        LVerifyResult := LCertVerify.GetVerifyResult;
+        LVerifyText := LowerCase(LCertVerify.GetVerifyResultString);
 
         Test('VerifyResult helper loss degrades to -1', LVerifyResult = -1);
         Test('VerifyResultString helper loss exposes unavailable diagnostic',
@@ -1558,8 +1576,8 @@ begin
         mbedtls_ssl_get_verify_result := LOriginalGetVerifyResult;
       end;
     finally
-      if Assigned(LConn) then
-        LConn.Free;
+      LCertVerify := nil;
+      LConnIntf := nil;
       LStream.Free;
       LLib.Finalize;
     end;
@@ -1576,6 +1594,7 @@ var
   LLib: ISSLLibrary;
   LCtx: ISSLContext;
   LConn: ISSLConnection;
+  LCertVerify: ISSLCertificateVerification;
   LStream: TMemoryStream;
 begin
   WriteLn('');
@@ -1589,10 +1608,12 @@ begin
     LStream := TMemoryStream.Create;
     try
       LConn := LCtx.CreateConnection(LStream);
+      RequireCertificateVerification(LConn, LCertVerify,
+        'TestMbedTLSVerifyStatusBeforeHandshakeContract');
       Test('Fresh MbedTLS connection does not report verify success before handshake',
-        LConn.GetVerifyResult = -1);
+        LCertVerify.GetVerifyResult = -1);
       Test('Fresh MbedTLS connection reports not-verified diagnostic before handshake',
-        Pos('not verified', LowerCase(LConn.GetVerifyResultString)) > 0);
+        Pos('not verified', LowerCase(LCertVerify.GetVerifyResultString)) > 0);
     finally
       LStream.Free;
       LLib.Finalize;

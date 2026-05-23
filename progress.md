@@ -16,3 +16,30 @@
   - `progress.md`
 - Result:
   - the trust-loading, style-guide import, and static-audit truths are all aligned with current head
+
+## 2026-05-24
+- Closed the `tests/test_mbedtls_framework.pas` deprecated-warning seam by:
+  - migrating context-level SNI checks to `ISSLClientConnection`
+  - migrating verify-result reads to `ISSLCertificateVerification`
+  - removing the file from residual/classification allowlists that no longer matched reality
+- Added a focused compiler-warning guard:
+  - `bash tests/scripts/test_mbedtls_framework_owner_surface_contract.sh`
+- Hit and fixed one regression while tightening the test:
+  - first attempt mixed interface refs with manual `Free` in `TestMbedTLSVerifyResultHelperLossContract`
+  - runtime failed with `EInvalidPointer`
+  - fixed by handing connection lifetime to `ISSLConnection` and dropping manual `Free`
+- Focused verification:
+  - `bash tests/scripts/test_active_direct_context_servername_surface_classification_contract.sh`
+  - `bash tests/scripts/test_backend_framework_context_level_sni_labels_contract.sh`
+  - `bash tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
+  - `bash tests/scripts/test_isslcertificateverification_mbedtls_residual_contract.sh`
+  - `bash tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+  - `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  - `bash tests/scripts/test_mbedtls_framework_owner_surface_contract.sh`
+- Broad sanity gate:
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+    - run id: `20260524_003048_191665`
+    - compile_all_modules: `186/186`
+    - module tests: `17/17`
+- Hygiene:
+  - `git diff --check`

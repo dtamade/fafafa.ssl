@@ -18,7 +18,6 @@ declare -A expected_labels=(
   ["tests/test_context_builder_server_servername_runtime_consistency.pas"]="INTENTIONAL_COMPAT"
   ["tests/test_cross_backend_client_context_server_name_clarification.pas"]="INTENTIONAL_COMPAT"
   ["tests/test_freepascal_context_server_name_inheritance.pas"]="INTENTIONAL_COMPAT"
-  ["tests/test_mbedtls_framework.pas"]="INTENTIONAL_API_SURFACE"
   ["tests/test_sslctxboth_client_capability_clarification.pas"]="INTENTIONAL_COMPAT"
   ["tests/test_wolfssl_framework.pas"]="INTENTIONAL_API_SURFACE"
   ["tests/unit/test_winssl_comprehensive.pas"]="INTENTIONAL_API_SURFACE"

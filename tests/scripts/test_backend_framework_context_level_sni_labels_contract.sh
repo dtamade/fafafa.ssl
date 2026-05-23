@@ -8,7 +8,6 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 cd "$PROJECT_ROOT"
 
 declare -a files=(
-  "tests/test_mbedtls_framework.pas"
   "tests/test_wolfssl_framework.pas"
 )
 
