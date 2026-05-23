@@ -1,27 +1,18 @@
 # Progress Log
 
 ## 2026-05-23
-- Rechecked the live Windows status with GitHub CLI:
-  - `gh run list --workflow "WinSSL Runtime Gate" --limit 40 --json databaseId,headSha,displayTitle,status,conclusion,createdAt,url`
-  - `gh run view 26159931322 --json jobs,url,name,displayTitle,conclusion,status,headSha`
-- Confirmed the closure evidence for commit `f0be85a`:
-  - workflow: `WinSSL Runtime Gate`
-  - run id: `26159931322`
-  - conclusion: `success`
-  - successful lanes:
-    - `Run quick WinSSL smoke`
-    - `Run Windows Wave B gate`
-    - `Run broader WinSSL runtime suite`
-- Added `tests/scripts/test_winssl_verifyex_store_interface_contract.sh` to lock the focused test's interface-held store ownership seam.
-- Updated:
-  - `docs/plans/2026-05-20-winssl-certificate-verifyex-flag-parity.md`
-  - `docs/plans/2026-05-20-winssl-cert-verifyex-custom-trust-engine.md`
+- Revalidated the already-shipped truth batches on current head:
+  - `bash tests/scripts/test_cafile_capath_trust_loading_parity_contract.sh`
+  - `bash tests/scripts/test_direct_library_default_config_parity_contract.sh`
+  - `bash tests/scripts/test_code_style_and_phase24_safety_doc_truth_contract.sh`
+  - `bash tests/scripts/test_v1_5_0_static_pascal_audit_contract.sh`
+- Updated the corresponding plan docs with explicit closeout outcomes:
+  - `docs/plans/2026-05-21-cafile-capath-trust-loading-parity.md`
+  - `docs/plans/2026-05-22-code-style-public-import-truth-hardening.md`
+  - `docs/plans/2026-05-22-v1-5-0-static-audit-inventory-refresh.md`
+- Refreshed:
   - `task_plan.md`
   - `findings.md`
   - `progress.md`
-- Verified:
-  - `bash tests/scripts/test_winssl_verifyex_store_interface_contract.sh`
-  - `git diff --check`
-- Results:
-  - the new contract passed locally
-  - the WinSSL `VerifyEx` follow-up is now written back as a closed loop instead of a lingering in-progress residual
+- Result:
+  - the trust-loading, style-guide import, and static-audit truths are all aligned with current head

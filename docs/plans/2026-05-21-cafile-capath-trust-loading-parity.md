@@ -94,3 +94,10 @@
 - raw factory 与 direct-library default-config path 不再把 `CAFile` / `CAPath` 静默丢掉
 - active docs 不再遗漏 direct-library 对齐字段
 - FreePascal real runtime 可以直接证明这条 trust-loading family 已经穿透到真实握手
+
+## Outcome
+
+- PASS
+- `bash tests/scripts/test_cafile_capath_trust_loading_parity_contract.sh` 在当前 head 上通过。
+- `bash tests/scripts/test_direct_library_default_config_parity_contract.sh` 继续通过。
+- `TSSLFactory.CreateContext(const AConfig)` 与五个 backend 的 direct-library `CreateContext(AType)` 现在都稳定消费 `CAFile` / `CAPath`。

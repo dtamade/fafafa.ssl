@@ -61,3 +61,9 @@ git diff --check
 - `v1.5.0` static audit page 回到 current-head truth
 - contract 不再依赖过时 inventory 数字
 - 下次如果 `src/` 清单继续变化，会直接给出更精确的静态红灯
+
+## Outcome
+
+- PASS
+- `docs/test_reports/STATIC_AUDIT_V1.5.0.md` 已记录 current-head inventory truth。
+- `bash tests/scripts/test_v1_5_0_static_pascal_audit_contract.sh` 在当前 head 上通过。
