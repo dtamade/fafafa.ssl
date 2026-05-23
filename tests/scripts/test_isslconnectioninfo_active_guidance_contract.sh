@@ -29,7 +29,7 @@ declare -a required_api_patterns=(
   "LInfo := LConnInfoAccess.GetConnectionInfo;"
   "WriteLn('ALPN: ', LConnInfoAccess.GetSelectedALPNProtocol);"
   "WriteLn('状态: ', LConnInfoAccess.GetStateString);"
-  "如果你在写新代码，并且需要连接信息 / ALPN / 状态字符串这组 mirrors"
+  "如果你在写新代码，并且需要连接信息 / 上下文引用 / ALPN / 状态字符串这组 mirrors"
 )
 
 for pattern in "${required_api_patterns[@]}"; do

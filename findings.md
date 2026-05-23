@@ -1,6 +1,11 @@
 # Findings
 
 ## Current Session
+- Current audit found one real false-red in `tests/scripts/test_isslconnectioninfo_active_guidance_contract.sh`: the script still expected the pre-`GetContext` phrase `连接信息 / ALPN / 状态字符串`, while `docs/reference/API_REFERENCE.md` already carried the expanded `连接信息 / 上下文引用 / ALPN / 状态字符串` owner-family guidance.
+- The fix was a contract expectation resync, not another API doc wording change and not a runtime change.
+- The remaining unclosed-looking `ISSLConnection` / `ISSLConnectionInfo` plans now have verified `Execution Result` sections.
+- `tests/contract/test_backend_contract.pas` compiled and ran through `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc`; result was 135 total, 111 passed, 0 failed, 24 skipped.
+- `ISSLConnectionInfo` is now closed across migration map, active guidance, source classification, owner-primacy, residual classification, and backend contract wording.
 - The previous `ISSLConnectionInfo` owner-primacy batch is complete and the worktree is clean.
 - The next high-value architecture batch is `TSSLConfig`, with likely focus on `TSSLLibraryDefaults` adoption and any remaining public-surface scope drift around logging, buffer size, handshake timeout, server name, and option-bridge booleans.
 - Before editing, we should recheck the live contracts and docs that already name `TSSLConfig` so we can keep the next change narrow and evidence-backed.

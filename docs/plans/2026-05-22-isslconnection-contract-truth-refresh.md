@@ -57,3 +57,17 @@ git diff --check
 - focused contracts 回到当前真实的 `ISSLConnection` shared owner/mirror truth
 - session-resumption residual wording 不再回退成旧分类
 - 下一次继续接口审查时，不会再把这两个 stale contract 误判成新的源码缺口
+
+## Execution Result
+
+- PASS.
+- Revalidated the focused refresh set:
+  - `tests/scripts/test_isslconnection_surface_truth_contract.sh`
+  - `tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+  - `tests/scripts/test_issldiagnostics_compiler_deprecated_contract.sh`
+  - `tests/scripts/test_isslsessionresumption_compiler_deprecated_contract.sh`
+  - `tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
+  - `tests/scripts/test_isslocspstapling_compiler_deprecated_contract.sh`
+  - `tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+  - `tests/scripts/test_facade_main_entry_truth_contract.sh`
+- This plan is now recorded as current-truth closeout rather than an open false-red.

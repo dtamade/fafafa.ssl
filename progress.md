@@ -1,6 +1,34 @@
 # Progress Log
 
 ## 2026-05-24
+- Audited remaining `ISSLConnection*` / `ISSLConnectionInfo*` plan files that lacked explicit `Execution Result` closeouts.
+- Found one stale contract expectation:
+  - `tests/scripts/test_isslconnectioninfo_active_guidance_contract.sh`
+  - expected old phrase: `连接信息 / ALPN / 状态字符串`
+  - current docs correctly include `GetContext`: `连接信息 / 上下文引用 / ALPN / 状态字符串`
+- Updated that focused contract expectation; no runtime or API doc changes were needed.
+- Revalidated plan-closeout contracts:
+  - `bash tests/scripts/test_isslconnection_surface_truth_contract.sh`
+  - `bash tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+  - `bash tests/scripts/test_isslconnectioninfo_active_guidance_contract.sh`
+  - `bash tests/scripts/test_isslconnectioninfo_source_classification_contract.sh`
+  - `bash tests/scripts/test_isslconnectioninfo_getcontext_contract_owner_contract.sh`
+  - `bash tests/scripts/test_isslconnection_whole_surface_taxonomy_contract.sh`
+  - `bash tests/scripts/test_issldiagnostics_compiler_deprecated_contract.sh`
+  - `bash tests/scripts/test_isslsessionresumption_compiler_deprecated_contract.sh`
+  - `bash tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
+  - `bash tests/scripts/test_isslocspstapling_compiler_deprecated_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+  - `bash tests/scripts/test_facade_main_entry_truth_contract.sh`
+  - `bash tests/scripts/test_isslconnectioninfo_alpn_statestring_contract_owner_contract.sh`
+  - `bash tests/scripts/test_isslconnectioninfo_getconnectioninfo_contract_owner_contract.sh`
+  - `bash tests/scripts/test_isslconnectioninfo_getselectedalpn_residual_classification_contract.sh`
+  - `bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
+- Rebuilt and ran backend contract proof:
+  - first `bash -lc` attempt with plain `fpc` failed because that shell did not inherit the FPC PATH
+  - reran with `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc`
+  - `tests/contract/test_backend_contract.pas`: 135 total, 111 passed, 0 failed, 24 skipped
+- Added closeout `Execution Result` sections to the relevant plan files.
 - Re-anchored the current continuation on `TSSLConfig` and checked the live roadmap/adoption/scope docs.
 - Ran the current `TSSLConfig` focused contracts:
   - `bash tests/scripts/test_tssllibrarydefaults_surface_contract.sh`

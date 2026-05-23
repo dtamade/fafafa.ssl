@@ -73,3 +73,14 @@ git diff --check
 - `ISSLConnectionInfo` 这组 backend contract mirror proof 终于在同一段 contract 内部讲同一张图
 - FreePascal TLS1.3 ALPN runtime proof 不再把 direct core getter 偷渡回 ordinary proof path
 - 下一批可以更自然地离开这条 family，转向 diagnostics / session / OCSP 等后续 owner cluster
+
+## Execution Result
+
+- PASS.
+- Revalidated the focused owner-primacy completion contracts:
+  - `tests/scripts/test_isslconnectioninfo_alpn_statestring_contract_owner_contract.sh`
+  - `tests/scripts/test_isslconnectioninfo_getconnectioninfo_contract_owner_contract.sh`
+  - `tests/scripts/test_isslconnectioninfo_getcontext_contract_owner_contract.sh`
+  - `tests/scripts/test_isslconnectioninfo_getselectedalpn_residual_classification_contract.sh`
+  - `tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
+- The family is closed as owner-first contract truth; no runtime implementation edits were needed in this pass.

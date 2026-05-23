@@ -55,3 +55,9 @@
 - 不要把当前 shipped taxonomy 误写成 v2 final shape。
 - 不要把 `ISSLClientConnection` / `ISSLNativeHandleAccess` 误算进这 41 个方法的 partition。
 - 不要把已经收口的 convenience / owner route 再退回成“未分类 getter 堆”。
+
+## Execution Result
+
+- PASS.
+- Revalidated `tests/scripts/test_isslconnection_whole_surface_taxonomy_contract.sh` with `bash -n` and `bash`.
+- The 41-method shipped taxonomy still holds as `17 core + 6 convenience mirrors + 18 compatibility-core mirrors`.

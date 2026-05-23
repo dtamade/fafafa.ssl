@@ -52,3 +52,10 @@ git diff --check
 - `GetContext` 的 contract 语义会先承认 `ISSLConnectionInfo` 是当前 owner
 - `ISSLConnection.GetContext` 保留为 mirror-equality proof，而不是隐含的同级 owner
 - 下一批可以直接讨论 `GetContext` 是否进入更强的 deprecation / removal 路线
+
+## Execution Result
+
+- PASS.
+- Revalidated `tests/scripts/test_isslconnectioninfo_getcontext_contract_owner_contract.sh` with `bash -n` and `bash`.
+- Rebuilt and executed `tests/contract/test_backend_contract.pas` with `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc`.
+- Backend contract summary: 135 total, 111 passed, 0 failed, 24 skipped.

@@ -53,3 +53,10 @@ git diff --check
 - active docs 开始主动 de-emphasize `ISSLConnection` core mirrors
 - 用户可见教学路径与 `ISSLConnectionInfo` migration map 对齐
 - 下一批更适合进入 source-facing slimming prep，而不是继续修文档推荐路径
+
+## Execution Result
+
+- PASS.
+- `tests/scripts/test_isslconnectioninfo_active_guidance_contract.sh` had one stale exact phrase after `GetContext` joined the same `ISSLConnectionInfo` owner-family wording.
+- The contract now expects the current expanded phrase: connection info / context reference / ALPN / state string.
+- Revalidated the script with `bash -n` and `bash`; active docs did not need another wording change.
