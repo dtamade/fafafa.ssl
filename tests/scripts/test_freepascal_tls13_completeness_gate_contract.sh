@@ -109,6 +109,43 @@ if ! grep -Fq -- "libmbedtls-dev" <<< "$ci_completeness_job"; then
   exit 1
 fi
 
+if ! grep -Fq -- "procedure TestALPNAndSNISelection;" "tests/test_freepascal_client_session_resumption.pas"; then
+  echo "[FAIL] client session resumption runtime proof must include the ALPN/SNI selection test"
+  exit 1
+fi
+
+for expected in \
+  "LCtx.SetALPNProtocols('h2,http/1.1');" \
+  "TOfflineTLS13ServerStream.CreateInitial(" \
+  "AssertTrue(LConn.GetSelectedALPNProtocol = 'http/1.1'" \
+  "AssertTrue(LInfo.ALPNProtocol = 'http/1.1'" \
+  "AssertTrue(LConnNoOverlap.GetSelectedALPNProtocol = ''" \
+  "AssertTrue(LInfoNoOverlap.ALPNProtocol = ''"
+do
+  if ! grep -Fq -- "$expected" "tests/test_freepascal_client_session_resumption.pas"; then
+    echo "[FAIL] client session resumption runtime proof missing ALPN/SNI assertion: $expected"
+    exit 1
+  fi
+done
+
+if ! grep -Fq -- "procedure RunServerAcceptSkeletonCase(" "tests/test_freepascal_server_accept_skeleton.pas"; then
+  echo "[FAIL] server accept skeleton runtime proof must include the ALPN selection helper"
+  exit 1
+fi
+
+for expected in \
+  "LCtx.SetALPNProtocols('h2,http/1.1');" \
+  "RunServerAcceptSkeletonCase('http/1.1', 'http/1.1');" \
+  "RunServerAcceptSkeletonCase('spdy/3', '');" \
+  "AssertTrue(LConn.GetSelectedALPNProtocol = AExpectedNegotiatedALPN" \
+  "AssertTrue(LInfo.ALPNProtocol = AExpectedNegotiatedALPN"
+do
+  if ! grep -Fq -- "$expected" "tests/test_freepascal_server_accept_skeleton.pas"; then
+    echo "[FAIL] server accept skeleton runtime proof missing ALPN assertion: $expected"
+    exit 1
+  fi
+done
+
 tmp_root="$(mktemp -d "${TMPDIR:-/tmp}/tls13_gate_contract.XXXXXX")"
 trap 'rm -rf "$tmp_root"' EXIT
 

@@ -1,20 +1,22 @@
-# Task Plan: TLS 1.3 PSK binder cleanup
+# Task Plan: FreePascal TLS 1.3 ALPN/SNI runtime proof
 
 ## Goal
-Keep the RFC 8448 PSK binder regression, remove temporary debug logging, and wire the new test into the FreePascal TLS 1.3 gate.
+Keep the FreePascal TLS 1.3 ALPN/SNI runtime proof aligned with the real negotiated path and keep the completeness gate wiring intact.
 
 ## Status
 Complete
 
+## Current Plan
+- [docs/plans/2026-05-23-freepascal-tls13-alpn-sni-runtime-proof.md](docs/plans/2026-05-23-freepascal-tls13-alpn-sni-runtime-proof.md)
+
 ## Done
-- Reproduced the binder path with `tests/test_rfc8448_psk_binder.pas`.
-- Removed temporary `DBG-*` logging from the binder/resumption path.
-- Added `test_rfc8448_psk_binder` to `scripts/run_freepascal_tls13_completeness_gate.sh`.
-- Updated `tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh` for the new test count.
+- Added ALPN parsing/serialization in the FreePascal TLS 1.3 handshake path.
+- Extended `tests/test_freepascal_client_session_resumption.pas` to assert negotiated ALPN and SNI truth.
+- Extended `tests/test_freepascal_server_accept_skeleton.pas` to cover matched and unmatched ALPN negotiation.
+- Wired the new assertions into `tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`.
 
 ## Verification
-- `./tests/test_rfc8448_psk_binder`
-- `./tests/test_freepascal_client_session_resumption`
-- `./tests/test_freepascal_server_session_resumption`
 - `bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
-- `python3 scripts/compile_all_modules.py` still fails on pre-existing `fafafa.ssl.pkcs11.engine.pas`
+- `./tmp/test_freepascal_client_session_resumption/test_freepascal_client_session_resumption`
+- `./tmp/test_freepascal_server_accept_skeleton/test_freepascal_server_accept_skeleton`
+- `bash scripts/run_freepascal_tls13_completeness_gate.sh` completed with one unrelated failing group: `test_freepascal_client_ct_sct_surface`

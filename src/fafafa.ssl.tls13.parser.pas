@@ -17,6 +17,8 @@ type
   TTLS13EncryptedExtensionsInfo = record
     Valid: Boolean;
     HasEarlyData: Boolean;
+    HasALPN: Boolean;
+    SelectedALPNProtocol: AnsiString;
   end;
 
   TTLS13ServerHelloInfo = record
@@ -216,6 +218,8 @@ var
   LExtensionsEnd: Integer;
   LExtType: Word;
   LExtLen: Word;
+  LALPNListLen: Integer;
+  LALPNNameLen: Integer;
 begin
   InitEncryptedExtensionsInfo(AInfo);
   AError := '';
@@ -274,6 +278,46 @@ begin
             Exit;
           end;
           AInfo.HasEarlyData := True;
+        end;
+
+      TLS_EXTENSION_ALPN:
+        begin
+          if AInfo.HasALPN then
+          begin
+            AError := 'EncryptedExtensions ALPN extension must not appear more than once';
+            Exit;
+          end;
+
+          if LExtLen < 3 then
+          begin
+            AError := 'EncryptedExtensions ALPN extension is too short';
+            Exit;
+          end;
+
+          LALPNListLen := ReadUInt16(AHandshakeMessage, LOffset);
+          if LALPNListLen <> Integer(LExtLen) - 2 then
+          begin
+            AError := 'EncryptedExtensions ALPN list length mismatch';
+            Exit;
+          end;
+
+          LALPNNameLen := AHandshakeMessage[LOffset + 2];
+          if LALPNNameLen = 0 then
+          begin
+            AError := 'EncryptedExtensions ALPN selected protocol must not be empty';
+            Exit;
+          end;
+
+          if LALPNNameLen <> Integer(LExtLen) - 3 then
+          begin
+            AError := 'EncryptedExtensions ALPN selected protocol length mismatch';
+            Exit;
+          end;
+
+          SetLength(AInfo.SelectedALPNProtocol, LALPNNameLen);
+          if LALPNNameLen > 0 then
+            Move(AHandshakeMessage[LOffset + 3], AInfo.SelectedALPNProtocol[1], LALPNNameLen);
+          AInfo.HasALPN := True;
         end;
     end;
 

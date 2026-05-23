@@ -764,16 +764,128 @@ begin
 end;
 {$WARN 6018 ON}
 
-function BuildTLS13EncryptedExtensionsHandshake(AAcceptEarlyData: Boolean): TBytes;
+function BuildExtensionHeader(AType: Word; const AData: TBytes): TBytes;
+begin
+  Result := nil;
+  AppendUInt16(Result, AType);
+  AppendUInt16(Result, Word(Length(AData)));
+  AppendBytes(Result, AData);
+end;
+
+function StringToAnsiBytes(const AValue: string): TBytes;
+begin
+  SetLength(Result, Length(AValue));
+  if Length(AValue) > 0 then
+    Move(AValue[1], Result[0], Length(AValue));
+end;
+
+function ParseALPNProtocolList(const AProtocols: string): TBytes;
+var
+  I: Integer;
+  LStart: Integer;
+  LStop: Integer;
+  LValue: string;
+  LProtocolBytes: TBytes;
+begin
+  SetLength(Result, 0);
+  LStart := 1;
+
+  for I := 1 to Length(AProtocols) + 1 do
+  begin
+    if (I <= Length(AProtocols)) and (AProtocols[I] <> ',') then
+      Continue;
+
+    LStop := I - 1;
+    while (LStart <= LStop) and (AProtocols[LStart] <= ' ') do
+      Inc(LStart);
+    while (LStop >= LStart) and (AProtocols[LStop] <= ' ') do
+      Dec(LStop);
+
+    if LStop >= LStart then
+    begin
+      LValue := Copy(AProtocols, LStart, LStop - LStart + 1);
+      LProtocolBytes := StringToAnsiBytes(LValue);
+      if Length(LProtocolBytes) = 0 then
+      begin
+        SetLength(Result, 0);
+        Exit;
+      end;
+      if Length(LProtocolBytes) > 255 then
+        RaiseInvalidParameter('ALPNProtocolLength');
+      AppendByte(Result, Byte(Length(LProtocolBytes)));
+      AppendBytes(Result, LProtocolBytes);
+    end;
+
+    LStart := I + 1;
+  end;
+end;
+
+function SelectALPNProtocol(
+  const AClientHello: TTLS13ClientHelloInfo;
+  const AServerALPNProtocols: string
+): string;
+var
+  I: Integer;
+  LStart: Integer;
+  LStop: Integer;
+  LCandidate: string;
+begin
+  Result := '';
+
+  if Length(AClientHello.ALPNProtocols) = 0 then
+    Exit;
+
+  LStart := 1;
+  for I := 1 to Length(AServerALPNProtocols) + 1 do
+  begin
+    if (I <= Length(AServerALPNProtocols)) and (AServerALPNProtocols[I] <> ',') then
+      Continue;
+
+    LStop := I - 1;
+    while (LStart <= LStop) and (AServerALPNProtocols[LStart] <= ' ') do
+      Inc(LStart);
+    while (LStop >= LStart) and (AServerALPNProtocols[LStop] <= ' ') do
+      Dec(LStop);
+
+    if LStop >= LStart then
+    begin
+      LCandidate := Copy(AServerALPNProtocols, LStart, LStop - LStart + 1);
+      if TLS13ClientHelloOffersALPNProtocol(AClientHello, LCandidate) then
+        Exit(LCandidate);
+    end;
+
+    LStart := I + 1;
+  end;
+end;
+
+function BuildTLS13EncryptedExtensionsHandshake(
+  AAcceptEarlyData: Boolean;
+  const ASelectedALPNProtocol: string
+): TBytes;
 var
   LBody: TBytes;
   LExtensions: TBytes;
+  LALPNData: TBytes;
+  LALPNList: TBytes;
 begin
   SetLength(LExtensions, 0);
   if AAcceptEarlyData then
   begin
     AppendUInt16(LExtensions, TLS_EXTENSION_EARLY_DATA);
     AppendUInt16(LExtensions, 0);
+  end;
+
+  if ASelectedALPNProtocol <> '' then
+  begin
+    LALPNList := ParseALPNProtocolList(ASelectedALPNProtocol);
+    if Length(LALPNList) = 0 then
+      RaiseInvalidParameter('ALPNProtocol');
+
+    SetLength(LALPNData, 0);
+    AppendUInt16(LALPNData, Word(Length(LALPNList)));
+    AppendBytes(LALPNData, LALPNList);
+    LALPNData := BuildExtensionHeader(TLS_EXTENSION_ALPN, LALPNData);
+    AppendBytes(LExtensions, LALPNData);
   end;
 
   SetLength(LBody, 0);
@@ -2634,6 +2746,9 @@ begin
                       Exit;
                     end;
 
+                    if LEncryptedExtensionsInfo.HasALPN then
+                      FSelectedALPNProtocol := string(LEncryptedExtensionsInfo.SelectedALPNProtocol);
+
                     AppendHandshakeBytes(ATranscriptData, LHandshakeMessage);
                   end
                   else if LMsgType = TLS_HANDSHAKE_TYPE_CERTIFICATE then
@@ -4026,6 +4141,7 @@ begin
 
   FProtocolVersion := sslProtocolTLS13;
   FCipherName := TLS13CipherSuiteToString(LSelectedCipherSuite);
+  FSelectedALPNProtocol := SelectALPNProtocol(LClientHello, FALPNProtocols);
 
   if not LResumedHandshake then
   begin
@@ -4194,7 +4310,10 @@ begin
     Exit;
   end;
 
-  LEncryptedExtensionsMessage := BuildTLS13EncryptedExtensionsHandshake(LEarlyDataAccepted);
+  LEncryptedExtensionsMessage := BuildTLS13EncryptedExtensionsHandshake(
+    LEarlyDataAccepted,
+    FSelectedALPNProtocol
+  );
 
   SetLength(LServerFlightMessages, 0);
   AppendHandshakeBytes(LServerFlightMessages, LEncryptedExtensionsMessage);

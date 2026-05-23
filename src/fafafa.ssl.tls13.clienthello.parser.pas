@@ -20,6 +20,7 @@ uses
 
 type
   TTLS13WordArray = array of Word;
+  TTLS13ALPNProtocolArray = array of AnsiString;
 
   TTLS13ClientHelloInfo = record
     Valid: Boolean;
@@ -29,6 +30,7 @@ type
     CipherSuites: TTLS13WordArray;
     SupportedVersions: TTLS13WordArray;
     SignatureAlgorithms: TTLS13WordArray;
+    ALPNProtocols: TTLS13ALPNProtocolArray;
     HasSupportedVersions: Boolean;
     HasSignatureAlgorithms: Boolean;
     HasKeyShare: Boolean;
@@ -57,6 +59,7 @@ function TryBuildTLS13ClientHelloPSKBinderTranscript(
 function TLS13ClientHelloSupportsVersion(const AInfo: TTLS13ClientHelloInfo; AVersion: Word): Boolean;
 function TLS13ClientHelloOffersCipherSuite(const AInfo: TTLS13ClientHelloInfo; ACipherSuite: Word): Boolean;
 function TLS13ClientHelloOffersSignatureScheme(const AInfo: TTLS13ClientHelloInfo; ASignatureScheme: Word): Boolean;
+function TLS13ClientHelloOffersALPNProtocol(const AInfo: TTLS13ClientHelloInfo; const AALPNProtocol: string): Boolean;
 
 implementation
 
@@ -68,6 +71,7 @@ begin
   SetLength(AInfo.CipherSuites, 0);
   SetLength(AInfo.SupportedVersions, 0);
   SetLength(AInfo.SignatureAlgorithms, 0);
+  SetLength(AInfo.ALPNProtocols, 0);
   SetLength(AInfo.PeerKeyShare, 0);
   SetLength(AInfo.FirstPSKIdentity, 0);
   SetLength(AInfo.FirstPSKBinder, 0);
@@ -113,6 +117,99 @@ begin
     if AInfo.SignatureAlgorithms[I] = ASignatureScheme then
       Exit(True);
   Result := False;
+end;
+
+function TLS13ClientHelloOffersALPNProtocol(const AInfo: TTLS13ClientHelloInfo; const AALPNProtocol: string): Boolean;
+var
+  I: Integer;
+begin
+  for I := 0 to High(AInfo.ALPNProtocols) do
+    if string(AInfo.ALPNProtocols[I]) = AALPNProtocol then
+      Exit(True);
+
+  Result := False;
+end;
+
+procedure ParseALPNProtocolsExtension(
+  const AHandshake: TBytes;
+  ADataOffset, ADataLength: Integer;
+  var AInfo: TTLS13ClientHelloInfo;
+  out AError: string
+);
+var
+  LListLength: Integer;
+  LOffset: Integer;
+  LEndPos: Integer;
+  LProtocolLength: Integer;
+  LProtocolCount: Integer;
+begin
+  AError := '';
+
+  if ADataLength < 2 then
+  begin
+    AError := 'ALPN extension is too short';
+    Exit;
+  end;
+
+  if Length(AInfo.ALPNProtocols) > 0 then
+  begin
+    AError := 'ALPN extension must not appear more than once';
+    Exit;
+  end;
+
+  LListLength := ReadUInt16(AHandshake, ADataOffset);
+  if LListLength <> ADataLength - 2 then
+  begin
+    AError := 'ALPN protocol_name_list length mismatch';
+    Exit;
+  end;
+
+  LOffset := ADataOffset + 2;
+  LEndPos := LOffset + LListLength;
+  LProtocolCount := 0;
+
+  while LOffset < LEndPos do
+  begin
+    if LOffset + 1 > LEndPos then
+    begin
+      AError := 'ALPN protocol name is missing length';
+      Exit;
+    end;
+
+    LProtocolLength := AHandshake[LOffset];
+    Inc(LOffset);
+
+    if LProtocolLength = 0 then
+    begin
+      AError := 'ALPN protocol name must not be empty';
+      Exit;
+    end;
+
+    if LOffset + LProtocolLength > LEndPos then
+    begin
+      AError := 'ALPN protocol name exceeds extension boundary';
+      Exit;
+    end;
+
+    SetLength(AInfo.ALPNProtocols, LProtocolCount + 1);
+    SetLength(AInfo.ALPNProtocols[LProtocolCount], LProtocolLength);
+    if LProtocolLength > 0 then
+      Move(AHandshake[LOffset], AInfo.ALPNProtocols[LProtocolCount][1], LProtocolLength);
+    Inc(LProtocolCount);
+    Inc(LOffset, LProtocolLength);
+  end;
+
+  if LOffset <> LEndPos then
+  begin
+    AError := 'ALPN protocol_name_list has trailing bytes';
+    Exit;
+  end;
+
+  if LProtocolCount = 0 then
+  begin
+    AError := 'ALPN protocol_name_list must not be empty';
+    Exit;
+  end;
 end;
 
 procedure ParseSupportedVersionsExtension(
@@ -604,6 +701,16 @@ begin
       TLS_EXTENSION_SIGNATURE_ALGORITHMS:
         begin
           ParseSignatureAlgorithmsExtension(AHandshake, LExtDataOffset, LExtLen, AInfo, LExtError);
+          if LExtError <> '' then
+          begin
+            AError := LExtError;
+            Exit;
+          end;
+        end;
+
+      TLS_EXTENSION_ALPN:
+        begin
+          ParseALPNProtocolsExtension(AHandshake, LExtDataOffset, LExtLen, AInfo, LExtError);
           if LExtError <> '' then
           begin
             AError := LExtError;

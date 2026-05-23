@@ -103,19 +103,6 @@ begin
   SetLength(Result, 0);
 end;
 
-function BuildEncryptedExtensionsMessage: TBytes;
-var
-  LBody: TBytes;
-begin
-  SetLength(LBody, 0);
-  AppendUInt16(LBody, 0);
-
-  SetLength(Result, 0);
-  AppendByte(Result, TLS_HANDSHAKE_TYPE_ENCRYPTED_EXTENSIONS);
-  AppendUInt24(Result, Length(LBody));
-  AppendBytes(Result, LBody);
-end;
-
 function BuildFinishedMessage(
   ACipherSuite: Word;
   const AServerHandshakeTrafficSecret: TBytes;
@@ -239,6 +226,7 @@ type
   private
     FMode: TOfflineHandshakeMode;
     FCipherSuite: Word;
+    FSelectedALPNProtocol: string;
     FReadBuffer: TBytes;
     FReadPosition: Int64;
     FWriteStage: Integer;
@@ -255,8 +243,8 @@ type
     procedure HandleClientHello(const AData: TBytes);
     procedure HandleClientFinished(const AData: TBytes);
   public
-    constructor CreateInitial(ACipherSuite: Word);
-    constructor CreateResumed(const ASession: ISSLSession);
+    constructor CreateInitial(ACipherSuite: Word; const ASelectedALPNProtocol: string = '');
+    constructor CreateResumed(const ASession: ISSLSession; const ASelectedALPNProtocol: string = '');
 
     function Read(var Buffer; Count: Longint): Longint; override;
     function Write(const Buffer; Count: Longint): Longint; override;
@@ -266,11 +254,48 @@ type
     property ObservedTicketIdentityMatch: Boolean read FObservedTicketIdentityMatch;
   end;
 
-constructor TOfflineTLS13ServerStream.CreateInitial(ACipherSuite: Word);
+function BuildEncryptedExtensionsMessage(const ASelectedALPNProtocol: string = ''): TBytes;
+var
+  LBody: TBytes;
+  LExtensions: TBytes;
+  LALPN: TBytes;
+  LALPNList: TBytes;
+begin
+  SetLength(LExtensions, 0);
+  if ASelectedALPNProtocol <> '' then
+  begin
+    SetLength(LALPN, Length(ASelectedALPNProtocol));
+    if Length(ASelectedALPNProtocol) > 0 then
+      Move(ASelectedALPNProtocol[1], LALPN[0], Length(ASelectedALPNProtocol));
+
+    SetLength(LALPNList, 0);
+    AppendByte(LALPNList, Byte(Length(LALPN)));
+    AppendBytes(LALPNList, LALPN);
+
+    SetLength(LBody, 0);
+    AppendUInt16(LBody, Word(Length(LALPNList)));
+    AppendBytes(LBody, LALPNList);
+    AppendUInt16(LExtensions, TLS_EXTENSION_ALPN);
+    AppendUInt16(LExtensions, Word(Length(LBody)));
+    AppendBytes(LExtensions, LBody);
+  end;
+
+  SetLength(LBody, 0);
+  AppendUInt16(LBody, Word(Length(LExtensions)));
+  AppendBytes(LBody, LExtensions);
+
+  SetLength(Result, 0);
+  AppendByte(Result, TLS_HANDSHAKE_TYPE_ENCRYPTED_EXTENSIONS);
+  AppendUInt24(Result, Length(LBody));
+  AppendBytes(Result, LBody);
+end;
+
+constructor TOfflineTLS13ServerStream.CreateInitial(ACipherSuite: Word; const ASelectedALPNProtocol: string);
 begin
   inherited Create;
   FMode := ohmInitial;
   FCipherSuite := ACipherSuite;
+  FSelectedALPNProtocol := ASelectedALPNProtocol;
   SetLength(FReadBuffer, 0);
   FReadPosition := 0;
   FWriteStage := 0;
@@ -282,9 +307,9 @@ begin
   FObservedTicketIdentityMatch := False;
 end;
 
-constructor TOfflineTLS13ServerStream.CreateResumed(const ASession: ISSLSession);
+constructor TOfflineTLS13ServerStream.CreateResumed(const ASession: ISSLSession; const ASelectedALPNProtocol: string);
 begin
-  CreateInitial(TLS13_CIPHER_CHACHA20_POLY1305_SHA256);
+  CreateInitial(TLS13_CIPHER_CHACHA20_POLY1305_SHA256, ASelectedALPNProtocol);
   FMode := ohmResumed;
   FPendingSession := ASession as IFreePascalResumptionSession;
 end;
@@ -322,6 +347,9 @@ begin
     raise Exception.Create('Failed to parse ClientHello: ' + LKeyShareError);
   if not LInfo.HasKeyShare then
     raise Exception.Create('ClientHello missing key_share');
+  if (FSelectedALPNProtocol <> '') and
+    (not TLS13ClientHelloOffersALPNProtocol(LInfo, FSelectedALPNProtocol)) then
+    raise Exception.Create('ClientHello missing expected ALPN offer');
 
   if FMode = ohmResumed then
   begin
@@ -380,7 +408,7 @@ begin
       raise Exception.Create('Failed to derive handshake secrets: ' + LKeyShareError);
   end;
 
-  LEncryptedExtensions := BuildEncryptedExtensionsMessage;
+  LEncryptedExtensions := BuildEncryptedExtensionsMessage(FSelectedALPNProtocol);
   AppendBytes(FTranscriptData, LEncryptedExtensions);
 
   LServerFinished := BuildFinishedMessage(
@@ -794,12 +822,79 @@ begin
   end;
 end;
 
+procedure TestALPNAndSNISelection;
+var
+  LCtx: ISSLContext;
+  LConn: ISSLConnection;
+  LInfo: TSSLConnectionInfo;
+  LStream: TOfflineTLS13ServerStream;
+  LCtxNoOverlap: ISSLContext;
+  LConnNoOverlap: ISSLConnection;
+  LInfoNoOverlap: TSSLConnectionInfo;
+  LStreamNoOverlap: TOfflineTLS13ServerStream;
+begin
+  LCtx := TSSLFactory.CreateContext(sslCtxClient, sslFreePascal);
+  AssertTrue(LCtx <> nil, 'ALPN client context should be created');
+  LCtx.SetPreferredVersion(sslProtocolTLS13);
+  LCtx.SetVerifyMode([]);
+  LCtx.SetALPNProtocols('h2,http/1.1');
+
+  LStream := TOfflineTLS13ServerStream.CreateInitial(
+    TLS13_CIPHER_CHACHA20_POLY1305_SHA256,
+    'http/1.1'
+  );
+  try
+    LConn := LCtx.CreateConnection(LStream);
+    AssertTrue(LConn <> nil, 'ALPN client connection should be created');
+    (LConn as ISSLClientConnection).SetServerName('example.com');
+
+    AssertTrue(LConn.Connect, 'ALPN client handshake should succeed');
+    AssertTrue(LConn.GetSelectedALPNProtocol = 'http/1.1',
+      'Client connection should record the negotiated ALPN');
+    LInfo := CaptureConnectionInfo('ALPN handshake', LConn);
+    AssertTrue(LInfo.ALPNProtocol = 'http/1.1',
+      'Connection info should mirror the negotiated ALPN');
+    AssertTrue(LInfo.ServerName = 'example.com',
+      'Connection info should mirror the configured server name');
+  finally
+    LStream.Free;
+  end;
+
+  LCtxNoOverlap := TSSLFactory.CreateContext(sslCtxClient, sslFreePascal);
+  AssertTrue(LCtxNoOverlap <> nil, 'ALPN no-overlap context should be created');
+  LCtxNoOverlap.SetPreferredVersion(sslProtocolTLS13);
+  LCtxNoOverlap.SetVerifyMode([]);
+  LCtxNoOverlap.SetALPNProtocols('spdy/3');
+
+  LStreamNoOverlap := TOfflineTLS13ServerStream.CreateInitial(
+    TLS13_CIPHER_CHACHA20_POLY1305_SHA256,
+    ''
+  );
+  try
+    LConnNoOverlap := LCtxNoOverlap.CreateConnection(LStreamNoOverlap);
+    AssertTrue(LConnNoOverlap <> nil, 'ALPN no-overlap connection should be created');
+    (LConnNoOverlap as ISSLClientConnection).SetServerName('example.com');
+
+    AssertTrue(LConnNoOverlap.Connect, 'ALPN no-overlap handshake should still succeed');
+    AssertTrue(LConnNoOverlap.GetSelectedALPNProtocol = '',
+      'Client connection should leave ALPN empty when the server does not select one');
+    LInfoNoOverlap := CaptureConnectionInfo('ALPN no-overlap handshake', LConnNoOverlap);
+    AssertTrue(LInfoNoOverlap.ALPNProtocol = '',
+      'Connection info should leave ALPN empty when the server does not select one');
+    AssertTrue(LInfoNoOverlap.ServerName = 'example.com',
+      'Connection info should still mirror the configured server name');
+  finally
+    LStreamNoOverlap.Free;
+  end;
+end;
+
 begin
   WriteLn('Testing FreePascal client session resumption contract...');
 
   TestOfflineSessionCaptureAndResume;
   TestResumedSessionSkipsRequiredCertificateTransparency;
   TestResumedSessionSkipsRequiredOCSPStapling;
+  TestALPNAndSNISelection;
 
   WriteLn('✅ FreePascal client session resumption checks passed');
 end.

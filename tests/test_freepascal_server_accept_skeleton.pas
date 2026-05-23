@@ -91,7 +91,10 @@ begin
   Result := BuildTLSPlaintext(TLS_CONTENT_TYPE_HANDSHAKE, LHandshake);
 end;
 
-procedure TestServerAcceptSkeleton;
+procedure RunServerAcceptSkeletonCase(
+  const AClientALPN: string;
+  const AExpectedNegotiatedALPN: string
+);
 var
   LCtx: ISSLContext;
   LConn: ISSLConnection;
@@ -111,13 +114,14 @@ begin
   LCtx := TSSLFactory.CreateContext(sslCtxServer, sslFreePascal);
   AssertTrue(LCtx <> nil, 'FreePascal server context should be created');
   LCtx.SetPreferredVersion(sslProtocolTLS13);
+  LCtx.SetALPNProtocols('h2,http/1.1');
   LCtx.LoadCertificate('tests/certificate/test_certs/signer_cert.pem');
   LCtx.LoadPrivateKey('tests/certificate/test_certs/signer_key.pem');
 
   GenerateX25519KeyPair(LClientPrivate, LClientPublic);
   LClientHelloRecord := BuildClientHelloRecordWithSingleCipher(
     'localhost',
-    '',
+    AClientALPN,
     LClientPublic,
     TLS13_CIPHER_AES_128_GCM_SHA256
   );
@@ -149,6 +153,8 @@ begin
       'Server skeleton should at least negotiate TLS 1.3 before stopping');
     AssertTrue(LConn.GetCipherName = 'TLS_AES_128_GCM_SHA256',
       'Server skeleton should select AES-128-GCM when client offers it');
+    AssertTrue(LConn.GetSelectedALPNProtocol = AExpectedNegotiatedALPN,
+      'Server skeleton should mirror the negotiated ALPN');
     LInfo := CaptureConnectionInfo(LConn);
     AssertEqualsWord(TLS13_CIPHER_AES_128_GCM_SHA256, LInfo.CipherSuiteId,
       'Server skeleton connection info should derive the TLS 1.3 cipher-suite id');
@@ -156,6 +162,8 @@ begin
       'Server skeleton connection info should derive AES-128 key size');
     AssertTrue(LInfo.MacSize = 16,
       'Server skeleton connection info should derive 16-byte AEAD tag length');
+    AssertTrue(LInfo.ALPNProtocol = AExpectedNegotiatedALPN,
+      'Server skeleton connection info should mirror negotiated ALPN');
 
     LServerResponseLen := LIOStream.Size - Length(LClientHelloRecord);
     AssertTrue(LServerResponseLen > 0, 'Server should write a ServerHello record to transport');
@@ -182,6 +190,12 @@ begin
   finally
     LIOStream.Free;
   end;
+end;
+
+procedure TestServerAcceptSkeleton;
+begin
+  RunServerAcceptSkeletonCase('http/1.1', 'http/1.1');
+  RunServerAcceptSkeletonCase('spdy/3', '');
 end;
 
 begin
