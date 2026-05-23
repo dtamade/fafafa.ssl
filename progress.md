@@ -1,6 +1,14 @@
 # Progress Log
 
 ## 2026-05-24
+- Rechecked the MbedTLS OCSP capability contract after the family sweep surfaced a false-red.
+- Root cause: the script rejected any `sslCertVerifyCheckOCSP` mention in `src/fafafa.ssl.mbedtls.certificate.pas`, even though that code only fails closed.
+- Updated `tests/scripts/test_mbedtls_ocsp_capability_doc_truth_contract.sh` to keep the reject path and ban online helper publication.
+- Revalidated:
+  - `bash tests/scripts/test_mbedtls_ocsp_capability_doc_truth_contract.sh`
+  - `git diff --check`
+
+## 2026-05-24
 - Audited remaining `ISSLConnection*` / `ISSLConnectionInfo*` plan files that lacked explicit `Execution Result` closeouts.
 - Found one stale contract expectation:
   - `tests/scripts/test_isslconnectioninfo_active_guidance_contract.sh`

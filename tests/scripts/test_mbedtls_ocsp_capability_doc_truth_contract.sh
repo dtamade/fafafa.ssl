@@ -49,11 +49,21 @@ require_fixed "$MBEDTLS_LIB" \
   "Optimized for embedded systems; early-data, OCSP stapling, and certificate transparency " \
   "MbedTLS KnownIssues must continue to record OCSP stapling unsupported truth"
 
-if rg -n "sslCertVerifyCheckOCSP" "${MBEDTLS_SOURCES[@]}" >/dev/null 2>&1; then
-  fail "MbedTLS source must not publish an online OCSP verification path"
-else
-  echo "[PASS] MbedTLS source does not publish an online OCSP verification path"
-fi
+require_fixed "$ROOT_DIR/src/fafafa.ssl.mbedtls.certificate.pas" \
+  "MbedTLS VerifyEx has no OCSP/CRL revocation material for sslCertVerifyCheckRevocation/sslCertVerifyCheckCRL/sslCertVerifyCheckOCSP" \
+  "MbedTLS source must keep the fail-closed VerifyEx OCSP/CRL rejection path"
+
+for needle in \
+  "CreateOCSPRequest" \
+  "SendOCSPRequest" \
+  "VerifyOCSPResponse" \
+  "CheckCertificateStatus"; do
+  if rg -n "$needle" "${MBEDTLS_SOURCES[@]}" >/dev/null 2>&1; then
+    fail "MbedTLS source must not publish an online OCSP verification helper: $needle"
+  else
+    echo "[PASS] MbedTLS source does not publish $needle"
+  fi
+done
 
 require_fixed "$BUILDER_SRC" \
   "Configured server_ocsp_stapled_response_file requires a backend that implements ISSLServerOCSPStaplingContext" \

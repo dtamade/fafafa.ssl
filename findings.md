@@ -1,5 +1,11 @@
 # Findings
 
+# 2026-05-24 MbedTLS OCSP Capability Doc Truth Resync
+- `tests/scripts/test_mbedtls_ocsp_capability_doc_truth_contract.sh` 之前的 false-red 来自过宽的负向检查：它把任何 `sslCertVerifyCheckOCSP` 词面都当成在线 OCSP 能力发布。
+- `src/fafafa.ssl.mbedtls.certificate.pas` 里的实际行为是 fail-closed：遇到 OCSP / CRL flags 时直接返回 “Certificate revocation verification is unavailable”。
+- 这次修复把 contract 收窄成两件事：保留 fail-closed VerifyEx 拒绝路径，并禁止在线 OCSP helper 的实际发布。
+- 当前 MbedTLS capability 事实仍然是：online OCSP 和 OCSP stapling 都不发布。
+
 ## Current Session
 - Current audit found one real false-red in `tests/scripts/test_isslconnectioninfo_active_guidance_contract.sh`: the script still expected the pre-`GetContext` phrase `连接信息 / ALPN / 状态字符串`, while `docs/reference/API_REFERENCE.md` already carried the expanded `连接信息 / 上下文引用 / ALPN / 状态字符串` owner-family guidance.
 - The fix was a contract expectation resync, not another API doc wording change and not a runtime change.
