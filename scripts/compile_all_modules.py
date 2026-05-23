@@ -102,12 +102,25 @@ def build_fpc_command(pas_file, rebuild, unit_output_dir, unit_paths=None, fpc_e
     ])
     return cmd
 
+def build_module_unit_output_dir(root_unit_output_dir, pas_file):
+    """为单个模块构造隔离的 -FU 子目录。"""
+    try:
+        module_rel = pas_file.relative_to(SRC_DIR)
+        module_name = module_rel.with_suffix('').as_posix()
+    except ValueError:
+        module_name = pas_file.with_suffix('').name
+
+    module_unit_output_dir = Path(root_unit_output_dir) / module_name.replace('/', '__')
+    module_unit_output_dir.mkdir(parents=True, exist_ok=True)
+    return module_unit_output_dir
+
 def compile_module(pas_file, rebuild, timeout_seconds, unit_output_dir, unit_paths=None, fpc_exe=DEFAULT_FPC_EXE):
     """编译单个模块"""
+    module_unit_output_dir = build_module_unit_output_dir(unit_output_dir, pas_file)
     cmd = build_fpc_command(
         pas_file,
         rebuild,
-        unit_output_dir,
+        module_unit_output_dir,
         unit_paths=unit_paths,
         fpc_exe=fpc_exe,
     )
@@ -222,12 +235,12 @@ def main():
         failed_files = []
         total_warnings = 0
         warning_categories = {}  # category -> count
-        
+
         # 逐个编译
         for i, pas_file in enumerate(compile_files, 1):
             rel_path = pas_file.relative_to(SRC_DIR)
             print(f"[{i}/{len(compile_files)}] 编译 {rel_path}...", end=" ")
-            
+
             success, stdout, stderr = compile_module(
                 pas_file,
                 args.rebuild,

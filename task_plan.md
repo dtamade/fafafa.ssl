@@ -1,21 +1,21 @@
-# Task Plan: FreePascal embedded SCT fail-closed alignment
+# Task Plan: Compile all modules isolated unit output
 
 ## Goal
-Keep the FreePascal client CT/SCT runtime surface fail-closed when an embedded X.509 SCT list is malformed, and close the last failing completeness-gate group without widening scope.
+Keep the default batch compile gate stable by isolating per-unit FPC output directories and eliminating the shared-`-FU` compiler AV.
 
 ## Status
 Complete
 
 ## Current Plan
-- [docs/plans/2026-05-23-freepascal-embedded-sct-fail-closed-alignment.md](docs/plans/2026-05-23-freepascal-embedded-sct-fail-closed-alignment.md)
+- [docs/plans/2026-05-23-compile-all-modules-isolated-unit-output.md](docs/plans/2026-05-23-compile-all-modules-isolated-unit-output.md)
 
 ## Done
-- Reproduced the remaining completeness-gate failure in `test_freepascal_client_ct_sct_surface`.
-- Kept the embedded SCT fallback path fail-closed instead of swallowing malformed `signed_certificate_timestamp` errors.
-- Re-ran the focused CT/SCT runtime proof and the fast-local completeness gate.
+- Reproduced the batch compile failure boundary where `fafafa.ssl.pkcs11.engine.pas` triggered an internal exception only under the shared-output batch script.
+- Moved `scripts/compile_all_modules.py` to per-unit `-FU` subdirectories.
+- Added a contract test that locks the per-unit output isolation behavior.
 
 ## Verification
-- `mkdir -p tmp/test_freepascal_client_ct_sct_surface && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_freepascal_client_ct_sct_surface -FEtmp/test_freepascal_client_ct_sct_surface -otmp/test_freepascal_client_ct_sct_surface/test_freepascal_client_ct_sct_surface tests/test_freepascal_client_ct_sct_surface.pas && ./tmp/test_freepascal_client_ct_sct_surface/test_freepascal_client_ct_sct_surface`
-- `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local`
-- `python3 -u scripts/compile_all_modules.py` still stops only at the pre-existing `fafafa.ssl.pkcs11.engine.pas` boundary (`185/186` compiled)
+- `bash tests/scripts/test_compile_all_modules_unit_output_isolation_contract.sh`
+- `python3 -m py_compile scripts/compile_all_modules.py`
+- `python3 -u scripts/compile_all_modules.py`
 - `git diff --check`

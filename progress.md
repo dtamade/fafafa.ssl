@@ -1,6 +1,19 @@
 # Progress Log
 
 ## 2026-05-23
+- Reproduced the default Linux compile gate failure boundary: `python3 scripts/compile_all_modules.py` failed only when all modules shared one `-FU` directory, and `fafafa.ssl.pkcs11.engine.pas` was the first visible victim.
+- Added per-unit output isolation to `scripts/compile_all_modules.py` so each module gets its own `-FU` subdirectory under the batch temp root.
+- Extended `tests/scripts/test_compile_all_modules_unit_output_isolation_contract.sh` to verify `compile_module(...)` isolates output per unit.
+- Verified:
+  - `bash tests/scripts/test_compile_all_modules_unit_output_isolation_contract.sh`
+  - `python3 -m py_compile scripts/compile_all_modules.py`
+  - `python3 -u scripts/compile_all_modules.py`
+  - `git diff --check`
+- Results:
+  - contract test passed
+  - `python3 -u scripts/compile_all_modules.py` finished `186/186 PASS`
+
+## 2026-05-23
 - Reproduced the last remaining completeness-gate failure in `tests/test_freepascal_client_ct_sct_surface.pas`: `FAIL: Malformed embedded SCT list should fail-closed`.
 - Traced the regression to `src/fafafa.ssl.freepascal.connection.pas`, where the embedded SCT fallback swallowed `TryLoadEmbeddedSignedCertificateTimestampList(...)` errors with `AError := ''`.
 - Tightened that path to preserve an SCT-related error, clear the peer certificate cache, and exit early so malformed embedded SCT data fails closed instead of degrading into a no-SCT path.
