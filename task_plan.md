@@ -1,31 +1,31 @@
-# Task Plan: ISSLConnectionInfo Backend Contract Owner Primacy Completion
+# Task Plan: TSSLConfig Migration and Timeout Truth Closeout Audit
 
 ## Goal
-Finish the remaining `ISSLConnectionInfo` backend-contract wording drift by making `GetSelectedALPNProtocol` and `GetStateString` follow the same owner-first contract semantics already used for `GetConnectionInfo` and `GetContext`.
+Verify that the current `TSSLConfig` migration map, library-defaults split, and timeout owner truth are already aligned across source, docs, and focused contracts, and record the closeout cleanly.
 
 ## Status
 Complete
 
 ## Current Plan
-- [docs/plans/2026-05-24-isslconnectioninfo-backend-contract-owner-primacy-completion.md](docs/plans/2026-05-24-isslconnectioninfo-backend-contract-owner-primacy-completion.md)
+- No source changes required for this batch; the live contracts already match the intended `TSSLConfig` surface direction.
 
 ## Done
-- Confirmed the current worktree is clean after the whole-surface taxonomy batch.
-- Re-checked the `ISSLConnectionInfo` family and found the real remaining drift is inside `tests/contract/test_backend_contract.pas`, not active docs or source declarations.
-- Verified `GetConnectionInfo` and `GetContext` already use owner-first failure wording, while `GetSelectedALPNProtocol` and `GetStateString` still describe the optional owner as if it drifted from the core mirror.
-- Add a focused shell contract for ALPN / state-string backend-contract owner primacy.
-- Flip the backend contract wording/comments to owner-first semantics for those two mirrors.
-- During verification, discovered two FreePascal TLS1.3 runtime proofs had reintroduced direct core `GetSelectedALPNProtocol`; migrated them back to `ISSLConnectionInfo.GetSelectedALPNProtocol` and restored the 4-hit residual allowlist.
+- Confirmed the `TSSLLibraryDefaults` public surface is already complete and passing its focused contract.
+- Confirmed `TSSLConfig` migration targets, scope buckets, logging surface, option-bridge surface/default/precedence, `ServerName`, active guidance, and timeout-related guidance are all aligned on current head.
+- Confirmed the current `timeout-owner-truth-resync` plan is already represented by existing focused contracts rather than a missing code path.
+- Discovered one stale local script name assumption: `tests/scripts/test_tsslconfig_timeout_owner_truth_resync.sh` does not exist; the real coverage is split across the existing timeout and direct-library contracts.
 
 ## Verification
-- `bash -n tests/scripts/test_isslconnectioninfo_alpn_statestring_contract_owner_contract.sh`
-- `bash tests/scripts/test_isslconnectioninfo_alpn_statestring_contract_owner_contract.sh`
-- `bash tests/scripts/test_isslconnectioninfo_getconnectioninfo_contract_owner_contract.sh`
-- `bash tests/scripts/test_isslconnectioninfo_getcontext_contract_owner_contract.sh`
-- `bash tests/scripts/test_isslconnectioninfo_getselectedalpn_residual_classification_contract.sh`
-- `bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
-- `fpc -B -Fu./src -Fu./tests -FUtmp/test_fp_alpn_owner/units -FEtmp/test_fp_alpn_owner/bin tests/test_freepascal_client_session_resumption.pas`
-- `tmp/test_fp_alpn_owner/bin/test_freepascal_client_session_resumption`
-- `fpc -B -Fu./src -Fu./tests -FUtmp/test_fp_alpn_owner_server/units -FEtmp/test_fp_alpn_owner_server/bin tests/test_freepascal_server_accept_skeleton.pas`
-- `tmp/test_fp_alpn_owner_server/bin/test_freepascal_server_accept_skeleton`
-- `git diff --check`
+- `bash tests/scripts/test_tssllibrarydefaults_surface_contract.sh`
+- `bash tests/scripts/test_tsslconfig_migration_targets_contract.sh`
+- `bash tests/scripts/test_tsslconfig_logging_surface_truth_contract.sh`
+- `bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+- `bash tests/scripts/test_tsslconfig_option_bridge_surface_truth_contract.sh`
+- `bash tests/scripts/test_tsslconfig_option_bridge_default_truth_contract.sh`
+- `bash tests/scripts/test_tsslconfig_option_bridge_precedence_freeze_contract.sh`
+- `bash tests/scripts/test_tsslconfig_servername_surface_truth_contract.sh`
+- `bash tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+- `bash tests/scripts/test_direct_library_connection_scope_clarification_contract.sh`
+- `bash tests/scripts/test_connector_timeout_safety_contract.sh`
+- `bash tests/scripts/test_context_builder_session_timeout_safety_contract.sh`
+- `bash tests/scripts/test_migration_guide_phase24_tbuffersize_truth_contract.sh`

@@ -1,5 +1,30 @@
 # Progress Log
 
+## 2026-05-24
+- Re-anchored the current continuation on `TSSLConfig` and checked the live roadmap/adoption/scope docs.
+- Ran the current `TSSLConfig` focused contracts:
+  - `bash tests/scripts/test_tssllibrarydefaults_surface_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_migration_targets_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_logging_surface_truth_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_option_bridge_surface_truth_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_option_bridge_default_truth_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_option_bridge_precedence_freeze_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_servername_surface_truth_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+  - `bash tests/scripts/test_direct_library_connection_scope_clarification_contract.sh`
+  - `bash tests/scripts/test_connector_timeout_safety_contract.sh`
+  - `bash tests/scripts/test_context_builder_session_timeout_safety_contract.sh`
+  - `bash tests/scripts/test_migration_guide_phase24_tbuffersize_truth_contract.sh`
+- Result:
+  - all checks passed
+  - the only mismatch was a stale local script-name assumption: `tests/scripts/test_tsslconfig_timeout_owner_truth_resync.sh` does not exist
+- Refreshed:
+  - `task_plan.md`
+  - `findings.md`
+- Next:
+  - move to the next unresolved high-value architecture batch only if a fresh drift appears; otherwise this `TSSLConfig` slice is already at current-truth closeout
+
 ## 2026-05-23
 - Revalidated the already-shipped truth batches on current head:
   - `bash tests/scripts/test_cafile_capath_trust_loading_parity_contract.sh`

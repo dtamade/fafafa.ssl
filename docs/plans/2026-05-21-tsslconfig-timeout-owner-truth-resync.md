@@ -116,3 +116,15 @@ architecture 参考
   在
   source / docs / focused tests
   上重新说同一张图
+
+## Execution Result
+
+- PASS
+- 当前 head 已经把 `HandshakeTimeout` 的 owner truth 固定在 `ISSLConnectionControl.SetTimeout(...)` / `TSSLConnector.WithTimeout(...)` / `TSSLAcceptor.WithTimeout(...)` 这条线，现有 focused contracts 也全部通过。
+- 实际可用的 timeout / direct-library contract 组合如下：
+  - `bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+  - `bash tests/scripts/test_direct_library_connection_scope_clarification_contract.sh`
+  - `bash tests/scripts/test_connector_timeout_safety_contract.sh`
+  - `bash tests/scripts/test_context_builder_session_timeout_safety_contract.sh`
+- 这份 plan 现在可视为已完成的历史记录，不再代表当前未完成事项。

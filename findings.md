@@ -1,5 +1,14 @@
 # Findings
 
+## Current Session
+- The previous `ISSLConnectionInfo` owner-primacy batch is complete and the worktree is clean.
+- The next high-value architecture batch is `TSSLConfig`, with likely focus on `TSSLLibraryDefaults` adoption and any remaining public-surface scope drift around logging, buffer size, handshake timeout, server name, and option-bridge booleans.
+- Before editing, we should recheck the live contracts and docs that already name `TSSLConfig` so we can keep the next change narrow and evidence-backed.
+- The repo already has dedicated `TSSLConfig` plan and contract files, including the roadmap, library-defaults adoption, scope-bucket truth, logging truth, migration-targets, and option-bridge truth checks.
+- `TSSLLibraryDefaults` adoption looks already completed in the plan docs, so the remaining value is likely in verifying the migration-target docs/contracts and checking for any small drift instead of inventing new structure.
+- Current contract sweep: migration targets, logging surface, scope buckets, option-bridge surface/default/precedence, `ServerName`, and active guidance are all passing; the only immediate snag was a missing timeout contract script name.
+- After checking the real timeout-related contracts, the current `TSSLConfig` slice is already at closeout truth; no source or docs edits were needed beyond keeping the session records current.
+
 ## Conclusions
 - `ISSLConnection` 当前 shipped surface 可以稳定冻结成一张 41-method taxonomy：`17` core、`6` convenience mirrors、`18` compatibility-core mirrors。
 - `ReadString` / `WriteString` 和 timeout / blocking 已经是明确的 owner-mapped convenience buckets，分别对应 `ISSLConnectionTextIO` 和 `ISSLConnectionControl`。
