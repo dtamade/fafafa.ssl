@@ -193,7 +193,7 @@
 
 ## Execution Result
 
-- IMPLEMENTED
+- PASS
 - 当前已经完成：
   - `test_winssl_cert_verify_ex.pas`
     从常量烟雾测试升级为真实 runtime contract
@@ -265,3 +265,37 @@
     所以真正的编译与运行证明
     交给 push 后的
     `WinSSL Runtime Gate`
+- 最终远端 closure：
+  - 临时
+    `CurrentUser\ROOT`
+    workaround
+    已被后续 custom-trust-engine
+    批次取代；
+    当前最终 passing proof
+    不再依赖系统根存储写入
+  - commit
+    `f0be85a`
+    (`test(winssl): hold verify stores by interface`)
+    把 focused test 改成始终以
+    `ISSLCertificateStore`
+    持有 memory-backed store
+  - `WinSSL Runtime Gate`
+    run
+    `26159931322`
+    已完整转绿：
+    - `Run quick WinSSL smoke`
+    - `Run Windows Wave B gate`
+    - `Run broader WinSSL runtime suite`
+  - 这说明：
+    - product-side 的
+      `VerifyEx`
+      flag parity
+      修复已经可用
+    - 最后残余的
+      `EAccessViolation`
+      来自 focused test
+      的临时 class-to-interface
+      store 转换生命周期洞，
+      而不是当前
+      `TWinSSLCertificate.VerifyEx`
+      实现仍有未收敛崩溃

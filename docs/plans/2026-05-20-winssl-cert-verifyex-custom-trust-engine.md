@@ -84,7 +84,7 @@
 
 ## Execution Result
 
-- IMPLEMENTED (iteration 1) + FOLLOW-UP IN PROGRESS
+- PASS
 - 已完成：
   - 新增
     `CERT_CHAIN_ENGINE_CONFIG`
@@ -186,3 +186,33 @@
     - per-call exception flags
       继续兑现，
       但不再依赖会崩的 native policy-flag lane
+- 最终远端 closure：
+  - commit
+    `f0be85a`
+    (`test(winssl): hold verify stores by interface`)
+    把 focused WinSSL test
+    里用于重复调用的 memory-backed store
+    改成由
+    `ISSLCertificateStore`
+    接口直接持有
+  - `WinSSL Runtime Gate`
+    run
+    `26159931322`
+    随后完整通过：
+    - quick smoke
+    - Windows Wave B gate
+    - broader WinSSL runtime suite
+  - 这把最后一层残余性质定死了：
+    - custom trust engine
+      方向本身没有再出错
+    - zero-flag native baseline
+      + public-contract override
+      方向也已站稳
+    - 最后的
+      `EAccessViolation`
+      是 focused test
+      对
+      `TInterfacedObject`
+      store 的生命周期持有方式错误，
+      不是当前 cert-level trust-engine
+      实现仍有未闭环 native 崩溃

@@ -1,21 +1,20 @@
-# Task Plan: Compile all modules isolated unit output
+# Task Plan: WinSSL VerifyEx Closure Writeback
 
 ## Goal
-Keep the default batch compile gate stable by isolating per-unit FPC output directories and eliminating the shared-`-FU` compiler AV.
+Close the stale WinSSL `VerifyEx` follow-up record by writing back the successful Windows proof and locking the focused test's `ISSLCertificateStore` ownership rule with a local contract.
 
 ## Status
 Complete
 
 ## Current Plan
-- [docs/plans/2026-05-23-compile-all-modules-isolated-unit-output.md](docs/plans/2026-05-23-compile-all-modules-isolated-unit-output.md)
+- [docs/plans/2026-05-23-winssl-verifyex-closure-writeback-and-store-interface-contract.md](docs/plans/2026-05-23-winssl-verifyex-closure-writeback-and-store-interface-contract.md)
 
 ## Done
-- Reproduced the batch compile failure boundary where `fafafa.ssl.pkcs11.engine.pas` triggered an internal exception only under the shared-output batch script.
-- Moved `scripts/compile_all_modules.py` to per-unit `-FU` subdirectories.
-- Added a contract test that locks the per-unit output isolation behavior.
+- Reconfirmed that remote `WinSSL Runtime Gate` run `26159931322` for commit `f0be85a` passed all three Windows lanes, including the broader WinSSL runtime suite.
+- Added a local shell contract that locks `tests/winssl/test_winssl_cert_verify_ex.pas` to interface-held memory-backed stores.
+- Updated the two historical WinSSL `VerifyEx` plan files so they now record the final closure instead of stopping at `FOLLOW-UP IN PROGRESS`.
 
 ## Verification
-- `bash tests/scripts/test_compile_all_modules_unit_output_isolation_contract.sh`
-- `python3 -m py_compile scripts/compile_all_modules.py`
-- `python3 -u scripts/compile_all_modules.py`
+- `gh run view 26159931322 --json jobs,url,name,displayTitle,conclusion,status,headSha`
+- `bash tests/scripts/test_winssl_verifyex_store_interface_contract.sh`
 - `git diff --check`
