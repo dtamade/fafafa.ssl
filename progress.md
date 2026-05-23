@@ -43,3 +43,16 @@
     - module tests: `17/17`
 - Hygiene:
   - `git diff --check`
+- Established a new overall architecture/specification anchor for the post-release phase:
+  - added `docs/plans/2026-05-24-framework-excellence-spec-and-evolution-roadmap.md`
+  - defined product north star, architecture principles, target layer model, evolution waves, and immediate next-batch recommendation
+- Synced active routing docs to the new anchor:
+  - `docs/ROADMAP.md`
+  - `docs/ARCHITECTURE.md`
+- Focused doc-truth verification:
+  - `bash tests/scripts/test_active_roadmap_references_contract.sh`
+  - `bash tests/scripts/test_architecture_current_route_truth_contract.sh`
+  - `bash tests/scripts/test_architecture_current_public_entrypoint_truth_contract.sh`
+- Result:
+  - route selection no longer has to rely only on historical audit fragments
+  - the next implementation recommendation is now explicitly `ISSLConnection` whole-surface taxonomy first, then owner-family execution

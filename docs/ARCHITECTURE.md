@@ -172,7 +172,7 @@ IInterface (FreePascal 内置)
     └─ ISSLSession          (会话管理)
 ```
 
-> 当前 public Pascal surface 只声明了 `ISSLClientConnection`；
+> 当前 public Pascal source 只声明了 `ISSLClientConnection`；
 > 服务端特有能力目前主要通过可选 context 扩展接口暴露，
 > 而不是通过单独的 `ISSLServerConnection` 公开接口。
 >
@@ -598,6 +598,7 @@ fafafa.ssl 使用的设计模式：
 当前执行顺序与产品路线以 [ROADMAP.md](ROADMAP.md) 为准。
 当前 release/runtime 结论请看 [test_reports/RELEASE_READINESS_V1.5.0.md](test_reports/RELEASE_READINESS_V1.5.0.md)。
 当前下一条更大的 completeness 主线，继续以 [plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md](plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md) 为候选入口。
+当前整体规格 / 架构原则 / 演进路线锚点，见 [plans/2026-05-24-framework-excellence-spec-and-evolution-roadmap.md](plans/2026-05-24-framework-excellence-spec-and-evolution-roadmap.md)。
 
 这份根层 `ARCHITECTURE.md` 当前只负责：
 
@@ -615,6 +616,7 @@ fafafa.ssl 使用的设计模式：
 
 - 架构分层真相继续回到本页与 `docs/reference/ARCHITECTURE.md`
 - 执行顺序、批次优先级、完成度判断继续回到 `ROADMAP.md` 与对应 `docs/plans/...`
+- 整体北极星、关键设计原则与长期演进顺序继续回到 `plans/2026-05-24-framework-excellence-spec-and-evolution-roadmap.md`
 
 ---
 
@@ -623,6 +625,7 @@ fafafa.ssl 使用的设计模式：
 - **接口设计**: [API_DESIGN_GUIDE.md](reference/API_DESIGN_GUIDE.md)
 - **迁移指南**: [MIGRATION_GUIDE_V1.1.md](MIGRATION_GUIDE_V1.1.md)
 - **当前路线图**: [ROADMAP.md](ROADMAP.md)
+- **整体规格与演进路线**: [plans/2026-05-24-framework-excellence-spec-and-evolution-roadmap.md](plans/2026-05-24-framework-excellence-spec-and-evolution-roadmap.md)
 - **当前 completeness 主线**: [plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md](plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md)
 
 ---

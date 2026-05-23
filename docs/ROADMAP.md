@@ -17,6 +17,7 @@
 - wave_c_role: `closeout / approval / historical reference only`
 - product_mainline: `SSL/TLS backend completeness roadmap`
 - next_route_candidate: `docs/plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md`
+- current_architecture_north_star: `docs/plans/2026-05-24-framework-excellence-spec-and-evolution-roadmap.md`
 - current_default_build: `python3 scripts/compile_all_modules.py`
 - current_default_gate: `bash scripts/run_minimal_ci_gate.sh --fast-local`
 - current_focused_gate: `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local`
@@ -46,9 +47,10 @@
 1. [v1.5.0 release formalization plan](plans/2026-05-12-release-v1.5.0-formalization.md)
 2. [Release readiness v1.5.0](test_reports/RELEASE_READINESS_V1.5.0.md)
 3. [SSL/TLS backend completeness roadmap](plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md)
-4. [GitHub Actions README](../.github/README.md)
-5. [Wave C Closeout Status](test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md)
-6. [Wave C Current Chain](test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md)
+4. [Framework excellence spec and evolution roadmap](plans/2026-05-24-framework-excellence-spec-and-evolution-roadmap.md)
+5. [GitHub Actions README](../.github/README.md)
+6. [Wave C Closeout Status](test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md)
+7. [Wave C Current Chain](test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md)
 
 如果你只是想开始开发或验证：
 
@@ -101,10 +103,12 @@ bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local
 2. 如果还要继续扩 early-data，不再建议无 fresh RED 地继续开 directory-store family；当前 blocker queue 已经收口，剩余只有更深的 crash-window / write-interruption drift 值得在 fresh failing evidence 出现时再重开，而不是现在回头重开现有 file-backed `.bak` family、managed boundary 或现有 parity 接线。
 3. capability 等级继续保持 `experimental`；当前剩余 caveat 已经收口到 local persistent 路径、fail-closed 行为，以及尚未承诺 distributed / cross-host replay coordination。在没有 fresh RED 前，这条 caveat 应视为 post-release 阶段有意保留的最终 experimental boundary，而不是默认 future queue。
 4. OCSP / CT / validation 只在 fresh failing evidence 出现时重开，不再作为默认 future queue。
+5. 如果要继续推进更高层的架构演进，先看 [Framework excellence spec and evolution roadmap](plans/2026-05-24-framework-excellence-spec-and-evolution-roadmap.md)，再决定实现批次应该落在 `ISSLConnection`、`TSSLConfig`、facade 还是 pure Pascal excellence 线上。
 
 相关计划：
 
 - [Backend completeness roadmap](plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md)
+- [Framework excellence spec and evolution roadmap](plans/2026-05-24-framework-excellence-spec-and-evolution-roadmap.md)
 - [2026-04-12 root roadmap truth alignment and early-data next wave](plans/2026-04-12-root-roadmap-truth-alignment-and-early-data-next-wave.md)
 - [2026-04-13 FreePascal early-data builder opt-in](plans/2026-04-13-freepascal-early-data-antireplay-builder-optin.md)
 - [2026-04-13 FreePascal early-data replay-store factory parity and error contracts](plans/2026-04-13-freepascal-early-data-replay-store-factory-parity-and-error-contracts.md)

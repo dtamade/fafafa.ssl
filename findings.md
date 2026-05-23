@@ -1,10 +1,13 @@
 # Findings
 
 ## Conclusions
-- `tests/test_mbedtls_framework.pas` no longer belongs in the active direct context-SNI or direct-core verify-result residual clusters; its framework coverage now follows `ISSLClientConnection` and `ISSLCertificateVerification`.
-- The real seam in this batch was compile-time drift, not product logic drift: focused compilation of `tests/test_mbedtls_framework.pas` emitted 5 deprecated warnings before the change.
-- The only regression introduced during the migration was an interface-lifetime bug in `TestMbedTLSVerifyResultHelperLossContract`; handing ownership to `ISSLConnection` and removing manual `Free` restored runtime stability.
+- The repo now has an explicit excellence-level architecture anchor: `docs/plans/2026-05-24-framework-excellence-spec-and-evolution-roadmap.md` is the new top-level place to reason about north star, principles, and evolution order.
+- The highest-value unfinished design debt remains the same three families, but they now sit inside a clearer global route:
+  - `ISSLConnection` core-too-fat / owner taxonomy
+  - `TSSLConfig` mixed-scope public model
+  - facade historical-path simplification
+- The next implementation batch should not reopen closed early-data / OCSP / CT / connection-scope families without fresh RED; it should first build a whole-surface taxonomy for `ISSLConnection`.
 
 ## Notes
-- `TMbedTLSConnection.DoGetVerifyResultString` still carries `FLastErrorString` for non-verification failures such as unsupported renegotiation; this batch preserved that semantic truth but moved access to the `ISSLCertificateVerification` owner path.
-- The new guard is `tests/scripts/test_mbedtls_framework_owner_surface_contract.sh`; it compiles the framework test and rejects reintroduced deprecated warnings for context-level SNI and direct-core verify-result mirrors.
+- The key strategic decision in this batch is to treat `ReadString` / `WriteString` and timeout/blocking as explicit `v1.x` convenience mirrors, not as owner-less clutter and not as the immediate first removal target.
+- Another key decision is to delay `ISSLServerConnection` symmetry work until after connection-core clarity and config-scope clarity are stronger; fake symmetry would make the public model worse, not better.

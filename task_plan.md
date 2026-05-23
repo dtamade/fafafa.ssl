@@ -1,27 +1,28 @@
-# Task Plan: MbedTLS Framework Owner-Surface Warning Closeout
+# Task Plan: Framework Excellence Spec And Evolution Roadmap
 
 ## Goal
-Close the deprecated-warning drift in `tests/test_mbedtls_framework.pas` by moving its active framework checks onto owner-path SNI / verify-result surfaces and freezing the new truth with focused contracts.
+Establish a durable overall spec, architecture-principle set, and evolution roadmap for `fafafa.ssl` so future implementation batches are driven by a unified design north star rather than isolated local seams.
 
 ## Status
 Complete
 
 ## Current Plan
-- [docs/plans/2026-05-24-mbedtls-framework-owner-surface-warning-closeout.md](docs/plans/2026-05-24-mbedtls-framework-owner-surface-warning-closeout.md)
+- [docs/plans/2026-05-24-framework-excellence-spec-and-evolution-roadmap.md](docs/plans/2026-05-24-framework-excellence-spec-and-evolution-roadmap.md)
 
 ## Done
-- Migrated `tests/test_mbedtls_framework.pas` from context-level SNI and direct core verify-result mirrors to `ISSLClientConnection` / `ISSLCertificateVerification`.
-- Fixed the helper-loss contract's interface lifetime regression by letting the interface own the connection instead of mixing interface refs with manual `Free`.
-- Removed `tests/test_mbedtls_framework.pas` from the direct-core verify-result residual allowlists and direct context-SNI classification allowlists.
-- Added `tests/scripts/test_mbedtls_framework_owner_surface_contract.sh` to compile the framework test and fail on the exact deprecated warnings that triggered this batch.
+- Authored a new architecture-north-star plan that defines:
+  - product north star
+  - excellence criteria
+  - architecture principles
+  - target layer model
+  - explicit evolution waves
+  - immediate next recommendation
+- Updated `docs/ROADMAP.md` to point current route selection at the new architecture north star without disturbing the released-state control-plane truth.
+- Updated `docs/ARCHITECTURE.md` to treat the new plan as the long-range design anchor while preserving current shipped-route ownership.
+- Re-centered the next implementation recommendation on a whole-surface `ISSLConnection` taxonomy batch instead of reopening closed families or drifting into isolated getter archaeology.
 
 ## Verification
-- `bash tests/scripts/test_active_direct_context_servername_surface_classification_contract.sh`
-- `bash tests/scripts/test_backend_framework_context_level_sni_labels_contract.sh`
-- `bash tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
-- `bash tests/scripts/test_isslcertificateverification_mbedtls_residual_contract.sh`
-- `bash tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
-- `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
-- `bash tests/scripts/test_mbedtls_framework_owner_surface_contract.sh`
-- `bash scripts/run_minimal_ci_gate.sh --fast-local`
+- `bash tests/scripts/test_active_roadmap_references_contract.sh`
+- `bash tests/scripts/test_architecture_current_route_truth_contract.sh`
+- `bash tests/scripts/test_architecture_current_public_entrypoint_truth_contract.sh`
 - `git diff --check`
