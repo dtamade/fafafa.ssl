@@ -8,15 +8,17 @@
 
 > 这份文档描述的是 **v2 最小 core 目标**，不是 `v1.5.0` 当前 shipped source 的逐行镜像。
 > 当前 shipped source truth 以 `src/fafafa.ssl.base.pas` 与 `docs/reference/API_REFERENCE.md` 为准；
-> `ReadString` / `WriteString` / timeout / blocking 这组方法在 `v1.x` 仍保留为 convenience-core / connection-adjacent surface。
-> 其中 timeout / blocking 当前 source 已补上 `ISSLConnectionControl` owner path，text helpers 当前也已补上 `ISSLConnectionTextIO` owner path；core 侧继续保留 convenience mirror。
+> `ISSLConnection` 当前 shipped surface 已经穷尽为 41 个方法，精确分成 `17 core + 6 convenience mirror + 18 compatibility-core mirror`。
+> `ReadString` / `WriteString` / timeout / blocking 这组方法在 `v1.x` 仍保留为 convenience surface；
+> 其中 timeout / blocking 当前 source 已补上 `ISSLConnectionControl` owner path，text helpers 当前也已补上 `ISSLConnectionTextIO` owner path。
+> 其余 18 个 compatibility-core mirrors 则分别落在 `ISSLConnectionInfo` / `ISSLDiagnostics` / `ISSLSessionResumption` / `ISSLCertificateVerification` / `ISSLOCSPStapling` 的 owner family 上。
 
 ---
 
 ## 接口层次结构
 
 ```
-ISSLConnection (v2 目标核心 - 17 个方法)
+ISSLConnection (v2 目标核心 - 17 个方法 / 当前 shipped surface 41 个方法见下)
 ├── ISSLClientConnection (客户端扩展 - SNI)
 ├── ISSLConnectionTextIO (文本 helper owner)
 ├── ISSLConnectionControl (timeout / blocking 控制)
@@ -31,6 +33,28 @@ ISSLConnection (v2 目标核心 - 17 个方法)
 > 注：当前 public Pascal source 尚未声明 `ISSLServerConnection`。
 > 现阶段服务端特有能力主要通过 `ISSLContext` 的可选扩展接口暴露，
 > 例如 `ISSLServerOCSPStaplingContext` 和 early-data 相关 server-side context surface。
+
+## 当前 v1.5 whole-surface taxonomy
+
+`ISSLConnection` 的当前 shipped surface 一共 41 个方法，精确分桶为 `17 + 6 + 18`。
+
+| Bucket | Count | Surface |
+| --- | ---: | --- |
+| Core | 17 | `Connect`, `Accept`, `Shutdown`, `Close`, `DoHandshake`, `IsHandshakeComplete`, `Renegotiate`, `Read`, `Write`, `WantRead`, `WantWrite`, `GetError`, `GetProtocolVersion`, `GetCipherName`, `GetPeerCertificate`, `IsConnected`, `GetState` |
+| Convenience mirror | 6 | `ReadString`, `WriteString`, `SetTimeout`, `GetTimeout`, `SetBlocking`, `GetBlocking` |
+| Compatibility-core mirror | 18 | `GetConnectionInfo`, `GetPeerCertificateChain`, `GetVerifyResult`, `GetVerifyResultString`, `GetSession`, `SetSession`, `IsSessionReused`, `GetSelectedALPNProtocol`, `GetContext`, `GetStateString`, `GetHealthStatus`, `IsHealthy`, `GetDiagnosticInfo`, `GetPerformanceMetrics`, `GetOCSPStaplingEnabled`, `GetOCSPResponse`, `IsOCSPResponseVerified`, `GetOCSPResponseStatus` |
+
+| Mirror cluster | Count | Current owner |
+| --- | ---: | --- |
+| `ReadString` / `WriteString` | 2 | `ISSLConnectionTextIO` |
+| `SetTimeout` / `GetTimeout` / `SetBlocking` / `GetBlocking` | 4 | `ISSLConnectionControl` |
+| `GetConnectionInfo` / `GetContext` / `GetSelectedALPNProtocol` / `GetStateString` | 4 | `ISSLConnectionInfo` |
+| `GetHealthStatus` / `IsHealthy` / `GetDiagnosticInfo` / `GetPerformanceMetrics` | 4 | `ISSLDiagnostics` |
+| `GetSession` / `SetSession` / `IsSessionReused` | 3 | `ISSLSessionResumption` |
+| `GetPeerCertificateChain` / `GetVerifyResult` / `GetVerifyResultString` | 3 | `ISSLCertificateVerification` |
+| `GetOCSPStaplingEnabled` / `GetOCSPResponse` / `IsOCSPResponseVerified` / `GetOCSPResponseStatus` | 4 | `ISSLOCSPStapling` |
+
+> `ISSLClientConnection` 与 `ISSLNativeHandleAccess` 是相邻 optional surfaces，不计入这 41 个方法的 partition。
 
 ---
 

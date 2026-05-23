@@ -1,27 +1,27 @@
-# Task Plan: Framework Excellence Spec And Evolution Roadmap
+# Task Plan: ISSLConnection Whole-Surface Taxonomy
 
 ## Goal
-Establish a durable overall spec, architecture-principle set, and evolution roadmap for `fafafa.ssl` so future implementation batches are driven by a unified design north star rather than isolated local seams.
+Classify the current shipped `ISSLConnection` surface exactly, then pin that taxonomy into the active design docs and contracts so future batches can flow from a single source of truth.
 
 ## Status
 Complete
 
 ## Current Plan
-- [docs/plans/2026-05-24-framework-excellence-spec-and-evolution-roadmap.md](docs/plans/2026-05-24-framework-excellence-spec-and-evolution-roadmap.md)
+- [docs/plans/2026-05-24-isslconnection-whole-surface-taxonomy.md](docs/plans/2026-05-24-isslconnection-whole-surface-taxonomy.md)
 
 ## Done
-- Authored a new architecture-north-star plan that defines:
-  - product north star
-  - excellence criteria
-  - architecture principles
-  - target layer model
-  - explicit evolution waves
-  - immediate next recommendation
-- Updated `docs/ROADMAP.md` to point current route selection at the new architecture north star without disturbing the released-state control-plane truth.
-- Updated `docs/ARCHITECTURE.md` to treat the new plan as the long-range design anchor while preserving current shipped-route ownership.
-- Re-centered the next implementation recommendation on a whole-surface `ISSLConnection` taxonomy batch instead of reopening closed families or drifting into isolated getter archaeology.
+- Established the framework excellence roadmap and anchored the repo around an explicit north-star / wave model.
+- Confirmed the current shipped `ISSLConnection` surface is the correct next batch, not another reopened closed family.
+- Wrote the whole-surface taxonomy into `docs/reference/INTERFACE_DESIGN_V2.md`.
+- Added a focused contract that verifies the 41-method partition and the owner-mapping buckets.
+- Refreshed the route/plan docs so the next batch stays aligned after this one lands.
 
 ## Verification
+- `bash tests/scripts/test_isslconnection_whole_surface_taxonomy_contract.sh`
+- `bash tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+- `bash tests/scripts/test_isslconnection_control_owner_path_contract.sh`
+- `bash tests/scripts/test_isslconnection_text_owner_path_contract.sh`
+- `bash tests/scripts/test_isslconnectioninfo_source_classification_contract.sh`
 - `bash tests/scripts/test_active_roadmap_references_contract.sh`
 - `bash tests/scripts/test_architecture_current_route_truth_contract.sh`
 - `bash tests/scripts/test_architecture_current_public_entrypoint_truth_contract.sh`

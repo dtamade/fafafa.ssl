@@ -11,7 +11,7 @@ base_file="src/fafafa.ssl.base.pas"
 conn_base_file="src/fafafa.ssl.connection.base.pas"
 
 declare -a required_base_patterns=(
-  "@compatibility-note v1.x compatibility-core mirror; Stage-A demotion target is ISSLConnectionInfo"
+  "@compatibility-note v1.x compatibility-core mirror; not recommended as the primary entry for new code; Stage-A demotion target is ISSLConnectionInfo"
   "承接 "
   "ISSLConnection"
   "这组 v1.x compatibility-core mirrors："

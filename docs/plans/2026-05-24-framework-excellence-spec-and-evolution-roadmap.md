@@ -543,22 +543,16 @@ backend 之间不必假装完全同构，
 ## Immediate Next Recommendation
 
 如果按“最大长期价值 / 最小方向漂移”排序，
-下一条最该推进的不是重新回头收早已关闭的 family，
+taxonomy batch 落地后，下一条最该推进的不是重新回头收早已关闭的 family，
 也不是继续做零散的 getter archaeology。
 
 最值得开的下一批应是：
 
-1. **`ISSLConnection` whole-surface taxonomy batch**
-   - 把 connection public surface 全量分成：
-     - core
-     - owner
-     - convenience mirror
-     - compatibility-core mirror
-     - backend/capability residual
-2. **在 taxonomy 明确后，再挑下一条 residual family 落地**
-   - 默认优先 remaining `ISSLConnectionInfo` family
-   - 然后才是 diagnostics / session / certificate-verification / OCSP 的 cluster strategy
-3. **之后再进入 `TSSLConfig` v2 blueprint**
+1. **remaining `ISSLConnectionInfo` family**
+   - 把 `GetConnectionInfo` / `GetContext` / `GetSelectedALPNProtocol` / `GetStateString` 这组 compatibility-core mirrors 继续收口到更清晰的 owner / deprecation truth
+2. **diagnostics / session / certificate-verification / OCSP cluster strategy**
+   - 按 taxonomy 之后的顺序推进，先让残余 mirrors 的 owner family 叙事更统一
+3. **`TSSLConfig` v2 blueprint**
 
 这样做的好处是：
 

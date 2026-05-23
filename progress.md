@@ -56,3 +56,18 @@
 - Result:
   - route selection no longer has to rely only on historical audit fragments
   - the next implementation recommendation is now explicitly `ISSLConnection` whole-surface taxonomy first, then owner-family execution
+- Restarted the `ISSLConnection` taxonomy batch from the live source truth:
+  - confirmed `src/fafafa.ssl.base.pas` currently exposes exactly 41 `ISSLConnection` methods
+  - confirmed the clean partition is `17 core + 6 convenience mirror + 18 compatibility-core mirror`
+  - identified `docs/reference/INTERFACE_DESIGN_V2.md` as the right doc to carry the current shipped taxonomy without collapsing the v2 target-core story
+  - legacy `session-catchup.py` path under `/home/dtamade/.codex/plugins/...` was absent, so I proceeded with direct repo inspection instead
+- Taxonomy doc and route doc are now updated and verified:
+  - `bash tests/scripts/test_isslconnection_whole_surface_taxonomy_contract.sh`
+  - `bash tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh`
+  - `bash tests/scripts/test_isslconnection_control_owner_path_contract.sh`
+  - `bash tests/scripts/test_isslconnection_text_owner_path_contract.sh`
+  - `bash tests/scripts/test_isslconnectioninfo_source_classification_contract.sh`
+  - `bash tests/scripts/test_active_roadmap_references_contract.sh`
+  - `bash tests/scripts/test_architecture_current_route_truth_contract.sh`
+  - `bash tests/scripts/test_architecture_current_public_entrypoint_truth_contract.sh`
+  - `git diff --check`
