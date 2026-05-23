@@ -867,7 +867,7 @@ begin
 end;
 ```
 
-如果你在写新代码，并且需要连接信息 / ALPN / 状态字符串这组 mirrors，优先通过 `ISSLConnectionInfo` 获取。
+如果你在写新代码，并且需要连接信息 / 上下文引用 / ALPN / 状态字符串这组 mirrors，优先通过 `ISSLConnectionInfo` 获取。
 需要上下文引用时，也优先通过 `ISSLConnectionInfo.GetContext` 获取。
 `GetConnectionInfo` 不再应被当作核心 `ISSLConnection` 的主入口；它当前在源码声明里也已经是编译期 `deprecated`。拿完整连接信息记录请优先通过 `ISSLConnectionInfo.GetConnectionInfo`。
 `GetContext` 也不再应被当作核心 `ISSLConnection` 的主入口；它当前在源码声明里同样已经是编译期 `deprecated`。需要连接所属 context 引用时，请优先通过 `ISSLConnectionInfo.GetContext`。

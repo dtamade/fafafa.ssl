@@ -53,3 +53,8 @@ git diff --check
 
 - `GetContext` 的 remaining live surface 被 freeze 成稳定 allowlist
 - 下一批可以更自信地决定是否进入 public deprecation wording 或切到下一条 mirror
+
+## Execution Result
+
+- PASS
+- `tests/scripts/test_isslconnectioninfo_getcontext_source_class_split_contract.sh` 已通过，说明 source/class split allowlist 已冻结到当前 shipped truth。

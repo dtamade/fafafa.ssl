@@ -54,3 +54,9 @@ git diff --check
 - 活跃文档不再把 `ISSLConnection.GetContext` 当推荐路径
 - `GetContext` 明确并入 `ISSLConnectionInfo` first guidance
 - 下一批可以直接进入 `GetContext` 的 source/class split feasibility 或 deprecation 路线，而不是继续补文档残面
+
+## Execution Result
+
+- PASS
+- `docs/reference/API_REFERENCE.md` now carries the exact `ISSLConnectionInfo`-first guidance phrase required by the focused contract.
+- This batch is now fully closed as a docs-only truth resync.

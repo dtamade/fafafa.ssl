@@ -52,3 +52,8 @@ git diff --check
 - ordinary integration/contract tests stop teaching direct core `GetSelectedALPNProtocol`
 - `GetSelectedALPNProtocol` remaining live surface shrinks toward backend-specific runtime / contract-only residuals
 - next batch can decide whether to freeze those residuals or discuss stronger client-owner wording
+
+## Execution Result
+
+- PASS
+- `tests/scripts/test_isslconnectioninfo_getselectedalpn_active_test_contract.sh` 已通过，说明 active tests 已优先切到 `ISSLConnectionInfo.GetSelectedALPNProtocol`。

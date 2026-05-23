@@ -73,3 +73,8 @@ git diff --check
 - 这批之后，`GetContext` 的第一条真正 public slimming slice 已经落地
 - 默认下一步不该再重复做这条 getter 的 wording/deprecation 清扫
 - 若继续沿 mirror 路线推进，应转去下一条 mirror 的 feasibility / slimming 选择
+
+## Execution Result
+
+- PASS
+- `tests/scripts/test_getcontext_compiler_deprecated_contract.sh` 已通过，说明编译期 deprecated 语义、文档 wording 与残余 mirror proof 已对齐。

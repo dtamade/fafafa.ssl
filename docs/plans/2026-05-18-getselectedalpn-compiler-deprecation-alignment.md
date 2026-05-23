@@ -84,3 +84,8 @@ git diff --check
 - 这批之后，`GetSelectedALPNProtocol` 的第一条真正 public slimming slice 已经落地
 - 默认下一步不该再重复做这条 getter 的 wording/deprecation 清扫
 - `ISSLConnectionInfo` 这 4 条 Stage-A mirrors 当前都已经完成 compiler-surface 收口；后续主线应从 mirror archaeology 切回 interface-design completeness / implementation-completeness 选择
+
+## Execution Result
+
+- PASS
+- `tests/scripts/test_getselectedalpn_compiler_deprecated_contract.sh` 已通过，说明 source / docs / residual runtime proofs 已对齐当前编译期 deprecated truth。

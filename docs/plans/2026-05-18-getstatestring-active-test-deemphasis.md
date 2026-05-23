@@ -52,3 +52,8 @@ git diff --check
 - ordinary generic/integration tests stop teaching direct core `GetStateString`
 - `GetStateString` remaining live surface shrinks toward backend-specific runtime / contract-only residuals
 - next batch can decide whether to classify those residuals or move to another mirror
+
+## Execution Result
+
+- PASS
+- `tests/scripts/test_isslconnectioninfo_getstatestring_active_test_contract.sh` 已通过，说明 active tests 已优先切到 `ISSLConnectionInfo.GetStateString`。

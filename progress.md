@@ -24,6 +24,27 @@
   - `findings.md`
 - Next:
   - move to the next unresolved high-value architecture batch only if a fresh drift appears; otherwise this `TSSLConfig` slice is already at current-truth closeout
+- Follow-up:
+  - verified `tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh` and closed the stale truth-resync record without source edits
+- Follow-up:
+  - verified `tests/scripts/test_isslconnection_control_owner_path_contract.sh` and closed the owner-path adoption record without source edits
+- Follow-up:
+  - verified `tests/scripts/test_isslconnection_text_owner_path_contract.sh` and closed the text owner-path adoption record without source edits
+- Follow-up:
+  - fixed the missing `ISSLConnectionInfo`-first guidance sentence in `docs/reference/API_REFERENCE.md`
+  - re-ran `tests/scripts/test_isslconnectioninfo_getcontext_active_guidance_contract.sh` and got PASS
+- Follow-up:
+  - verified `tests/scripts/test_getcontext_compiler_deprecated_contract.sh`
+  - verified `tests/scripts/test_isslconnectioninfo_getcontext_source_class_split_contract.sh`
+  - both passed and only needed plan closeout markers
+- Follow-up:
+  - verified `tests/scripts/test_getstatestring_compiler_deprecated_contract.sh`
+  - verified `tests/scripts/test_isslconnectioninfo_getstatestring_active_test_contract.sh`
+  - verified `tests/scripts/test_isslconnectioninfo_getstatestring_residual_classification_contract.sh`
+  - verified `tests/scripts/test_getselectedalpn_compiler_deprecated_contract.sh`
+  - verified `tests/scripts/test_isslconnectioninfo_getselectedalpn_active_test_contract.sh`
+  - verified `tests/scripts/test_isslconnectioninfo_getselectedalpn_residual_classification_contract.sh`
+  - all passed and only needed plan closeout markers
 
 ## 2026-05-23
 - Revalidated the already-shipped truth batches on current head:

@@ -100,3 +100,8 @@ git diff --check
 - `ISSLConnection`
   主线向“更小 core + 更清晰 owner path”再次前进一步
 
+## Execution Result
+
+- PASS
+- `tests/scripts/test_isslconnection_text_owner_path_contract.sh` 已通过，当前 shipped truth 已包含文本 owner-path 收口。
+- 这批同样不需要继续动 runtime 实现，只需把计划状态和工作记录收尾。

@@ -53,3 +53,8 @@ git diff --check
 
 - `GetSelectedALPNProtocol` 的 residual direct-core surface 被 freeze 成稳定 allowlist
 - 下一批可以决定是讨论更强 client-owner/deprecation wording，还是切到下一条 mirror
+
+## Execution Result
+
+- PASS
+- `tests/scripts/test_isslconnectioninfo_getselectedalpn_residual_classification_contract.sh` 已通过，说明 residual direct-core surface allowlist 已冻结到当前 shipped truth。

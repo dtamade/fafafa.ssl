@@ -8,6 +8,12 @@
 - `TSSLLibraryDefaults` adoption looks already completed in the plan docs, so the remaining value is likely in verifying the migration-target docs/contracts and checking for any small drift instead of inventing new structure.
 - Current contract sweep: migration targets, logging surface, scope buckets, option-bridge surface/default/precedence, `ServerName`, and active guidance are all passing; the only immediate snag was a missing timeout contract script name.
 - After checking the real timeout-related contracts, the current `TSSLConfig` slice is already at closeout truth; no source or docs edits were needed beyond keeping the session records current.
+- The `ISSLConnection` convenience-surface classification contract is also already aligned with shipped truth; the pass only needed a plan/records closeout, not code changes.
+- `ISSLConnectionControl` owner-path adoption is likewise already aligned with shipped truth; the contract passed and only the plan records needed closing.
+- `ISSLConnection` text owner-path adoption is also already aligned with shipped truth; the contract passed and only the plan records needed closing.
+- `GetContext` active guidance had one real doc drift; the one-line API reference note fix made the focused contract pass again.
+- `GetContext` compiler deprecation and source/class split contracts are also green; they only needed closeout markers, not code changes.
+- `GetStateString` and `GetSelectedALPNProtocol` residual contracts are also green; these are now just plan closeouts, not code changes.
 
 ## Conclusions
 - `ISSLConnection` 当前 shipped surface 可以稳定冻结成一张 41-method taxonomy：`17` core、`6` convenience mirrors、`18` compatibility-core mirrors。

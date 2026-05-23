@@ -77,3 +77,9 @@
 
 - 不要把 contract 修成“只认旧 builder-first 说法”，否则会把后续 owner-path 收口重新打回假红。
 - 不要把 scope 扩成 `ISSLConnection` 拆接口；这一批只是 workflow truth repair。
+
+## Execution Result
+
+- PASS
+- `tests/scripts/test_isslconnection_convenience_surface_classification_contract.sh` 已和当前 shipped truth 对齐。
+- 这一批不需要改 `src/` 代码，只需要把 focused contract 的旧措辞同步到现行 owner-path truth。

@@ -76,3 +76,8 @@ git diff --check
 - 这批之后，`GetStateString` 的第一条真正 public slimming slice 已经落地
 - 默认下一步不该再重复做这条 getter 的 wording/deprecation 清扫
 - 若继续沿 mirror 路线推进，应转去下一条 mirror 的 feasibility / slimming 选择
+
+## Execution Result
+
+- PASS
+- `tests/scripts/test_getstatestring_compiler_deprecated_contract.sh` 已通过，说明 source / docs / residual runtime proofs 已对齐当前编译期 deprecated truth。

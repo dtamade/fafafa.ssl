@@ -110,3 +110,9 @@ Focused contract 内部会验证：
 - 后续 residual 更清晰地收敛到：
   - `ReadString` / `WriteString`
   - 以及其他仍留在 core 的 convenience/history baggage
+
+## Execution Result
+
+- PASS
+- `tests/scripts/test_isslconnection_control_owner_path_contract.sh` 已通过，说明 `ISSLConnectionControl` owner-path 当前已对齐 shipped truth。
+- 这批同样不需要新增 runtime changes，只需要把计划状态和工作记录收口。
