@@ -77,6 +77,7 @@ SUMMARY_FILE="$PROJECT_ROOT/$REPORTS_DIR/freepascal_tls13_completeness_${RUN_ID}
 TEST_NAMES=(
   "test_tls13_posthandshake"
   "test_tls13_resumption"
+  "test_rfc8448_psk_binder"
   "test_tls13_clienthello_parser"
   "test_tls13_servercertverify"
   "test_freepascal_revocation_fast_contracts"
@@ -97,6 +98,7 @@ TEST_NAMES=(
 TEST_FILES=(
   "tests/test_tls13_posthandshake.pas"
   "tests/test_tls13_resumption.pas"
+  "tests/test_rfc8448_psk_binder.pas"
   "tests/test_tls13_clienthello_parser.pas"
   "tests/test_tls13_servercertverify.pas"
   "tests/test_freepascal_revocation_fast_contracts.pas"

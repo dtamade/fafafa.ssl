@@ -26,6 +26,7 @@ fi
 for expected in \
   "tests/test_tls13_posthandshake.pas" \
   "tests/test_tls13_resumption.pas" \
+  "tests/test_rfc8448_psk_binder.pas" \
   "tests/test_tls13_clienthello_parser.pas" \
   "tests/test_tls13_servercertverify.pas" \
   "tests/test_freepascal_revocation_fast_contracts.pas" \
@@ -176,8 +177,8 @@ if [[ ! -f "$marker_file" ]]; then
 fi
 
 marker_lines="$(wc -l < "$marker_file" | tr -d ' ')"
-if [[ "$marker_lines" -ne 17 ]]; then
-  echo "[FAIL] gate should invoke fake fpc 17 times (got: $marker_lines)"
+if [[ "$marker_lines" -ne 18 ]]; then
+  echo "[FAIL] gate should invoke fake fpc 18 times (got: $marker_lines)"
   cat "$marker_file"
   exit 1
 fi
@@ -190,6 +191,12 @@ fi
 
 if ! grep -Fq -- "| \`test_freepascal_client_certificateverify_runtime\` | PASS |" "$summary_file"; then
   echo "[FAIL] summary report must record the CertificateVerify runtime PASS row when fake fpc executions succeed"
+  cat "$summary_file"
+  exit 1
+fi
+
+if ! grep -Fq -- "| \`test_rfc8448_psk_binder\` | PASS |" "$summary_file"; then
+  echo "[FAIL] summary report must record the RFC 8448 PSK binder PASS row when fake fpc executions succeed"
   cat "$summary_file"
   exit 1
 fi
