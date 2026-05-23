@@ -1536,7 +1536,10 @@ begin
       AError
     ) then
     begin
-      AError := '';
+      if Trim(AError) = '' then
+        AError := 'Failed to inspect embedded signed_certificate_timestamp';
+      ClearPeerCertificateCache;
+      Exit;
     end;
 
     if LEmbeddedSCTFound then
