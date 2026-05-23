@@ -207,6 +207,7 @@ var
   LLib: ISSLLibrary;
   LContext: ISSLContext;
   LConn: ISSLConnection;
+  LDiag: ISSLDiagnostics;
   LHealthStatus: TSSLHealthStatus;
   LPerfMetrics: TSSLPerformanceMetrics;
   LDiagInfo: TSSLDiagnosticInfo;
@@ -223,31 +224,27 @@ begin
   // 创建连接（使用无效 socket 仅用于测试接口）
   LConn := LContext.CreateConnection(INVALID_SOCKET);
 
-  // INTENTIONAL_CORE_SURFACE: keep this direct core diagnostics path as a
-  // WinSSL runtime residual proof while ordinary docs/tests move to
-  // ISSLDiagnostics.
-  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
+  Assert(Supports(LConn, ISSLDiagnostics, LDiag), 'WinSSL connection exposes ISSLDiagnostics');
   // 测试健康状态接口
-  LHealthStatus := LConn.GetHealthStatus;
+  LHealthStatus := LDiag.GetHealthStatus;
   Assert(not LHealthStatus.IsConnected, '未连接状态正确');
   Assert(not LHealthStatus.HandshakeComplete, '握手未完成状态正确');
   Assert(LHealthStatus.BytesSent = 0, '初始发送字节数为 0');
   Assert(LHealthStatus.BytesReceived = 0, '初始接收字节数为 0');
 
   // 测试健康检查接口
-  Assert(not LConn.IsHealthy, '未连接时健康检查返回 False');
+  Assert(not LDiag.IsHealthy, '未连接时健康检查返回 False');
 
   // 测试性能指标接口
-  LPerfMetrics := LConn.GetPerformanceMetrics;
+  LPerfMetrics := LDiag.GetPerformanceMetrics;
   Assert(LPerfMetrics.HandshakeTime = 0, '初始握手时间为 0');
   Assert(LPerfMetrics.TotalBytesTransferred = 0, '初始传输字节数为 0');
   Assert(not LPerfMetrics.SessionReused, '初始 Session 未复用');
 
   // 测试诊断信息接口
-  LDiagInfo := LConn.GetDiagnosticInfo;
+  LDiagInfo := LDiag.GetDiagnosticInfo;
   Assert(not LDiagInfo.HealthStatus.IsConnected, '诊断信息中连接状态正确');
   Assert(Length(LDiagInfo.ErrorHistory) = 0, '初始错误历史为空');
-  {$POP}
 
   LLib.Finalize;
   WriteLn;

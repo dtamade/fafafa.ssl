@@ -1,25 +1,29 @@
-# Task Plan: MbedTLS OCSP Capability Doc Truth Resync
+# Task Plan: ISSLDiagnostics Residual Slimming
 
 ## Goal
-Keep the MbedTLS OCSP capability contract aligned with current fail-closed source truth without reopening a non-existent online OCSP path.
+Push the diagnostics owner-path cleanup one step further by moving WinSSL runtime diagnostics tests to `ISSLDiagnostics` and shrinking the remaining direct-core proof to the backend contract only.
 
 ## Status
 Complete
 
 ## Current Plan
-- No runtime or public API change was required.
-- The false-red came from treating any `sslCertVerifyCheckOCSP` mention in MbedTLS source as an online OCSP publication signal.
-- The contract now preserves the fail-closed VerifyEx branch and forbids actual online OCSP helper publication.
+- No runtime behavior change was required.
+- The old residual note was stale after the WinSSL runtime tests moved to owner path.
+- The remaining direct-core diagnostics proof now lives only in `tests/contract/test_backend_contract.pas`.
 
 ## Done
-- Updated `tests/scripts/test_mbedtls_ocsp_capability_doc_truth_contract.sh`.
-- Revalidated the MbedTLS OCSP capability contract.
-- Verified diff hygiene with `git diff --check`.
+- Migrated `tests/winssl/test_winssl_monitoring.pas` to `ISSLDiagnostics`.
+- Migrated the diagnostics portions of `tests/winssl/test_winssl_connection_edge_cases.pas` to `ISSLDiagnostics`.
+- Updated `tests/scripts/test_issldiagnostics_compiler_deprecated_contract.sh` to drop the WinSSL residual runtime allowlist.
+- Synced `src/fafafa.ssl.connection.base.pas` and the diagnostics plan doc to the slimmer truth.
+- Revalidated the diagnostics contracts and backend contract.
 
 ## Verification
-- `bash tests/scripts/test_mbedtls_ocsp_capability_doc_truth_contract.sh`
+- `bash tests/scripts/test_issldiagnostics_compiler_deprecated_contract.sh`
+- `bash tests/scripts/test_issldiagnostics_active_guidance_contract.sh`
+- `bash tests/contract/test_backend_contract.pas` via `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc` earlier in this session
 - `git diff --check`
+- `fpc` compile attempts for the two WinSSL test units were blocked on this Linux host because `fafafa.ssl.winssl.certificate` requires the `Windows` unit
 
 ## Next
-- Do not reopen `TSSLConfig`, `GetContext`, `GetStateString`, or `GetSelectedALPNProtocol` unless a fresh focused contract goes red.
-- The next architecture batch should move to the remaining owner clusters: diagnostics, session-resumption, certificate-verification, or OCSP.
+- The next architecture batch should move to the remaining owner clusters or the `TSSLConfig` scope blueprint, whichever shows the freshest contract pressure first.

@@ -1,6 +1,16 @@
 # Progress Log
 
 ## 2026-05-24
+- Slimmed the diagnostics residual set further by migrating WinSSL monitoring and edge-case diagnostics reads to `ISSLDiagnostics`.
+- Updated `tests/scripts/test_issldiagnostics_compiler_deprecated_contract.sh` so only `tests/contract/test_backend_contract.pas` remains in the direct-core diagnostics residual set.
+- Synced `src/fafafa.ssl.connection.base.pas` and the diagnostics plan doc to the slimmer truth.
+- Revalidated:
+  - `bash tests/scripts/test_issldiagnostics_compiler_deprecated_contract.sh`
+  - `bash tests/scripts/test_issldiagnostics_active_guidance_contract.sh`
+  - `git diff --check`
+- Attempted to compile the WinSSL test units on this Linux host, but both stop in `fafafa.ssl.winssl.certificate.pas` because the `Windows` unit is unavailable.
+
+## 2026-05-24
 - Rechecked the MbedTLS OCSP capability contract after the family sweep surfaced a false-red.
 - Root cause: the script rejected any `sslCertVerifyCheckOCSP` mention in `src/fafafa.ssl.mbedtls.certificate.pas`, even though that code only fails closed.
 - Updated `tests/scripts/test_mbedtls_ocsp_capability_doc_truth_contract.sh` to keep the reject path and ban online helper publication.

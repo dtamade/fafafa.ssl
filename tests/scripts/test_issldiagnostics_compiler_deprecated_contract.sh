@@ -92,7 +92,7 @@ done
 declare -a required_conn_base_patterns=(
   '`GetHealthStatus` / `IsHealthy` / `GetDiagnosticInfo` / `GetPerformanceMetrics`'
   'ordinary docs/tests 已转向 `ISSLDiagnostics` owner path'
-  'direct core diagnostics 当前只剩 contract mirror proof 和 WinSSL runtime residuals'
+  'direct core diagnostics 当前只剩 contract mirror proof'
 )
 
 for pattern in "${required_conn_base_patterns[@]}"; do
@@ -146,22 +146,13 @@ compare_file_list "diagnostics direct-core residual file set" \
   "$residual_hits" \
   "$(cat <<'EOF'
 tests/contract/test_backend_contract.pas
-tests/winssl/test_winssl_connection_edge_cases.pas
-tests/winssl/test_winssl_monitoring.pas
 EOF
 )"
 
 for file in \
-  "tests/contract/test_backend_contract.pas" \
-  "tests/winssl/test_winssl_connection_edge_cases.pas" \
-  "tests/winssl/test_winssl_monitoring.pas"; do
+  "tests/contract/test_backend_contract.pas"; do
   require_fixed "$file" '{$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}' \
     "missing diagnostics deprecation warning quarantine in $file"
 done
-
-if rg -n --quiet '\bAConn\.GetPerformanceMetrics\b' "tests/winssl/test_winssl_session_resumption.pas"; then
-  echo "[FAIL] session resumption test still uses direct core GetPerformanceMetrics"
-  exit 1
-fi
 
 echo "[PASS] ISSLDiagnostics compiler deprecation is aligned across source, docs, and residual mirror proofs"

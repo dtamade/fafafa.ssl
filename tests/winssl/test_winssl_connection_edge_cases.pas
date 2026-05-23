@@ -446,6 +446,7 @@ procedure TestErrorRecovery;
 var
   LContext: ISSLContext;
   LConnection: ISSLConnection;
+  LDiag: ISSLDiagnostics;
   LConfig: TSSLConfig;
   LSocket: THandle;
   LHealthStatus: TSSLHealthStatus;
@@ -464,11 +465,10 @@ begin
 
     try
       LConnection := TWinSSLConnection.Create(LContext, LSocket);
+      Assert(Supports(LConnection, ISSLDiagnostics, LDiag), 'WinSSL connection exposes ISSLDiagnostics');
 
       // 获取健康状态
-      {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-      LHealthStatus := LConnection.GetHealthStatus;
-      {$POP}
+      LHealthStatus := LDiag.GetHealthStatus;
       Assert(not LHealthStatus.IsConnected, '健康状态：未连接');
       Assert(not LHealthStatus.HandshakeComplete, '健康状态：握手未完成');
       Assert(LHealthStatus.LastError = sslErrNone, '健康状态：无错误');
@@ -480,9 +480,7 @@ begin
         on E: Exception do
         begin
           // 再次获取健康状态
-          {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-          LHealthStatus := LConnection.GetHealthStatus;
-          {$POP}
+          LHealthStatus := LDiag.GetHealthStatus;
           Assert(True, '错误后可以获取健康状态');
         end;
       end;
@@ -610,6 +608,7 @@ procedure TestPerformanceMetrics;
 var
   LContext: ISSLContext;
   LConnection: ISSLConnection;
+  LDiag: ISSLDiagnostics;
   LConfig: TSSLConfig;
   LSocket: THandle;
   LMetrics: TSSLPerformanceMetrics;
@@ -629,25 +628,21 @@ begin
 
     try
       LConnection := TWinSSLConnection.Create(LContext, LSocket);
+      Assert(Supports(LConnection, ISSLDiagnostics, LDiag), 'WinSSL connection exposes ISSLDiagnostics');
 
-      // INTENTIONAL_CORE_SURFACE: keep this direct core diagnostics path as a
-      // WinSSL runtime residual proof while ordinary docs/tests move to
-      // ISSLDiagnostics.
-      {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
       // 获取性能指标
-      LMetrics := LConnection.GetPerformanceMetrics;
+      LMetrics := LDiag.GetPerformanceMetrics;
       Assert(LMetrics.HandshakeTime = 0, '未连接时握手时间为 0');
       Assert(LMetrics.TotalBytesTransferred = 0, '未连接时传输字节数为 0');
       Assert(not LMetrics.SessionReused, '未连接时会话未复用');
 
       // 获取诊断信息
-      LDiagInfo := LConnection.GetDiagnosticInfo;
+      LDiagInfo := LDiag.GetDiagnosticInfo;
       Assert(not LDiagInfo.HealthStatus.IsConnected, '诊断信息：未连接');
       Assert(Length(LDiagInfo.ErrorHistory) >= 0, '诊断信息：错误历史可访问');
 
       // 测试健康检查
-      Assert(not LConnection.IsHealthy, '未连接时健康检查返回 False');
-      {$POP}
+      Assert(not LDiag.IsHealthy, '未连接时健康检查返回 False');
 
     finally
       LConnection := nil;

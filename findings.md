@@ -1,5 +1,11 @@
 # Findings
 
+# 2026-05-24 ISSLDiagnostics Residual Slimming
+- `tests/winssl/test_winssl_monitoring.pas` and the diagnostics blocks in `tests/winssl/test_winssl_connection_edge_cases.pas` now use `ISSLDiagnostics` owner path instead of direct core getters.
+- `tests/scripts/test_issldiagnostics_compiler_deprecated_contract.sh` now treats `tests/contract/test_backend_contract.pas` as the only remaining direct-core diagnostics residual.
+- `src/fafafa.ssl.connection.base.pas` now describes diagnostics as contract-mirror-only instead of carrying a stale WinSSL residual note.
+- `fpc` compile attempts for the WinSSL test units on this Linux host stop in `fafafa.ssl.winssl.certificate.pas` because the `Windows` unit is unavailable; the diagnostics contract and text checks still passed.
+
 # 2026-05-24 MbedTLS OCSP Capability Doc Truth Resync
 - `tests/scripts/test_mbedtls_ocsp_capability_doc_truth_contract.sh` 之前的 false-red 来自过宽的负向检查：它把任何 `sslCertVerifyCheckOCSP` 词面都当成在线 OCSP 能力发布。
 - `src/fafafa.ssl.mbedtls.certificate.pas` 里的实际行为是 fail-closed：遇到 OCSP / CRL flags 时直接返回 “Certificate revocation verification is unavailable”。

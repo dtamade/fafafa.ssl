@@ -76,7 +76,7 @@ type
  *   当前保留为 v1.x convenience mirror / fallback path。
  * - `GetHealthStatus` / `IsHealthy` / `GetDiagnosticInfo` / `GetPerformanceMetrics`
  *   当前共享同一组 diagnostics 基类实现；ordinary docs/tests 已转向 `ISSLDiagnostics` owner path，
- *   direct core diagnostics 当前只剩 contract mirror proof 和 WinSSL runtime residuals。
+ *   direct core diagnostics 当前只剩 contract mirror proof。
  * - `GetSession` / `SetSession` / `IsSessionReused` 当前共享同一组会话复用基类实现；
  *   ordinary docs/tests 已转向 `ISSLSessionResumption` owner path，direct core session-resumption 当前只剩 contract mirror proof 和 backend-specific semantic truth proofs。
  * - `GetOCSPStaplingEnabled` / `GetOCSPResponse` / `IsOCSPResponseVerified` /

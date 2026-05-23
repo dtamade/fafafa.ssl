@@ -6,7 +6,7 @@
 `GetPerformanceMetrics` 从“owner path 已明确、ordinary docs/tests 已转向
 `ISSLDiagnostics`”继续收成真正的 compiler-level compatibility-only surface：
 源码声明进入 `deprecated`，参考文档同步记录，cross-backend contract 保留一条
-mirror proof，WinSSL residual runtime proof 做局部 warning quarantine。
+mirror proof，WinSSL 专项测试继续走 owner path。
 
 ## Scope
 
@@ -19,7 +19,6 @@ mirror proof，WinSSL residual runtime proof 做局部 warning quarantine。
 - `tests/contract/test_backend_contract.pas`
 - `tests/winssl/test_winssl_connection_edge_cases.pas`
 - `tests/winssl/test_winssl_monitoring.pas`
-- `tests/winssl/test_winssl_session_resumption.pas`
 - `tests/scripts/test_issldiagnostics_compiler_deprecated_contract.sh`
 - `task_plan.md`
 - `findings.md`
@@ -49,15 +48,14 @@ compiler-surface truth。
 1. 在 `src/fafafa.ssl.base.pas` 中把四个 diagnostics core getter 标成
    compiler `deprecated`，统一导向 `ISSLDiagnostics` owner path。
 2. 在 `src/fafafa.ssl.connection.base.pas` 中补 diagnostics residual note，
-   明确 direct core 只剩 contract mirror proof 和 WinSSL runtime residuals。
+   明确 direct core 只剩 contract mirror proof。
 3. 在 `API_REFERENCE.md` / `INTERFACE_DESIGN_V2.md` 中把 diagnostics core
    getter 明确记录为编译期 deprecated compatibility mirror。
 4. 在 `tests/contract/test_backend_contract.pas` 中新增 direct-core diagnostics
    mirror proof，并做局部 warning quarantine。
-5. 把 `tests/winssl/test_winssl_session_resumption.pas` 切到
-   `ISSLDiagnostics` owner path；保留 `test_winssl_connection_edge_cases.pas` /
-   `test_winssl_monitoring.pas` 作为 WinSSL residual direct-core runtime proof，
-   同时补 local warning quarantine。
+5. 把 `tests/winssl/test_winssl_connection_edge_cases.pas` /
+   `tests/winssl/test_winssl_monitoring.pas` 切到 `ISSLDiagnostics` owner path，
+   让 direct core diagnostics 只保留 backend contract mirror proof。
 6. 新增 focused shell contract，锁住 source/doc/mirror-proof/residual-allowlist
    truth。
 
@@ -81,8 +79,17 @@ git diff --check
 - diagnostics core getter 在 source/doc/compiler 三层都被明确为
   compatibility-only mirror
 - active docs/tests 继续优先走 `ISSLDiagnostics`
-- direct core diagnostics 只保留：
-  - cross-backend contract mirror proof
-  - WinSSL residual runtime proof
+- direct core diagnostics 只保留 cross-backend contract mirror proof
 - 这条 diagnostics route 后续不再反复停留在“owner path 已有但 core 还像主入口”
   的中间态
+
+## Execution Result
+
+- PASS.
+- Revalidated `tests/scripts/test_issldiagnostics_compiler_deprecated_contract.sh`
+  and `tests/scripts/test_issldiagnostics_active_guidance_contract.sh`.
+- Moved WinSSL monitoring / edge-case diagnostics checks to `ISSLDiagnostics`
+  owner path.
+- Rebuilt and ran `tests/contract/test_backend_contract.pas` with the absolute FPC path.
+- Linux-host compile attempts for the WinSSL test units stop at `fafafa.ssl.winssl.certificate.pas`
+  because the `Windows` unit is unavailable here.
