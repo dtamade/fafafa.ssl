@@ -117,9 +117,11 @@ fi
 for expected in \
   "LCtx.SetALPNProtocols('h2,http/1.1');" \
   "TOfflineTLS13ServerStream.CreateInitial(" \
-  "AssertTrue(LConn.GetSelectedALPNProtocol = 'http/1.1'" \
+  "function CaptureSelectedALPN(const ALabel: string; AConn: ISSLConnection): string;" \
+  "Result := LConnInfoAccess.GetSelectedALPNProtocol;" \
+  "AssertTrue(CaptureSelectedALPN('ALPN handshake', LConn) = 'http/1.1'" \
   "AssertTrue(LInfo.ALPNProtocol = 'http/1.1'" \
-  "AssertTrue(LConnNoOverlap.GetSelectedALPNProtocol = ''" \
+  "AssertTrue(CaptureSelectedALPN('ALPN no-overlap handshake', LConnNoOverlap) = ''" \
   "AssertTrue(LInfoNoOverlap.ALPNProtocol = ''"
 do
   if ! grep -Fq -- "$expected" "tests/test_freepascal_client_session_resumption.pas"; then
@@ -137,7 +139,9 @@ for expected in \
   "LCtx.SetALPNProtocols('h2,http/1.1');" \
   "RunServerAcceptSkeletonCase('http/1.1', 'http/1.1');" \
   "RunServerAcceptSkeletonCase('spdy/3', '');" \
-  "AssertTrue(LConn.GetSelectedALPNProtocol = AExpectedNegotiatedALPN" \
+  "function CaptureSelectedALPN(AConn: ISSLConnection): string;" \
+  "Result := LConnInfoAccess.GetSelectedALPNProtocol;" \
+  "AssertTrue(CaptureSelectedALPN(LConn) = AExpectedNegotiatedALPN" \
   "AssertTrue(LInfo.ALPNProtocol = AExpectedNegotiatedALPN"
 do
   if ! grep -Fq -- "$expected" "tests/test_freepascal_server_accept_skeleton.pas"; then

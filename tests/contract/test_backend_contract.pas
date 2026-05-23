@@ -1840,6 +1840,7 @@ var
   LProbeStream: TMemoryStream;
   LCoreInfo: TSSLConnectionInfo;
   LCoreALPN: string;
+  LCoreStateString: string;
   LOptionalInfo: TSSLConnectionInfo;
   LOptionalCtx: ISSLContext;
   LCoreCtx: ISSLContext;
@@ -1931,19 +1932,23 @@ begin
           {$POP}
           if LConnInfoAccess.GetSelectedALPNProtocol <> LCoreALPN then
           begin
-            WriteLn('  [FAIL] Optional interface ALPN getter drifted from core getter');
+            WriteLn('  [FAIL] Core GetSelectedALPNProtocol mirror drifted from optional owner');
             AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
-              'ISSLConnectionInfo.GetSelectedALPNProtocol does not match ISSLConnection.GetSelectedALPNProtocol');
+              'ISSLConnection.GetSelectedALPNProtocol does not mirror ISSLConnectionInfo.GetSelectedALPNProtocol');
           end
           else
           begin
+          // INTENTIONAL_CORE_SURFACE: keep this direct core GetStateString read as
+          // the single state-string mirror proof while the public core declaration
+          // is compiler-deprecated in favor of ISSLConnectionInfo.GetStateString.
           {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-          if LConnInfoAccess.GetStateString <> LConn.GetStateString then
+          LCoreStateString := LConn.GetStateString;
           {$POP}
+          if LConnInfoAccess.GetStateString <> LCoreStateString then
           begin
-            WriteLn('  [FAIL] Optional interface state string drifted from core getter');
+            WriteLn('  [FAIL] Core GetStateString mirror drifted from optional owner');
             AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
-              'ISSLConnectionInfo.GetStateString does not match ISSLConnection.GetStateString');
+              'ISSLConnection.GetStateString does not mirror ISSLConnectionInfo.GetStateString');
           end
           else
           begin

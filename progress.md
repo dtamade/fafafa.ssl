@@ -71,3 +71,22 @@
   - `bash tests/scripts/test_architecture_current_route_truth_contract.sh`
   - `bash tests/scripts/test_architecture_current_public_entrypoint_truth_contract.sh`
   - `git diff --check`
+- Completed the next `ISSLConnectionInfo` family batch on current head:
+  - added `tests/scripts/test_isslconnectioninfo_alpn_statestring_contract_owner_contract.sh`
+  - flipped `tests/contract/test_backend_contract.pas` ALPN / state-string mirror proof wording to owner-first semantics
+  - while verifying, caught two FreePascal TLS1.3 runtime proofs that had reintroduced direct core `GetSelectedALPNProtocol`
+  - migrated those proofs back to `ISSLConnectionInfo.GetSelectedALPNProtocol`:
+    - `tests/test_freepascal_client_session_resumption.pas`
+    - `tests/test_freepascal_server_accept_skeleton.pas`
+  - synced `tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh` to the owner-path proof shape
+- Focused verification for the owner-primacy/alpn-residual closeout:
+  - `bash tests/scripts/test_isslconnectioninfo_alpn_statestring_contract_owner_contract.sh`
+  - `bash tests/scripts/test_isslconnectioninfo_getconnectioninfo_contract_owner_contract.sh`
+  - `bash tests/scripts/test_isslconnectioninfo_getcontext_contract_owner_contract.sh`
+  - `bash tests/scripts/test_isslconnectioninfo_getselectedalpn_residual_classification_contract.sh`
+  - `bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/test_fp_alpn_owner/units -FEtmp/test_fp_alpn_owner/bin tests/test_freepascal_client_session_resumption.pas`
+  - `tmp/test_fp_alpn_owner/bin/test_freepascal_client_session_resumption`
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/test_fp_alpn_owner_server/units -FEtmp/test_fp_alpn_owner_server/bin tests/test_freepascal_server_accept_skeleton.pas`
+  - `tmp/test_fp_alpn_owner_server/bin/test_freepascal_server_accept_skeleton`
+  - `git diff --check`

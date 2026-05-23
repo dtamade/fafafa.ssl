@@ -75,6 +75,15 @@ begin
   Result := LConnInfoAccess.GetConnectionInfo;
 end;
 
+function CaptureSelectedALPN(const ALabel: string; AConn: ISSLConnection): string;
+var
+  LConnInfoAccess: ISSLConnectionInfo;
+begin
+  AssertTrue(Supports(AConn, ISSLConnectionInfo, LConnInfoAccess),
+    ALabel + ' connection should expose ISSLConnectionInfo');
+  Result := LConnInfoAccess.GetSelectedALPNProtocol;
+end;
+
 function BytesEqual(const ALeft, ARight: TBytes): Boolean;
 var
   I: Integer;
@@ -849,7 +858,7 @@ begin
     (LConn as ISSLClientConnection).SetServerName('example.com');
 
     AssertTrue(LConn.Connect, 'ALPN client handshake should succeed');
-    AssertTrue(LConn.GetSelectedALPNProtocol = 'http/1.1',
+    AssertTrue(CaptureSelectedALPN('ALPN handshake', LConn) = 'http/1.1',
       'Client connection should record the negotiated ALPN');
     LInfo := CaptureConnectionInfo('ALPN handshake', LConn);
     AssertTrue(LInfo.ALPNProtocol = 'http/1.1',
@@ -876,7 +885,7 @@ begin
     (LConnNoOverlap as ISSLClientConnection).SetServerName('example.com');
 
     AssertTrue(LConnNoOverlap.Connect, 'ALPN no-overlap handshake should still succeed');
-    AssertTrue(LConnNoOverlap.GetSelectedALPNProtocol = '',
+    AssertTrue(CaptureSelectedALPN('ALPN no-overlap handshake', LConnNoOverlap) = '',
       'Client connection should leave ALPN empty when the server does not select one');
     LInfoNoOverlap := CaptureConnectionInfo('ALPN no-overlap handshake', LConnNoOverlap);
     AssertTrue(LInfoNoOverlap.ALPNProtocol = '',

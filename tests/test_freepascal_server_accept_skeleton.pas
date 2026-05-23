@@ -46,6 +46,15 @@ begin
   Result := LConnInfoAccess.GetConnectionInfo;
 end;
 
+function CaptureSelectedALPN(AConn: ISSLConnection): string;
+var
+  LConnInfoAccess: ISSLConnectionInfo;
+begin
+  AssertTrue(Supports(AConn, ISSLConnectionInfo, LConnInfoAccess),
+    'Server skeleton connection should expose ISSLConnectionInfo');
+  Result := LConnInfoAccess.GetSelectedALPNProtocol;
+end;
+
 function BuildClientHelloRecordWithSingleCipher(
   const AServerName: string;
   const AALPN: string;
@@ -153,7 +162,7 @@ begin
       'Server skeleton should at least negotiate TLS 1.3 before stopping');
     AssertTrue(LConn.GetCipherName = 'TLS_AES_128_GCM_SHA256',
       'Server skeleton should select AES-128-GCM when client offers it');
-    AssertTrue(LConn.GetSelectedALPNProtocol = AExpectedNegotiatedALPN,
+    AssertTrue(CaptureSelectedALPN(LConn) = AExpectedNegotiatedALPN,
       'Server skeleton should mirror the negotiated ALPN');
     LInfo := CaptureConnectionInfo(LConn);
     AssertEqualsWord(TLS13_CIPHER_AES_128_GCM_SHA256, LInfo.CipherSuiteId,
