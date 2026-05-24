@@ -248,3 +248,16 @@
   - `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_freepascal_ct_sct_owner/units -FEtmp/test_freepascal_ct_sct_owner/bin tests/test_freepascal_client_ct_sct_surface.pas`
   - `tmp/test_freepascal_ct_sct_owner/bin/test_freepascal_client_ct_sct_surface`
 - Result: root-test verify-result residual set is now 7 files.
+
+## 2026-05-24 ISSLCertificateVerification OCSP Stapling Owner Path
+- Migrated `tests/test_freepascal_client_ocsp_stapling_runtime.pas` required OCSP stapling fail-closed text checks to `ISSLCertificateVerification.GetVerifyResultString` via local helper `GetCertificateVerifyResultString`.
+- Removed that file from the root residual, broad residual, and compiler-deprecated quarantine lists.
+- Focused verification passed:
+  - `bash tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+  - `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  - `bash tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
+  - `bash tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+- Pascal compile/run passed:
+  - `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_freepascal_ocsp_stapling_owner/units -FEtmp/test_freepascal_ocsp_stapling_owner/bin tests/test_freepascal_client_ocsp_stapling_runtime.pas`
+  - `tmp/test_freepascal_ocsp_stapling_owner/bin/test_freepascal_client_ocsp_stapling_runtime`
+- Result: root-test verify-result residual set is now 6 files.

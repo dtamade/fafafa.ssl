@@ -1,5 +1,10 @@
 # Findings
 
+# 2026-05-24 ISSLCertificateVerification OCSP Stapling Owner Path
+- `tests/test_freepascal_client_ocsp_stapling_runtime.pas` 的 direct verify-result usage 都是 required OCSP stapling fail-closed 文本检查，不是 core mirror 等价 proof。
+- 新增本地 helper `GetCertificateVerifyResultString`，通过 `ISSLCertificateVerification.GetVerifyResultString` 读取失败文本，并移除该文件的 deprecated-warning quarantine。
+- 目标 OCSP stapling 测试编译运行通过；编译输出仍有该文件既有的 6 个 managed result initialization warning。root-test direct-core verify-result residual set 从 7 个文件缩到 6 个文件。
+
 # 2026-05-24 ISSLCertificateVerification CT/SCT Owner Path
 - `tests/test_freepascal_client_ct_sct_surface.pas` 的 verify-result direct core usage 都是 CT/SCT fail-closed 文本检查，不是 core mirror 等价 proof。
 - 新增本地 helper `GetCertificateVerifyResultString`，通过 `ISSLCertificateVerification.GetVerifyResultString` 读取失败文本，避免在多个断言处重复 `Supports` 代码。

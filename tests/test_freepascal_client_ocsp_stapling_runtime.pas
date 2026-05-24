@@ -30,12 +30,6 @@ type
     PrivateKeyBlob: TBytes;
   end;
 
-// INTENTIONAL_VERIFY_RESULT_CORE_SURFACE: this root-test runtime file
-// intentionally keeps direct core GetVerifyResult/GetVerifyResultString
-// coverage as fail-closed/backend proof. Generic ISSLCertificateVerification
-// owner-path guidance is frozen elsewhere.
-{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-
 procedure Fail(const AMessage: string);
 begin
   WriteLn('FAIL: ', AMessage);
@@ -69,6 +63,15 @@ end;
 function ContainsTextInsensitive(const AValue, ASubText: string): Boolean;
 begin
   Result := Pos(LowerCase(ASubText), LowerCase(AValue)) > 0;
+end;
+
+function GetCertificateVerifyResultString(const AConn: ISSLConnection): string;
+var
+  LCertVerify: ISSLCertificateVerification;
+begin
+  AssertTrue(Supports(AConn, ISSLCertificateVerification, LCertVerify),
+    'Connection should expose certificate verification interface');
+  Result := LCertVerify.GetVerifyResultString;
 end;
 
 function HashTranscriptForSuite(ACipherSuite: Word; const ATranscriptData: TBytes): TBytes;
@@ -830,8 +833,8 @@ begin
     AssertTrue(LStream.ObservedStatusRequest,
       'Required stapling path should still request status_request');
     AssertTrue(
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'ocsp') or
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'stapling'),
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'ocsp') or
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'stapling'),
       'Required stapling failure should mention OCSP/stapling'
     );
   finally
@@ -861,8 +864,8 @@ begin
     AssertTrue(LStream.ObservedStatusRequest,
       'Required stapling path should request status_request before failure');
     AssertTrue(
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'ocsp') or
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'stapling'),
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'ocsp') or
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'stapling'),
       'Unaccepted stapled response failure should mention OCSP/stapling'
     );
   finally
@@ -938,10 +941,10 @@ begin
     AssertTrue(LStream.ObservedStatusRequest,
       'Required good-status stapled-response path should request status_request before failure');
     AssertTrue(
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'ocsp') or
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'stapling') or
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'signature') or
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'verification'),
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'ocsp') or
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'stapling') or
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'signature') or
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'verification'),
       'Cryptographic stapling failure should mention OCSP/stapling/signature/verification'
     );
   finally
@@ -1015,9 +1018,9 @@ begin
     AssertTrue(LStream.ObservedStatusRequest,
       'Required unknown-status stapled-response path should request status_request before failure');
     AssertTrue(
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'ocsp') or
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'stapling') or
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'unknown'),
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'ocsp') or
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'stapling') or
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'unknown'),
       'Unknown cert-status failure should mention OCSP/stapling/unknown'
     );
   finally

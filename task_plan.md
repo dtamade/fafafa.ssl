@@ -22,8 +22,9 @@ Complete
 
 ## This Batch
 
-- Migrate `tests/test_freepascal_client_ct_sct_surface.pas` CT/SCT
-  fail-closed text checks from direct `ISSLConnection.GetVerifyResultString` to
+- Migrate `tests/test_freepascal_client_ocsp_stapling_runtime.pas` required
+  OCSP stapling fail-closed text checks from direct
+  `ISSLConnection.GetVerifyResultString` to
   `ISSLCertificateVerification.GetVerifyResultString`.
 - Remove the file from the root residual allowlist and compiler-deprecated
   quarantine list.
@@ -35,14 +36,14 @@ Complete
 - `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
 - `bash tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
 - `bash tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
-- `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_freepascal_ct_sct_owner/units -FEtmp/test_freepascal_ct_sct_owner/bin tests/test_freepascal_client_ct_sct_surface.pas`
-- `tmp/test_freepascal_ct_sct_owner/bin/test_freepascal_client_ct_sct_surface`
+- `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_freepascal_ocsp_stapling_owner/units -FEtmp/test_freepascal_ocsp_stapling_owner/bin tests/test_freepascal_client_ocsp_stapling_runtime.pas`
+- `tmp/test_freepascal_ocsp_stapling_owner/bin/test_freepascal_client_ocsp_stapling_runtime`
 - `git diff --check`
 
 ## Next
 
-- Inspect `tests/test_freepascal_client_ocsp_stapling_runtime.pas` next; it
-  appears to be another single-purpose `GetVerifyResultString` runtime check
-  and may be safe to migrate to `ISSLCertificateVerification`.
+- Inspect `tests/test_freepascal_client_online_ocsp_runtime.pas` next; it
+  appears to be another failure-text runtime check and may be safe to migrate
+  to `ISSLCertificateVerification`.
 - Keep `tests/contract/test_backend_contract.pas` as the mirror-proof boundary
   unless the public API deprecation/removal strategy changes.
