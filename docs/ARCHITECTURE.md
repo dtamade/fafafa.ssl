@@ -176,6 +176,12 @@ IInterface (FreePascal 内置)
 > 服务端特有能力目前主要通过可选 context 扩展接口暴露，
 > 而不是通过单独的 `ISSLServerConnection` 公开接口。
 >
+> 连接侧 owner surfaces 当前已经明确分层：
+> `ISSLConnectionTextIO` / `ISSLConnectionControl` / `ISSLConnectionInfo` /
+> `ISSLDiagnostics` / `ISSLSessionResumption` /
+> `ISSLCertificateVerification` / `ISSLOCSPStapling`；
+> `ISSLConnection` 继续作为 compatibility-facing core shell。
+>
 > `ISSLConnection` 的 connection-side owner surfaces 当前主要通过这些可选接口暴露：
 > - `ISSLConnectionControl`：timeout / blocking runtime control owner
 > - `ISSLConnectionTextIO`：text helper owner；框架/transport 集成仍优先使用 `Read` / `Write`

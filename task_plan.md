@@ -1,3 +1,66 @@
+# Task Plan: Wave B Connection Boundary Completion
+
+## Objective
+
+Sync source/doc truth around the connection-side owner surfaces and
+compatibility mirrors, keeping runtime behavior unchanged.
+
+## Current State
+
+- The active batch has been implemented and verified on current evidence.
+- Source comments already distinguish core mirrors from owner surfaces; this
+  round makes that language explicit for the remaining optional owner
+  interfaces and the doc surfaces that summarize them.
+
+## Planned Batch
+
+- `src/fafafa.ssl.base.pas`
+- `src/fafafa.ssl.connection.base.pas`
+- `docs/ARCHITECTURE.md`
+- `docs/reference/API_REFERENCE.md`
+- `docs/ROADMAP.md`
+
+## Verification
+
+- See the batch plan in
+  `docs/plans/2026-05-25-connection-boundary-completion-waveb.md`
+- run `bash tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+- run `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+- run `bash tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+- run `python3 scripts/compile_all_modules.py --rebuild`
+- run `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local`
+- finish with `git diff --check`
+
+## Verification Result
+
+- `tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+  passed
+- `tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  passed
+- `tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+  passed
+- `tests/scripts/test_issldiagnostics_active_guidance_contract.sh` passed
+- `tests/scripts/test_isslsessionresumption_active_guidance_contract.sh` passed
+- `tests/scripts/test_isslocspstapling_active_guidance_contract.sh` passed
+- `tests/scripts/test_architecture_optional_owner_surface_truth_contract.sh`
+  passed
+- `tests/scripts/test_architecture_current_route_truth_contract.sh` passed
+- `tests/scripts/test_active_roadmap_references_contract.sh` passed
+- `python3 scripts/compile_all_modules.py --rebuild` passed with `186/186`
+  and `0` warnings
+- `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local --run-id
+  connection_boundary_waveb_20260525` passed with `18` tests passed and `0`
+  failed
+- `git diff --check` passed
+
+## Review Conclusion
+
+- Connection-side owner surface wording is now aligned across source comments,
+  architecture docs, API reference, and roadmap.
+- Runtime behavior stayed unchanged; the batch was documentation and comment
+  truth sync only.
+- The repo is ready for commit.
+
 # Task Plan: TLS13 Early-Data Note Cleanup Wave1
 
 ## Objective

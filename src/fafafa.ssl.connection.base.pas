@@ -86,6 +86,9 @@ type
  *   与 `WolfSSL` runtime residual。
  * - OCSP / CT / CT validation getter/stub 仍保留在基类里，供显式支持这些可选接口
  *   的后端连接类复用；但基类本身不再无条件暴露对应 interface。
+ * - `ISSLConnectionInfo` / `ISSLDiagnostics` / `ISSLSessionResumption` /
+ *   `ISSLCertificateVerification` / `ISSLOCSPStapling` 都是对应 compatibility
+ *   mirrors 的推荐 owner path；core 侧继续保留 v1.x mirrors 以维持兼容。
  *}
   TBaseSSLConnection = class(TInterfacedObject,
     ISSLConnection,

@@ -1,5 +1,33 @@
 # Progress Log
 
+# 2026-05-25 Wave B Connection Boundary Completion
+- Created the batch plan at
+  `docs/plans/2026-05-25-connection-boundary-completion-waveb.md`.
+- Added a new task-plan section for the active batch and recorded the scope as
+  source/doc truth sync only.
+- Updated `src/fafafa.ssl.base.pas` to add explicit preferred-access and
+  owner-note guidance for the remaining optional owner interfaces:
+  diagnostics, session resumption, certificate verification, and OCSP
+  stapling.
+- Updated `src/fafafa.ssl.connection.base.pas` to restate the owner-surface
+  recommendation at the connection-base level.
+- Updated `docs/ARCHITECTURE.md`, `docs/reference/API_REFERENCE.md`, and
+  `docs/ROADMAP.md` so the public docs and route selection now match the source
+  truth.
+- Verification passed:
+  - `bash tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+  - `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  - `bash tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+  - `bash tests/scripts/test_issldiagnostics_active_guidance_contract.sh`
+  - `bash tests/scripts/test_isslsessionresumption_active_guidance_contract.sh`
+  - `bash tests/scripts/test_isslocspstapling_active_guidance_contract.sh`
+  - `bash tests/scripts/test_architecture_optional_owner_surface_truth_contract.sh`
+  - `bash tests/scripts/test_architecture_current_route_truth_contract.sh`
+  - `bash tests/scripts/test_active_roadmap_references_contract.sh`
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc python3 scripts/compile_all_modules.py --rebuild`
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local --run-id connection_boundary_waveb_20260525`
+  - `git diff --check`
+
 # 2026-05-25 TLS13 Early-Data Note Cleanup Wave1
 - Carried the batch boundary forward after committing the source-note cleanup.
 - Isolated the last gate note family to

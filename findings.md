@@ -1,5 +1,25 @@
 # Findings
 
+# 2026-05-25 Wave B Connection Boundary Completion
+- `ISSLDiagnostics`, `ISSLSessionResumption`, `ISSLCertificateVerification`,
+  and `ISSLOCSPStapling` now carry explicit `@preferred-access` and
+  `@owner-note` guidance in `src/fafafa.ssl.base.pas`.
+- `src/fafafa.ssl.connection.base.pas` now states that the connection-side
+  owner interfaces are the recommended owner paths for their corresponding
+  compatibility mirrors.
+- `docs/ARCHITECTURE.md` and `docs/reference/API_REFERENCE.md` now say the same
+  thing at the public-doc layer: owner surfaces first, compatibility mirrors
+  second.
+- `docs/ROADMAP.md` now points the active batch at the connection boundary
+  completion wave so the route selection state matches the work in progress.
+- Verification stayed green:
+  - active guidance / residual classification / root residual contracts passed
+  - architecture owner-surface and roadmap truth contracts passed
+  - `compile_all_modules.py --rebuild` passed with `186/186` and `0` warnings
+  - `run_freepascal_tls13_completeness_gate.sh --fast-local --run-id
+    connection_boundary_waveb_20260525` passed with `18` passed and `0` failed
+- No runtime behavior changed in this batch.
+
 # 2026-05-25 TLS13 Early-Data Note Cleanup Wave1
 - The remaining TLS 1.3 completeness gate notes after the source batch are all
   in `tests/test_freepascal_tls13_early_data.pas`.

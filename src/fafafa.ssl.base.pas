@@ -1576,6 +1576,7 @@ type
    *
    * 提供连接健康状态、性能指标等诊断信息。
    * 此接口是可选的，用于监控和调试场景。
+   * 当前是 `ISSLConnection` 上这组诊断 mirrors 的默认 owner。
    *
    * @stable 1.0
    * @since 2026-02-05
@@ -1583,16 +1584,24 @@ type
   ISSLDiagnostics = interface
     ['{8E4F2A1B-3C5D-6E7F-8A9B-0C1D2E3F4A5B}']
 
-    {** 获取连接健康状态 *}
+    {** 获取连接健康状态
+        @preferred-access 新代码优先通过 ISSLDiagnostics.GetHealthStatus 获取
+        @owner-note 当前默认 owner；ISSLConnection.GetHealthStatus 继续作为 v1.x compatibility mirror 保留 *}
     function GetHealthStatus: TSSLHealthStatus;
 
-    {** 检查连接是否健康 *}
+    {** 检查连接是否健康
+        @preferred-access 新代码优先通过 ISSLDiagnostics.IsHealthy 获取
+        @owner-note 当前默认 owner；ISSLConnection.IsHealthy 继续作为 v1.x compatibility mirror 保留 *}
     function IsHealthy: Boolean;
 
-    {** 获取性能指标 *}
+    {** 获取性能指标
+        @preferred-access 新代码优先通过 ISSLDiagnostics.GetPerformanceMetrics 获取
+        @owner-note 当前默认 owner；ISSLConnection.GetPerformanceMetrics 继续作为 v1.x compatibility mirror 保留 *}
     function GetPerformanceMetrics: TSSLPerformanceMetrics;
 
-    {** 获取完整诊断信息 *}
+    {** 获取完整诊断信息
+        @preferred-access 新代码优先通过 ISSLDiagnostics.GetDiagnosticInfo 获取
+        @owner-note 当前默认 owner；ISSLConnection.GetDiagnosticInfo 继续作为 v1.x compatibility mirror 保留 *}
     function GetDiagnosticInfo: TSSLDiagnosticInfo;
   end;
 
@@ -1600,6 +1609,7 @@ type
    * ISSLSessionResumption - 会话复用扩展接口
    *
    * 提供 TLS 会话保存和恢复功能，用于减少握手开销。
+   * 当前是 `ISSLConnection` 上这组会话 mirrors 的默认 owner。
    *
    * @stable 1.0
    * @since 2026-02-05
@@ -1607,13 +1617,19 @@ type
   ISSLSessionResumption = interface
     ['{9F5A3B2C-4D6E-7F8A-9B0C-1D2E3F4A5B6C}']
 
-    {** 获取当前会话 *}
+    {** 获取当前会话
+        @preferred-access 新代码优先通过 ISSLSessionResumption.GetSession 获取
+        @owner-note 当前默认 owner；ISSLConnection.GetSession 继续作为 v1.x compatibility mirror 保留 *}
     function GetSession: ISSLSession;
 
-    {** 设置要恢复的会话 *}
+    {** 设置要恢复的会话
+        @preferred-access 新代码优先通过 ISSLSessionResumption.SetSession 配置待恢复会话
+        @owner-note 当前默认 owner；ISSLConnection.SetSession 继续作为 v1.x compatibility mirror 保留 *}
     procedure SetSession(ASession: ISSLSession);
 
-    {** 检查是否使用了会话恢复 *}
+    {** 检查是否使用了会话恢复
+        @preferred-access 新代码优先通过 ISSLSessionResumption.IsSessionReused 获取
+        @owner-note 当前默认 owner；ISSLConnection.IsSessionReused 继续作为 v1.x compatibility mirror 保留 *}
     function IsSessionReused: Boolean;
   end;
 
@@ -1621,6 +1637,7 @@ type
    * ISSLCertificateVerification - 证书验证扩展接口
    *
    * 提供证书链和验证结果的详细信息。
+   * 当前是 `ISSLConnection` 上这组证书验证 mirrors 的默认 owner。
    *
    * @stable 1.0
    * @since 2026-02-05
@@ -1628,13 +1645,19 @@ type
   ISSLCertificateVerification = interface
     ['{A0B1C2D3-E4F5-6A7B-8C9D-0E1F2A3B4C5D}']
 
-    {** 获取对端证书链 *}
+    {** 获取对端证书链
+        @preferred-access 新代码优先通过 ISSLCertificateVerification.GetPeerCertificateChain 获取
+        @owner-note 当前默认 owner；ISSLConnection.GetPeerCertificateChain 继续作为 v1.x compatibility mirror 保留 *}
     function GetPeerCertificateChain: TSSLCertificateArray;
 
-    {** 获取证书验证结果码 *}
+    {** 获取证书验证结果码
+        @preferred-access 新代码优先通过 ISSLCertificateVerification.GetVerifyResult 获取
+        @owner-note 当前默认 owner；ISSLConnection.GetVerifyResult 继续作为 v1.x compatibility mirror 保留 *}
     function GetVerifyResult: Integer;
 
-    {** 获取证书验证结果描述 *}
+    {** 获取证书验证结果描述
+        @preferred-access 新代码优先通过 ISSLCertificateVerification.GetVerifyResultString 获取
+        @owner-note 当前默认 owner；ISSLConnection.GetVerifyResultString 继续作为 v1.x compatibility mirror 保留 *}
     function GetVerifyResultString: string;
   end;
 
@@ -1642,6 +1665,7 @@ type
    * ISSLOCSPStapling - OCSP 装订扩展接口
    *
    * 提供 OCSP Stapling 相关功能。
+   * 当前是 `ISSLConnection` 上这组 OCSP mirrors 的默认 owner。
    *
    * @stable 1.0
    * @since 2026-02-05
@@ -1649,16 +1673,24 @@ type
   ISSLOCSPStapling = interface
     ['{B1C2D3E4-F5A6-7B8C-9D0E-1F2A3B4C5D6E}']
 
-    {** 检查是否启用了 OCSP Stapling *}
+    {** 检查是否启用了 OCSP Stapling
+        @preferred-access 新代码优先通过 ISSLOCSPStapling.GetOCSPStaplingEnabled 获取
+        @owner-note 当前默认 owner；ISSLConnection.GetOCSPStaplingEnabled 继续作为 v1.x compatibility mirror 保留 *}
     function GetOCSPStaplingEnabled: Boolean;
 
-    {** 获取 OCSP 响应 *}
+    {** 获取 OCSP 响应
+        @preferred-access 新代码优先通过 ISSLOCSPStapling.GetOCSPResponse 获取
+        @owner-note 当前默认 owner；ISSLConnection.GetOCSPResponse 继续作为 v1.x compatibility mirror 保留 *}
     function GetOCSPResponse: TBytes;
 
-    {** 检查 OCSP 响应是否已验证 *}
+    {** 检查 OCSP 响应是否已验证
+        @preferred-access 新代码优先通过 ISSLOCSPStapling.IsOCSPResponseVerified 获取
+        @owner-note 当前默认 owner；ISSLConnection.IsOCSPResponseVerified 继续作为 v1.x compatibility mirror 保留 *}
     function IsOCSPResponseVerified: Boolean;
 
-    {** 获取 OCSP 响应状态 *}
+    {** 获取 OCSP 响应状态
+        @preferred-access 新代码优先通过 ISSLOCSPStapling.GetOCSPResponseStatus 获取
+        @owner-note 当前默认 owner；ISSLConnection.GetOCSPResponseStatus 继续作为 v1.x compatibility mirror 保留 *}
     function GetOCSPResponseStatus: string;
   end;
 
@@ -1722,18 +1754,22 @@ type
     ['{C2D3E4F5-A6B7-8C9D-0E1F-2A3B4C5D6E7F}']
 
     {** 获取连接详细信息
+        @preferred-access 新代码优先通过 ISSLConnectionInfo.GetConnectionInfo 获取
         @owner-note 当前连接信息记录的默认 owner；ISSLConnection.GetConnectionInfo 保留为 v1.x compatibility mirror *}
     function GetConnectionInfo: TSSLConnectionInfo;
 
     {** 获取关联的上下文
+        @preferred-access 新代码优先通过 ISSLConnectionInfo.GetContext 获取
         @owner-note 当前 context 引用的默认 owner；ISSLConnection.GetContext 保留为 v1.x compatibility mirror *}
     function GetContext: ISSLContext;
 
     {** 获取 ALPN 协商结果
+        @preferred-access 新代码优先通过 ISSLConnectionInfo.GetSelectedALPNProtocol 获取
         @owner-note 当前 ALPN 协商结果的默认 owner；ISSLConnection.GetSelectedALPNProtocol 保留为 v1.x compatibility mirror *}
     function GetSelectedALPNProtocol: string;
 
     {** 获取状态描述字符串
+        @preferred-access 新代码优先通过 ISSLConnectionInfo.GetStateString 获取
         @owner-note 当前状态描述字符串的默认 owner；ISSLConnection.GetStateString 保留为 v1.x compatibility mirror *}
     function GetStateString: string;
   end;
