@@ -1,57 +1,52 @@
-# Task Plan: ISSLCertificateVerification Residual Campaign
+# Task Plan: Managed Result Initialization Safety
 
 ## Objective
 
-Finish the current `ISSLCertificateVerification` residual campaign with a
-bounded goal: move ordinary runtime tests off deprecated direct-core
-`GetVerifyResult` / `GetVerifyResultString`, and freeze only real mirror/backend
-proofs as intentional residuals.
+Eliminate the remaining Pascal managed-result initialization warnings in the
+public facade / shared connection base / verification harness by using
+type-safe empty-result initialization instead of `FillChar(...)` or
+`SetLength(Result, 0)` on uninitialized managed results.
 
 ## Current State
 
-- Root-test direct-core verify-result residual set: 2 files.
-- Known owner-migrated root files in this campaign:
-  - `tests/test_freepascal_backend_basic.pas`
-  - `tests/test_freepascal_client_cert_verify_flags_runtime.pas`
-  - `tests/test_freepascal_client_certificate_flight_requirements.pas`
-  - `tests/test_freepascal_client_ct_sct_surface.pas`
-  - `tests/test_freepascal_client_ocsp_stapling_runtime.pas`
-  - `tests/test_freepascal_client_online_ocsp_runtime.pas`
-  - `tests/test_freepascal_client_chain_trust_runtime.pas`
-  - `tests/test_freepascal_server_accept_skeleton.pas`
-- Known frozen root proofs:
-  - `tests/test_openssl_connection_verify_result_contract.pas`
-  - `tests/test_wolfssl_framework.pas`
+- `src/fafafa.ssl.pas` already uses `Default(TSSLConfig)` for the default-config
+  fallback.
+- `src/fafafa.ssl.connection.base.pas` already uses `Default(...)` / `Result := nil`
+  on the core paths that matter for this batch.
+- The remaining live empty-`TBytes` helpers in the verification harness were in
+  `tests/test_connection_builder_hostname_precedence.pas`; they now use
+  `Result := nil`.
+- `tests/scripts/test_managed_result_init_safety_contract.sh` now checks both
+  the source contract and the harness helpers.
 
 ## Remaining Queue
 
-None. The remaining root-test residuals are intentional backend/mirror proofs.
+None for this batch if verification stays green.
 
 ## Per-Round Contract
 
 Each round must have:
 
 - One named target file or one explicit freeze decision.
-- A short pre-edit classification: `owner-migrate` or `freeze`.
-- Code/test changes only for that target, plus required allowlist updates.
-- Verification:
-  - `bash tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
-  - `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
-  - `bash tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
-  - relevant Pascal compile/run when a Pascal test is changed
-  - `git diff --check`
+- A short pre-edit classification.
+- Focused contract verification before broader compile checks.
+- `git diff --check`.
 - Brief review conclusion before commit.
 - Git commit after the round.
 
 ## Stop Conditions
 
-Stop this campaign when one of these is true:
+Stop this batch when:
 
-- Root-test residual set contains only intentional mirror/backend proofs.
-- A target would require changing public API or runtime semantics.
-- A focused test fails in a way that changes the classification.
+- the managed-result contract passes,
+- the two focused Pascal compiles pass,
+- and the worktree is clean except for the intended batch changes.
 
 ## Next Round
 
-Campaign complete. If we continue after this batch, start a fresh plan from the
-next unresolved architecture lane rather than reopening this residual subgroup.
+If anything regresses, re-open the exact function that reintroduced the
+managed-result warning instead of widening scope.
+
+If we continue after this batch, the next likely target is
+`docs/plans/2026-05-20-managed-result-init-safety-wave2.md`
+(`src/fafafa.ssl.tls13.wire.pas` / `src/fafafa.ssl.freepascal.session.pas`).

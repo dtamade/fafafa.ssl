@@ -1,5 +1,19 @@
 # Findings
 
+# 2026-05-24 Managed Result Init Safety Harness Extension
+- The source contract on `src/fafafa.ssl.pas` and `src/fafafa.ssl.connection.base.pas`
+  was already in the type-safe form the batch wanted, so the live warning source
+  we had to close was the verification harness.
+- `tests/test_connection_builder_hostname_precedence.pas` also used the same
+  empty `TBytes` result pattern in `TMockCertificate.SaveToDER` and
+  `TMockSession.Serialize`.
+- Switching those helpers to `Result := nil` keeps the behavior identical while
+  removing the managed-result warning class from the verification harness.
+- `tests/scripts/test_managed_result_init_safety_contract.sh` now covers the
+  harness helpers in addition to the source-managed-result contract.
+- If we continue, the next likely managed-result cleanup is wave 2:
+  `src/fafafa.ssl.tls13.wire.pas` and `src/fafafa.ssl.freepascal.session.pas`.
+
 # 2026-05-24 ISSLCertificateVerification Root Residual Campaign Closeout
 - `tests/test_openssl_connection_verify_result_contract.pas` was rechecked and remains a backend/core mirror proof.
 - `tests/test_wolfssl_framework.pas` was rechecked and remains a backend framework proof with direct core verify-result coverage intentionally preserved.

@@ -1,6 +1,36 @@
 # Progress Log
 
 ## 2026-05-24
+- Started the `Managed Result Initialization Safety` batch and rechecked the
+  live source truth.
+- Found that `src/fafafa.ssl.pas` and `src/fafafa.ssl.connection.base.pas`
+  were already using type-safe initialization on the core paths for this batch.
+- The remaining warning-class helpers were in the verification harness:
+  - `tests/test_connection_builder_hostname_precedence.pas`
+- Patched the harness helpers to use `Result := nil`:
+  - `TMockCertificate.SaveToDER`
+  - `TMockSession.Serialize`
+- Extended the managed-result contract script so it now checks the harness
+  helpers as well as the source contract.
+- Synced the session planning files:
+  - `task_plan.md`
+  - `findings.md`
+- Revalidated:
+  - `bash -n tests/scripts/test_managed_result_init_safety_contract.sh`
+  - `bash tests/scripts/test_managed_result_init_safety_contract.sh`
+  - `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/defaultcfg_units -FEtmp/defaultcfg_bin -otest_default_config tests/config/test_default_config.pas`
+  - `./tmp/defaultcfg_bin/test_default_config`
+  - `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/conninfo_units -FEtmp/conninfo_bin -otest_connection_builder_hostname_precedence tests/test_connection_builder_hostname_precedence.pas`
+  - `./tmp/conninfo_bin/test_connection_builder_hostname_precedence`
+  - `git diff --check`
+- Result:
+  - contract passed
+  - both focused compiles passed
+  - no managed-result warnings remained in the verified batch
+- Next likely batch if we continue:
+  - `docs/plans/2026-05-20-managed-result-init-safety-wave2.md`
+
+## 2026-05-24
 - Rechecked the two remaining root-test verify-result residuals and confirmed both are intentional mirror/backend proofs:
   - `tests/test_openssl_connection_verify_result_contract.pas`
   - `tests/test_wolfssl_framework.pas`

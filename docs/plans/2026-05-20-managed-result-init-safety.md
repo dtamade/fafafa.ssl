@@ -14,6 +14,7 @@
 
 - `src/fafafa.ssl.pas`
 - `src/fafafa.ssl.connection.base.pas`
+- `tests/test_connection_builder_hostname_precedence.pas`
 - `tests/scripts/test_managed_result_init_safety_contract.sh`
 - `task_plan.md`
 - `findings.md`
@@ -41,6 +42,8 @@
   都带 `string` / 动态数组字段
 - 这类写法会持续制造编译期 warning，
   也给后续 public helper / owner-surface 安全性留下不必要噪音
+- verification harness `tests/test_connection_builder_hostname_precedence.pas`
+  也在用同类空 `TBytes` 默认返回写法，所以这批会顺手把它一起收口
 
 ## Expected Result
 
@@ -54,7 +57,13 @@
   /
   `DoGetSignedCertificateTimestampList`
   改为显式 `Result := nil`
+- `TMockCertificate.SaveToDER`
+  /
+  `TMockSession.Serialize`
+  改为显式 `Result := nil`
 - focused compile 中，上述 `connection.base` managed-result warnings 消失
+- focused compile 中，`tests/test_connection_builder_hostname_precedence.pas`
+  的同类 managed-result warnings 也消失
 
 ## Verification
 

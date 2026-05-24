@@ -4,16 +4,18 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FACADE_FILE="$ROOT_DIR/src/fafafa.ssl.pas"
 CONN_BASE_FILE="$ROOT_DIR/src/fafafa.ssl.connection.base.pas"
+HOSTNAME_PRECEDENCE_FILE="$ROOT_DIR/tests/test_connection_builder_hostname_precedence.pas"
 
 echo "[TEST] managed result init safety contract"
 
-python3 - "$FACADE_FILE" "$CONN_BASE_FILE" <<'PY'
+python3 - "$FACADE_FILE" "$CONN_BASE_FILE" "$HOSTNAME_PRECEDENCE_FILE" <<'PY'
 from pathlib import Path
 import re
 import sys
 
 facade = Path(sys.argv[1]).read_text(encoding="utf-8")
 conn_base = Path(sys.argv[2]).read_text(encoding="utf-8")
+hostname_precedence = Path(sys.argv[3]).read_text(encoding="utf-8")
 
 def require(condition: bool, message: str) -> None:
     if not condition:
@@ -41,6 +43,12 @@ ocsp_resp = extract_function(
 sct_list = extract_function(
     conn_base, "function TBaseSSLConnection.DoGetSignedCertificateTimestampList: TBytes;"
 )
+save_to_der = extract_function(
+    hostname_precedence, "function TMockCertificate.SaveToDER: TBytes;"
+)
+serialize = extract_function(
+    hostname_precedence, "function TMockSession.Serialize: TBytes;"
+)
 
 require("Result := Default(TSSLConfig);" in create_default,
         "CreateDefaultConfig fallback uses Default(TSSLConfig)")
@@ -66,6 +74,16 @@ require("Result := nil;" in sct_list,
         "DoGetSignedCertificateTimestampList uses nil for the empty TBytes default")
 require("SetLength(Result, 0);" not in sct_list,
         "DoGetSignedCertificateTimestampList no longer uses SetLength on an uninitialized TBytes result")
+
+require("Result := nil;" in save_to_der,
+        "TMockCertificate.SaveToDER uses nil for the empty TBytes default")
+require("SetLength(Result, 0);" not in save_to_der,
+        "TMockCertificate.SaveToDER no longer uses SetLength on an uninitialized TBytes result")
+
+require("Result := nil;" in serialize,
+        "TMockSession.Serialize uses nil for the empty TBytes default")
+require("SetLength(Result, 0);" not in serialize,
+        "TMockSession.Serialize no longer uses SetLength on an uninitialized TBytes result")
 PY
 
 echo "[PASS] managed result init safety contract passed"

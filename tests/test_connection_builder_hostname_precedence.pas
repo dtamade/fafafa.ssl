@@ -298,7 +298,7 @@ end;
 
 function TMockCertificate.SaveToDER: TBytes;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 end;
 
 function TMockCertificate.GetInfo: TSSLCertificateInfo;
@@ -514,7 +514,7 @@ end;
 
 function TMockSession.Serialize: TBytes;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 end;
 
 function TMockSession.Deserialize(const AData: TBytes): Boolean;
