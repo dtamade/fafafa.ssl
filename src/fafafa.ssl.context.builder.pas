@@ -851,6 +851,9 @@ begin
   Result.ProtocolVersions := FProtocolVersions;
   Result.VerifyMode := EffectiveBuilderVerifyMode(Self, AContextType = sslCtxServer);
   Result.VerifyDepth := FVerifyDepth;
+  Result.CAFile := FCAFile;
+  Result.CAPath := FCAPath;
+  Result.UseSystemRoots := FUseSystemRoots;
   Result.Options := FOptions;
   if FSessionCacheEnabled then
     Include(Result.Options, ssoEnableSessionCache)
@@ -861,6 +864,13 @@ begin
   Result.ClientEarlyDataEnabled := FClientEarlyDataEnabled;
   Result.ServerEarlyDataPolicy := FServerEarlyDataPolicy;
   Result.ServerMaxEarlyDataSize := FServerMaxEarlyDataSize;
+  if FCertificatePEM = '' then
+    Result.CertificateFile := FCertificateFile;
+  if (FPKCS11URI = '') and (FPrivateKeyPEM = '') then
+  begin
+    Result.PrivateKeyFile := FPrivateKeyFile;
+    Result.PrivateKeyPassword := FPrivateKeyPassword;
+  end;
 end;
 
 function TSSLContextBuilderImpl.WithTLS12: ISSLContextBuilder;
@@ -1201,14 +1211,12 @@ end;
 
 function TSSLContextBuilderImpl.BuildClient: ISSLContext;
 var
-  Store: ISSLCertificateStore;
   LHttpHooks: ISSLHttpHooksAccess;
   ContextBackend: TSSLLibraryType;
   SelectedBackend: TSSLLibraryType;
   MatchScore: Integer;
   LConfig: TSSLContextConfig;
 begin
-  Store := nil;
   ContextBackend := sslAutoDetect;
   EnsureClientReplayStoreScope(Self, 'BuildClient');
 
@@ -1245,8 +1253,6 @@ begin
   // Imported dual-state configs are documented as PEM-first.
   if FCertificatePEM <> '' then
     Result.LoadCertificatePEM(FCertificatePEM);
-  if (FCertificatePEM = '') and (FCertificateFile <> '') then
-    Result.LoadCertificate(FCertificateFile);
 
   // Load private key (PKCS#11 or file)
   if FPKCS11URI <> '' then
@@ -1257,29 +1263,7 @@ begin
     Result.LoadPrivateKey(FPKCS11URI, GetSupportedPKCS11PINValue);
   end
   else if FPrivateKeyPEM <> '' then
-    Result.LoadPrivateKeyPEM(FPrivateKeyPEM, FPrivateKeyPassword)
-  else if FPrivateKeyFile <> '' then
-    Result.LoadPrivateKey(FPrivateKeyFile, FPrivateKeyPassword);
-
-  // Load system roots if requested
-  if FUseSystemRoots then
-  begin
-    // Prefer the backend-specific certificate store abstraction.
-    // This is best-effort: if loading fails, handshake verification will fail later.
-    Store := TSSLFactory.CreateCertificateStore(ContextBackend);
-    if Store <> nil then
-    begin
-      Store.LoadSystemStore;
-      Result.SetCertificateStore(Store);
-    end;
-  end;
-
-  // Load CA certificates (after setting system roots so they merge into the same store)
-  if FCAFile <> '' then
-    Result.LoadCAFile(FCAFile);
-
-  if FCAPath <> '' then
-    Result.LoadCAPath(FCAPath);
+    Result.LoadPrivateKeyPEM(FPrivateKeyPEM, FPrivateKeyPassword);
 
   // Backend-gated custom cipher overrides stay on the original builder path.
   if FCipherList <> '' then
@@ -1299,7 +1283,6 @@ end;
 
 function TSSLContextBuilderImpl.BuildServer: ISSLContext;
 var
-  Store: ISSLCertificateStore;
   LHttpHooks: ISSLHttpHooksAccess;
   LEarlyDataReplayInstaller: IFreePascalContextEarlyDataReplayInstaller;
   LEarlyDataReplayDirectoryInstaller: IFreePascalContextEarlyDataReplayDirectoryInstaller;
@@ -1309,7 +1292,6 @@ var
   MatchScore: Integer;
   LConfig: TSSLContextConfig;
 begin
-  Store := nil;
   ContextBackend := sslAutoDetect;
 
   // v1.3.0: 自动后端选择
@@ -1328,6 +1310,14 @@ begin
       ContextBackend := TSSLFactory.DetectBestLibrary;
   end;
 
+  // Validate required server material before the context-safe factory path can
+  // load ordinary certificate/key files.
+  if (FCertificateFile = '') and (FCertificatePEM = '') then
+    raise ESSLException.Create('Server context requires a certificate');
+
+  if (FPrivateKeyFile = '') and (FPrivateKeyPEM = '') and (FPKCS11URI = '') then
+    raise ESSLException.Create('Server context requires a private key');
+
   LConfig := BuildContextConfig(sslCtxServer, ContextBackend);
   Result := TSSLFactory.CreateContext(LConfig);
 
@@ -1342,17 +1332,8 @@ begin
     LHttpHooks.SetHTTPPostCallback(FHTTPPostCallback);
   end;
 
-  // Server MUST have certificate and private key
-  if (FCertificateFile = '') and (FCertificatePEM = '') then
-    raise ESSLException.Create('Server context requires a certificate');
-
-  if (FPrivateKeyFile = '') and (FPrivateKeyPEM = '') and (FPKCS11URI = '') then
-    raise ESSLException.Create('Server context requires a private key');
-
   if FCertificatePEM <> '' then
-    Result.LoadCertificatePEM(FCertificatePEM)
-  else if FCertificateFile <> '' then
-    Result.LoadCertificate(FCertificateFile);
+    Result.LoadCertificatePEM(FCertificatePEM);
 
   // Load private key (PKCS#11 or file)
   if FPKCS11URI <> '' then
@@ -1363,9 +1344,7 @@ begin
     Result.LoadPrivateKey(FPKCS11URI, GetSupportedPKCS11PINValue);
   end
   else if FPrivateKeyPEM <> '' then
-    Result.LoadPrivateKeyPEM(FPrivateKeyPEM, FPrivateKeyPassword)
-  else if FPrivateKeyFile <> '' then
-    Result.LoadPrivateKey(FPrivateKeyFile, FPrivateKeyPassword);
+    Result.LoadPrivateKeyPEM(FPrivateKeyPEM, FPrivateKeyPassword);
 
   if FServerOCSPStapledResponseFile <> '' then
   begin
@@ -1409,22 +1388,6 @@ begin
         'Configured server_early_data_replay_store_directory could not install the requested replay store'
       );
   end;
-
-  if FUseSystemRoots then
-  begin
-    Store := TSSLFactory.CreateCertificateStore(ContextBackend);
-    if Store <> nil then
-    begin
-      Store.LoadSystemStore;
-      Result.SetCertificateStore(Store);
-    end;
-  end;
-
-  if FCAFile <> '' then
-    Result.LoadCAFile(FCAFile);
-
-  if FCAPath <> '' then
-    Result.LoadCAPath(FCAPath);
 
   // Backend-gated custom cipher overrides stay on the original builder path.
   if FCipherList <> '' then

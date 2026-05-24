@@ -18,6 +18,15 @@ uses
   fafafa.ssl.freepascal.lib;
 
 type
+  IInspectableBuilderMaterialContext = interface
+    ['{7B588BE0-06B4-4C75-91BB-9E3F3DCBA6F9}']
+    function GetLoadedCertificateFile: string;
+    function GetLoadedPrivateKeyFile: string;
+    function GetLoadedPrivateKeyPassword: string;
+    function GetLoadedCAFile: string;
+    function GetLoadedCAPath: string;
+  end;
+
   TMockBuilderContextBase = class(TInterfacedObject, ISSLContext)
   private
     FContextType: TSSLContextType;
@@ -34,6 +43,11 @@ type
     FServerName: string;
     FALPNProtocols: string;
     FCertVerifyFlags: TSSLCertVerifyFlags;
+    FLoadedCertificateFile: string;
+    FLoadedPrivateKeyFile: string;
+    FLoadedPrivateKeyPassword: string;
+    FLoadedCAFile: string;
+    FLoadedCAPath: string;
   public
     constructor Create(AContextType: TSSLContextType);
 
@@ -104,7 +118,14 @@ type
     function IsValid: Boolean;
   end;
 
-  TMockBuilderContextNoInstaller = class(TMockBuilderContextBase)
+  TMockBuilderContextNoInstaller = class(TMockBuilderContextBase,
+    IInspectableBuilderMaterialContext)
+  public
+    function GetLoadedCertificateFile: string;
+    function GetLoadedPrivateKeyFile: string;
+    function GetLoadedPrivateKeyPassword: string;
+    function GetLoadedCAFile: string;
+    function GetLoadedCAPath: string;
   end;
 
   TMockBuilderContextFailingInstaller = class(TMockBuilderContextBase,
@@ -215,6 +236,11 @@ begin
   FServerName := '';
   FALPNProtocols := '';
   FCertVerifyFlags := [];
+  FLoadedCertificateFile := '';
+  FLoadedPrivateKeyFile := '';
+  FLoadedPrivateKeyPassword := '';
+  FLoadedCAFile := '';
+  FLoadedCAPath := '';
 end;
 
 function TMockBuilderContextBase.GetContextType: TSSLContextType;
@@ -244,7 +270,9 @@ end;
 
 procedure TMockBuilderContextBase.LoadCertificate(const AFileName: string);
 begin
-  if AFileName = '' then;
+  if AFileName = 'missing-before-private-key-check.pem' then
+    raise Exception.Create('certificate material should not load before server private-key validation');
+  FLoadedCertificateFile := AFileName;
 end;
 
 procedure TMockBuilderContextBase.LoadCertificate(AStream: TStream);
@@ -259,7 +287,8 @@ end;
 
 procedure TMockBuilderContextBase.LoadPrivateKey(const AFileName: string; const APassword: string);
 begin
-  if (AFileName = '') and (APassword = '') then;
+  FLoadedPrivateKeyFile := AFileName;
+  FLoadedPrivateKeyPassword := APassword;
 end;
 
 procedure TMockBuilderContextBase.LoadPrivateKey(AStream: TStream; const APassword: string);
@@ -279,17 +308,42 @@ end;
 
 procedure TMockBuilderContextBase.LoadCAFile(const AFileName: string);
 begin
-  if AFileName = '' then;
+  FLoadedCAFile := AFileName;
 end;
 
 procedure TMockBuilderContextBase.LoadCAPath(const APath: string);
 begin
-  if APath = '' then;
+  FLoadedCAPath := APath;
 end;
 
 procedure TMockBuilderContextBase.SetCertificateStore(AStore: ISSLCertificateStore);
 begin
   if AStore <> nil then;
+end;
+
+function TMockBuilderContextNoInstaller.GetLoadedCertificateFile: string;
+begin
+  Result := FLoadedCertificateFile;
+end;
+
+function TMockBuilderContextNoInstaller.GetLoadedPrivateKeyFile: string;
+begin
+  Result := FLoadedPrivateKeyFile;
+end;
+
+function TMockBuilderContextNoInstaller.GetLoadedPrivateKeyPassword: string;
+begin
+  Result := FLoadedPrivateKeyPassword;
+end;
+
+function TMockBuilderContextNoInstaller.GetLoadedCAFile: string;
+begin
+  Result := FLoadedCAFile;
+end;
+
+function TMockBuilderContextNoInstaller.GetLoadedCAPath: string;
+begin
+  Result := FLoadedCAPath;
 end;
 
 procedure TMockBuilderContextBase.SetVerifyMode(AMode: TSSLVerifyModes);
@@ -701,6 +755,14 @@ begin
   Assert(LResult.ErrorMessage <> '', 'Should provide error message');
   WriteLn('    Error: ', LResult.ErrorMessage);
 
+  LBuilder := CreateRuntimeBuilder
+    .WithCertificate('missing-before-private-key-check.pem');
+  LResult := LBuilder.TryBuildServer(LContext);
+  Assert(LResult.IsErr, 'Should fail without private key before loading certificate file material');
+  Assert(LContext = nil, 'Context should stay nil when private key is missing');
+  Assert(Pos('requires a private key', LowerCase(LResult.ErrorMessage)) > 0,
+    'Missing private key should keep the server validation error boundary');
+
   // 生成测试证书
   if not TCertificateUtils.TryGenerateSelfSignedSimple(
     'test.local',
@@ -948,6 +1010,7 @@ var
   LBuilder: ISSLContextBuilder;
   LContext: ISSLContext;
   LResult: TSSLOperationResult;
+  LMaterial: IInspectableBuilderMaterialContext;
 begin
   WriteLn('=== Context-Safe Config Builder Projection Tests ===');
 
@@ -957,6 +1020,11 @@ begin
       .WithBackend(sslOpenSSL)
       .WithTLS13
       .WithVerifyNone
+      .WithCertificate('builder-client-cert.pem')
+      .WithPrivateKey('builder-client-key.pem', 'builder-secret')
+      .WithCAFile('builder-ca.pem')
+      .WithCAPath('builder-ca-dir')
+      .WithSystemRoots
       .WithCipherList('HIGH:!aNULL')
       .WithTLS13Ciphersuites('TLS_AES_256_GCM_SHA384')
       .WithALPN('h2,http/1.1')
@@ -985,6 +1053,21 @@ begin
         'Projected builder config should preserve WithSessionCache(False)');
       Assert(not (ssoEnableSessionCache in LContext.GetOptions),
         'Projected builder options should preserve disabled session cache option');
+      Assert(Supports(LContext, IInspectableBuilderMaterialContext, LMaterial),
+        'Projected builder context should expose material probe');
+      if LMaterial <> nil then
+      begin
+        Assert(LMaterial.GetLoadedCertificateFile = 'builder-client-cert.pem',
+          'Projected builder config should apply certificate file material');
+        Assert(LMaterial.GetLoadedPrivateKeyFile = 'builder-client-key.pem',
+          'Projected builder config should apply private-key file material');
+        Assert(LMaterial.GetLoadedPrivateKeyPassword = 'builder-secret',
+          'Projected builder config should apply private-key password');
+        Assert(LMaterial.GetLoadedCAFile = 'builder-ca.pem',
+          'Projected builder config should apply CA file trust material');
+        Assert(LMaterial.GetLoadedCAPath = 'builder-ca-dir',
+          'Projected builder config should apply CA path trust material');
+      end;
     end;
   finally
     UnregisterReplayStoreMockLibraries;

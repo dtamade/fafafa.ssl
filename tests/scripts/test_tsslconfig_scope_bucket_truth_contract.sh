@@ -114,12 +114,26 @@ require_fixed "Result.SetSessionTimeout(LConfig.SessionTimeout);" "$factory_file
   "factory no longer applies SessionTimeout on the context path"
 require_fixed "Result.SetALPNProtocols(LConfig.ALPNProtocols);" "$factory_file" \
   "factory no longer applies ALPNProtocols on the context path"
-require_fixed "LEarlyDataContext.SetClientEarlyDataEnabled(AConfig.ClientEarlyDataEnabled);" \
-  "$factory_file" "factory no longer applies ClientEarlyDataEnabled on the context path"
-require_fixed "LEarlyDataContext.SetServerMaxEarlyDataSize(AConfig.ServerMaxEarlyDataSize);" \
-  "$factory_file" "factory no longer applies ServerMaxEarlyDataSize on the context path"
-require_fixed "LEarlyDataContext.SetServerEarlyDataPolicy(AConfig.ServerEarlyDataPolicy);" \
-  "$factory_file" "factory no longer applies ServerEarlyDataPolicy on the context path"
+require_fixed "procedure ApplyEarlyDataContextValues(" "$factory_file" \
+  "factory no longer routes early-data application through the context-value helper"
+require_fixed "AClientEnabled: Boolean;" "$factory_file" \
+  "factory early-data helper no longer accepts ClientEarlyDataEnabled as an input"
+require_fixed "AServerPolicy: TSSLEarlyDataServerPolicy;" "$factory_file" \
+  "factory early-data helper no longer accepts ServerEarlyDataPolicy as an input"
+require_fixed "AServerMaxEarlyDataSize: Cardinal" "$factory_file" \
+  "factory early-data helper no longer accepts ServerMaxEarlyDataSize as an input"
+require_fixed "LEarlyDataContext.SetClientEarlyDataEnabled(AClientEnabled);" "$factory_file" \
+  "factory no longer applies ClientEarlyDataEnabled through the context-value helper"
+require_fixed "LEarlyDataContext.SetServerMaxEarlyDataSize(AServerMaxEarlyDataSize);" "$factory_file" \
+  "factory no longer applies ServerMaxEarlyDataSize through the context-value helper"
+require_fixed "LEarlyDataContext.SetServerEarlyDataPolicy(AServerPolicy);" "$factory_file" \
+  "factory no longer applies ServerEarlyDataPolicy through the context-value helper"
+require_fixed "AConfig.ClientEarlyDataEnabled" "$factory_file" \
+  "factory no longer passes ClientEarlyDataEnabled from config into early-data context application"
+require_fixed "AConfig.ServerEarlyDataPolicy" "$factory_file" \
+  "factory no longer passes ServerEarlyDataPolicy from config into early-data context application"
+require_fixed "AConfig.ServerMaxEarlyDataSize" "$factory_file" \
+  "factory no longer passes ServerMaxEarlyDataSize from config into early-data context application"
 require_fixed "Configured server_early_data_replay_store_file requires a backend that implements IFreePascalContextEarlyDataReplayInstaller" \
   "$factory_file" "factory no longer documents the server replay-store file backend seam"
 require_fixed "Configured server_early_data_replay_store_directory requires a backend that implements IFreePascalContextEarlyDataReplayDirectoryInstaller" \

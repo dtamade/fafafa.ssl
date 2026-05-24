@@ -102,6 +102,12 @@ context-safe callers.
 
 ## Stage 2: TSSLConfig scope-surgery completion
 
+**Status:** in progress. First slice complete in the builder material projection
+batch: ordinary builder certificate/key/trust file material now flows through
+`TSSLContextConfig`; PEM, PKCS#11, HTTP hooks, OCSP response-file loading,
+replay-store installers, and backend-gated custom cipher overrides remain on
+their owner-specific post-create paths.
+
 **Purpose:** Continue moving callers and docs away from the mixed-scope
 `TSSLConfig` mental model while preserving `v1.x` compatibility.
 

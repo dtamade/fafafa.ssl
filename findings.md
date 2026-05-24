@@ -1,5 +1,27 @@
 # Findings
 
+# 2026-05-25 TSSLContextConfig Builder Material Projection
+- Ordinary builder file/trust material is now stable enough to belong in
+  `TSSLContextConfig`: certificate file, private key file/password, CA file,
+  CA path, and system-root trust opt-in all map to context creation rather than
+  backend-specific post-create behavior.
+- The ownership line remains intentionally narrow. PEM material keeps
+  PEM-first builder semantics, PKCS#11 URI loading keeps PIN-method semantics,
+  HTTP hooks keep callback ownership, OCSP stapled response file loading keeps
+  server-builder ownership, replay-store installers keep backend seam
+  validation, and custom cipher overrides stay backend-gated.
+- Moving ordinary certificate file loading into the factory path can otherwise
+  change the server error boundary: a missing private key must still fail before
+  certificate material is loaded. `BuildServer` therefore validates required
+  server certificate/private-key presence before `TSSLFactory.CreateContext`.
+- Two existing contracts had stale string anchors after the Stage 1 helper
+  extraction:
+  - system-root public-surface checks now assert helper inputs/data flow rather
+    than the removed inline `AConfig.UseSystemRoots` expression.
+  - scope-bucket early-data checks now assert
+    `ApplyEarlyDataContextValues(...)` parameters, setter calls, and `AConfig`
+    data flow rather than the removed inline setter statements.
+
 # 2026-05-25 TSSLContextConfig Factory Direct Application
 - `TSSLFactory.CreateContext(const TSSLContextConfig)` should not use legacy
   `TSSLConfig` as the main internal transport for new context-safe callers.

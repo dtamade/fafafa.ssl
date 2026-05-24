@@ -1,5 +1,58 @@
 # Progress Log
 
+# 2026-05-25 TSSLContextConfig Builder Material Projection
+- Continued Stage 2 after commit
+  `0db8165 feat: apply context config directly in factory`.
+- Added focused RED coverage:
+  - `tests/scripts/test_tsslcontextconfig_builder_material_projection_contract.sh`
+  - runtime probe additions in `tests/config/test_context_builder_try.pas`
+    for ordinary certificate file, private key file/password, CA file, and CA
+    path material.
+- First RED:
+  - `bash tests/scripts/test_tsslcontextconfig_builder_material_projection_contract.sh`
+  - result: failed because `BuildContextConfig(...)` did not project ordinary
+    certificate/key/trust material and builder still loaded those values
+    post-create.
+- Implemented the material projection:
+  - projected `CertificateFile`, `PrivateKeyFile`, `PrivateKeyPassword`,
+    `CAFile`, `CAPath`, and `UseSystemRoots` into `TSSLContextConfig`.
+  - skipped certificate file projection when certificate PEM is configured.
+  - skipped private-key file projection when PKCS#11 URI or private-key PEM is
+    configured.
+  - removed duplicate builder post-create ordinary certificate/key/CA/system-root
+    loading.
+- Boundary RED after the first implementation:
+  - `test_context_builder_try` reported `85` passed and `1` failed.
+  - failure: missing private-key server validation had moved behind ordinary
+    certificate-file loading.
+- Fixed the boundary:
+  - moved server required certificate/private-key validation before
+    `TSSLFactory.CreateContext(LConfig)`.
+  - added a probe that raises if the missing-key server case loads certificate
+    material before reporting `requires a private key`.
+- Updated stale helper-extraction contracts:
+  - `tests/scripts/test_system_roots_public_surface_contract.sh`
+  - `tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+- Focused verification passed:
+  - `bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_migration_targets_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+  - `bash tests/scripts/test_tssllibrarydefaults_surface_contract.sh`
+  - `bash tests/scripts/test_system_roots_public_surface_contract.sh`
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc bash tests/scripts/test_tsslcontextconfig_builder_material_projection_contract.sh`
+    - result: `86` passed, `0` failed.
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc bash tests/scripts/test_tsslcontextconfig_builder_adoption_contract.sh`
+    - result: `86` passed, `0` failed.
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc bash tests/scripts/test_tsslcontextconfig_factory_direct_application_contract.sh`
+- Full compile verification passed:
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc python3 scripts/compile_all_modules.py --rebuild`
+  - result: `186/186` compiled, `0` failures, `0` warnings.
+- Hygiene verification passed:
+  - `git diff --check`
+  - `bash -n tests/scripts/test_tsslcontextconfig_builder_material_projection_contract.sh`
+  - `bash -n tests/scripts/test_system_roots_public_surface_contract.sh`
+  - `bash -n tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+
 # 2026-05-25 TSSLContextConfig Factory Direct Application
 - Started Stage 1 from the sequential master plan after commit
   `f16298a docs: add framework excellence execution plan`.

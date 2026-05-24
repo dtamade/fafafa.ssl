@@ -42,8 +42,14 @@ require_rg "$base_file" \
   "TSSLConfig no longer exposes UseSystemRoots as a context-scoped trust-store opt-in"
 
 require_fixed "$factory_file" \
-  "AConfig.UseSystemRoots)) then" \
+  "AUseSystemRoots: Boolean" \
+  "factory server verify baseline no longer accepts UseSystemRoots as an input"
+require_fixed "$factory_file" \
+  "(AUseSystemRoots)) then" \
   "factory server verify baseline no longer treats UseSystemRoots as a trust-root source"
+require_fixed "$factory_file" \
+  "AConfig.UseSystemRoots" \
+  "factory context-safe config path no longer passes UseSystemRoots into verify/root loading helpers"
 require_fixed "$factory_file" \
   "procedure ApplySystemRootsIfRequested" \
   "factory context paths no longer gate system-root loading on UseSystemRoots"

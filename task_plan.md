@@ -1,3 +1,69 @@
+# Task Plan: TSSLContextConfig Builder Material Projection
+
+## Objective
+
+Complete the first Stage 2 code-heavy slice by moving ordinary builder
+certificate/key/trust material through `TSSLContextConfig`, instead of keeping
+those stable context-scoped values on the builder post-create path.
+
+## Current State
+
+- Stage 1 already made `TSSLFactory.CreateContext(const TSSLContextConfig)`
+  apply context-safe fields directly.
+- Builder adoption already routes stable protocol/session/ALPN/early-data
+  fields through `TSSLContextConfig`.
+- Before this batch, builder still loaded ordinary certificate files, private
+  key files, CA file/path, and system roots after context creation, duplicating
+  responsibilities now owned by the context-safe config factory path.
+
+## Planned Batch
+
+- Add a focused contract proving builder material projection happens inside
+  `BuildContextConfig(...)`.
+- Extend the builder runtime probe so ordinary certificate/key/CA material is
+  observable after factory creation.
+- Project ordinary file/trust material into `TSSLContextConfig`.
+- Remove duplicate builder post-create ordinary certificate/key/CA/system-root
+  loading.
+- Keep PEM, PKCS#11 URI/PIN semantics, HTTP hooks, OCSP stapled response file,
+  replay-store installers, and backend-gated custom cipher overrides on the
+  owner-specific builder post-create path.
+- Preserve the server missing-private-key validation boundary before ordinary
+  certificate files can be loaded by the factory path.
+
+## Verification
+
+- RED:
+  - `bash tests/scripts/test_tsslcontextconfig_builder_material_projection_contract.sh`
+  - failed first because `BuildContextConfig(...)` did not project ordinary
+    certificate/key/trust material and builder still loaded those values
+    post-create.
+  - after moving ordinary material, `test_context_builder_try` exposed a
+    missing-private-key boundary regression before server validation was moved
+    ahead of context creation.
+- GREEN:
+  - `bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_migration_targets_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+  - `bash tests/scripts/test_tssllibrarydefaults_surface_contract.sh`
+  - `bash tests/scripts/test_system_roots_public_surface_contract.sh`
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc bash tests/scripts/test_tsslcontextconfig_builder_material_projection_contract.sh`
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc bash tests/scripts/test_tsslcontextconfig_builder_adoption_contract.sh`
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc bash tests/scripts/test_tsslcontextconfig_factory_direct_application_contract.sh`
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc python3 scripts/compile_all_modules.py --rebuild`
+  - `git diff --check`
+  - `bash -n tests/scripts/test_tsslcontextconfig_builder_material_projection_contract.sh`
+  - `bash -n tests/scripts/test_system_roots_public_surface_contract.sh`
+  - `bash -n tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+
+## Review Conclusion
+
+- Verified. Ordinary builder file/trust material now flows through
+  `TSSLContextConfig` and the direct factory path, while backend-sensitive and
+  owner-specific builder responsibilities remain post-create. Adjacent
+  `TSSLConfig` scope, system-root, builder adoption, factory direct-application,
+  and full compile gates stayed green.
+
 # Task Plan: TSSLContextConfig Factory Direct Application
 
 ## Objective
