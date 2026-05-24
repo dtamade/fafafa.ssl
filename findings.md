@@ -1,5 +1,10 @@
 # Findings
 
+# 2026-05-24 ISSLCertificateVerification CT/SCT Owner Path
+- `tests/test_freepascal_client_ct_sct_surface.pas` 的 verify-result direct core usage 都是 CT/SCT fail-closed 文本检查，不是 core mirror 等价 proof。
+- 新增本地 helper `GetCertificateVerifyResultString`，通过 `ISSLCertificateVerification.GetVerifyResultString` 读取失败文本，避免在多个断言处重复 `Supports` 代码。
+- 目标 CT/SCT 测试编译运行通过；编译输出仍有该文件既有的 10 个 managed result initialization warning。root-test direct-core verify-result residual set 从 8 个文件缩到 7 个文件。
+
 # 2026-05-24 ISSLCertificateVerification Certificate-Flight Owner Path
 - `tests/test_freepascal_client_certificate_flight_requirements.pas` 只有一处 direct `GetVerifyResultString`，用途是断言完整 TLS 1.3 握手缺少 Certificate/CertificateVerify flight 时失败文本包含 `certificate`；这不是 core mirror 等价 proof。
 - 该断言已迁到 `ISSLCertificateVerification.GetVerifyResultString`，root-test direct-core verify-result residual set 从 9 个文件缩到 8 个文件。

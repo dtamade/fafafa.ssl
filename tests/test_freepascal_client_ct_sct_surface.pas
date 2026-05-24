@@ -70,12 +70,6 @@ var
   GCTIssuerObservationOriginalBIONewMemBuf: TBIO_new_mem_buf = nil;
   GCTIssuerObservationOriginalSCTValidate: TSCT_validate = nil;
 
-// INTENTIONAL_VERIFY_RESULT_CORE_SURFACE: this root-test runtime file
-// intentionally keeps direct core GetVerifyResult/GetVerifyResultString
-// coverage as fail-closed/backend proof. Generic ISSLCertificateVerification
-// owner-path guidance is frozen elsewhere.
-{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-
 procedure Fail(const AMessage: string);
 begin
   WriteLn('FAIL: ', AMessage);
@@ -109,6 +103,15 @@ end;
 function ContainsTextInsensitive(const AValue, ASubText: string): Boolean;
 begin
   Result := Pos(LowerCase(ASubText), LowerCase(AValue)) > 0;
+end;
+
+function GetCertificateVerifyResultString(const AConn: ISSLConnection): string;
+var
+  LCertVerify: ISSLCertificateVerification;
+begin
+  AssertTrue(Supports(AConn, ISSLCertificateVerification, LCertVerify),
+    'Connection should expose certificate verification interface');
+  Result := LCertVerify.GetVerifyResultString;
 end;
 
 function TryEnsureOpenSSLCTValidationAvailable: Boolean;
@@ -1456,8 +1459,8 @@ begin
     AssertTrue(LStream.ObservedSCTRequest,
       'Required-CT path should still request signed_certificate_timestamp');
     AssertTrue(
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'certificate transparency') or
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'sct'),
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'certificate transparency') or
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'sct'),
       'Required-CT missing-SCT failure should mention certificate transparency/SCT'
     );
   finally
@@ -1508,10 +1511,10 @@ begin
     AssertTrue(LStream.ObservedSCTRequest,
       'Required-CT policy path should still request signed_certificate_timestamp');
     AssertTrue(
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'certificate transparency') or
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'sct') or
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'policy') or
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'validation'),
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'certificate transparency') or
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'sct') or
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'policy') or
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'validation'),
       'Required-CT policy failure should mention CT policy/validation'
     );
   finally
@@ -1577,8 +1580,8 @@ begin
     AssertTrue(LStream.ObservedSCTRequest,
       'Malformed-SCT path should still request signed_certificate_timestamp');
     AssertTrue(
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'signed_certificate_timestamp') or
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'sct'),
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'signed_certificate_timestamp') or
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'sct'),
       'Malformed SCT failure should mention signed_certificate_timestamp/SCT'
     );
   finally
@@ -1664,8 +1667,8 @@ begin
     AssertTrue(LStream.ObservedSCTRequest,
       'Malformed embedded SCT path should still request signed_certificate_timestamp');
     AssertTrue(
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'signed_certificate_timestamp') or
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'sct'),
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'signed_certificate_timestamp') or
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'sct'),
       'Malformed embedded SCT failure should mention signed_certificate_timestamp/SCT'
     );
   finally
