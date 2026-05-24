@@ -287,6 +287,9 @@ begin
 
   LHandshakeScheme := LSignatureScheme;
   case FMode of
+    cvmValid:
+      begin
+      end;
     cvmTamperedSignature:
       LCertVerifySignature := TamperSignatureBytes(LCertVerifySignature);
     cvmMismatchedScheme:

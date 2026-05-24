@@ -1747,6 +1747,9 @@ begin
       raise Exception.Create('Exploding replay store guard should be fail-closed');
     rsfmFalseOnGuard:
       Exit(False);
+    rsfmNone, rsfmRaiseOnLoad, rsfmRaiseOnSave, rsfmFalseOnLoad, rsfmFalseOnSave:
+      begin
+      end;
   end;
 
   AGuard := TNoopReplayStoreGuard.Create;
@@ -1766,6 +1769,9 @@ begin
       raise Exception.Create('Exploding replay store load should be fail-closed');
     rsfmFalseOnLoad:
       Exit(False);
+    rsfmNone, rsfmRaiseOnGuard, rsfmRaiseOnSave, rsfmFalseOnGuard, rsfmFalseOnSave:
+      begin
+      end;
   end;
 
   SetLength(AEntries, Length(FEntries));
@@ -1785,6 +1791,9 @@ begin
       raise Exception.Create('Exploding replay store save should be fail-closed');
     rsfmFalseOnSave:
       Exit(False);
+    rsfmNone, rsfmRaiseOnGuard, rsfmRaiseOnLoad, rsfmFalseOnGuard, rsfmFalseOnLoad:
+      begin
+      end;
   end;
 
   SetLength(FEntries, Length(AEntries));
@@ -1839,6 +1848,7 @@ function TExplodingReplayProviderStore.TryAcquireReplayKey(
   ANow: TDateTime
 ): Boolean;
 begin
+  Result := False;
   raise Exception.Create('Exploding replay provider should be fail-closed');
 end;
 

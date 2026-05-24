@@ -656,7 +656,7 @@ begin
 
   LReader := TPEMReader.Create;
   try
-    LText := TEncoding.ANSI.GetString(APEMBlob);
+    LText := AnsiString(TEncoding.ANSI.GetString(APEMBlob));
     LReader.LoadFromString(LText);
     LBlocks := LReader.GetPrivateKeys;
     for I := 0 to High(LBlocks) do
@@ -711,6 +711,8 @@ begin
         Result := Copy(LDER, 0, Length(LDER));
         Move(LMutatedPKCS1[0], Result[LOffset], LLength);
       end;
+  else
+    Exit;
   end;
 end;
 
@@ -750,6 +752,8 @@ begin
         Result := Copy(LDER, 0, Length(LDER));
         Move(LMutatedPKCS1[0], Result[LOffset], LLength);
       end;
+  else
+    Exit;
   end;
 end;
 
@@ -795,6 +799,8 @@ begin
         Result := Copy(LDER, 0, Length(LDER));
         Move(LMutatedPKCS1B[0], Result[LOffset], LLength);
       end;
+  else
+    Exit;
   end;
 end;
 
@@ -911,6 +917,8 @@ begin
         Result := Copy(LDER, 0, Length(LDER));
         Move(LMutatedPKCS1[0], Result[LOffset], LLength);
       end;
+  else
+    Exit;
   end;
 end;
 
@@ -950,6 +958,8 @@ begin
         Result := Copy(LDER, 0, Length(LDER));
         Move(LMutatedPKCS1[0], Result[LOffset], LLength);
       end;
+  else
+    Exit;
   end;
 end;
 
@@ -989,6 +999,8 @@ begin
         Result := Copy(LDER, 0, Length(LDER));
         Move(LMutatedPKCS1[0], Result[LOffset], LLength);
       end;
+  else
+    Exit;
   end;
 end;
 
@@ -1028,6 +1040,8 @@ begin
         Result := Copy(LDER, 0, Length(LDER));
         Move(LMutatedPKCS1[0], Result[LOffset], LLength);
       end;
+  else
+    Exit;
   end;
 end;
 
@@ -1067,6 +1081,8 @@ begin
         Result := Copy(LDER, 0, Length(LDER));
         Move(LMutatedPKCS1[0], Result[LOffset], LLength);
       end;
+  else
+    Exit;
   end;
 end;
 
@@ -1106,6 +1122,8 @@ begin
         Result := Copy(LDER, 0, Length(LDER));
         Move(LMutatedPKCS1[0], Result[LOffset], LLength);
       end;
+  else
+    Exit;
   end;
 end;
 
@@ -1145,6 +1163,8 @@ begin
         Result := Copy(LDER, 0, Length(LDER));
         Move(LMutatedPKCS1[0], Result[LOffset], LLength);
       end;
+  else
+    Exit;
   end;
 end;
 
@@ -1184,6 +1204,8 @@ begin
         Result := Copy(LDER, 0, Length(LDER));
         Move(LMutatedPKCS1[0], Result[LOffset], LLength);
       end;
+  else
+    Exit;
   end;
 end;
 
@@ -1223,6 +1245,8 @@ begin
         Result := Copy(LDER, 0, Length(LDER));
         Move(LMutatedPKCS1[0], Result[LOffset], LLength);
       end;
+  else
+    Exit;
   end;
 end;
 
@@ -1284,7 +1308,7 @@ begin
     LWriter.Free;
   end;
 
-  Result := TEncoding.ASCII.GetBytes(LText);
+  Result := TEncoding.ASCII.GetBytes(UnicodeString(LText));
 end;
 
 procedure AssertPKCS1SignatureMatchesBaseline(

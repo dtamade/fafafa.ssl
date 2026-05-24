@@ -1,5 +1,35 @@
 # Progress Log
 
+## 2026-05-25 TLS13 Warning-Wave Clearance
+- Continued without asking for confirmation and cleared the remaining warning
+  families from the TLS 1.3 completeness gate.
+- Case-statement wave:
+  - Added explicit `else Exit` fail-closed paths for PEM mutation helpers.
+  - Added explicit valid/no-op and unrelated-failure-mode branches in the two
+    scripted runtime tests.
+  - Focused compile grep for
+    `Warning: Case statement does not handle all possible cases` returned no
+    matches.
+  - Target binaries passed for server CertificateVerify, client
+    CertificateVerify runtime, and TLS 1.3 early data.
+- String-conversion wave:
+  - Made the PEM ANSI/ASCII conversion boundaries explicit in
+    `tests/test_tls13_servercertverify.pas`.
+  - Focused compile grep for `Warning: Implicit string type conversion`
+    returned no matches.
+  - Target server CertificateVerify binary passed.
+- Function-result wave:
+  - Initialized `Result := False` before the intentional fail-closed exception
+    in `TExplodingReplayProviderStore.TryAcquireReplayKey`.
+  - Focused compile grep for
+    `Warning: Function result does not seem to be set` returned no matches.
+  - Target early-data binary passed.
+- Full TLS 1.3 completeness gate:
+  - run id: `warning_clearance_20260525`
+  - result: `18` passed, `0` failed
+  - `rg -n "Warning:" tmp/warning_clearance_20260525_tls13_completeness.log`
+    returned no matches.
+
 ## 2026-05-25 TLS13 ServerCertVerify Range-Check Cleanup
 - Restored context from the latest TLS 1.3 residual scan and confirmed the
   previous completeness gate had already completed successfully.

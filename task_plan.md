@@ -1,3 +1,47 @@
+# Task Plan: TLS13 Warning-Wave Clearance
+
+## Objective
+
+Clear all current `Warning:` families exposed by the FreePascal TLS 1.3
+completeness gate.
+
+## Current State
+
+- The latest authoritative gate run is `warning_clearance_20260525`.
+- The gate passed with `18` passed and `0` failed.
+- `rg -n "Warning:" tmp/warning_clearance_20260525_tls13_completeness.log`
+  returns no matches.
+- Closed warning families in this round:
+  - `Case statement does not handle all possible cases`
+  - implicit string type conversion
+  - `Function result does not seem to be set`
+- Compiler `Note:` output remains, but notes are not part of the current
+  warning-wave objective.
+
+## Verification
+
+- Focused compiles:
+  - `tmp/case_wave1_servercertverify_compile_green.log`
+  - `tmp/case_wave1_client_certificateverify_compile_green.log`
+  - `tmp/case_wave1_early_data_compile_green.log`
+  - `tmp/string_wave1_servercertverify_compile_green.log`
+  - `tmp/function_wave1_early_data_compile_green.log`
+- Focused runs:
+  - `tmp/case_wave1_servercertverify_run.log`
+  - `tmp/case_wave1_client_certificateverify_run.log`
+  - `tmp/case_wave1_early_data_run.log`
+  - `tmp/string_wave1_servercertverify_run.log`
+  - `tmp/function_wave1_early_data_run.log`
+- Full gate:
+  - `tmp/warning_clearance_20260525_tls13_completeness.log`
+  - `tmp/test-reports/freepascal_tls13_completeness_warning_clearance_20260525.md`
+
+## Next Queue
+
+- No remaining TLS 1.3 completeness `Warning:` waves on current evidence.
+- If we continue after this batch, the next cleanup class should be tracked as
+  `Note:` cleanup, not folded into warning-wave closure.
+
 # Task Plan: TLS13 ServerCertVerify Range-Check Warning Cleanup
 
 ## Objective

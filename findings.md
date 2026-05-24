@@ -1,5 +1,25 @@
 # Findings
 
+# 2026-05-25 TLS13 Warning-Wave Clearance
+- The remaining TLS 1.3 completeness warning families after the range-check
+  cleanup were:
+  `Case statement does not handle all possible cases`,
+  implicit string conversions, and one generic
+  `Function result does not seem to be set`.
+- Case warnings were test-harness coverage issues:
+  PEM mutation helpers now fail closed for non-private-key PEM types, scripted
+  CertificateVerify valid mode is explicit no-op, and early-data replay-store
+  operation-specific failure modes explicitly fall through for unrelated modes.
+- String conversion warnings were from deliberate PEM ANSI/ASCII interop
+  boundaries; explicit casts now preserve the same conversion semantics without
+  leaving the conversions implicit.
+- The early-data exploding replay provider now initializes `Result := False`
+  before raising, preserving fail-closed behavior while satisfying FPC's result
+  assignment analysis.
+- Focused compiles and target runs passed for the affected tests.
+- The `warning_clearance_20260525` TLS 1.3 completeness gate passed with
+  `18` passed, `0` failed, and no `Warning:` entries in the gate log.
+
 # 2026-05-25 TLS13 ServerCertVerify Range-Check Cleanup
 - `tests/test_tls13_servercertverify.pas` hit a concentrated
   `Warning: Range check error while evaluating constants` batch around the
