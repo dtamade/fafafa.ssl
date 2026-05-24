@@ -1,5 +1,10 @@
 # Findings
 
+# 2026-05-24 ISSLCertificateVerification Root Residual Campaign Closeout
+- `tests/test_openssl_connection_verify_result_contract.pas` was rechecked and remains a backend/core mirror proof.
+- `tests/test_wolfssl_framework.pas` was rechecked and remains a backend framework proof with direct core verify-result coverage intentionally preserved.
+- The current root-test direct-core verify-result residual subgroup is now fully intentional; the residual campaign is complete.
+
 # 2026-05-24 ISSLCertificateVerification Client Chain Trust Owner Path
 - `tests/test_freepascal_client_chain_trust_runtime.pas` 的 trust-status 与 not-verified / OK 断言已迁到本地 helper `GetCertificateVerifyResult` / `GetCertificateVerifyResultString`。
 - 两个 helper 都通过 `ISSLCertificateVerification` 读取 owner surface，保留 CA-signed / self-signed / trust-store parity 语义不变。

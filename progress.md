@@ -1,6 +1,16 @@
 # Progress Log
 
 ## 2026-05-24
+- Rechecked the two remaining root-test verify-result residuals and confirmed both are intentional mirror/backend proofs:
+  - `tests/test_openssl_connection_verify_result_contract.pas`
+  - `tests/test_wolfssl_framework.pas`
+- No code changes were needed for this freeze decision.
+- Updated:
+  - `task_plan.md`
+  - `findings.md`
+  - `docs/plans/2026-05-19-isslcertificateverification-root-test-residual-freeze.md`
+
+## 2026-05-24
 - Migrated `tests/test_freepascal_client_chain_trust_runtime.pas` off direct core `GetVerifyResult` / `GetVerifyResultString` and onto owner helpers backed by `ISSLCertificateVerification`.
 - Removed the file from:
   - `tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`

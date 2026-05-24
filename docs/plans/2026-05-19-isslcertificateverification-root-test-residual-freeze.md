@@ -82,3 +82,16 @@ git diff --check
 - 当前 root-test direct-core verify-result residual subgroup 已缩到 2 个文件；
   以 `tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
   为最新 file-set truth。
+
+## Execution Result
+
+- `tests/test_openssl_connection_verify_result_contract.pas` 与
+  `tests/test_wolfssl_framework.pas` 都已复核为 intentional backend/mirror
+  proofs。
+- 当前 root-test direct-core verify-result residual subgroup 已完成冻结，不再
+  需要额外迁移。
+- Focused verification used for this closeout:
+  - `bash tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+  - `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  - `bash tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
+- The residual campaign is now complete.

@@ -19,15 +19,13 @@ proofs as intentional residuals.
   - `tests/test_freepascal_client_online_ocsp_runtime.pas`
   - `tests/test_freepascal_client_chain_trust_runtime.pas`
   - `tests/test_freepascal_server_accept_skeleton.pas`
+- Known frozen root proofs:
+  - `tests/test_openssl_connection_verify_result_contract.pas`
+  - `tests/test_wolfssl_framework.pas`
 
 ## Remaining Queue
 
-1. `tests/test_openssl_connection_verify_result_contract.pas`
-   - Backend/core mirror contract.
-   - Action: keep frozen unless public API compatibility strategy changes.
-2. `tests/test_wolfssl_framework.pas`
-   - Backend framework contract.
-   - Action: inspect last; migrate only non-mirror failure text if obviously safe.
+None. The remaining root-test residuals are intentional backend/mirror proofs.
 
 ## Per-Round Contract
 
@@ -55,8 +53,5 @@ Stop this campaign when one of these is true:
 
 ## Next Round
 
-Target `tests/test_openssl_connection_verify_result_contract.pas`.
-
-Execution goal: classify this backend/core mirror contract first, then keep it
-frozen unless the public compatibility strategy changes, run focused contracts
-plus any required proof refresh, review, then commit.
+Campaign complete. If we continue after this batch, start a fresh plan from the
+next unresolved architecture lane rather than reopening this residual subgroup.
