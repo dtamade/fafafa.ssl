@@ -9,9 +9,10 @@ proofs as intentional residuals.
 
 ## Current State
 
-- Root-test direct-core verify-result residual set: 4 files.
+- Root-test direct-core verify-result residual set: 3 files.
 - Known owner-migrated root files in this campaign:
   - `tests/test_freepascal_backend_basic.pas`
+  - `tests/test_freepascal_client_cert_verify_flags_runtime.pas`
   - `tests/test_freepascal_client_certificate_flight_requirements.pas`
   - `tests/test_freepascal_client_ct_sct_surface.pas`
   - `tests/test_freepascal_client_ocsp_stapling_runtime.pas`
@@ -20,16 +21,13 @@ proofs as intentional residuals.
 
 ## Remaining Queue
 
-1. `tests/test_freepascal_client_cert_verify_flags_runtime.pas`
+1. `tests/test_freepascal_client_chain_trust_runtime.pas`
    - Mixed numeric result + text assertions.
    - Action: migrate to owner only if semantics stay clear; otherwise freeze as intentional runtime proof.
-2. `tests/test_freepascal_client_chain_trust_runtime.pas`
-   - Mixed numeric result + text assertions.
-   - Action: migrate to owner only if semantics stay clear; otherwise freeze as intentional runtime proof.
-3. `tests/test_openssl_connection_verify_result_contract.pas`
+2. `tests/test_openssl_connection_verify_result_contract.pas`
    - Backend/core mirror contract.
    - Action: keep frozen unless public API compatibility strategy changes.
-4. `tests/test_wolfssl_framework.pas`
+3. `tests/test_wolfssl_framework.pas`
    - Backend framework contract.
    - Action: inspect last; migrate only non-mirror failure text if obviously safe.
 
@@ -59,7 +57,7 @@ Stop this campaign when one of these is true:
 
 ## Next Round
 
-Target `tests/test_freepascal_client_cert_verify_flags_runtime.pas`.
+Target `tests/test_freepascal_client_chain_trust_runtime.pas`.
 
 Execution goal: classify this mixed numeric/text runtime target first, then
 migrate to owner path only if the numeric/text semantics stay clear; otherwise

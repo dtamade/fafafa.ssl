@@ -1,5 +1,11 @@
 # Findings
 
+# 2026-05-24 ISSLCertificateVerification Client Cert Verify Flags Owner Path
+- `tests/test_freepascal_client_cert_verify_flags_runtime.pas` 的 mixed numeric/text verify-result 断言已迁到本地 helper `GetCertificateVerifyResult` / `GetCertificateVerifyResultString`。
+- 两个 helper 都通过 `ISSLCertificateVerification` 读取 owner surface，保留 hostname / expiry / strict-chain / revocation / CRL fail-closed 语义不变。
+- 该文件已移出 root residual、broad residual、compiler-deprecated quarantine allowlist；root-test direct-core verify-result residual set 从 4 个文件缩到 3 个文件。
+- 目标测试编译运行通过；编译输出仍有 4 个既有 managed result initialization warning，没有引入新的失败。
+
 # 2026-05-24 ISSLCertificateVerification Server Accept Skeleton Owner Path
 - `tests/test_freepascal_server_accept_skeleton.pas` 的 accept-failure verify-result 文本读取已迁到本地 helper `GetCertificateVerifyResultString`。
 - helper 通过 `ISSLCertificateVerification.GetVerifyResultString` 读取失败文本，保留 TLS 1.3 server accept skeleton / ALPN / connection-info 断言不变。

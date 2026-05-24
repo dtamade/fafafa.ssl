@@ -133,7 +133,6 @@ root_test_hits="$(rg -lP '\b(?!LCertVerify\b|CertVerify\b)[A-Za-z0-9_\.]+\.GetVe
 compare_file_list "root tests direct-core verify-result file set" \
   "$root_test_hits" \
   "$(cat <<'EOF'
-tests/test_freepascal_client_cert_verify_flags_runtime.pas
 tests/test_freepascal_client_chain_trust_runtime.pas
 tests/test_openssl_connection_verify_result_contract.pas
 tests/test_wolfssl_framework.pas

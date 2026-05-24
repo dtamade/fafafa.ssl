@@ -31,12 +31,6 @@ type
 const
   REVOCATION_TEST_SERIAL = 1001;
 
-// INTENTIONAL_VERIFY_RESULT_CORE_SURFACE: this root-test runtime file
-// intentionally keeps direct core GetVerifyResult/GetVerifyResultString
-// coverage as fail-closed/backend proof. Generic ISSLCertificateVerification
-// owner-path guidance is frozen elsewhere.
-{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-
 procedure Fail(const AMessage: string);
 begin
   WriteLn('❌ ', AMessage);
@@ -129,6 +123,24 @@ end;
 function ContainsTextInsensitive(const AValue, ASubText: string): Boolean;
 begin
   Result := Pos(LowerCase(ASubText), LowerCase(AValue)) > 0;
+end;
+
+function GetCertificateVerifyResult(const AConn: ISSLConnection): Integer;
+var
+  LCertVerify: ISSLCertificateVerification;
+begin
+  AssertTrue(Supports(AConn, ISSLCertificateVerification, LCertVerify),
+    'Connection should expose certificate verification interface');
+  Result := LCertVerify.GetVerifyResult;
+end;
+
+function GetCertificateVerifyResultString(const AConn: ISSLConnection): string;
+var
+  LCertVerify: ISSLCertificateVerification;
+begin
+  AssertTrue(Supports(AConn, ISSLCertificateVerification, LCertVerify),
+    'Connection should expose certificate verification interface');
+  Result := LCertVerify.GetVerifyResultString;
 end;
 
 function GenerateServerMaterial(
@@ -481,10 +493,10 @@ begin
 
     AssertTrue(not LConn.Connect,
       'Hostname mismatch should fail when ignore-hostname flag is absent');
-    AssertEqualsInt(Ord(sslErrHostnameMismatch), LConn.GetVerifyResult,
+    AssertEqualsInt(Ord(sslErrHostnameMismatch), GetCertificateVerifyResult(LConn),
       'Hostname mismatch should surface sslErrHostnameMismatch');
     AssertTrue(
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'hostname'),
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'hostname'),
       'Hostname mismatch should mention hostname in verify-result string'
     );
   finally
@@ -541,10 +553,10 @@ begin
 
     AssertTrue(not LConn.Connect,
       'Expired certificate should fail when ignore-expiry flag is absent');
-    AssertEqualsInt(Ord(sslErrCertificateExpired), LConn.GetVerifyResult,
+    AssertEqualsInt(Ord(sslErrCertificateExpired), GetCertificateVerifyResult(LConn),
       'Expired certificate should surface sslErrCertificateExpired');
     AssertTrue(
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'expired'),
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'expired'),
       'Expired certificate should mention expiry in verify-result string'
     );
   finally
@@ -602,9 +614,9 @@ begin
     AssertTrue(not LConn.Connect,
       'Strict-chain flag should fail when the leaf certificate lacks serverAuth EKU');
     AssertTrue(
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'strict') or
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'serverauth') or
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'extended key usage'),
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'strict') or
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'serverauth') or
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'extended key usage'),
       'Strict-chain failure should mention strict-chain or serverAuth extended key usage'
     );
   finally
@@ -635,8 +647,8 @@ begin
     AssertTrue(not LConn.Connect,
       'Revocation-check flag should fail-closed when revocation status is unavailable');
     AssertTrue(
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'revocation') or
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'unavailable'),
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'revocation') or
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'unavailable'),
       'Revocation-check failure should mention revocation status unavailability'
     );
   finally
@@ -667,8 +679,8 @@ begin
     AssertTrue(not LConn.Connect,
       'CRL-check flag should fail-closed when CRL status is unavailable');
     AssertTrue(
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'crl') or
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'revocation'),
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'crl') or
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'revocation'),
       'CRL-check failure should mention CRL or revocation'
     );
   finally
@@ -733,11 +745,11 @@ begin
 
     AssertTrue(not LConn.Connect,
       'CRL-check flag should fail-closed when caller-provided CRL material revokes the peer cert');
-    AssertEqualsInt(Ord(sslErrCertificateRevoked), LConn.GetVerifyResult,
+    AssertEqualsInt(Ord(sslErrCertificateRevoked), GetCertificateVerifyResult(LConn),
       'Revoked CRL material should surface sslErrCertificateRevoked');
     AssertTrue(
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'revoked') or
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'crl'),
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'revoked') or
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'crl'),
       'Revoked CRL material failure should mention revoked or CRL'
     );
   finally

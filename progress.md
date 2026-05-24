@@ -1,6 +1,23 @@
 # Progress Log
 
 ## 2026-05-24
+- Migrated `tests/test_freepascal_client_cert_verify_flags_runtime.pas` off direct core `GetVerifyResult` / `GetVerifyResultString` and onto owner helpers backed by `ISSLCertificateVerification`.
+- Removed the file from:
+  - `tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+  - `tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  - `tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
+- Revalidated:
+  - `bash tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+  - `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  - `bash tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
+  - `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_freepascal_client_cert_verify_flags_runtime_owner/units -FEtmp/test_freepascal_client_cert_verify_flags_runtime_owner/bin -otmp/test_freepascal_client_cert_verify_flags_runtime_owner/bin/test_freepascal_client_cert_verify_flags_runtime tests/test_freepascal_client_cert_verify_flags_runtime.pas`
+  - `tmp/test_freepascal_client_cert_verify_flags_runtime_owner/bin/test_freepascal_client_cert_verify_flags_runtime`
+  - `git diff --check`
+- Compile/run result:
+  - pass
+  - 4 existing managed result initialization warnings in the target test
+
+## 2026-05-24
 - Slimmed the session-resumption residual set after diagnostics closed to contract-mirror-only.
 - Migrated backend semantic tests to `ISSLSessionResumption`:
   - `tests/test_mbedtls_connection_session_reused_contract.pas`
