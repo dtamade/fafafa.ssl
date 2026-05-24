@@ -1,5 +1,24 @@
 # Findings
 
+# 2026-05-24 Managed Result Init Safety Wave 5
+- Wave5 production and test targets were already type-safe on current head:
+  `TLS13ComputeResumptionMasterSecretFromTranscriptHash`,
+  `TLS13DeriveResumptionPSKFromTranscriptHash`,
+  `HashTranscriptForSuite`, `HKDFExtractForSuite`,
+  `HKDFExpandLabelForSuite`, `BuildExtensionHeader`,
+  `BuildTLS13ServerHelloBody`, `BuildTLS13ServerHelloHandshake`,
+  `BuildTLS13ServerHelloHandshakeWithSelectedPSK`, and `HexToBytes` all passed
+  the focused managed-result contract.
+- Focused compile/run passed for `tests/test_tls13_appschedule.pas`,
+  `tests/test_tls13_serverhello_builder.pas`, and
+  `tests/test_tls13_resumption.pas`.
+- The wave5 compile logs rebuilt `tls13.appschedule`, `tls13.serverhello`, and
+  `tests/test_tls13_resumption.pas` and contain no
+  `Warning: Function result variable of a managed type`.
+- No production edits were needed for this batch.
+- There is no `wave6` plan or contract on current head; the next safe step is
+  a residual-discovery pass before creating any follow-up wave.
+
 # 2026-05-24 Managed Result Init Safety Wave 4
 - Wave4 production targets were already type-safe on current head:
   `HashTranscriptForSuite`, `HKDFExtractForSuite`,

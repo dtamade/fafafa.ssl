@@ -1,5 +1,29 @@
 # Progress Log
 
+## 2026-05-24 Managed Result Init Safety Wave 5
+- Goal: close the wave5 managed-result initialization batch for
+  `tls13.appschedule`, `tls13.serverhello`, and `tests/test_tls13_resumption.pas`.
+- Starting state: worktree clean after
+  `14042f4 docs: close managed result safety wave4`.
+- Contract verification passed:
+  - `bash -n tests/scripts/test_managed_result_init_safety_wave5_contract.sh`
+  - `bash tests/scripts/test_managed_result_init_safety_wave5_contract.sh`
+- Focused compile/run passed:
+  - `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/tls13_appschedule_units -FEtmp/tls13_appschedule_bin -otest_tls13_appschedule tests/test_tls13_appschedule.pas 2>&1 | tee tmp/managed_result_wave5_tls13_appschedule_compile.log`
+  - `./tmp/tls13_appschedule_bin/test_tls13_appschedule`
+  - `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/tls13_serverhello_units -FEtmp/tls13_serverhello_bin -otest_tls13_serverhello_builder tests/test_tls13_serverhello_builder.pas 2>&1 | tee tmp/managed_result_wave5_tls13_serverhello_compile.log`
+  - `./tmp/tls13_serverhello_bin/test_tls13_serverhello_builder`
+  - `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/tls13_resumption_units -FEtmp/tls13_resumption_bin -otest_tls13_resumption tests/test_tls13_resumption.pas 2>&1 | tee tmp/managed_result_wave5_tls13_resumption_compile.log`
+  - `./tmp/tls13_resumption_bin/test_tls13_resumption`
+- Warning check:
+  - `rg -n "Warning: Function result variable of a managed type" tmp/managed_result_wave5_*_compile.log || true`
+  - Result: no matches.
+- Result: wave5 source/test targets were already in the safe shape; no
+  production code edits were needed. Updated the wave5 plan and root working
+  records.
+- Next target: no wave6 file exists; run residual discovery before opening the
+  next managed-result cleanup wave.
+
 ## 2026-05-24 Managed Result Init Safety Wave 4
 - Goal: close the wave4 managed-result initialization batch for
   `tls13.keyschedule` and `tls13.clienthello`.

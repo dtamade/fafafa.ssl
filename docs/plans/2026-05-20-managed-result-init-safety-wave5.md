@@ -83,3 +83,37 @@ fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/tls13_resumption_units -F
 fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/tls13_resumption_units -FEtmp/tmp -otest_tls13_resumption tests/test_tls13_resumption.pas 2>&1 | rg "tls13\\.appschedule|tls13\\.serverhello|test_tls13_resumption|Warning: Function result variable of a managed type does not seem to be initialized"
 git diff --check
 ```
+
+## Execution Result
+
+- Wave5 production and test targets were already in the intended type-safe
+  result initialization shape on current head:
+  - `TLS13ComputeResumptionMasterSecretFromTranscriptHash(...)`
+  - `TLS13DeriveResumptionPSKFromTranscriptHash(...)`
+  - `HashTranscriptForSuite(...)`
+  - `HKDFExtractForSuite(...)`
+  - `HKDFExpandLabelForSuite(...)`
+  - `BuildExtensionHeader(...)`
+  - `BuildTLS13ServerHelloBody(...)`
+  - `BuildTLS13ServerHelloHandshake(...)`
+  - `BuildTLS13ServerHelloHandshakeWithSelectedPSK(...)`
+  - `HexToBytes(...)`
+- Focused verification passed:
+  - `bash -n tests/scripts/test_managed_result_init_safety_wave5_contract.sh`
+  - `bash tests/scripts/test_managed_result_init_safety_wave5_contract.sh`
+  - compile/run `tests/test_tls13_appschedule.pas`
+  - compile/run `tests/test_tls13_serverhello_builder.pas`
+  - compile/run `tests/test_tls13_resumption.pas`
+- Compile-log grep confirmed `tls13.appschedule`,
+  `tls13.serverhello`, and `tests/test_tls13_resumption.pas` were rebuilt and
+  no `Warning: Function result variable of a managed type` remained in the
+  wave5 focused logs.
+- No production edits were needed for this batch; the closeout records the
+  verified current truth.
+
+## Next
+
+No `wave6` plan or contract exists on current head. The next safe batch should
+be a small residual-discovery pass: rebuild the next relevant FreePascal gate,
+grep for remaining managed-result warnings, and only create a follow-up wave if
+the compile evidence identifies a concrete target set.

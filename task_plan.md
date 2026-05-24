@@ -1,39 +1,39 @@
-# Task Plan: Managed Result Initialization Safety Wave 4
+# Task Plan: Managed Result Initialization Safety Wave 5
 
 ## Objective
 
-Close the wave4 managed-result initialization batch for shared TLS 1.3
-key-schedule and ClientHello builder helpers, while keeping verification
-focused on the runtime paths that compile those units.
+Close the wave5 managed-result initialization batch for shared TLS 1.3
+application-schedule helpers, ServerHello builders, and the focused resumption
+test helper.
 
 ## Current State
 
-- Wave 1, wave 2, and wave 3 are closed and committed.
-- Wave4 production targets already satisfy the type-safe initialization
-  contract on current head:
+- Waves 1 through 4 are closed and committed.
+- Wave5 production and test targets already satisfy the type-safe
+  initialization contract on current head:
+  - `TLS13ComputeResumptionMasterSecretFromTranscriptHash(...)`
+  - `TLS13DeriveResumptionPSKFromTranscriptHash(...)`
   - `HashTranscriptForSuite(...)`
   - `HKDFExtractForSuite(...)`
   - `HKDFExpandLabelForSuite(...)`
-  - `TLS13ComputePSKBinderForCipherSuite(...)`
-  - `BuildExtensionServerName(...)`
-  - `BuildExtensionALPN(...)`
-  - `BuildExtensionPreSharedKey(...)`
-  - `BuildTLS13ClientHelloBody(...)`
-  - `BuildTLS13ClientHelloBodyWithPSKCore(...)`
-  - `BuildTLS13ClientHelloHandshake(...)`
-  - `BuildTLS13ClientHelloHandshakeWithPSK(...)`
-  - `BuildTLS13ClientHelloHandshakeWithComputedPSKBinder(...)`
-- The focused compile logs rebuilt both `tls13.keyschedule` and
-  `tls13.clienthello` without the managed-result warning class.
+  - `BuildExtensionHeader(...)`
+  - `BuildTLS13ServerHelloBody(...)`
+  - `BuildTLS13ServerHelloHandshake(...)`
+  - `BuildTLS13ServerHelloHandshakeWithSelectedPSK(...)`
+  - `HexToBytes(...)`
+- The focused compile logs rebuilt `tls13.appschedule`,
+  `tls13.serverhello`, and `tests/test_tls13_resumption.pas` without the
+  managed-result warning class.
 - No production code edits were required in this batch.
 
 ## Verification
 
 Completed:
 
-- `bash -n tests/scripts/test_managed_result_init_safety_wave4_contract.sh`
-- `bash tests/scripts/test_managed_result_init_safety_wave4_contract.sh`
-- compile/run `tests/test_tls13_foundation.pas`
+- `bash -n tests/scripts/test_managed_result_init_safety_wave5_contract.sh`
+- `bash tests/scripts/test_managed_result_init_safety_wave5_contract.sh`
+- compile/run `tests/test_tls13_appschedule.pas`
+- compile/run `tests/test_tls13_serverhello_builder.pas`
 - compile/run `tests/test_tls13_resumption.pas`
 - compile-log grep for `Warning: Function result variable of a managed type`
 
@@ -54,5 +54,6 @@ Each round must have:
 
 ## Next Round
 
-If we continue after this batch, the next target is
-`docs/plans/2026-05-20-managed-result-init-safety-wave5.md`.
+No `wave6` plan or contract exists on current head. If we continue after this
+batch, run a small residual-discovery pass first, then open a follow-up wave
+only if compile evidence identifies concrete remaining managed-result warnings.
