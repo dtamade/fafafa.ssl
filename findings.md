@@ -1,5 +1,33 @@
 # Findings
 
+# 2026-05-25 TSSLContextConfig Builder Adoption
+- `TSSLContextBuilder` is the right first consumer of `TSSLContextConfig`
+  because it is the recommended high-level entrypoint for ordinary new code.
+- The safe adoption line is not "put every builder field into
+  `TSSLContextConfig`." PEM / PKCS#11 loading, HTTP hooks, OCSP response file
+  loading, replay-store installer contracts, and deprecated `WithSNI(...)`
+  warnings remain post-create builder responsibilities in this slice.
+- The first GREEN attempt exposed two migration risks:
+  - legacy factory normalization can re-include `ssoEnableSessionCache`, so
+    builder must explicitly restore its option truth after factory creation to
+    preserve `WithSessionCache(False)`.
+  - backend-gated custom cipher overrides have their own capability contract;
+    builder adoption must not silently move their failure boundary into the
+    generic context-safe projection.
+- `tests/config/test_context_builder_try.pas` had stale custom-cipher wording:
+  FreePascal currently publishes `SupportsCustomCipherSuites=False`, so the
+  builder test should expect fail-closed rejection for custom non-default
+  cipher lists on that backend.
+- The adjacent custom-cipher contract exposed a real source/test mismatch:
+  `TFreePascalSSLLibrary.GetCapabilities` still published
+  `SupportsCustomCipherSuites=True`, and the runtime test still treated
+  FreePascal as a published backend. The current runtime setter behavior is
+  unpublished/fail-closed, so the capability publication and runtime probe now
+  match that truth.
+- `TFreePascalContext.SetCipherSuites(...)` also needed the same custom
+  non-default rejection guard as `SetCipherList(...)`; otherwise TLS 1.3 cipher
+  suite overrides could bypass the unpublished capability contract.
+
 # 2026-05-25 TSSLContextConfig Surface Adoption
 - The first real `TSSLConfig` scope-surgery code slice should be additive,
   mirroring the successful `TSSLLibraryDefaults` pattern instead of removing

@@ -1568,7 +1568,7 @@ begin
   Result.SupportsPKCS12 := False;
   Result.SupportsPasswordProtectedKeys := False;  // non-empty APassword is not consumed by the current FreePascal runtime path yet
 
-  Result.SupportsCustomCipherSuites := True;  // custom TLS 1.3 cipher suite selection is supported
+  Result.SupportsCustomCipherSuites := False;  // custom non-default cipher overrides are not published by this runtime path yet
   Result.SupportsCallbacks := False;  // verify/password/info setters are storage-only today; no runtime callback wiring is published
 
   Result.CompatibilityLevel := 64;

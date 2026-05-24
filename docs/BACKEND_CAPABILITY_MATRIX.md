@@ -22,7 +22,7 @@
 | **PKCS#11**                  | ❌         | ✅      | ❌     | ❌      | ❌      |
 | **PKCS#12 / PFX**            | ❌         | ✅      | ⚠️     | ❌      | ❌      |
 | **Password-Protected Keys**  | ❌         | ✅      | ⚠️     | ✅      | ❌      |
-| **Custom Cipher Suites**     | ❌         | ✅      | ❌     | ❌      | ❌      |
+| **Custom Cipher Suites**      | ❌         | ✅      | ❌     | ❌      | ❌      |
 | **Context Callbacks**        | ❌         | ✅      | ⚠️     | ❌      | ❌      |
 
 **图例**:

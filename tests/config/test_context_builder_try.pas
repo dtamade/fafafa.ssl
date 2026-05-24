@@ -829,8 +829,12 @@ begin
     .WithCipherList('HIGH:!aNULL:!MD5')
     .WithTLS13Ciphersuites('TLS_AES_256_GCM_SHA384');
   LResult := LBuilder.TryBuildClient(LContext);
-  Assert(LResult.IsOk, 'Should create client with custom ciphers');
-  Assert(LContext <> nil, 'Context should not be nil');
+  Assert(LResult.IsErr,
+    'FreePascal builder path should reject backend-gated custom cipher lists');
+  Assert(LContext = nil,
+    'Context should stay nil when backend-gated custom cipher list is rejected');
+  Assert(Pos('custom non-default cipher override', LowerCase(LResult.ErrorMessage)) > 0,
+    'Custom cipher rejection should explain backend capability gating');
   LContext := nil;
 
   WriteLn;
@@ -935,6 +939,56 @@ begin
       'Override-configured CT required state should persist to context options');
   end;
   LContext := nil;
+
+  WriteLn;
+end;
+
+procedure TestContextSafeConfigBuilderProjection;
+var
+  LBuilder: ISSLContextBuilder;
+  LContext: ISSLContext;
+  LResult: TSSLOperationResult;
+begin
+  WriteLn('=== Context-Safe Config Builder Projection Tests ===');
+
+  RegisterReplayStoreMockLibraries;
+  try
+    LBuilder := TSSLContextBuilder.Create
+      .WithBackend(sslOpenSSL)
+      .WithTLS13
+      .WithVerifyNone
+      .WithCipherList('HIGH:!aNULL')
+      .WithTLS13Ciphersuites('TLS_AES_256_GCM_SHA384')
+      .WithALPN('h2,http/1.1')
+      .WithSessionCache(False)
+      .WithSessionTimeout(123);
+
+    LResult := LBuilder.TryBuildClient(LContext);
+    Assert(LResult.IsOk, 'Builder should create client context through context-safe projection');
+    Assert(LContext <> nil, 'Projected builder context should not be nil');
+
+    if LContext <> nil then
+    begin
+      Assert(LContext.GetProtocolVersions = [sslProtocolTLS13],
+        'Projected builder config should apply protocol versions');
+      Assert(LContext.GetVerifyMode = [sslVerifyNone],
+        'Projected builder config should apply verify mode');
+      Assert(LContext.GetCipherList = 'HIGH:!aNULL',
+        'Projected builder config should apply TLS 1.2 cipher list');
+      Assert(LContext.GetCipherSuites = 'TLS_AES_256_GCM_SHA384',
+        'Projected builder config should apply TLS 1.3 cipher suites');
+      Assert(LContext.GetALPNProtocols = 'h2,http/1.1',
+        'Projected builder config should apply ALPN defaults');
+      Assert(LContext.GetSessionTimeout = 123,
+        'Projected builder config should apply session timeout');
+      Assert(not LContext.GetSessionCacheMode,
+        'Projected builder config should preserve WithSessionCache(False)');
+      Assert(not (ssoEnableSessionCache in LContext.GetOptions),
+        'Projected builder options should preserve disabled session cache option');
+    end;
+  finally
+    UnregisterReplayStoreMockLibraries;
+  end;
 
   WriteLn;
 end;
@@ -1063,6 +1117,7 @@ begin
     TestAutoBackendRequirements;
     TestOCSPOverrideState;
     TestCTRequiredOverrideState;
+    TestContextSafeConfigBuilderProjection;
     TestReplayStoreErrorContracts;
 
     WriteLn('╔════════════════════════════════════════════════════════════╗');

@@ -1,5 +1,65 @@
 # Progress Log
 
+# 2026-05-25 TSSLContextConfig Builder Adoption
+- Started the next scope-surgery implementation slice after commit
+  `18dbc02 feat: add context-safe ssl config surface`.
+- Chose `TSSLContextBuilder` as the next adoption point because it is the
+  recommended ordinary high-level entrypoint and still manually applied stable
+  context fields after raw context creation.
+- Added RED coverage:
+  - `tests/scripts/test_tsslcontextconfig_builder_adoption_contract.sh`
+  - extra runtime assertions in `tests/config/test_context_builder_try.pas`
+- First RED:
+  - `bash tests/scripts/test_tsslcontextconfig_builder_adoption_contract.sh`
+  - failed on missing internal builder `BuildContextConfig(...)`.
+- Implemented the initial builder adoption:
+  - added `BuildContextConfig(AContextType, ALibraryType): TSSLContextConfig`
+  - changed `BuildClient` / `BuildServer` to create contexts through
+    `TSSLFactory.CreateContext(LConfig)`
+  - kept PEM / PKCS#11 / HTTP hooks / OCSP / replay-store / SNI warning logic
+    on the post-create builder path.
+- First GREEN attempt caught migration drift:
+  - `WithSessionCache(False)` mode stayed false, but `ssoEnableSessionCache`
+    was reintroduced by factory normalization.
+  - FreePascal custom cipher builder test still expected a stale success path.
+- Fixed the drift:
+  - restored builder option truth with `Result.SetOptions(LConfig.Options)`
+    after factory creation.
+  - kept custom cipher overrides on the original backend-gated builder path.
+  - updated the FreePascal custom-cipher test to expect fail-closed capability
+    gating.
+- Focused GREEN:
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc bash tests/scripts/test_tsslcontextconfig_builder_adoption_contract.sh`
+  - result: passed, `77` tests passed and `0` failed in
+    `test_context_builder_try`.
+- Adjacent custom-cipher truth check:
+  - `bash tests/scripts/test_custom_cipher_capability_truth_contract.sh`
+  - first failed because FreePascal still published
+    `SupportsCustomCipherSuites=True`.
+  - updated FreePascal capability publication, added the missing
+    `SetCipherSuites(...)` custom override rejection, and moved the runtime
+    contract to the unpublished backend path.
+- Custom-cipher GREEN:
+  - `bash tests/scripts/test_custom_cipher_capability_truth_contract.sh`
+  - result: passed.
+  - compiled and ran
+    `tests/test_backend_custom_cipher_capability_truth_contract.pas`.
+  - result: passed; FreePascal reported `SupportsCustomCipherSuites=False` and
+    setter/factory/direct-library default-config custom overrides rejected
+    fail-closed.
+- Final verification:
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc bash tests/scripts/test_tsslcontextconfig_builder_adoption_contract.sh`
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc bash tests/scripts/test_tsslcontextconfig_surface_contract.sh`
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc python3 scripts/compile_all_modules.py --rebuild`
+  - `bash -n tests/scripts/test_tsslcontextconfig_builder_adoption_contract.sh`
+  - `git diff --check`
+- Final verification result:
+  - builder adoption contract passed with `77` passed and `0` failed.
+  - context-safe surface contract passed.
+  - full source rebuild passed with `186/186` modules, `0` failures, and `0`
+    warnings.
+  - shell syntax and diff whitespace checks passed.
+
 # 2026-05-25 TSSLContextConfig Surface Adoption
 - Started the first real implementation slice after activating the
   `TSSLConfig` scope-surgery blueprint.

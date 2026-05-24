@@ -1,3 +1,59 @@
+# Task Plan: TSSLContextConfig Builder Adoption
+
+## Objective
+
+Move the recommended `TSSLContextBuilder` build path onto the new
+`TSSLContextConfig` surface for stable context-scoped fields, while preserving
+existing builder behavior for backend-sensitive and post-create operations.
+
+## Current State
+
+- `TSSLContextConfig` and `TSSLFactory.CreateContext(const TSSLContextConfig)`
+  are already additive public surface.
+- `TSSLContextBuilder` is the recommended high-level entrypoint for ordinary
+  new code.
+- Before this batch, builder still created raw contexts and manually applied
+  context fields.
+
+## Planned Batch
+
+- Add an internal builder projection helper:
+  `BuildContextConfig(AContextType, ALibraryType)`.
+- Route `BuildClient` / `BuildServer` through
+  `TSSLFactory.CreateContext(const TSSLContextConfig)`.
+- Preserve builder post-create behavior for PEM / PKCS#11 loading, HTTP hooks,
+  OCSP stapled response loading, replay-store installers, deprecated SNI
+  warnings, and backend-gated custom cipher overrides.
+- Add a focused builder adoption contract and runtime projection assertions.
+- Keep adjacent FreePascal custom cipher capability truth aligned when the
+  builder test exposes stale published/unpublished expectations.
+- Update working records.
+
+## Verification
+
+- RED:
+  - `bash tests/scripts/test_tsslcontextconfig_builder_adoption_contract.sh`
+  - failed first because the builder had no internal `TSSLContextConfig`
+    projection helper.
+- GREEN:
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc bash tests/scripts/test_tsslcontextconfig_builder_adoption_contract.sh`
+  - `bash tests/scripts/test_tsslcontextconfig_surface_contract.sh`
+  - `bash tests/scripts/test_custom_cipher_capability_truth_contract.sh`
+  - compile and run
+    `tests/test_backend_custom_cipher_capability_truth_contract.pas`
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc python3 scripts/compile_all_modules.py --rebuild`
+  - `bash -n tests/scripts/test_tsslcontextconfig_builder_adoption_contract.sh`
+  - `git diff --check`
+
+## Review Conclusion
+
+- Verified. Builder context creation now flows through
+  `TSSLFactory.CreateContext(const TSSLContextConfig)` for stable
+  context-scoped fields, while post-create responsibilities stay on the
+  existing builder path. The adjacent FreePascal custom-cipher capability drift
+  is also closed so backend publication, runtime setters, docs, and contracts
+  agree.
+
 # Task Plan: TSSLContextConfig Surface Adoption
 
 ## Objective

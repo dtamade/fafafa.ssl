@@ -300,6 +300,7 @@ type
     procedure SyncOCSPStaplingOptions;
     procedure SyncCertificateTransparencyOptions;
     function GetSupportedPKCS11PINValue: string;
+    function BuildContextConfig(AContextType: TSSLContextType; ALibraryType: TSSLLibraryType): TSSLContextConfig;
   public
     constructor Create;
 
@@ -821,41 +822,6 @@ begin
     );
 end;
 
-function ContextTypeSupportsClientScopedEarlyData(
-  AContextType: TSSLContextType): Boolean;
-begin
-  Result := AContextType in [sslCtxClient, sslCtxBoth];
-end;
-
-function ContextTypeSupportsServerScopedEarlyData(
-  AContextType: TSSLContextType): Boolean;
-begin
-  Result := AContextType in [sslCtxServer, sslCtxBoth];
-end;
-
-procedure ApplyScopedEarlyDataContextConfig(
-  const AContext: ISSLContext;
-  AClientEnabled: Boolean;
-  AServerPolicy: TSSLEarlyDataServerPolicy;
-  AServerMaxEarlyDataSize: Cardinal
-);
-var
-  LEarlyDataContext: ISSLEarlyDataContext;
-begin
-  if (AContext = nil) or
-    (not Supports(AContext, ISSLEarlyDataContext, LEarlyDataContext)) then
-    Exit;
-
-  if ContextTypeSupportsClientScopedEarlyData(AContext.GetContextType) then
-    LEarlyDataContext.SetClientEarlyDataEnabled(AClientEnabled);
-
-  if ContextTypeSupportsServerScopedEarlyData(AContext.GetContextType) then
-  begin
-    LEarlyDataContext.SetServerMaxEarlyDataSize(AServerMaxEarlyDataSize);
-    LEarlyDataContext.SetServerEarlyDataPolicy(AServerPolicy);
-  end;
-end;
-
 function TSSLContextBuilderImpl.GetSupportedPKCS11PINValue: string;
 begin
   case FPKCS11PINMethod of
@@ -870,6 +836,31 @@ begin
       UnsupportedBuilderPKCS11PINMethodMessage(FPKCS11PINMethod)
     );
   end;
+end;
+
+function TSSLContextBuilderImpl.BuildContextConfig(
+  AContextType: TSSLContextType;
+  ALibraryType: TSSLLibraryType
+): TSSLContextConfig;
+begin
+  SyncOCSPStaplingOptions;
+  SyncCertificateTransparencyOptions;
+
+  Result := CreateDefaultContextConfig(AContextType);
+  Result.LibraryType := ALibraryType;
+  Result.ProtocolVersions := FProtocolVersions;
+  Result.VerifyMode := EffectiveBuilderVerifyMode(Self, AContextType = sslCtxServer);
+  Result.VerifyDepth := FVerifyDepth;
+  Result.Options := FOptions;
+  if FSessionCacheEnabled then
+    Include(Result.Options, ssoEnableSessionCache)
+  else
+    Exclude(Result.Options, ssoEnableSessionCache);
+  Result.SessionTimeout := FSessionTimeout;
+  Result.ALPNProtocols := FALPNProtocols;
+  Result.ClientEarlyDataEnabled := FClientEarlyDataEnabled;
+  Result.ServerEarlyDataPolicy := FServerEarlyDataPolicy;
+  Result.ServerMaxEarlyDataSize := FServerMaxEarlyDataSize;
 end;
 
 function TSSLContextBuilderImpl.WithTLS12: ISSLContextBuilder;
@@ -1215,7 +1206,7 @@ var
   ContextBackend: TSSLLibraryType;
   SelectedBackend: TSSLLibraryType;
   MatchScore: Integer;
-  LVerifyMode: TSSLVerifyModes;
+  LConfig: TSSLContextConfig;
 begin
   Store := nil;
   ContextBackend := sslAutoDetect;
@@ -1227,32 +1218,23 @@ begin
     if not SelectBestBackend(FBackendRequirements, SelectedBackend, MatchScore) then
       raise ESSLException.Create('No suitable SSL backend found for requirements');
     ContextBackend := SelectedBackend;
-    Result := TSSLFactory.CreateContext(sslCtxClient, ContextBackend);
   end
   else if FExplicitBackendSet then
-  begin
-    ContextBackend := FExplicitBackend;
-    Result := TSSLFactory.CreateContext(sslCtxClient, ContextBackend);
-  end
+    ContextBackend := FExplicitBackend
   else
   begin
     ContextBackend := TSSLFactory.GetDefaultLibrary;
     if ContextBackend = sslAutoDetect then
       ContextBackend := TSSLFactory.DetectBestLibrary;
-    Result := TSSLFactory.CreateContext(sslCtxClient, ContextBackend);
   end;
+
+  LConfig := BuildContextConfig(sslCtxClient, ContextBackend);
+  Result := TSSLFactory.CreateContext(LConfig);
 
   if Result = nil then
     raise ESSLException.Create('Failed to create SSL client context');
 
-  // Apply configuration
-  SyncOCSPStaplingOptions;
-  SyncCertificateTransparencyOptions;
-  LVerifyMode := EffectiveBuilderVerifyMode(Self, False);
-  Result.SetProtocolVersions(FProtocolVersions);
-  Result.SetVerifyMode(LVerifyMode);
-  Result.SetVerifyDepth(FVerifyDepth);
-  Result.SetOptions(FOptions);
+  Result.SetOptions(LConfig.Options);
 
   if Supports(Result, ISSLHttpHooksAccess, LHttpHooks) then
   begin
@@ -1299,33 +1281,20 @@ begin
   if FCAPath <> '' then
     Result.LoadCAPath(FCAPath);
 
-  // Cipher configuration
+  // Backend-gated custom cipher overrides stay on the original builder path.
   if FCipherList <> '' then
     Result.SetCipherList(FCipherList);
 
   if FTLS13Ciphersuites <> '' then
     Result.SetCipherSuites(FTLS13Ciphersuites);
 
-  // SNI and ALPN
   if FServerName <> '' then
     LogBuilderContextLevelServerNameCompatibilityWarning(
       'TSSLContextBuilderImpl.BuildClient',
       False
     );
 
-  if FALPNProtocols <> '' then
-    Result.SetALPNProtocols(FALPNProtocols);
-
-  // Session configuration
   Result.SetSessionCacheMode(FSessionCacheEnabled);
-  Result.SetSessionTimeout(FSessionTimeout);
-
-  ApplyScopedEarlyDataContextConfig(
-    Result,
-    FClientEarlyDataEnabled,
-    FServerEarlyDataPolicy,
-    FServerMaxEarlyDataSize
-  );
 end;
 
 function TSSLContextBuilderImpl.BuildServer: ISSLContext;
@@ -1338,7 +1307,7 @@ var
   ContextBackend: TSSLLibraryType;
   SelectedBackend: TSSLLibraryType;
   MatchScore: Integer;
-  LVerifyMode: TSSLVerifyModes;
+  LConfig: TSSLContextConfig;
 begin
   Store := nil;
   ContextBackend := sslAutoDetect;
@@ -1349,32 +1318,23 @@ begin
     if not SelectBestBackend(FBackendRequirements, SelectedBackend, MatchScore) then
       raise ESSLException.Create('No suitable SSL backend found for requirements');
     ContextBackend := SelectedBackend;
-    Result := TSSLFactory.CreateContext(sslCtxServer, ContextBackend);
   end
   else if FExplicitBackendSet then
-  begin
-    ContextBackend := FExplicitBackend;
-    Result := TSSLFactory.CreateContext(sslCtxServer, ContextBackend);
-  end
+    ContextBackend := FExplicitBackend
   else
   begin
     ContextBackend := TSSLFactory.GetDefaultLibrary;
     if ContextBackend = sslAutoDetect then
       ContextBackend := TSSLFactory.DetectBestLibrary;
-    Result := TSSLFactory.CreateContext(sslCtxServer, ContextBackend);
   end;
+
+  LConfig := BuildContextConfig(sslCtxServer, ContextBackend);
+  Result := TSSLFactory.CreateContext(LConfig);
 
   if Result = nil then
     raise ESSLException.Create('Failed to create SSL server context');
 
-  // Apply configuration (same as client, but server context)
-  SyncOCSPStaplingOptions;
-  SyncCertificateTransparencyOptions;
-  LVerifyMode := EffectiveBuilderVerifyMode(Self, True);
-  Result.SetProtocolVersions(FProtocolVersions);
-  Result.SetVerifyMode(LVerifyMode);
-  Result.SetVerifyDepth(FVerifyDepth);
-  Result.SetOptions(FOptions);
+  Result.SetOptions(LConfig.Options);
 
   if Supports(Result, ISSLHttpHooksAccess, LHttpHooks) then
   begin
@@ -1466,7 +1426,7 @@ begin
   if FCAPath <> '' then
     Result.LoadCAPath(FCAPath);
 
-  // Cipher configuration
+  // Backend-gated custom cipher overrides stay on the original builder path.
   if FCipherList <> '' then
     Result.SetCipherList(FCipherList);
 
@@ -1479,19 +1439,7 @@ begin
       True
     );
 
-  if FALPNProtocols <> '' then
-    Result.SetALPNProtocols(FALPNProtocols);
-
-  // Session configuration
   Result.SetSessionCacheMode(FSessionCacheEnabled);
-  Result.SetSessionTimeout(FSessionTimeout);
-
-  ApplyScopedEarlyDataContextConfig(
-    Result,
-    FClientEarlyDataEnabled,
-    FServerEarlyDataPolicy,
-    FServerMaxEarlyDataSize
-  );
 end;
 
 function TSSLContextBuilderImpl.TryBuildClient(out AContext: ISSLContext): TSSLOperationResult;
