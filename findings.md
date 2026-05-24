@@ -1,5 +1,19 @@
 # Findings
 
+# 2026-05-24 Managed Result Init Safety Wave 3
+- Wave3 production targets were already type-safe on current head:
+  `CopyBytes`, `ConcatBytes`, `BuildTLS13HKDFLabel`,
+  `HKDF_Expand_SHA256`, `HKDF_Expand_SHA384`, and
+  `TConstantTime.Select` all passed the focused managed-result contract.
+- `tests/unit/test_constant_time.pas` failed in `TestTimingConsistency` because
+  it measured very short loops with `GetTickCount64`; the average time was near
+  zero, so normal scheduler noise inflated the percentage deviation.
+- The fix keeps deterministic equal/different compare sanity loops and removes
+  low-resolution wall-clock variance as a pass/fail signal.
+- Focused compile logs for wave3 no longer contain
+  `Warning: Function result variable of a managed type`.
+- The next likely managed-result cleanup is wave 4.
+
 # 2026-05-24 Managed Result Init Safety Wave 2
 - Wave 2 production functions were already type-safe on current head:
   `BuildTLSPlaintext(...)`, `ReadVector16(...)`, and

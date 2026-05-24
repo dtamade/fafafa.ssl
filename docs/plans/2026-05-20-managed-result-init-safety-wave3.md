@@ -14,6 +14,7 @@
 
 - `src/fafafa.ssl.tls13.primitives.pas`
 - `src/fafafa.ssl.crypto.constant_time.pas`
+- `tests/unit/test_constant_time.pas`
 - `tests/scripts/test_managed_result_init_safety_wave3_contract.sh`
 - `task_plan.md`
 - `findings.md`
@@ -46,6 +47,10 @@
   是 TLS 1.3 `ExpandLabel` 路径的中心 helper
 - `TConstantTime.Select(...)`
   是 shared constant-time byte selection helper
+- focused verification also depends on `tests/unit/test_constant_time.pas`;
+  its old wall-clock variance assertion used millisecond-resolution
+  `GetTickCount64` around very short loops, which can fail randomly on normal
+  scheduler noise even when the constant-time semantics are correct
 
 ## Expected Result
 
@@ -55,6 +60,8 @@
   - `tls13.primitives`
   - `crypto.constant_time`
   这批 managed-result warning 消失
+- `tests/unit/test_constant_time.pas` keeps deterministic constant-time API
+  semantics checks without failing on low-resolution timing jitter
 
 ## Verification
 
@@ -69,3 +76,23 @@ fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/constant_time_units -FEtm
 ./tmp/constant_time_bin/test_constant_time
 git diff --check
 ```
+
+## Execution Result
+
+- Wave3 production targets were already in the intended type-safe result
+  initialization shape on current head.
+- `tests/unit/test_constant_time.pas` had a flaky timing-variance assertion:
+  it measured 100 short compare loops with `GetTickCount64`, so the average was
+  near zero and scheduler noise could report thousands of percent deviation.
+- The timing check now keeps deterministic equal/different compare sanity loops
+  and no longer treats low-resolution wall-clock variance as a pass/fail signal.
+- Focused verification passed:
+  - `bash -n tests/scripts/test_managed_result_init_safety_wave3_contract.sh`
+  - `bash tests/scripts/test_managed_result_init_safety_wave3_contract.sh`
+  - `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/tls13_foundation_units -FEtmp/tls13_foundation_bin -otest_tls13_foundation tests/test_tls13_foundation.pas`
+  - `./tmp/tls13_foundation_bin/test_tls13_foundation`
+  - `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/constant_time_units -FEtmp/constant_time_bin -otest_constant_time tests/unit/test_constant_time.pas`
+  - `./tmp/constant_time_bin/test_constant_time`
+- Compile-log grep found no remaining
+  `Warning: Function result variable of a managed type` in the two focused
+  compile logs.

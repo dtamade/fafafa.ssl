@@ -1,6 +1,34 @@
 # Progress Log
 
 ## 2026-05-24
+- Continued into `Managed Result Init Safety Wave 3`.
+- Rechecked focused contract and found the production targets already green:
+  - `src/fafafa.ssl.tls13.primitives.pas`
+  - `src/fafafa.ssl.crypto.constant_time.pas`
+- Ran focused compile/run checks:
+  - `tests/test_tls13_foundation.pas`
+  - `tests/unit/test_constant_time.pas`
+- `test_constant_time` initially failed in `TestTimingConsistency` because the
+  old test asserted a 5% wall-clock variance bound on millisecond-resolution
+  `GetTickCount64` samples around very short loops.
+- Updated the timing test to keep deterministic equal/different compare sanity
+  loops and stop treating low-resolution scheduler jitter as a pass/fail signal.
+- Revalidated:
+  - `bash -n tests/scripts/test_managed_result_init_safety_wave3_contract.sh`
+  - `bash tests/scripts/test_managed_result_init_safety_wave3_contract.sh`
+  - `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/tls13_foundation_units -FEtmp/tls13_foundation_bin -otest_tls13_foundation tests/test_tls13_foundation.pas`
+  - `./tmp/tls13_foundation_bin/test_tls13_foundation`
+  - `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/constant_time_units -FEtmp/constant_time_bin -otest_constant_time tests/unit/test_constant_time.pas`
+  - `./tmp/constant_time_bin/test_constant_time`
+  - `rg -n "Warning: Function result variable of a managed type" tmp/tls13_foundation_wave3_compile.log tmp/constant_time_wave3_compile.log || true`
+- Result:
+  - focused contract passed
+  - both compile/runs passed
+  - no remaining managed-result warning in the two focused compile logs
+- Next likely batch if we continue:
+  - `docs/plans/2026-05-20-managed-result-init-safety-wave4.md`
+
+## 2026-05-24
 - Continued into `Managed Result Init Safety Wave 2`.
 - Rechecked focused contract and found the production targets already green:
   - `src/fafafa.ssl.tls13.wire.pas`

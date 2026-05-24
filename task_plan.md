@@ -1,33 +1,35 @@
-# Task Plan: Managed Result Initialization Safety Wave 2
+# Task Plan: Managed Result Initialization Safety Wave 3
 
 ## Objective
 
-Close the next managed-result initialization safety batch by keeping shared TLS
-1.3/session implementation code and its focused verification harness free of
-`SetLength(Result, 0)` on uninitialized managed `TBytes` results.
+Close the wave3 managed-result initialization batch for shared TLS 1.3
+primitive helpers and constant-time helpers, while keeping the focused
+verification gate stable and warning-clean.
 
 ## Current State
 
-- Wave 1 is closed and committed.
-- Wave 2 production functions are already in the intended type-safe shape:
-  - `BuildTLSPlaintext(...)`
-  - `ReadVector16(...)`
-  - `TFreePascalSession.Serialize(...)`
-- The focused session-resumption compile exposed the live residual warning class
-  in `tests/test_freepascal_client_session_resumption.pas`.
-- This round changed that harness to use `Result := nil` in all helper functions
-  that return empty/build-up `TBytes` results.
-- `tests/scripts/test_managed_result_init_safety_wave2_contract.sh` now guards
-  both production functions and the session-resumption harness helpers.
+- Wave 1 and wave 2 are closed and committed.
+- Wave3 production targets already satisfy the type-safe initialization
+  contract on current head:
+  - `CopyBytes(...)`
+  - `ConcatBytes(...)`
+  - `BuildTLS13HKDFLabel(...)`
+  - `HKDF_Expand_SHA256(...)`
+  - `HKDF_Expand_SHA384(...)`
+  - `TConstantTime.Select(...)`
+- The focused constant-time runtime test exposed a flaky wall-clock variance
+  assertion unrelated to managed-result initialization.
+- This round changed that test to keep deterministic equal/different compare
+  loops without using millisecond-resolution jitter as a pass/fail signal.
 
 ## Verification
 
 Completed:
 
-- `bash -n tests/scripts/test_managed_result_init_safety_wave2_contract.sh`
-- `bash tests/scripts/test_managed_result_init_safety_wave2_contract.sh`
+- `bash -n tests/scripts/test_managed_result_init_safety_wave3_contract.sh`
+- `bash tests/scripts/test_managed_result_init_safety_wave3_contract.sh`
 - compile/run `tests/test_tls13_foundation.pas`
-- compile/run `tests/test_freepascal_client_session_resumption.pas`
+- compile/run `tests/unit/test_constant_time.pas`
 - compile-log grep for `Warning: Function result variable of a managed type`
 
 Pending before commit:
@@ -48,6 +50,4 @@ Each round must have:
 ## Next Round
 
 If we continue after this batch, the next likely target is
-`docs/plans/2026-05-20-managed-result-init-safety-wave3.md`
-(`src/fafafa.ssl.tls13.primitives.pas` /
-`src/fafafa.ssl.crypto.constant_time.pas`).
+`docs/plans/2026-05-20-managed-result-init-safety-wave4.md`.
