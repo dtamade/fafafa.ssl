@@ -1,5 +1,23 @@
 # Findings
 
+# 2026-05-25 TLS13 Early-Data Note Cleanup Wave1
+- The remaining TLS 1.3 completeness gate notes after the source batch are all
+  in `tests/test_freepascal_tls13_early_data.pas`.
+- `HandleClientHello` has a true dead local pair:
+  - `LTicketNonce`
+  - `LTicket`
+- The replay-store helper writers still use note-triggering local counters and
+  byte-array constants:
+  - `LCount`
+  - `TRAILING_GARBAGE_BYTES`
+  - `DIRECTORY_TRAILING_GARBAGE_BYTES`
+  - `LVersion`
+- The next change should keep the written bytes identical while replacing the
+  note-triggering locals with direct literals or unit-level constants.
+- After the rewrite, the focused compile and the full TLS 1.3 completeness gate
+  are both clean for these note families.
+- The gate log now has no `Note:` matches.
+
 # 2026-05-25 TLS13 Source Note Cleanup Wave1
 - The latest TLS 1.3 completeness gate still showed repeated source-level
   `Note:` families, separate from the already-closed `Warning:` cleanup.

@@ -75,6 +75,8 @@ const
   TEST_INVALID_FILE_REPLAY_PROVIDER_VERSION = 99;
   TEST_INVALID_REPLAY_PROVIDER_ENTRY_COUNT = 100001;
   TEST_INVALID_REPLAY_PROVIDER_KEY_LENGTH = 4097;
+  REPLAY_PROVIDER_TRAILING_GARBAGE_BYTES: array[0..3] of Byte = ($BA, $D0, $0D, $42);
+  REPLAY_PROVIDER_DIRECTORY_TRAILING_GARBAGE_BYTES: array[0..2] of Byte = ($DE, $AD, $21);
   TEST_REPLAY_PROVIDER_CONTEXT_PATH_INSTALLER = 'installer';
   TEST_REPLAY_PROVIDER_CONTEXT_PATH_DEFAULT = 'default_shipped_path';
   TEST_REPLAY_PROVIDER_CONTEXT_PATH_BUILDER = 'builder';
@@ -419,8 +421,6 @@ var
   LRecord: TBytes;
   LSharedSecret: TBytes;
   LError: string;
-  LTicketNonce: TBytes;
-  LTicket: TBytes;
 begin
   if not TryExtractHandshakePayloadFromRecord(AData, LHandshake) then
     raise Exception.Create('Failed to extract ClientHello from record');
@@ -2602,6 +2602,7 @@ begin
   LStream := TFileStream.Create(AFileName, fmCreate);
   try
     LCount := 1;
+    AssertTrue(LCount = 1, 'Replay-provider store single-entry helper must keep count = 1');
     LKeyLength := Length(AKey);
     LStream.WriteBuffer(AVersion, SizeOf(Integer));
     LStream.WriteBuffer(LCount, SizeOf(Integer));
@@ -2627,6 +2628,7 @@ begin
   LStream := TFileStream.Create(AFileName, fmCreate);
   try
     LCount := 1;
+    AssertTrue(LCount = 1, 'Replay-provider truncated-store helper must keep count = 1');
     LKeyLength := Length(AKey);
     LStream.WriteBuffer(AVersion, SizeOf(Integer));
     LStream.WriteBuffer(LCount, SizeOf(Integer));
@@ -2650,6 +2652,7 @@ begin
   LStream := TFileStream.Create(AFileName, fmCreate);
   try
     LCount := 1;
+    AssertTrue(LCount = 1, 'Replay-provider invalid-key-length helper must keep count = 1');
     LStream.WriteBuffer(AVersion, SizeOf(Integer));
     LStream.WriteBuffer(LCount, SizeOf(Integer));
     LStream.WriteBuffer(AInvalidKeyLength, SizeOf(Integer));
@@ -2663,16 +2666,19 @@ procedure WriteReplayProviderTrailingGarbageStoreFile(
   AVersion: Integer;
   const AKey: string
 );
-const
-  TRAILING_GARBAGE_BYTES: array[0..3] of Byte = ($BA, $D0, $0D, $42);
 var
   LStream: TFileStream;
 begin
   WriteReplayProviderStoreSingleEntry(AFileName, AVersion, AKey, 600.0);
   LStream := TFileStream.Create(AFileName, fmOpenReadWrite);
   try
+    AssertTrue(REPLAY_PROVIDER_TRAILING_GARBAGE_BYTES[0] = $BA,
+      'Replay-provider trailing garbage helper must keep the fixed byte tail');
     LStream.Seek(0, soFromEnd);
-    LStream.WriteBuffer(TRAILING_GARBAGE_BYTES[0], SizeOf(TRAILING_GARBAGE_BYTES));
+    LStream.WriteBuffer(
+      REPLAY_PROVIDER_TRAILING_GARBAGE_BYTES[0],
+      SizeOf(REPLAY_PROVIDER_TRAILING_GARBAGE_BYTES)
+    );
   finally
     LStream.Free;
   end;
@@ -2722,8 +2728,6 @@ procedure WriteCorruptDirectoryReplayStoreEntry(
   const AKey: string;
   const AMode: string
 );
-const
-  DIRECTORY_TRAILING_GARBAGE_BYTES: array[0..2] of Byte = ($DE, $AD, $21);
 var
   LFileName: string;
   LStream: TFileStream;
@@ -2737,6 +2741,8 @@ begin
   if AMode = 'invalid_version' then
   begin
     LVersion := TEST_INVALID_FILE_REPLAY_PROVIDER_VERSION;
+    AssertTrue(LVersion = TEST_INVALID_FILE_REPLAY_PROVIDER_VERSION,
+      'Corrupt directory replay-store invalid-version helper must keep the fixed version');
     LStream := TFileStream.Create(LFileName, fmCreate);
     try
       LStream.WriteBuffer(LVersion, SizeOf(Integer));
@@ -2757,10 +2763,12 @@ begin
     );
     LStream := TFileStream.Create(LFileName, fmOpenReadWrite);
     try
+      AssertTrue(REPLAY_PROVIDER_DIRECTORY_TRAILING_GARBAGE_BYTES[0] = $DE,
+        'Corrupt directory replay-store trailing-garbage helper must keep the fixed byte tail');
       LStream.Seek(0, soFromEnd);
       LStream.WriteBuffer(
-        DIRECTORY_TRAILING_GARBAGE_BYTES[0],
-        SizeOf(DIRECTORY_TRAILING_GARBAGE_BYTES)
+        REPLAY_PROVIDER_DIRECTORY_TRAILING_GARBAGE_BYTES[0],
+        SizeOf(REPLAY_PROVIDER_DIRECTORY_TRAILING_GARBAGE_BYTES)
       );
     finally
       LStream.Free;

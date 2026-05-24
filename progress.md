@@ -1,5 +1,19 @@
 # Progress Log
 
+# 2026-05-25 TLS13 Early-Data Note Cleanup Wave1
+- Carried the batch boundary forward after committing the source-note cleanup.
+- Isolated the last gate note family to
+  `tests/test_freepascal_tls13_early_data.pas`.
+- Confirmed the obvious dead locals are limited to the server-side early-data
+  helper, while the replay-store fixtures need small literal/constant rewrites.
+- Started the new plan for the early-data note cleanup wave.
+- Rewrote the replay-store fixture helpers to keep the same bytes while giving
+  the compiler explicit reads for the helper locals.
+- Focused compile came back clean for the targeted note families.
+- TLS 1.3 completeness gate passed with `18` tests passed and `0` failed.
+- `rg -n "Note:" tmp/early_data_note_wave1_tls13_completeness.log` returned no
+  matches.
+
 # 2026-05-25 TLS13 Source Note Cleanup Wave1
 - Restored the latest repo state and confirmed the worktree is ahead of
   `origin/master` with no local dirty files before this batch.

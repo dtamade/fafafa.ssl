@@ -1,3 +1,31 @@
+# Task Plan: TLS13 Early-Data Note Cleanup Wave1
+
+## Objective
+
+Clear the remaining compiler `Note:` families in
+`tests/test_freepascal_tls13_early_data.pas` while preserving the early-data
+test behavior and replay-store fixture bytes.
+
+## Current State
+
+- The early-data note batch is now green on current evidence.
+- Focused compile and the TLS 1.3 completeness gate both passed, and the gate
+  log has no `Note:` matches.
+- This batch stayed tightly scoped to one file,
+  `tests/test_freepascal_tls13_early_data.pas`, and preserved the replay-store
+  fixture bytes.
+
+## Planned Batch
+
+- `tests/test_freepascal_tls13_early_data.pas`
+
+## Verification
+
+- Recompile the file directly.
+- Grep the focused log for the target `Note:` families.
+- Rerun the TLS 1.3 completeness gate with a fresh run id.
+- Finish with `git diff --check` and a commit.
+
 # Task Plan: TLS13 Source Note Cleanup Wave1
 
 ## Objective
