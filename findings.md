@@ -1,5 +1,22 @@
 # Findings
 
+# 2026-05-24 Managed Result Init Safety Wave 2
+- Wave 2 production functions were already type-safe on current head:
+  `BuildTLSPlaintext(...)`, `ReadVector16(...)`, and
+  `TFreePascalSession.Serialize(...)` all initialize empty `TBytes` results
+  with `Result := nil`.
+- The focused `tests/test_freepascal_client_session_resumption.pas` compile
+  exposed the live residual warning class in its TLS 1.3 handshake-message
+  helper functions.
+- Replacing the helper `SetLength(Result, 0)` calls with `Result := nil`
+  preserves append/build semantics while removing the managed-result warning
+  class from the verification harness.
+- The wave2 contract now guards both the production functions and those
+  session-resumption helper functions.
+- The next likely managed-result cleanup is wave 3:
+  `src/fafafa.ssl.tls13.primitives.pas` and
+  `src/fafafa.ssl.crypto.constant_time.pas`.
+
 # 2026-05-24 Managed Result Init Safety Harness Extension
 - The source contract on `src/fafafa.ssl.pas` and `src/fafafa.ssl.connection.base.pas`
   was already in the type-safe form the batch wanted, so the live warning source

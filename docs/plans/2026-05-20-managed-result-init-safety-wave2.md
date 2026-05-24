@@ -14,6 +14,7 @@
 
 - `src/fafafa.ssl.tls13.wire.pas`
 - `src/fafafa.ssl.freepascal.session.pas`
+- `tests/test_freepascal_client_session_resumption.pas`
 - `tests/scripts/test_managed_result_init_safety_wave2_contract.sh`
 - `task_plan.md`
 - `findings.md`
@@ -43,6 +44,10 @@
   被大量 FreePascal/TLS13/runtime tests 复用
 - `TFreePascalSession.Serialize/Deserialize`
   是 session resumption / early-data 相关 runtime path 的基础件
+- focused compile also exposed the same warning class in
+  `tests/test_freepascal_client_session_resumption.pas`; those helpers build
+  TLS 1.3 handshake messages for the runtime proof, so the harness should be
+  warning-clean for this batch too
 
 ## Expected Result
 
@@ -52,10 +57,13 @@
   在 `SetLength(Result, ...)` 前先显式初始化 `Result`
 - `TFreePascalSession.Serialize(...)`
   以类型安全方式初始化空 `TBytes` 结果
+- `tests/test_freepascal_client_session_resumption.pas`
+  中的 TLS 1.3 handshake helper result buffers 改为 `Result := nil`
 - focused compile 中：
   - `tls13.wire`
   - `freepascal.session`
-  这三条 managed-result warning 消失
+  - `test_freepascal_client_session_resumption`
+  这批 managed-result warning 消失
 
 ## Verification
 
@@ -70,3 +78,27 @@ fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/fp_session_units -FEtmp/f
 ./tmp/fp_session_bin/test_freepascal_client_session_resumption
 git diff --check
 ```
+
+## Execution Result
+
+- `BuildTLSPlaintext(...)`、`ReadVector16(...)`、
+  `TFreePascalSession.Serialize(...)` 当前均已是类型安全初始化形态。
+- 本轮 focused compile 暴露并修复了验证 harness 中同类 `Result`
+  初始化 warning：
+  - `HashTranscriptForSuite`
+  - `BuildFinishedMessage`
+  - `BuildNewSessionTicketMessage`
+  - `BuildServerHelloWithSelectedPSK`
+  - `BuildEncryptedExtensionsMessage`
+- `tests/scripts/test_managed_result_init_safety_wave2_contract.sh`
+  已扩展到同时守住生产单元和 harness helper。
+- Focused verification passed:
+  - `bash -n tests/scripts/test_managed_result_init_safety_wave2_contract.sh`
+  - `bash tests/scripts/test_managed_result_init_safety_wave2_contract.sh`
+  - `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/tls13_foundation_units -FEtmp/tls13_foundation_bin -otest_tls13_foundation tests/test_tls13_foundation.pas`
+  - `./tmp/tls13_foundation_bin/test_tls13_foundation`
+  - `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/fp_session_units -FEtmp/fp_session_bin -otest_freepascal_client_session_resumption tests/test_freepascal_client_session_resumption.pas`
+  - `./tmp/fp_session_bin/test_freepascal_client_session_resumption`
+- Compile-log grep found no remaining
+  `Warning: Function result variable of a managed type` in the two focused
+  compile logs.

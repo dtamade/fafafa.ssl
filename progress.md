@@ -1,6 +1,40 @@
 # Progress Log
 
 ## 2026-05-24
+- Continued into `Managed Result Init Safety Wave 2`.
+- Rechecked focused contract and found the production targets already green:
+  - `src/fafafa.ssl.tls13.wire.pas`
+  - `src/fafafa.ssl.freepascal.session.pas`
+- Ran focused compile/run checks:
+  - `tests/test_tls13_foundation.pas`
+  - `tests/test_freepascal_client_session_resumption.pas`
+- The session-resumption compile exposed 4 managed-result warnings in the test
+  harness helpers, plus one same-family unreported empty-result helper.
+- Updated `tests/test_freepascal_client_session_resumption.pas` to use
+  `Result := nil` in:
+  - `HashTranscriptForSuite`
+  - `BuildFinishedMessage`
+  - `BuildNewSessionTicketMessage`
+  - `BuildServerHelloWithSelectedPSK`
+  - `BuildEncryptedExtensionsMessage`
+- Extended `tests/scripts/test_managed_result_init_safety_wave2_contract.sh`
+  so this class cannot regress in the production functions or session harness.
+- Revalidated:
+  - `bash -n tests/scripts/test_managed_result_init_safety_wave2_contract.sh`
+  - `bash tests/scripts/test_managed_result_init_safety_wave2_contract.sh`
+  - `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/tls13_foundation_units -FEtmp/tls13_foundation_bin -otest_tls13_foundation tests/test_tls13_foundation.pas`
+  - `./tmp/tls13_foundation_bin/test_tls13_foundation`
+  - `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/fp_session_units -FEtmp/fp_session_bin -otest_freepascal_client_session_resumption tests/test_freepascal_client_session_resumption.pas`
+  - `./tmp/fp_session_bin/test_freepascal_client_session_resumption`
+  - `rg -n "Warning: Function result variable of a managed type" tmp/tls13_foundation_wave2_compile.log tmp/fp_session_wave2_compile.log || true`
+- Result:
+  - focused contract passed
+  - both compile/runs passed
+  - no remaining managed-result warning in the two focused compile logs
+- Next likely batch if we continue:
+  - `docs/plans/2026-05-20-managed-result-init-safety-wave3.md`
+
+## 2026-05-24
 - Started the `Managed Result Initialization Safety` batch and rechecked the
   live source truth.
 - Found that `src/fafafa.ssl.pas` and `src/fafafa.ssl.connection.base.pas`
