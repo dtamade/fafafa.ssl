@@ -328,3 +328,21 @@
   - update the three allowlist/quarantine contracts
   - compile/run the target Pascal test
   - run `git diff --check`
+
+## 2026-05-24 ISSLCertificateVerification Server Accept Skeleton Owner Path
+- Migrated `tests/test_freepascal_server_accept_skeleton.pas` accept-failure text check to `ISSLCertificateVerification.GetVerifyResultString` via local helper `GetCertificateVerifyResultString`.
+- Removed that file from:
+  - `tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+  - `tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  - `tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
+- Verification passed:
+  - `bash tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+  - `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  - `bash tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
+  - `bash tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+  - `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_freepascal_server_accept_owner/units -FEtmp/test_freepascal_server_accept_owner/bin tests/test_freepascal_server_accept_skeleton.pas`
+  - `tmp/test_freepascal_server_accept_owner/bin/test_freepascal_server_accept_skeleton`
+  - `git diff --check`
+- Result:
+  - root-test verify-result residual set is now 4 files
+  - next target is `tests/test_freepascal_client_cert_verify_flags_runtime.pas`

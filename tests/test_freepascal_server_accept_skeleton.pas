@@ -13,12 +13,6 @@ uses
   fafafa.ssl.tls13.clienthello,
   fafafa.ssl.tls13.x25519;
 
-// INTENTIONAL_VERIFY_RESULT_CORE_SURFACE: this root-test runtime file
-// intentionally keeps direct core GetVerifyResult/GetVerifyResultString
-// coverage as fail-closed/backend proof. Generic ISSLCertificateVerification
-// owner-path guidance is frozen elsewhere.
-{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-
 procedure Fail(const AMessage: string);
 begin
   WriteLn('❌ ', AMessage);
@@ -53,6 +47,15 @@ begin
   AssertTrue(Supports(AConn, ISSLConnectionInfo, LConnInfoAccess),
     'Server skeleton connection should expose ISSLConnectionInfo');
   Result := LConnInfoAccess.GetSelectedALPNProtocol;
+end;
+
+function GetCertificateVerifyResultString(const AConn: ISSLConnection): string;
+var
+  LCertVerify: ISSLCertificateVerification;
+begin
+  AssertTrue(Supports(AConn, ISSLCertificateVerification, LCertVerify),
+    'Server skeleton connection should expose certificate verification interface');
+  Result := LCertVerify.GetVerifyResultString;
 end;
 
 function BuildClientHelloRecordWithSingleCipher(
@@ -147,7 +150,7 @@ begin
     LAcceptResult := LConn.Accept;
     AssertTrue(not LAcceptResult, 'Server accept should fail in one-way stream test');
 
-    LVerifyStr := LowerCase(LConn.GetVerifyResultString);
+    LVerifyStr := LowerCase(GetCertificateVerifyResultString(LConn));
     AssertTrue(
       (LConn.GetError(-1) = sslErrIO) or (LConn.GetError(-1) = sslErrProtocol) or (LConn.GetError(-1) = sslErrUnsupported),
       'Accept failure should be IO/protocol/unsupported'

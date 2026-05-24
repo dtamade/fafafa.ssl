@@ -1,5 +1,10 @@
 # Findings
 
+# 2026-05-24 ISSLCertificateVerification Server Accept Skeleton Owner Path
+- `tests/test_freepascal_server_accept_skeleton.pas` 的 accept-failure verify-result 文本读取已迁到本地 helper `GetCertificateVerifyResultString`。
+- helper 通过 `ISSLCertificateVerification.GetVerifyResultString` 读取失败文本，保留 TLS 1.3 server accept skeleton / ALPN / connection-info 断言不变。
+- 该文件已移出 root residual、broad residual、compiler-deprecated quarantine allowlist；root-test direct-core verify-result residual set 从 5 个文件缩到 4 个文件。
+
 # 2026-05-24 ISSLCertificateVerification Server Accept Skeleton Planning
 - `tests/test_freepascal_server_accept_skeleton.pas` 的 direct `GetVerifyResultString` 只用于 accept 失败后的诊断文本，主要判断 `client finished` / `certificateverify signer` 一类失败原因。
 - 该文件的 `GetConnectionInfo` / `GetSelectedALPNProtocol` 相关逻辑是独立 owner surface，不需要一起改。

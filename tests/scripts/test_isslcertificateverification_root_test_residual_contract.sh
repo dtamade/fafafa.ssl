@@ -35,7 +35,6 @@ require_pattern() {
 expected_hits="$(cat <<'EOF'
 tests/test_freepascal_client_cert_verify_flags_runtime.pas
 tests/test_freepascal_client_chain_trust_runtime.pas
-tests/test_freepascal_server_accept_skeleton.pas
 tests/test_openssl_connection_verify_result_contract.pas
 tests/test_wolfssl_framework.pas
 EOF
@@ -47,7 +46,6 @@ compare_file_list "root-test direct-core verify-result residual file set" "$actu
 declare -a residual_files=(
   "tests/test_freepascal_client_cert_verify_flags_runtime.pas"
   "tests/test_freepascal_client_chain_trust_runtime.pas"
-  "tests/test_freepascal_server_accept_skeleton.pas"
   "tests/test_openssl_connection_verify_result_contract.pas"
   "tests/test_wolfssl_framework.pas"
 )
@@ -70,7 +68,6 @@ require_pattern "tests/test_freepascal_client_cert_verify_flags_runtime.pas" "Ge
 require_pattern "tests/test_freepascal_client_cert_verify_flags_runtime.pas" "GetVerifyResultString"
 require_pattern "tests/test_freepascal_client_chain_trust_runtime.pas" "GetVerifyResult"
 require_pattern "tests/test_freepascal_client_chain_trust_runtime.pas" "GetVerifyResultString"
-require_pattern "tests/test_freepascal_server_accept_skeleton.pas" "GetVerifyResultString"
 require_pattern "tests/test_openssl_connection_verify_result_contract.pas" "GetVerifyResult"
 require_pattern "tests/test_openssl_connection_verify_result_contract.pas" "GetVerifyResultString"
 require_pattern "tests/test_wolfssl_framework.pas" "GetVerifyResult"
