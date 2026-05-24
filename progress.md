@@ -1,5 +1,24 @@
 # Progress Log
 
+## 2026-05-24 Managed Result Init Safety Post-Wave6 Discovery
+- After commit `5fc756a test: close managed result safety wave6`, reran broad
+  residual discovery instead of opening wave7 by assumption.
+- Broad module tests passed:
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc FAFAFA_FAST_LOCAL=1 FAFAFA_FPC_UNIT_OUTPUT_DIR=tmp/managed_result_post_wave6_module_units bash scripts/run_all_module_tests.sh --fast-local`
+  - result: `22` passed, `0` failed, `0` skipped
+- Managed-result grep over the broad module run was clean:
+  - `rg -n "Warning: Function result variable of a managed type does not seem to be initialized" tmp/managed_result_post_wave6_run_all_module_tests.log tmp/test-reports/*20260524_234622_1649209*`
+  - result: no matches
+- Source compile proof stayed clean:
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc python3 scripts/compile_all_modules.py --rebuild --fpc-exe /opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc --unit-output-dir tmp/managed_result_post_wave6_compile_all_units --timeout 120`
+  - result: `186/186`, `0` warnings
+- Review conclusion before commit:
+  - Managed-result cleanup is closed on current source, TLS13 gate, and broad
+    module-test evidence.
+  - Do not create managed-result wave7 without fresh evidence.
+  - The next real candidate is a separate test `Unreachable code` warning
+    family, not more managed-result work.
+
 ## 2026-05-24 Managed Result Init Safety Wave 6
 - Started from the existing dirty wave6 worktree and confirmed the dirty scope
   was limited to 11 TLS 1.3 completeness harness files plus the new wave6 plan

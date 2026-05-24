@@ -101,7 +101,32 @@ git diff --check
 
 ## Next
 
-After this commit, run residual discovery again and create `wave7` only from
-fresh compile evidence. If managed-result warnings are now clean in the current
-FreePascal gates, move the next batch to a separately named warning family
-rather than mixing concerns into wave6.
+Post-wave6 residual discovery ran:
+
+```bash
+FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc \
+FAFAFA_FAST_LOCAL=1 \
+FAFAFA_FPC_UNIT_OUTPUT_DIR=tmp/managed_result_post_wave6_module_units \
+bash scripts/run_all_module_tests.sh --fast-local
+
+rg -n "Warning: Function result variable of a managed type does not seem to be initialized" \
+  tmp/managed_result_post_wave6_run_all_module_tests.log \
+  tmp/test-reports/*20260524_234622_1649209*
+
+FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc \
+python3 scripts/compile_all_modules.py --rebuild \
+  --fpc-exe /opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc \
+  --unit-output-dir tmp/managed_result_post_wave6_compile_all_units \
+  --timeout 120
+```
+
+Results:
+
+- `run_all_module_tests.sh --fast-local`: `22` passed, `0` failed, `0` skipped.
+- Broad module-test compile-log grep found no managed-result warnings.
+- `compile_all_modules.py --rebuild`: `186/186` source modules compiled,
+  `0` warnings.
+
+No wave7 is justified for managed-result warnings on current evidence. The next
+round should switch to a separately named warning family; current broad module
+logs point at test `Unreachable code` warnings as the next concrete candidate.

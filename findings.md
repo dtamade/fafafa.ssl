@@ -1,5 +1,16 @@
 # Findings
 
+# 2026-05-24 Managed Result Init Safety Post-Wave6 Residual Discovery
+- Post-wave6 broad module tests passed: `run_all_module_tests.sh --fast-local`
+  reported `22` passed, `0` failed, and `0` skipped.
+- Broad module-test compile-log grep found no
+  `Warning: Function result variable of a managed type does not seem to be initialized`.
+- Post-wave6 source compile remained clean: `compile_all_modules.py --rebuild`
+  compiled `186/186` source modules with `0` warnings.
+- No managed-result wave7 is justified on current evidence.
+- The next warning-family candidate should be tracked separately; the broad
+  module logs expose test `Unreachable code` warnings.
+
 # 2026-05-24 Managed Result Init Safety Wave 6
 - Residual discovery showed source modules were already clean for this warning
   family: `compile_all_modules.py --rebuild` compiled `186/186` source modules
