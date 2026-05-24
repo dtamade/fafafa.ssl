@@ -71,7 +71,6 @@ declare -a suppressed_files=(
   "tests/openssl/test_openssl_server_ocsp_stapling_runtime.pas"
   "tests/test_freepascal_client_cert_verify_flags_runtime.pas"
   "tests/test_freepascal_client_chain_trust_runtime.pas"
-  "tests/test_freepascal_client_online_ocsp_runtime.pas"
   "tests/test_freepascal_server_accept_skeleton.pas"
   "tests/test_openssl_connection_verify_result_contract.pas"
   "tests/test_wolfssl_framework.pas"

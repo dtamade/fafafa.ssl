@@ -1,5 +1,10 @@
 # Findings
 
+# 2026-05-24 ISSLCertificateVerification Online OCSP Owner Path
+- `tests/test_freepascal_client_online_ocsp_runtime.pas` 的 revoked、signature verification、responder/delegated responder failure 文本断言已迁到本地 helper `GetCertificateVerifyResultString`。
+- helper 通过 `ISSLCertificateVerification.GetVerifyResultString` 读取失败文本，保留 online OCSP fail-closed 语义不变。
+- 该文件已移出 root residual、broad residual、compiler-deprecated quarantine allowlist；root-test direct-core verify-result residual set 从 6 个文件缩到 5 个文件。
+
 # 2026-05-24 ISSLCertificateVerification Online OCSP Planning
 - `tests/test_freepascal_client_online_ocsp_runtime.pas` 的 remaining direct `GetVerifyResultString` 命中只用于 revoked、signature verification、responder/delegated responder 三类 fail-closed 文本断言。
 - 这些命中不是 core mirror 等价 proof；下一轮预分类为 `owner-migrate`。

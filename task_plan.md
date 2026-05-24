@@ -9,32 +9,29 @@ proofs as intentional residuals.
 
 ## Current State
 
-- Root-test direct-core verify-result residual set: 6 files.
+- Root-test direct-core verify-result residual set: 5 files.
 - Known owner-migrated root files in this campaign:
   - `tests/test_freepascal_backend_basic.pas`
   - `tests/test_freepascal_client_certificate_flight_requirements.pas`
   - `tests/test_freepascal_client_ct_sct_surface.pas`
   - `tests/test_freepascal_client_ocsp_stapling_runtime.pas`
+  - `tests/test_freepascal_client_online_ocsp_runtime.pas`
 
 ## Remaining Queue
 
-1. `tests/test_freepascal_client_online_ocsp_runtime.pas`
-   - Classification: `owner-migrate`.
-   - Plan: `docs/plans/2026-05-24-isslcertificateverification-online-ocsp-owner-path.md`.
-   - Action: migrate failure-text reads to `ISSLCertificateVerification`.
-2. `tests/test_freepascal_server_accept_skeleton.pas`
+1. `tests/test_freepascal_server_accept_skeleton.pas`
    - Likely simple failure-text check.
    - Action: inspect, then migrate if safe.
-3. `tests/test_freepascal_client_cert_verify_flags_runtime.pas`
+2. `tests/test_freepascal_client_cert_verify_flags_runtime.pas`
    - Mixed numeric result + text assertions.
    - Action: migrate to owner only if semantics stay clear; otherwise freeze as intentional runtime proof.
-4. `tests/test_freepascal_client_chain_trust_runtime.pas`
+3. `tests/test_freepascal_client_chain_trust_runtime.pas`
    - Mixed numeric result + text assertions.
    - Action: migrate to owner only if semantics stay clear; otherwise freeze as intentional runtime proof.
-5. `tests/test_openssl_connection_verify_result_contract.pas`
+4. `tests/test_openssl_connection_verify_result_contract.pas`
    - Backend/core mirror contract.
    - Action: keep frozen unless public API compatibility strategy changes.
-6. `tests/test_wolfssl_framework.pas`
+5. `tests/test_wolfssl_framework.pas`
    - Backend framework contract.
    - Action: inspect last; migrate only non-mirror failure text if obviously safe.
 
@@ -64,8 +61,9 @@ Stop this campaign when one of these is true:
 
 ## Next Round
 
-Target `tests/test_freepascal_client_online_ocsp_runtime.pas`.
+Target `tests/test_freepascal_server_accept_skeleton.pas`.
 
-Execution goal: migrate this one file to owner path, update only the required
+Execution goal: classify this one file, migrate it to owner path if it is only
+failure-text runtime coverage, update only the required
 allowlists, run the focused contracts plus target Pascal compile/run, review,
 then commit.

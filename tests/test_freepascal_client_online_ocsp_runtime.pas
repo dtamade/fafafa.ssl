@@ -70,12 +70,6 @@ type
     CheckValidity: TOCSP_check_validity;
   end;
 
-// INTENTIONAL_VERIFY_RESULT_CORE_SURFACE: this root-test runtime file
-// intentionally keeps direct core GetVerifyResult/GetVerifyResultString
-// coverage as fail-closed/backend proof. Generic ISSLCertificateVerification
-// owner-path guidance is frozen elsewhere.
-{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-
   TScriptedOnlineOCSPServerStream = class(TStream)
   private
     FCipherSuite: Word;
@@ -139,6 +133,15 @@ end;
 function ContainsTextInsensitive(const AValue, ASubText: string): Boolean;
 begin
   Result := Pos(LowerCase(ASubText), LowerCase(AValue)) > 0;
+end;
+
+function GetCertificateVerifyResultString(const AConn: ISSLConnection): string;
+var
+  LCertVerify: ISSLCertificateVerification;
+begin
+  AssertTrue(Supports(AConn, ISSLCertificateVerification, LCertVerify),
+    'Connection should expose certificate verification interface');
+  Result := LCertVerify.GetVerifyResultString;
 end;
 
 function HashTranscriptForSuite(ACipherSuite: Word; const ATranscriptData: TBytes): TBytes;
@@ -843,6 +846,7 @@ var
   LConn: ISSLConnection;
   LStream: TScriptedOnlineOCSPServerStream;
   LStubState: TOCSPStubState;
+  LVerifyText: string;
 begin
   LMaterial := GenerateCASignedServerMaterial(
     'example.com',
@@ -867,9 +871,10 @@ begin
       'Online OCSP revoked status should fail-closed');
     AssertEqualsInt(1, LHook.CallCount,
       'Online OCSP revoked status should still perform one HTTP POST');
+    LVerifyText := GetCertificateVerifyResultString(LConn);
     AssertTrue(
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'ocsp') or
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'revoked'),
+      ContainsTextInsensitive(LVerifyText, 'ocsp') or
+      ContainsTextInsensitive(LVerifyText, 'revoked'),
       'Revoked online OCSP failure should mention OCSP/revoked'
     );
   finally
@@ -887,6 +892,7 @@ var
   LConn: ISSLConnection;
   LStream: TScriptedOnlineOCSPServerStream;
   LStubState: TOCSPStubState;
+  LVerifyText: string;
 begin
   LMaterial := GenerateCASignedServerMaterial(
     'example.com',
@@ -912,9 +918,10 @@ begin
       'Online OCSP good status without cryptographic proof should fail-closed');
     AssertEqualsInt(1, LHook.CallCount,
       'Online OCSP cryptographic failure should still perform one HTTP POST');
+    LVerifyText := GetCertificateVerifyResultString(LConn);
     AssertTrue(
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'ocsp') and
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'signature'),
+      ContainsTextInsensitive(LVerifyText, 'ocsp') and
+      ContainsTextInsensitive(LVerifyText, 'signature'),
       'Online OCSP cryptographic verification failure should mention OCSP signature verification'
     );
   finally
@@ -932,6 +939,7 @@ var
   LConn: ISSLConnection;
   LStream: TScriptedOnlineOCSPServerStream;
   LStubState: TOCSPStubState;
+  LVerifyText: string;
 begin
   LMaterial := GenerateCASignedServerMaterial(
     'example.com',
@@ -955,9 +963,10 @@ begin
 
     AssertTrue(not LConn.Connect,
       'Online OCSP responder verification failure should fail-closed');
+    LVerifyText := GetCertificateVerifyResultString(LConn);
     AssertTrue(
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'responder') or
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'delegated'),
+      ContainsTextInsensitive(LVerifyText, 'responder') or
+      ContainsTextInsensitive(LVerifyText, 'delegated'),
       'Online OCSP responder verification failure should mention responder or delegated responder'
     );
   finally

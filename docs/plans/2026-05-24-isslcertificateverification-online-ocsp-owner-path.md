@@ -72,3 +72,19 @@ git diff --check
 - root-test residual set 从 6 个文件缩到 5 个文件。
 - `ISSLConnection.GetVerifyResultString` 的 compiler-deprecated quarantine
   面进一步缩小。
+
+## Execution Result
+
+- `tests/test_freepascal_client_online_ocsp_runtime.pas` 已迁到
+  `ISSLCertificateVerification.GetVerifyResultString`。
+- 该文件已从 root residual、broad residual、compiler-deprecated quarantine
+  allowlist 中移除。
+- Focused verification passed:
+  - `bash tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+  - `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  - `bash tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
+  - `bash tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+- Pascal compile/run passed:
+  - `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_freepascal_online_ocsp_owner/units -FEtmp/test_freepascal_online_ocsp_owner/bin tests/test_freepascal_client_online_ocsp_runtime.pas`
+  - `tmp/test_freepascal_online_ocsp_owner/bin/test_freepascal_client_online_ocsp_runtime`
+- Result: root-test direct-core verify-result residual set is now 5 files.
