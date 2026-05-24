@@ -34,7 +34,6 @@ require_pattern() {
 
 expected_hits="$(cat <<'EOF'
 tests/test_freepascal_client_cert_verify_flags_runtime.pas
-tests/test_freepascal_client_certificate_flight_requirements.pas
 tests/test_freepascal_client_chain_trust_runtime.pas
 tests/test_freepascal_client_ct_sct_surface.pas
 tests/test_freepascal_client_ocsp_stapling_runtime.pas
@@ -50,7 +49,6 @@ compare_file_list "root-test direct-core verify-result residual file set" "$actu
 
 declare -a residual_files=(
   "tests/test_freepascal_client_cert_verify_flags_runtime.pas"
-  "tests/test_freepascal_client_certificate_flight_requirements.pas"
   "tests/test_freepascal_client_chain_trust_runtime.pas"
   "tests/test_freepascal_client_ct_sct_surface.pas"
   "tests/test_freepascal_client_ocsp_stapling_runtime.pas"
@@ -76,7 +74,6 @@ done
 
 require_pattern "tests/test_freepascal_client_cert_verify_flags_runtime.pas" "GetVerifyResult"
 require_pattern "tests/test_freepascal_client_cert_verify_flags_runtime.pas" "GetVerifyResultString"
-require_pattern "tests/test_freepascal_client_certificate_flight_requirements.pas" "GetVerifyResultString"
 require_pattern "tests/test_freepascal_client_chain_trust_runtime.pas" "GetVerifyResult"
 require_pattern "tests/test_freepascal_client_chain_trust_runtime.pas" "GetVerifyResultString"
 require_pattern "tests/test_freepascal_client_ct_sct_surface.pas" "GetVerifyResultString"

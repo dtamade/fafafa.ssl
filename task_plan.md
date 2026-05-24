@@ -22,8 +22,9 @@ Complete
 
 ## This Batch
 
-- Migrate `tests/test_freepascal_backend_basic.pas` TLS 1.2 client/server
-  failure text checks from direct `ISSLConnection.GetVerifyResultString` to
+- Migrate `tests/test_freepascal_client_certificate_flight_requirements.pas`
+  missing-certificate-flight failure text check from direct
+  `ISSLConnection.GetVerifyResultString` to
   `ISSLCertificateVerification.GetVerifyResultString`.
 - Remove the file from the root residual allowlist and compiler-deprecated
   quarantine list.
@@ -35,14 +36,14 @@ Complete
 - `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
 - `bash tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
 - `bash tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
-- `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -FUtmp/test_freepascal_backend_basic_owner/units -FEtmp/test_freepascal_backend_basic_owner/bin tests/test_freepascal_backend_basic.pas`
-- `tmp/test_freepascal_backend_basic_owner/bin/test_freepascal_backend_basic`
+- `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -FUtmp/test_freepascal_cert_flight_owner/units -FEtmp/test_freepascal_cert_flight_owner/bin tests/test_freepascal_client_certificate_flight_requirements.pas`
+- `tmp/test_freepascal_cert_flight_owner/bin/test_freepascal_client_certificate_flight_requirements`
 - `git diff --check`
 
 ## Next
 
-- Inspect `tests/test_freepascal_client_certificate_flight_requirements.pas`
-  next: it appears to be another single-purpose `GetVerifyResultString`
-  runtime check and may be safe to migrate to `ISSLCertificateVerification`.
+- Inspect `tests/test_freepascal_client_ct_sct_surface.pas` next: it appears
+  to be another single-purpose `GetVerifyResultString` runtime check and may
+  be safe to migrate to `ISSLCertificateVerification`.
 - Keep `tests/contract/test_backend_contract.pas` as the mirror-proof boundary
   unless the public API deprecation/removal strategy changes.

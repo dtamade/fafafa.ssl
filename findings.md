@@ -1,5 +1,10 @@
 # Findings
 
+# 2026-05-24 ISSLCertificateVerification Certificate-Flight Owner Path
+- `tests/test_freepascal_client_certificate_flight_requirements.pas` 只有一处 direct `GetVerifyResultString`，用途是断言完整 TLS 1.3 握手缺少 Certificate/CertificateVerify flight 时失败文本包含 `certificate`；这不是 core mirror 等价 proof。
+- 该断言已迁到 `ISSLCertificateVerification.GetVerifyResultString`，root-test direct-core verify-result residual set 从 9 个文件缩到 8 个文件。
+- 目标测试编译运行通过；编译输出仍有该文件既有的 3 个 managed result initialization warning，没有引入失败。
+
 # 2026-05-24 ISSLCertificateVerification FreePascal Basic Owner Path
 - `tests/test_freepascal_backend_basic.pas` 的 TLS 1.2 client/server failure text checks 不是 core mirror 等价 proof；它们只需要读取验证失败文本，因此适合迁到 `ISSLCertificateVerification.GetVerifyResultString`。
 - 本批保留 FreePascal backend fail-closed / unsupported 语义不变，只把读取路径从 deprecated `ISSLConnection.GetVerifyResultString` compatibility mirror 切到 owner interface。

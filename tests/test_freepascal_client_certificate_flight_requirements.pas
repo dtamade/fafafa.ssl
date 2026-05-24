@@ -22,12 +22,6 @@ uses
 type
   TScriptedHandshakeMode = (shmFullWithoutCertificate, shmResumedWithoutCertificate);
 
-// INTENTIONAL_VERIFY_RESULT_CORE_SURFACE: this root-test runtime file
-// intentionally keeps direct core GetVerifyResult/GetVerifyResultString
-// coverage as fail-closed/backend proof. Generic ISSLCertificateVerification
-// owner-path guidance is frozen elsewhere.
-{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-
 procedure Fail(const AMessage: string);
 begin
   WriteLn('❌ ', AMessage);
@@ -405,6 +399,7 @@ procedure TestFullHandshakeRequiresCertificateFlight;
 var
   LCtx: ISSLContext;
   LConn: ISSLConnection;
+  LCertVerify: ISSLCertificateVerification;
   LStream: TScriptedServerFlightStream;
   LVerifyText: string;
 begin
@@ -420,10 +415,14 @@ begin
 
     AssertTrue(not LConn.Connect,
       'Full handshake without Certificate/CertificateVerify should fail');
-    LVerifyText := LowerCase(LConn.GetVerifyResultString);
+    AssertTrue(Supports(LConn, ISSLCertificateVerification, LCertVerify),
+      'Full-handshake connection should expose certificate verification interface');
+    LVerifyText := LowerCase(LCertVerify.GetVerifyResultString);
     AssertTrue(Pos('certificate', LVerifyText) > 0,
       'Failure should mention missing certificate flight');
   finally
+    LCertVerify := nil;
+    LConn := nil;
     LStream.Free;
   end;
 end;

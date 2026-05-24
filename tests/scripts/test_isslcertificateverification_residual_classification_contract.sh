@@ -134,7 +134,6 @@ compare_file_list "root tests direct-core verify-result file set" \
   "$root_test_hits" \
   "$(cat <<'EOF'
 tests/test_freepascal_client_cert_verify_flags_runtime.pas
-tests/test_freepascal_client_certificate_flight_requirements.pas
 tests/test_freepascal_client_chain_trust_runtime.pas
 tests/test_freepascal_client_ct_sct_surface.pas
 tests/test_freepascal_client_ocsp_stapling_runtime.pas

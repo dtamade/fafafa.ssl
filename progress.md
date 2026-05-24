@@ -222,3 +222,16 @@
 - Final combined verification initially exposed only one hygiene issue:
   - `git diff --check` reported `task_plan.md:49: new blank line at EOF.`
   - Removed the trailing blank line and reran final checks.
+
+## 2026-05-24 ISSLCertificateVerification Certificate-Flight Owner Path
+- Migrated `tests/test_freepascal_client_certificate_flight_requirements.pas` missing-certificate-flight failure text check to `ISSLCertificateVerification.GetVerifyResultString` via `Supports(...)`.
+- Removed that file from the root residual, broad residual, and compiler-deprecated quarantine lists.
+- Focused verification passed:
+  - `bash tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+  - `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  - `bash tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
+  - `bash tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+- Pascal compile/run passed:
+  - `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -FUtmp/test_freepascal_cert_flight_owner/units -FEtmp/test_freepascal_cert_flight_owner/bin tests/test_freepascal_client_certificate_flight_requirements.pas`
+  - `tmp/test_freepascal_cert_flight_owner/bin/test_freepascal_client_certificate_flight_requirements`
+- Result: root-test verify-result residual set is now 8 files.
