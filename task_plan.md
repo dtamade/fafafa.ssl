@@ -1,3 +1,46 @@
+# Task Plan: Framework Excellence Sequential Execution Master Plan
+
+## Objective
+
+Absorb the remaining roadmap work into one ordered execution plan so future
+rounds move through real code-heavy stages instead of reopening scope selection.
+
+## Current State
+
+- Latest commit before this planning batch: `a715d14 feat: route builder
+  through context-safe config`.
+- `TSSLContextConfig` surface adoption and builder adoption are both verified.
+- `docs/ROADMAP.md` still pointed at the older `TSSLConfig` scope-surgery
+  blueprint, which no longer captured the full ordered queue requested by the
+  user.
+
+## Planned Batch
+
+- Create
+  `docs/plans/2026-05-25-framework-excellence-sequential-execution-master-plan.md`.
+- Update `docs/ROADMAP.md` so the active batch and next route candidate point
+  to the sequential master plan.
+- Update `tests/scripts/test_active_roadmap_references_contract.sh` so route
+  drift back to the old blueprint fails.
+- Update working records and commit the planning batch.
+
+## Verification
+
+- RED:
+  - `bash tests/scripts/test_active_roadmap_references_contract.sh`
+  - failed because the sequential master plan did not exist yet.
+- GREEN:
+  - `bash -n tests/scripts/test_active_roadmap_references_contract.sh`
+  - `bash tests/scripts/test_active_roadmap_references_contract.sh`
+  - `bash tests/scripts/test_architecture_current_route_truth_contract.sh`
+  - `git diff --check`
+
+## Review Conclusion
+
+- Verified. The active roadmap route now points at the sequential execution
+  master plan, and the old `TSSLConfig` blueprint is retained as a completed
+  input rather than the active route.
+
 # Task Plan: TSSLContextConfig Builder Adoption
 
 ## Objective

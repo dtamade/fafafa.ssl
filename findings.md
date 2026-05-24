@@ -1,5 +1,18 @@
 # Findings
 
+# 2026-05-25 Framework Excellence Sequential Execution Master Plan
+- The user explicitly selected the full queue instead of another ambiguous
+  route-selection loop: roadmap sync, `TSSLConfig` continuation, facade
+  simplification, FreePascal excellence, and performance / ops excellence
+  should be executed as one ordered plan.
+- `docs/ROADMAP.md` had become conservative after the last two commits:
+  it still pointed at the `TSSLConfig` scope-surgery blueprint even though the
+  first two implementation slices (`TSSLContextConfig` surface adoption and
+  builder adoption) were already committed.
+- The next code-heavy slice should be `TSSLContextConfig` factory direct
+  application, because it directly follows the just-landed builder adoption and
+  reduces remaining legacy `TSSLConfig` bounce for new context-safe callers.
+
 # 2026-05-25 TSSLContextConfig Builder Adoption
 - `TSSLContextBuilder` is the right first consumer of `TSSLContextConfig`
   because it is the recommended high-level entrypoint for ordinary new code.

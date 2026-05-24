@@ -1,6 +1,6 @@
 # fafafa.ssl 当前路线图
 
-> **更新**: 2026-05-17
+> **更新**: 2026-05-25
 > **用途**: 这是当前对外稳定入口，用来说明“现在项目处于什么状态、接下来最该做什么、从哪里开始验证”。
 
 ---
@@ -8,16 +8,16 @@
 ## 当前状态
 
 - engineering_state: RELEASED
-- approval_gate: explicit scope selection required before the next implementation batch
-- current_execution_control_plane: `post-release route selection`
+- approval_gate: sequential execution plan selected
+- current_execution_control_plane: `framework excellence sequential execution`
 - current_release_plan: `docs/plans/2026-05-12-release-v1.5.0-formalization.md`
 - current_release_readiness: `docs/test_reports/RELEASE_READINESS_V1.5.0.md`
 - current_release_status: `RELEASED`
 - current_workflow_surface: `.github/README.md`
 - wave_c_role: `closeout / approval / historical reference only`
 - product_mainline: `SSL/TLS backend completeness roadmap`
-- current_active_batch: `docs/plans/2026-05-25-tsslconfig-scope-surgery-blueprint.md`
-- next_route_candidate: `docs/plans/2026-05-25-tsslconfig-scope-surgery-blueprint.md`
+- current_active_batch: `docs/plans/2026-05-25-framework-excellence-sequential-execution-master-plan.md`
+- next_route_candidate: `docs/plans/2026-05-25-framework-excellence-sequential-execution-master-plan.md`
 - current_architecture_north_star: `docs/plans/2026-05-24-framework-excellence-spec-and-evolution-roadmap.md`
 - current_default_build: `python3 scripts/compile_all_modules.py`
 - current_default_gate: `bash scripts/run_minimal_ci_gate.sh --fast-local`
@@ -27,9 +27,9 @@
 
 这几个状态需要分开理解：
 
-- 当前默认执行控制面已经从 `release-control / v1.5.0 formalization` 切到 `post-release route selection`：
+- 当前默认执行控制面已经从 `post-release route selection` 切到 `framework excellence sequential execution`：
   - `v1.5.0` 的发布链已经闭环
-  - 当前先看 roadmap / release readiness / workflow surface / product mainline roadmap，再决定下一条实现线
+  - 当前不再反复做 scope selection；后续按 sequential master plan 顺序执行
 - 当前 release-control 的技术门禁已经闭环：
   - manual `wave-b-b2-manual.yml` run `25989095571` 在 head `b95044d` 上的 `windows-gate` / `macos-gate` / `linux-gate` / `summary` 全部 `SUCCESS`
   - 默认 `CI` run `25989090032` 在同一 head 上也已 `SUCCESS`
@@ -37,8 +37,9 @@
   - `v1.5.0` GitHub Release 已发布，source archive `fafafa-ssl-v1.5.0-source.tar.gz` 已上传
 - `Wave C` 现在只是 closeout / 历史参考，不再承载当前审批门或默认实施入口。
 - 当前真正还在推进的实现主线，是 pure Pascal backend 的 SSL/TLS completeness。
-- 当前活跃批次转入 `TSSLConfig` scope surgery blueprint，让 mixed-scope config
-  record 的后续演进从已验证的字段分桶和 migration map 出发。
+- 当前活跃批次转入 framework excellence sequential execution master plan，把
+  `TSSLConfig` scope surgery、facade simplification、FreePascal excellence 和
+  performance / ops excellence 排成一个顺序执行队列。
 - `KnownIssues` 已不再把 OCSP / CT / validation / resumption 写成剩余 gap；这些线只有 fresh RED 才应重开。
 
 ---
@@ -102,10 +103,13 @@ bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local
 6. connection boundary completion / owner-path truth sync 已经收口：
    - source comments、architecture doc 和 API reference 已经对齐推荐 owner path 与 compatibility mirror 的语言
    - 行为不变，只做了叙事与入口推荐收口
-7. 当前活跃批次转入 `TSSLConfig` scope surgery blueprint：
+7. `TSSLConfig` scope surgery 已经完成前两条实现 slice：
+   - `TSSLContextConfig` additive surface / projection / factory overload 已落地
+   - `TSSLContextBuilder` 已通过 `TSSLContextConfig` 创建 context，同时保留 post-create owner responsibilities
+8. 当前活跃批次转入 framework excellence sequential execution master plan：
    - 不重开已经完成的 option-bridge / logging / timeout owner truth
-   - 先把 roadmap 与 contract 指向新的 `TSSLConfig` blueprint
    - 后续实现 slice 必须从现有 scope buckets / migration targets 出发，避免继续把 `TSSLConfig` 当成万能配置 record
+   - 执行顺序固定为 factory direct context-safe path、`TSSLConfig` scope-surgery completion、facade simplification、FreePascal excellence、performance / ops excellence
 
 下一条最值得开的实现线：
 
@@ -113,12 +117,13 @@ bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local
 2. 如果还要继续扩 early-data，不再建议无 fresh RED 地继续开 directory-store family；当前 blocker queue 已经收口，剩余只有更深的 crash-window / write-interruption drift 值得在 fresh failing evidence 出现时再重开，而不是现在回头重开现有 file-backed `.bak` family、managed boundary 或现有 parity 接线。
 3. capability 等级继续保持 `experimental`；当前剩余 caveat 已经收口到 local persistent 路径、fail-closed 行为，以及尚未承诺 distributed / cross-host replay coordination。在没有 fresh RED 前，这条 caveat 应视为 post-release 阶段有意保留的最终 experimental boundary，而不是默认 future queue。
 4. OCSP / CT / validation 只在 fresh failing evidence 出现时重开，不再作为默认 future queue。
-5. 高层架构演进当前已经选择 `TSSLConfig` scope surgery blueprint 作为下一批；第一条真实实现 slice 应优先评估 additive `TSSLContextConfig` / projection surface 是否能降低 mixed-scope 使用，而不是直接破坏 `v1.x` record 兼容。
+5. 高层架构演进当前已经选择 sequential master plan；下一条代码-heavy slice 是 `TSSLContextConfig` factory direct application，用来减少新 context-safe 调用继续绕回 legacy `TSSLConfig` 的内部 bounce。
 
 相关计划：
 
 - [Backend completeness roadmap](plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md)
 - [Framework excellence spec and evolution roadmap](plans/2026-05-24-framework-excellence-spec-and-evolution-roadmap.md)
+- [Framework excellence sequential execution master plan](plans/2026-05-25-framework-excellence-sequential-execution-master-plan.md)
 - [TSSLConfig scope surgery blueprint](plans/2026-05-25-tsslconfig-scope-surgery-blueprint.md)
 - [TSSLConfig public-surface slimming roadmap](plans/2026-05-18-tsslconfig-public-surface-slimming-roadmap.md)
 - [2026-04-12 root roadmap truth alignment and early-data next wave](plans/2026-04-12-root-roadmap-truth-alignment-and-early-data-next-wave.md)

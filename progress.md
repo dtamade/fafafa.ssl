@@ -1,5 +1,30 @@
 # Progress Log
 
+# 2026-05-25 Framework Excellence Sequential Execution Master Plan
+- Started a planning batch after commit
+  `a715d14 feat: route builder through context-safe config`.
+- User requested all previously reported roadmap tasks be placed into one plan
+  and executed sequentially.
+- Updated the active roadmap contract first to require
+  `docs/plans/2026-05-25-framework-excellence-sequential-execution-master-plan.md`.
+- RED check:
+  - `bash tests/scripts/test_active_roadmap_references_contract.sh`
+  - result: failed because the sequential master plan did not exist yet.
+- Created the sequential master plan with ordered stages:
+  - route control sync
+  - `TSSLContextConfig` factory direct application
+  - `TSSLConfig` scope-surgery completion
+  - curated facade simplification
+  - FreePascal backend excellence
+  - performance and operational excellence
+- Updated `docs/ROADMAP.md` to make the sequential master plan the active batch
+  and next route candidate.
+- Verification passed:
+  - `bash -n tests/scripts/test_active_roadmap_references_contract.sh`
+  - `bash tests/scripts/test_active_roadmap_references_contract.sh`
+  - `bash tests/scripts/test_architecture_current_route_truth_contract.sh`
+  - `git diff --check`
+
 # 2026-05-25 TSSLContextConfig Builder Adoption
 - Started the next scope-surgery implementation slice after commit
   `18dbc02 feat: add context-safe ssl config surface`.
