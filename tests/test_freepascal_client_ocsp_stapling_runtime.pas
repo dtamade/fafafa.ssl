@@ -80,7 +80,7 @@ begin
     Exit(SHA256(ATranscriptData));
   if TLS13CipherSuiteIsSHA384(ACipherSuite) then
     Exit(SHA384(ATranscriptData));
-  SetLength(Result, 0);
+  Result := nil;
 end;
 
 function BuildEncryptedExtensionsMessage: TBytes;
@@ -90,7 +90,7 @@ begin
   SetLength(LBody, 0);
   AppendUInt16(LBody, 0);
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendByte(Result, TLS_HANDSHAKE_TYPE_ENCRYPTED_EXTENSIONS);
   AppendUInt24(Result, Length(LBody));
   AppendBytes(Result, LBody);
@@ -110,7 +110,7 @@ begin
     HashTranscriptForSuite(ACipherSuite, ATranscriptData)
   );
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendByte(Result, TLS_HANDSHAKE_TYPE_FINISHED);
   AppendUInt24(Result, Length(LVerifyData));
   AppendBytes(Result, LVerifyData);
@@ -120,7 +120,7 @@ function ReadFileBytes(const AFileName: string): TBytes;
 var
   LStream: TFileStream;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   LStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyNone);
   try
     SetLength(Result, LStream.Size);
@@ -140,6 +140,7 @@ end;
 
 function AnsiStringToBytes(const AValue: AnsiString): TBytes;
 begin
+  Result := nil;
   SetLength(Result, Length(AValue));
   if Length(AValue) > 0 then
     Move(AValue[1], Result[0], Length(AValue));
@@ -210,7 +211,7 @@ var
   LNow: TDateTime;
   LError: string;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   LError := '';
   if not TryParseCertificateBlob(ACertificateBlob, LCertificates, LError) then
     Fail('Failed to parse certificate blob for OCSP response: ' + LError);
@@ -297,7 +298,7 @@ begin
   AppendUInt24(LBody, Length(AResponse));
   AppendBytes(LBody, AResponse);
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendUInt16(Result, 5);
   AppendUInt16(Result, Length(LBody));
   AppendBytes(Result, LBody);

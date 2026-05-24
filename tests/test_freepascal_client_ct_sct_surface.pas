@@ -273,7 +273,7 @@ begin
     Exit(SHA256(ATranscriptData));
   if TLS13CipherSuiteIsSHA384(ACipherSuite) then
     Exit(SHA384(ATranscriptData));
-  SetLength(Result, 0);
+  Result := nil;
 end;
 
 function BuildEncryptedExtensionsMessage: TBytes;
@@ -283,7 +283,7 @@ begin
   SetLength(LBody, 0);
   AppendUInt16(LBody, 0);
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendByte(Result, TLS_HANDSHAKE_TYPE_ENCRYPTED_EXTENSIONS);
   AppendUInt24(Result, Length(LBody));
   AppendBytes(Result, LBody);
@@ -303,7 +303,7 @@ begin
     HashTranscriptForSuite(ACipherSuite, ATranscriptData)
   );
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendByte(Result, TLS_HANDSHAKE_TYPE_FINISHED);
   AppendUInt24(Result, Length(LVerifyData));
   AppendBytes(Result, LVerifyData);
@@ -313,7 +313,7 @@ function ReadFileBytes(const AFileName: string): TBytes;
 var
   LStream: TFileStream;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   LStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyNone);
   try
     SetLength(Result, LStream.Size);
@@ -333,6 +333,7 @@ end;
 
 function AnsiStringToBytes(const AValue: AnsiString): TBytes;
 begin
+  Result := nil;
   SetLength(Result, Length(AValue));
   if Length(AValue) > 0 then
     Move(AValue[1], Result[0], Length(AValue));
@@ -423,6 +424,7 @@ function BuildBytePattern(ALength: Integer; ASeed: Byte): TBytes;
 var
   I: Integer;
 begin
+  Result := nil;
   SetLength(Result, ALength);
   for I := 0 to ALength - 1 do
     Result[I] := Byte((Integer(ASeed) + I) and $FF);
@@ -435,7 +437,7 @@ function BuildSerializedSCT(
 begin
   AssertEqualsInt(32, Length(ALogID), 'Serialized SCT log ID must be 32 bytes');
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendByte(Result, 0); // v1
   AppendBytes(Result, ALogID);
   AppendUInt64(Result, ATimestamp);
@@ -459,7 +461,7 @@ begin
     AppendBytes(LList, ASCTs[I]);
   end;
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendUInt16(Result, Word(Length(LList)));
   AppendBytes(Result, LList);
 end;
@@ -486,7 +488,7 @@ end;
 
 function BuildSignedCertificateTimestampCertificateExtensionRaw(const AData: TBytes): TBytes;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   AppendUInt16(Result, TLS_EXTENSION_SIGNED_CERTIFICATE_TIMESTAMP);
   AppendUInt16(Result, Word(Length(AData)));
   AppendBytes(Result, AData);
@@ -501,7 +503,7 @@ begin
   AppendUInt24(LBody, Length(AResponse));
   AppendBytes(LBody, AResponse);
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendUInt16(Result, 5);
   AppendUInt16(Result, Length(LBody));
   AppendBytes(Result, LBody);
@@ -522,7 +524,7 @@ var
   LNow: TDateTime;
   LError: string;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   LError := '';
   if not TryParseCertificateBlob(ACertificateBlob, LCertificates, LError) then
     Fail('Failed to parse certificate blob for OCSP-delivered SCT response: ' + LError);

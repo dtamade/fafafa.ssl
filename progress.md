@@ -1,5 +1,29 @@
 # Progress Log
 
+## 2026-05-24 Managed Result Init Safety Wave 6
+- Started from the existing dirty wave6 worktree and confirmed the dirty scope
+  was limited to 11 TLS 1.3 completeness harness files plus the new wave6 plan
+  and contract script.
+- Reviewed the wave6 diff:
+  - empty `TBytes` result helpers now use `Result := nil`
+  - direct result-resize helpers now explicitly initialize `Result` first where
+    needed
+  - no production units were changed in this batch
+- Verified focused contract:
+  - `bash -n tests/scripts/test_managed_result_init_safety_wave6_contract.sh`
+  - `bash tests/scripts/test_managed_result_init_safety_wave6_contract.sh`
+- Verified full TLS 1.3 completeness gate:
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local --run-id managed_result_wave6_tls13 --fpc-exe /opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc`
+  - report: `tmp/test-reports/freepascal_tls13_completeness_managed_result_wave6_tls13.md`
+  - result: `18` passed, `0` failed
+- Confirmed target warning class is gone from the wave6 gate log:
+  - `rg -n "Warning: Function result variable of a managed type does not seem to be initialized" tmp/managed_result_wave6_tls13_completeness.log`
+  - result: no matches
+- Review conclusion before commit:
+  - Wave6 is test-harness-only and preserves behavior.
+  - The target managed-result warning family is clean in the full TLS 1.3 gate.
+  - Non-target warnings remain and should be handled in separate batches.
+
 ## 2026-05-24 Managed Result Init Safety Wave 5
 - Goal: close the wave5 managed-result initialization batch for
   `tls13.appschedule`, `tls13.serverhello`, and `tests/test_tls13_resumption.pas`.

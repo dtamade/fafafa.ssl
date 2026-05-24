@@ -1,5 +1,22 @@
 # Findings
 
+# 2026-05-24 Managed Result Init Safety Wave 6
+- Residual discovery showed source modules were already clean for this warning
+  family: `compile_all_modules.py --rebuild` compiled `186/186` source modules
+  with `0` warnings.
+- The remaining managed-result warnings came from the TLS 1.3 completeness test
+  harness, not production units.
+- Replacing empty `TBytes` result initialization with `Result := nil` preserves
+  helper semantics while avoiding FreePascal's managed-result initialization
+  warning.
+- Helpers that resize `Result` directly now initialize it first where the gate
+  exposed the same warning class.
+- Full TLS 1.3 completeness gate passed with `18` tests passed and `0` failed.
+- The wave6 gate log contains no
+  `Warning: Function result variable of a managed type does not seem to be initialized`.
+- Remaining gate warnings are different families and should be handled in
+  separately named follow-up batches, not folded into wave6.
+
 # 2026-05-24 Managed Result Init Safety Wave 5
 - Wave5 production and test targets were already type-safe on current head:
   `TLS13ComputeResumptionMasterSecretFromTranscriptHash`,

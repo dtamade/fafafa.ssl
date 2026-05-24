@@ -48,7 +48,7 @@ begin
     Exit(SHA256(ATranscriptData));
   if TLS13CipherSuiteIsSHA384(ACipherSuite) then
     Exit(SHA384(ATranscriptData));
-  SetLength(Result, 0);
+  Result := nil;
 end;
 
 function BuildEncryptedExtensionsMessage: TBytes;
@@ -58,7 +58,7 @@ begin
   SetLength(LBody, 0);
   AppendUInt16(LBody, 0);
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendByte(Result, TLS_HANDSHAKE_TYPE_ENCRYPTED_EXTENSIONS);
   AppendUInt24(Result, Length(LBody));
   AppendBytes(Result, LBody);
@@ -78,7 +78,7 @@ begin
     HashTranscriptForSuite(ACipherSuite, ATranscriptData)
   );
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendByte(Result, TLS_HANDSHAKE_TYPE_FINISHED);
   AppendUInt24(Result, Length(LVerifyData));
   AppendBytes(Result, LVerifyData);
@@ -88,7 +88,7 @@ function ReadFileBytes(const AFileName: string): TBytes;
 var
   LStream: TFileStream;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   LStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyNone);
   try
     SetLength(Result, LStream.Size);
@@ -115,6 +115,7 @@ begin
   LLeafPEM := ReadFileBytes('tests/certificate/test_certs/signer_cert.pem');
   LIssuerPEM := ReadFileBytes('tests/certificate/test_certs/ca_cert.pem');
   LCombined := BytesToString(LLeafPEM) + LineEnding + BytesToString(LIssuerPEM);
+  Result := nil;
   SetLength(Result, Length(LCombined));
   if Length(LCombined) > 0 then
     Move(LCombined[1], Result[0], Length(LCombined));

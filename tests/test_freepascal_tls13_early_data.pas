@@ -165,7 +165,7 @@ begin
     Exit(SHA256(ATranscriptData));
   if TLS13CipherSuiteIsSHA384(ACipherSuite) then
     Exit(SHA384(ATranscriptData));
-  SetLength(Result, 0);
+  Result := nil;
 end;
 
 function BuildEncryptedExtensionsMessage(AAcceptEarlyData: Boolean): TBytes;
@@ -184,7 +184,7 @@ begin
   AppendUInt16(LBody, Word(Length(LExtensions)));
   AppendBytes(LBody, LExtensions);
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendByte(Result, TLS_HANDSHAKE_TYPE_ENCRYPTED_EXTENSIONS);
   AppendUInt24(Result, Length(LBody));
   AppendBytes(Result, LBody);
@@ -204,7 +204,7 @@ begin
     HashTranscriptForSuite(ACipherSuite, ATranscriptData)
   );
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendByte(Result, TLS_HANDSHAKE_TYPE_FINISHED);
   AppendUInt24(Result, Length(LVerifyData));
   AppendBytes(Result, LVerifyData);
@@ -245,7 +245,7 @@ begin
   AppendUInt16(LBody, Word(Length(LExtensions)));
   AppendBytes(LBody, LExtensions);
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendByte(Result, TLS_HANDSHAKE_TYPE_NEW_SESSION_TICKET);
   AppendUInt24(Result, Length(LBody));
   AppendBytes(Result, LBody);
@@ -298,7 +298,7 @@ begin
   AppendUInt16(LBody, Word(Length(LExtensions)));
   AppendBytes(LBody, LExtensions);
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendByte(Result, TLS_HANDSHAKE_TYPE_SERVER_HELLO);
   AppendUInt24(Result, Length(LBody));
   AppendBytes(Result, LBody);
@@ -1176,6 +1176,7 @@ end;
 
 function BytesOf(const AValue: AnsiString): TBytes;
 begin
+  Result := nil;
   SetLength(Result, Length(AValue));
   if Length(AValue) > 0 then
     Move(AValue[1], Result[0], Length(AValue));
@@ -2011,6 +2012,7 @@ function ReadBytesFromFile(const AFileName: string): TBytes;
 var
   LStream: TFileStream;
 begin
+  Result := nil;
   AssertTrue((AFileName <> '') and FileExists(AFileName),
     'Byte-file helper should only read existing files');
   LStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyNone);

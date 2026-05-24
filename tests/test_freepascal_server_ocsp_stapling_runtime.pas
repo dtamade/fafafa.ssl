@@ -50,7 +50,7 @@ begin
     Exit(SHA256(ATranscriptData));
   if TLS13CipherSuiteIsSHA384(ACipherSuite) then
     Exit(SHA384(ATranscriptData));
-  SetLength(Result, 0);
+  Result := nil;
 end;
 
 procedure AppendHandshakeBytes(var ADest: TBytes; const ASource: TBytes);
@@ -107,7 +107,7 @@ function ReadFileBytes(const AFileName: string): TBytes;
 var
   LStream: TFileStream;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   LStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyNone);
   try
     SetLength(Result, LStream.Size);

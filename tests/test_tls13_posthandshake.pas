@@ -75,7 +75,7 @@ begin
   AppendUInt16(LBody, $002A);
   AppendUInt16(LBody, 0);
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendByte(Result, TLS_HANDSHAKE_TYPE_NEW_SESSION_TICKET);
   AppendUInt24(Result, Length(LBody));
   AppendBytes(Result, LBody);
@@ -183,7 +183,7 @@ end;
 
 function BuildSampleKeyUpdate(ARequestValue: Byte): TBytes;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   AppendByte(Result, TLS_HANDSHAKE_TYPE_KEY_UPDATE);
   AppendUInt24(Result, 1);
   AppendByte(Result, ARequestValue);

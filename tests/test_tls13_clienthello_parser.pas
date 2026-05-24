@@ -30,7 +30,6 @@ end;
 function BuildExtensionHeader(AType: Word; const AData: TBytes): TBytes;
 begin
   Result := nil;
-  SetLength(Result, 0);
   AppendUInt16(Result, AType);
   AppendUInt16(Result, Word(Length(AData)));
   AppendBytes(Result, AData);
@@ -48,7 +47,7 @@ var
   LX25519Share: TBytes;
   I: Integer;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   SetLength(LBody, 0);
   AppendUInt16(LBody, TLS_LEGACY_VERSION);
 
@@ -102,7 +101,7 @@ begin
   AppendUInt16(LBody, Word(Length(LExtensions)));
   AppendBytes(LBody, LExtensions);
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendByte(Result, TLS_HANDSHAKE_TYPE_CLIENT_HELLO);
   AppendUInt24(Result, Length(LBody));
   AppendBytes(Result, LBody);
@@ -117,7 +116,7 @@ var
   LExtData: TBytes;
   LKeyShare: TBytes;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   SetLength(LBody, 0);
   AppendUInt16(LBody, TLS_LEGACY_VERSION);
 
@@ -155,7 +154,7 @@ begin
   AppendUInt16(LBody, Word(Length(LExtensions)));
   AppendBytes(LBody, LExtensions);
 
-  SetLength(Result, 0);
+  Result := nil;
   AppendByte(Result, TLS_HANDSHAKE_TYPE_CLIENT_HELLO);
   AppendUInt24(Result, Length(LBody));
   AppendBytes(Result, LBody);

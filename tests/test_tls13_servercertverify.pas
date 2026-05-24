@@ -21,6 +21,7 @@ function LoadFileBytes(const AFileName: string): TBytes;
 var
   LStream: TFileStream;
 begin
+  Result := nil;
   LStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
   try
     SetLength(Result, LStream.Size);
@@ -683,7 +684,7 @@ var
   LOffset: Integer;
   LLength: Integer;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 
   if not TryExtractFirstPrivateKeyDER(APEMBlob, LDER, LType) then
     Exit;
@@ -722,7 +723,7 @@ var
   LOffset: Integer;
   LLength: Integer;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 
   if not TryExtractFirstPrivateKeyDER(APEMBlob, LDER, LType) then
     Exit;
@@ -762,7 +763,7 @@ var
   LOffset: Integer;
   LLength: Integer;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 
   if not TryExtractFirstPrivateKeyDER(APEMBlob, LDER, LType) then
     Exit;
@@ -883,7 +884,7 @@ var
   LOffset: Integer;
   LLength: Integer;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 
   if not TryExtractFirstPrivateKeyDER(APEMBlob, LDER, LType) then
     Exit;
@@ -922,7 +923,7 @@ var
   LOffset: Integer;
   LLength: Integer;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 
   if not TryExtractFirstPrivateKeyDER(APEMBlob, LDER, LType) then
     Exit;
@@ -961,7 +962,7 @@ var
   LOffset: Integer;
   LLength: Integer;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 
   if not TryExtractFirstPrivateKeyDER(APEMBlob, LDER, LType) then
     Exit;
@@ -1000,7 +1001,7 @@ var
   LOffset: Integer;
   LLength: Integer;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 
   if not TryExtractFirstPrivateKeyDER(APEMBlob, LDER, LType) then
     Exit;
@@ -1039,7 +1040,7 @@ var
   LOffset: Integer;
   LLength: Integer;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 
   if not TryExtractFirstPrivateKeyDER(APEMBlob, LDER, LType) then
     Exit;
@@ -1078,7 +1079,7 @@ var
   LOffset: Integer;
   LLength: Integer;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 
   if not TryExtractFirstPrivateKeyDER(APEMBlob, LDER, LType) then
     Exit;
@@ -1117,7 +1118,7 @@ var
   LOffset: Integer;
   LLength: Integer;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 
   if not TryExtractFirstPrivateKeyDER(APEMBlob, LDER, LType) then
     Exit;
@@ -1156,7 +1157,7 @@ var
   LOffset: Integer;
   LLength: Integer;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 
   if not TryExtractFirstPrivateKeyDER(APEMBlob, LDER, LType) then
     Exit;
@@ -1195,7 +1196,7 @@ var
   LOffset: Integer;
   LLength: Integer;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 
   if not TryExtractFirstPrivateKeyDER(APEMBlob, LDER, LType) then
     Exit;
@@ -1485,6 +1486,7 @@ var
   LCount: Integer;
   I: Integer;
 begin
+  Result := nil;
   if AValue = 0 then
   begin
     SetLength(Result, 1);
@@ -1654,7 +1656,7 @@ var
   I: Integer;
   LPayloadOffset: Integer;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   if Length(ADER) < 4 then
     Exit;
   if ADER[0] <> $30 then
@@ -1703,6 +1705,7 @@ const
 var
   LJunkBytes: TBytes;
 begin
+  Result := nil;
   LJunkBytes := TEncoding.ASCII.GetBytes(JUNK_PREFIX);
   SetLength(Result, Length(LJunkBytes) + Length(APEMBlob));
   if Length(LJunkBytes) > 0 then
@@ -1718,6 +1721,7 @@ var
   LSepBytes: TBytes;
   LOffset: Integer;
 begin
+  Result := nil;
   LSepBytes := TEncoding.ASCII.GetBytes(SEP);
   SetLength(Result, Length(APEMBlobA) + Length(LSepBytes) + Length(APEMBlobB));
   LOffset := 0;
