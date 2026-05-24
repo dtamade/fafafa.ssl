@@ -30,6 +30,7 @@
   - Behavior is unchanged: expected constants and failure messages are the same.
   - The warning family is clean in focused and broad module-test compile logs.
   - Remaining TLS 1.3 gate warnings belong to different warning families.
+- Committed as `6ac93d7 test: clear module unreachable-code warnings`.
 
 ## 2026-05-24 Managed Result Init Safety Post-Wave6 Discovery
 - After commit `5fc756a test: close managed result safety wave6`, reran broad

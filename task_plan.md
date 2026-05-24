@@ -40,10 +40,11 @@ Completed:
 - `rg -n "Warning:" tmp/test-reports/*20260524_235928_1700710*_compile.log`
   - result: no matches
 
-Pending before commit:
+Completed after verification:
 
 - `git diff --check`
-- final review and commit
+- final review
+- commit `6ac93d7 test: clear module unreachable-code warnings`
 
 ## Per-Round Contract
 
