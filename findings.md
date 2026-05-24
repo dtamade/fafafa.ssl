@@ -1,5 +1,10 @@
 # Findings
 
+# 2026-05-24 ISSLCertificateVerification Online OCSP Planning
+- `tests/test_freepascal_client_online_ocsp_runtime.pas` 的 remaining direct `GetVerifyResultString` 命中只用于 revoked、signature verification、responder/delegated responder 三类 fail-closed 文本断言。
+- 这些命中不是 core mirror 等价 proof；下一轮预分类为 `owner-migrate`。
+- Starting contracts 通过：root residual allowlist、broad residual classification、compiler-deprecated quarantine 当前都仍与 6-file residual truth 对齐。
+
 # 2026-05-24 ISSLCertificateVerification Campaign Control
 - The campaign is now bounded to 6 root-test residual files, not an open-ended sweep.
 - Each future round must classify exactly one target as `owner-migrate` or `freeze`, then verify and commit.

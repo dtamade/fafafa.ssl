@@ -19,8 +19,9 @@ proofs as intentional residuals.
 ## Remaining Queue
 
 1. `tests/test_freepascal_client_online_ocsp_runtime.pas`
-   - Likely failure-text runtime checks.
-   - Action: inspect, then migrate to `ISSLCertificateVerification` if not a mirror proof.
+   - Classification: `owner-migrate`.
+   - Plan: `docs/plans/2026-05-24-isslcertificateverification-online-ocsp-owner-path.md`.
+   - Action: migrate failure-text reads to `ISSLCertificateVerification`.
 2. `tests/test_freepascal_server_accept_skeleton.pas`
    - Likely simple failure-text check.
    - Action: inspect, then migrate if safe.
@@ -64,3 +65,7 @@ Stop this campaign when one of these is true:
 ## Next Round
 
 Target `tests/test_freepascal_client_online_ocsp_runtime.pas`.
+
+Execution goal: migrate this one file to owner path, update only the required
+allowlists, run the focused contracts plus target Pascal compile/run, review,
+then commit.

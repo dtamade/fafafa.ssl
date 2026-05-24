@@ -273,3 +273,19 @@
   - `tests/test_wolfssl_framework.pas`
 - New per-round rule: one named target, pre-edit classification, focused verification, short review conclusion, git commit.
 - Next round target: `tests/test_freepascal_client_online_ocsp_runtime.pas`.
+
+## 2026-05-24 ISSLCertificateVerification Online OCSP Planning
+- Inspected `tests/test_freepascal_client_online_ocsp_runtime.pas`.
+- Pre-edit classification: `owner-migrate`.
+- Reason: direct `GetVerifyResultString` reads only assert fail-closed diagnostic text for revoked, OCSP signature verification, and responder/delegated responder failures; they are not core mirror equivalence proofs.
+- Added execution plan:
+  - `docs/plans/2026-05-24-isslcertificateverification-online-ocsp-owner-path.md`
+- Starting verification passed:
+  - `bash tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+  - `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  - `bash tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
+- Next implementation round:
+  - migrate this one target file to `ISSLCertificateVerification.GetVerifyResultString`
+  - update the three allowlist/quarantine contracts
+  - compile/run the target Pascal test
+  - run `git diff --check`
