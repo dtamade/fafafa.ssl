@@ -261,3 +261,15 @@
   - `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_freepascal_ocsp_stapling_owner/units -FEtmp/test_freepascal_ocsp_stapling_owner/bin tests/test_freepascal_client_ocsp_stapling_runtime.pas`
   - `tmp/test_freepascal_ocsp_stapling_owner/bin/test_freepascal_client_ocsp_stapling_runtime`
 - Result: root-test verify-result residual set is now 6 files.
+
+## 2026-05-24 ISSLCertificateVerification Campaign Control
+- Reframed the residual work as a bounded campaign instead of an open-ended continuation.
+- Current root-test direct-core verify-result residual set is 6 files:
+  - `tests/test_freepascal_client_cert_verify_flags_runtime.pas`
+  - `tests/test_freepascal_client_chain_trust_runtime.pas`
+  - `tests/test_freepascal_client_online_ocsp_runtime.pas`
+  - `tests/test_freepascal_server_accept_skeleton.pas`
+  - `tests/test_openssl_connection_verify_result_contract.pas`
+  - `tests/test_wolfssl_framework.pas`
+- New per-round rule: one named target, pre-edit classification, focused verification, short review conclusion, git commit.
+- Next round target: `tests/test_freepascal_client_online_ocsp_runtime.pas`.

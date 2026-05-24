@@ -1,5 +1,10 @@
 # Findings
 
+# 2026-05-24 ISSLCertificateVerification Campaign Control
+- The campaign is now bounded to 6 root-test residual files, not an open-ended sweep.
+- Each future round must classify exactly one target as `owner-migrate` or `freeze`, then verify and commit.
+- `tests/test_openssl_connection_verify_result_contract.pas` is already likely a real backend/core mirror proof and should not be rewritten unless the public compatibility strategy changes.
+
 # 2026-05-24 ISSLCertificateVerification OCSP Stapling Owner Path
 - `tests/test_freepascal_client_ocsp_stapling_runtime.pas` 的 direct verify-result usage 都是 required OCSP stapling fail-closed 文本检查，不是 core mirror 等价 proof。
 - 新增本地 helper `GetCertificateVerifyResultString`，通过 `ISSLCertificateVerification.GetVerifyResultString` 读取失败文本，并移除该文件的 deprecated-warning quarantine。
