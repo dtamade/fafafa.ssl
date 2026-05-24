@@ -49,6 +49,20 @@
 - 如果你走 `TSSLFactory.CreateContext(...)` 或 `ISSLLibrary.SetDefaultConfig(...)` + `CreateContext(...)`，等价字段现在是 `TSSLConfig.UseSystemRoots`。
 - `Lib.CreateContext(sslCtxClient)` 本身仍不代表“自动加载系统 CA”；只有在 default config 明确把 `UseSystemRoots=True` 写进去时，direct-library path 才会在创建 context 时加载并注入 system roots。
 
+## Context-Safe Config Surface Note
+
+`TSSLContextConfig` 是 `TSSLConfig` scope surgery 的第一条 additive surface。
+它只承载 context 创建阶段可消费的字段，不包含 `LogLevel` / `LogCallback`
+这类 library-scoped defaults，也不包含 `BufferSize` / `HandshakeTimeout`
+这类 connection-scoped hint，或 `ServerName` 这类 compatibility-only SNI 字段。
+
+当前桥接函数保持 `v1.x` 兼容：
+
+- `CreateDefaultContextConfig(...)` 创建 context-safe baseline。
+- `ContextConfigFromSSLConfig(...)` 从 legacy `TSSLConfig` 投影出 context-safe 子集。
+- `SSLConfigFromContextConfig(...)` 投影回现有 `TSSLConfig`，再复用当前 factory/backend 路径。
+- `TSSLFactory.CreateContext(const TSSLContextConfig)` 是 additive overload；它不改变已有 `TSSLConfig` overload 行为。
+
 ---
 
 ## TSSLConfig Scope Buckets
@@ -100,6 +114,7 @@
 `TSSLConfig` 在 `v1.x` 仍然保留为 public record，但 mixed-scope / compatibility 字段已经不再适合作为未来主路径。当前推荐把迁移方向理解成下面这张 field-to-surface map。
 
 - 继续保留在 context-safe `TSSLConfig` 主路径
+  - 当前 additive surface：`TSSLContextConfig` + `CreateDefaultContextConfig(...)` / `TSSLFactory.CreateContext(const TSSLContextConfig)`
   - `ProtocolVersions` / `PreferredVersion`
   - `CertificateFile` / `PrivateKeyFile` / `PrivateKeyPassword`
   - `CAFile` / `CAPath` / `UseSystemRoots` / `VerifyMode` / `VerifyDepth`

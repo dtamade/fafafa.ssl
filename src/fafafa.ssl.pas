@@ -90,6 +90,7 @@ type
   TSSLConnectionInfo = fafafa.ssl.base.TSSLConnectionInfo;
   PSSLConnectionInfo = fafafa.ssl.base.PSSLConnectionInfo;
   TSSLConfig = fafafa.ssl.base.TSSLConfig;
+  TSSLContextConfig = fafafa.ssl.base.TSSLContextConfig;
   TSSLLibraryDefaults = fafafa.ssl.base.TSSLLibraryDefaults;
   PSSLConfig = fafafa.ssl.base.PSSLConfig;
   TSSLStatistics = fafafa.ssl.base.TSSLStatistics;
@@ -426,6 +427,9 @@ function LibraryTypeToString(ALibType: TSSLLibraryType): string;
 function CreateDefaultLibraryDefaults: TSSLLibraryDefaults;
 function GetLibraryDefaults(const ALibrary: ISSLLibrary): TSSLLibraryDefaults;
 procedure ApplyLibraryDefaults(const ALibrary: ISSLLibrary; const ADefaults: TSSLLibraryDefaults);
+function CreateDefaultContextConfig(AContextType: TSSLContextType = sslCtxClient): TSSLContextConfig;
+function ContextConfigFromSSLConfig(const AConfig: TSSLConfig): TSSLContextConfig;
+function SSLConfigFromContextConfig(const AConfig: TSSLContextConfig): TSSLConfig;
 
 // type-safety supporting helper surface
 function SSLVersionToString(AVersion: TSSLVersion): string;
@@ -525,6 +529,21 @@ procedure ApplyLibraryDefaults(const ALibrary: ISSLLibrary;
   const ADefaults: TSSLLibraryDefaults);
 begin
   fafafa.ssl.base.ApplyLibraryDefaults(ALibrary, ADefaults);
+end;
+
+function CreateDefaultContextConfig(AContextType: TSSLContextType): TSSLContextConfig;
+begin
+  Result := fafafa.ssl.base.CreateDefaultContextConfig(AContextType);
+end;
+
+function ContextConfigFromSSLConfig(const AConfig: TSSLConfig): TSSLContextConfig;
+begin
+  Result := fafafa.ssl.base.ContextConfigFromSSLConfig(AConfig);
+end;
+
+function SSLConfigFromContextConfig(const AConfig: TSSLContextConfig): TSSLConfig;
+begin
+  Result := fafafa.ssl.base.SSLConfigFromContextConfig(AConfig);
 end;
 
 function SSLVersionToString(AVersion: TSSLVersion): string;

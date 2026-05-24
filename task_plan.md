@@ -1,3 +1,56 @@
+# Task Plan: TSSLContextConfig Surface Adoption
+
+## Objective
+
+Add the first runtime-usable `TSSLConfig` scope-surgery slice: a context-safe
+configuration record and projection helpers that new code can use without
+touching library-scoped defaults, connection-scoped hints, or compatibility-only
+SNI fields.
+
+## Current State
+
+- `TSSLConfig` scope buckets and migration targets are contract-checked.
+- `TSSLLibraryDefaults` already proved the additive-surface pattern for
+  library-scoped defaults.
+- The active blueprint identified additive `TSSLContextConfig` / projection as
+  the next implementation slice.
+
+## Planned Batch
+
+- Add `TSSLContextConfig` in `src/fafafa.ssl.base.pas`.
+- Add `CreateDefaultContextConfig(...)`,
+  `ContextConfigFromSSLConfig(...)`, and
+  `SSLConfigFromContextConfig(...)`.
+- Re-export the type and helpers from `src/fafafa.ssl.pas`.
+- Add `TSSLFactory.CreateContext(const TSSLContextConfig)`.
+- Add focused Pascal and shell contract coverage.
+- Update API reference and working records.
+
+## Verification
+
+- RED:
+  - `bash tests/scripts/test_tsslcontextconfig_surface_contract.sh`
+  - failed first because base source did not declare `TSSLContextConfig`
+  - second RED exposed that legacy option-bridge precedence was not folded into
+    `Options` during projection
+- GREEN:
+  - `bash tests/scripts/test_tsslcontextconfig_surface_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_migration_targets_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+  - `bash tests/scripts/test_tssllibrarydefaults_surface_contract.sh`
+  - `bash tests/scripts/test_active_roadmap_references_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_option_bridge_precedence_freeze_contract.sh`
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc python3 scripts/compile_all_modules.py --rebuild`
+  - `git diff --check`
+
+## Review Conclusion
+
+- Verified. `TSSLContextConfig` is now an additive, context-safe config surface
+  with focused runtime coverage, legacy projection helpers, facade re-exports,
+  and a factory overload. Existing `TSSLConfig` callers and option-bridge
+  precedence stay protected by adjacent contracts.
+
 # Task Plan: TSSLConfig Scope Surgery Blueprint
 
 ## Objective

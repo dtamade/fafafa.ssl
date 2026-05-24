@@ -261,6 +261,7 @@ type
      * </code>
      *}
     class function CreateContext(const AConfig: TSSLConfig): ISSLContext; overload;
+    class function CreateContext(const AConfig: TSSLContextConfig): ISSLContext; overload;
 
     class procedure NormalizeConfig(var AConfig: TSSLConfig);
 
@@ -1250,6 +1251,11 @@ begin
   ApplyEarlyDataContextConfig(Result, LConfig);
   ApplyEarlyDataReplayStoreConfig(Result, LConfig,
     'TSSLFactory.CreateContext(const AConfig)');
+end;
+
+class function TSSLFactory.CreateContext(const AConfig: TSSLContextConfig): ISSLContext;
+begin
+  Result := CreateContext(SSLConfigFromContextConfig(AConfig));
 end;
 
 class function TSSLFactory.CreateCertificate(ALibType: TSSLLibraryType): ISSLCertificate;

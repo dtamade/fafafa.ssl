@@ -1,5 +1,49 @@
 # Progress Log
 
+# 2026-05-25 TSSLContextConfig Surface Adoption
+- Started the first real implementation slice after activating the
+  `TSSLConfig` scope-surgery blueprint.
+- Added RED coverage:
+  - `tests/test_tsslcontextconfig_surface.pas`
+  - `tests/scripts/test_tsslcontextconfig_surface_contract.sh`
+- First RED:
+  - `bash tests/scripts/test_tsslcontextconfig_surface_contract.sh`
+  - failed on missing `TSSLContextConfig` in `src/fafafa.ssl.base.pas`.
+- Implemented the additive surface:
+  - `TSSLContextConfig`
+  - `CreateDefaultContextConfig(...)`
+  - `ContextConfigFromSSLConfig(...)`
+  - `SSLConfigFromContextConfig(...)`
+  - facade re-exports
+  - `TSSLFactory.CreateContext(const TSSLContextConfig)`
+- Added a second RED around legacy option-bridge precedence during projection.
+- Fixed projection by folding `EnableCompression`, `EnableSessionTickets`, and
+  `EnableOCSPStapling` into `Options` before creating `TSSLContextConfig`.
+- Focused GREEN:
+  - `bash tests/scripts/test_tsslcontextconfig_surface_contract.sh`
+  - result: passed.
+- Scope review:
+  - `TSSLContextConfig` excludes `LogLevel` / `LogCallback`,
+    `BufferSize` / `HandshakeTimeout`, and deprecated `ServerName`.
+  - `TSSLFactory.CreateContext(const TSSLContextConfig)` remains a thin
+    overload through `SSLConfigFromContextConfig(...)`, preserving the existing
+    backend path for this additive slice.
+- Final verification queue:
+  - `bash tests/scripts/test_tsslcontextconfig_surface_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_migration_targets_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+  - `bash tests/scripts/test_tssllibrarydefaults_surface_contract.sh`
+  - `bash tests/scripts/test_active_roadmap_references_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_option_bridge_precedence_freeze_contract.sh`
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc python3 scripts/compile_all_modules.py --rebuild`
+  - `git diff --check`
+- Final verification result:
+  - all seven contract scripts passed.
+  - full source rebuild passed with `186/186` modules, `0` failures, and `0`
+    warnings.
+  - `git diff --check` passed.
+
 # 2026-05-25 TSSLConfig Scope Surgery Blueprint
 - Started the next framework-excellence batch after Wave B closeout.
 - Wrote a red roadmap contract by updating

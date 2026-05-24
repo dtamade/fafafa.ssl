@@ -1,5 +1,23 @@
 # Findings
 
+# 2026-05-25 TSSLContextConfig Surface Adoption
+- The first real `TSSLConfig` scope-surgery code slice should be additive,
+  mirroring the successful `TSSLLibraryDefaults` pattern instead of removing
+  fields from the `v1.x` compatibility record.
+- `TSSLContextConfig` should contain only build-stage context fields and should
+  deliberately exclude `LogLevel` / `LogCallback`, `BufferSize` /
+  `HandshakeTimeout`, and deprecated `ServerName`.
+- The first RED confirmed the new surface did not exist.
+- The second RED caught an important projection rule: when projecting from
+  legacy `TSSLConfig`, the three option-bridge booleans must be folded into
+  `Options` first so the frozen legacy-boolean precedence is preserved.
+- `SSLConfigFromContextConfig(...)` deliberately does not resurrect
+  connection-scoped hints or deprecated context-level SNI. It only produces a
+  compatibility `TSSLConfig` projection for the current factory/backend path.
+- `TSSLFactory.CreateContext(const TSSLContextConfig)` should stay a thin
+  additive overload for now; deeper backend-native adoption belongs to the next
+  slice, after this surface is proven and documented.
+
 # 2026-05-25 TSSLConfig Scope Surgery Blueprint
 - The previous active roadmap pointer was stale after commit `6335f0b`: it still
   named `docs/plans/2026-05-25-connection-boundary-completion-waveb.md` even

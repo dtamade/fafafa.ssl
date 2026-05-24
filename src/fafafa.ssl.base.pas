@@ -384,6 +384,35 @@ type
     LogCallback: TSSLLogCallback;
   end;
 
+  { Context-safe configuration surface.
+    This is the first additive slice of the TSSLConfig scope-surgery path:
+    only build-stage context fields live here. }
+  TSSLContextConfig = record
+    LibraryType: TSSLLibraryType;
+    ContextType: TSSLContextType;
+    ProtocolVersions: TSSLProtocolVersions;
+    PreferredVersion: TSSLProtocolVersion;
+    CertificateFile: string;
+    PrivateKeyFile: string;
+    PrivateKeyPassword: string;
+    CAFile: string;
+    CAPath: string;
+    UseSystemRoots: Boolean;
+    VerifyMode: TSSLVerifyModes;
+    VerifyDepth: Integer;
+    CipherList: string;
+    CipherSuites: string;
+    Options: TSSLOptions;
+    SessionCacheSize: Integer;
+    SessionTimeout: Integer;
+    ALPNProtocols: string;
+    ClientEarlyDataEnabled: Boolean;
+    ServerEarlyDataPolicy: TSSLEarlyDataServerPolicy;
+    ServerMaxEarlyDataSize: Cardinal;
+    ServerEarlyDataReplayStoreFile: string;
+    ServerEarlyDataReplayStoreDirectory: string;
+  end;
+
   { SSL 配置 }
   TSSLConfig = record
     // 基本配置
@@ -2089,6 +2118,9 @@ function LibraryTypeToString(ALibType: TSSLLibraryType): string;
 function CreateDefaultLibraryDefaults: TSSLLibraryDefaults;
 function GetLibraryDefaults(const ALibrary: ISSLLibrary): TSSLLibraryDefaults;
 procedure ApplyLibraryDefaults(const ALibrary: ISSLLibrary; const ADefaults: TSSLLibraryDefaults);
+function CreateDefaultContextConfig(AContextType: TSSLContextType = sslCtxClient): TSSLContextConfig;
+function ContextConfigFromSSLConfig(const AConfig: TSSLConfig): TSSLContextConfig;
+function SSLConfigFromContextConfig(const AConfig: TSSLContextConfig): TSSLConfig;
 
 {** 获取库版本字符串 *}
 function GetFafafaSSLVersion: string;
@@ -2315,6 +2347,121 @@ begin
   LConfig.LogLevel := ADefaults.LogLevel;
   ALibrary.SetDefaultConfig(LConfig);
   ALibrary.SetLogCallback(ADefaults.LogCallback);
+end;
+
+function CreateDefaultContextConfig(AContextType: TSSLContextType): TSSLContextConfig;
+begin
+  Result := Default(TSSLContextConfig);
+  Result.LibraryType := sslAutoDetect;
+  Result.ContextType := AContextType;
+  Result.ProtocolVersions := [sslProtocolTLS12, sslProtocolTLS13];
+  Result.PreferredVersion := sslProtocolUnknown;
+  if AContextType = sslCtxServer then
+    Result.VerifyMode := []
+  else
+    Result.VerifyMode := [sslVerifyPeer];
+  Result.VerifyDepth := SSL_DEFAULT_VERIFY_DEPTH;
+  Result.CipherList := SSL_DEFAULT_CIPHER_LIST;
+  Result.CipherSuites := SSL_DEFAULT_TLS13_CIPHERSUITES;
+  Result.Options := [
+    ssoEnableSessionCache,
+    ssoEnableSessionTickets,
+    ssoDisableCompression,
+    ssoDisableRenegotiation,
+    ssoNoSSLv2,
+    ssoNoSSLv3,
+    ssoNoTLSv1,
+    ssoNoTLSv1_1
+  ];
+  Result.SessionCacheSize := SSL_DEFAULT_SESSION_CACHE_SIZE;
+  Result.SessionTimeout := SSL_DEFAULT_SESSION_TIMEOUT;
+  Result.ClientEarlyDataEnabled := False;
+  Result.ServerEarlyDataPolicy := sslEarlyDataServerReject;
+  Result.ServerMaxEarlyDataSize := 0;
+end;
+
+procedure ProjectOptionBridgeBooleansIntoOptions(var AConfig: TSSLConfig);
+begin
+  if AConfig.EnableCompression then
+    Exclude(AConfig.Options, ssoDisableCompression)
+  else
+    Include(AConfig.Options, ssoDisableCompression);
+
+  if AConfig.EnableSessionTickets then
+    Include(AConfig.Options, ssoEnableSessionTickets)
+  else
+    Exclude(AConfig.Options, ssoEnableSessionTickets);
+
+  if AConfig.EnableOCSPStapling then
+    Include(AConfig.Options, ssoEnableOCSPStapling)
+  else
+    Exclude(AConfig.Options, ssoEnableOCSPStapling);
+end;
+
+function ContextConfigFromSSLConfig(const AConfig: TSSLConfig): TSSLContextConfig;
+var
+  LConfig: TSSLConfig;
+begin
+  LConfig := AConfig;
+  ProjectOptionBridgeBooleansIntoOptions(LConfig);
+
+  Result := Default(TSSLContextConfig);
+  Result.LibraryType := LConfig.LibraryType;
+  Result.ContextType := LConfig.ContextType;
+  Result.ProtocolVersions := LConfig.ProtocolVersions;
+  Result.PreferredVersion := LConfig.PreferredVersion;
+  Result.CertificateFile := LConfig.CertificateFile;
+  Result.PrivateKeyFile := LConfig.PrivateKeyFile;
+  Result.PrivateKeyPassword := LConfig.PrivateKeyPassword;
+  Result.CAFile := LConfig.CAFile;
+  Result.CAPath := LConfig.CAPath;
+  Result.UseSystemRoots := LConfig.UseSystemRoots;
+  Result.VerifyMode := LConfig.VerifyMode;
+  Result.VerifyDepth := LConfig.VerifyDepth;
+  Result.CipherList := LConfig.CipherList;
+  Result.CipherSuites := LConfig.CipherSuites;
+  Result.Options := LConfig.Options;
+  Result.SessionCacheSize := LConfig.SessionCacheSize;
+  Result.SessionTimeout := LConfig.SessionTimeout;
+  Result.ALPNProtocols := LConfig.ALPNProtocols;
+  Result.ClientEarlyDataEnabled := LConfig.ClientEarlyDataEnabled;
+  Result.ServerEarlyDataPolicy := LConfig.ServerEarlyDataPolicy;
+  Result.ServerMaxEarlyDataSize := LConfig.ServerMaxEarlyDataSize;
+  Result.ServerEarlyDataReplayStoreFile := LConfig.ServerEarlyDataReplayStoreFile;
+  Result.ServerEarlyDataReplayStoreDirectory := LConfig.ServerEarlyDataReplayStoreDirectory;
+end;
+
+function SSLConfigFromContextConfig(const AConfig: TSSLContextConfig): TSSLConfig;
+begin
+  Result := Default(TSSLConfig);
+  Result.LibraryType := AConfig.LibraryType;
+  Result.ContextType := AConfig.ContextType;
+  Result.ProtocolVersions := AConfig.ProtocolVersions;
+  Result.PreferredVersion := AConfig.PreferredVersion;
+  Result.CertificateFile := AConfig.CertificateFile;
+  Result.PrivateKeyFile := AConfig.PrivateKeyFile;
+  Result.PrivateKeyPassword := AConfig.PrivateKeyPassword;
+  Result.CAFile := AConfig.CAFile;
+  Result.CAPath := AConfig.CAPath;
+  Result.UseSystemRoots := AConfig.UseSystemRoots;
+  Result.VerifyMode := AConfig.VerifyMode;
+  Result.VerifyDepth := AConfig.VerifyDepth;
+  Result.CipherList := AConfig.CipherList;
+  Result.CipherSuites := AConfig.CipherSuites;
+  Result.Options := AConfig.Options;
+  Result.SessionCacheSize := AConfig.SessionCacheSize;
+  Result.SessionTimeout := AConfig.SessionTimeout;
+  Result.ALPNProtocols := AConfig.ALPNProtocols;
+  Result.ClientEarlyDataEnabled := AConfig.ClientEarlyDataEnabled;
+  Result.ServerEarlyDataPolicy := AConfig.ServerEarlyDataPolicy;
+  Result.ServerMaxEarlyDataSize := AConfig.ServerMaxEarlyDataSize;
+  Result.ServerEarlyDataReplayStoreFile := AConfig.ServerEarlyDataReplayStoreFile;
+  Result.ServerEarlyDataReplayStoreDirectory := AConfig.ServerEarlyDataReplayStoreDirectory;
+  Result.EnableCompression := not (ssoDisableCompression in AConfig.Options);
+  Result.EnableSessionTickets := ssoEnableSessionTickets in AConfig.Options;
+  Result.EnableOCSPStapling := ssoEnableOCSPStapling in AConfig.Options;
+  Result.LogLevel := sslLogError;
+  Result.LogCallback := nil;
 end;
 
 { TSSLOperationResult }

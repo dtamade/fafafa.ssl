@@ -63,6 +63,7 @@ git diff --check
   connection-boundary batch.
 - The existing `TSSLConfig` scope bucket, migration-target, and active-guidance
   contracts remain green.
-- The next real implementation slice can start from a clear question:
-  whether an additive `TSSLContextConfig`/projection surface reduces
-  mixed-scope usage without breaking `v1.x` compatibility.
+- The first real implementation slice is
+  [TSSLContextConfig surface adoption](2026-05-25-tsslcontextconfig-surface-adoption.md):
+  an additive `TSSLContextConfig` / projection surface that reduces mixed-scope
+  usage without breaking `v1.x` compatibility.

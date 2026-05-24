@@ -24,6 +24,9 @@ require_fixed() {
 require_fixed '## TSSLConfig Migration Targets' \
   "$api_ref" \
   "API reference no longer contains the TSSLConfig migration-targets section"
+require_fixed '当前 additive surface：`TSSLContextConfig` + `CreateDefaultContextConfig(...)` / `TSSLFactory.CreateContext(const TSSLContextConfig)`' \
+  "$api_ref" \
+  "API reference no longer maps context-safe config fields to TSSLContextConfig"
 require_fixed '当前推荐入口：`TSSLLibraryDefaults` + `GetLibraryDefaults(...)` / `ApplyLibraryDefaults(...)`' \
   "$api_ref" \
   "API reference no longer maps LogLevel to library default config APIs"
