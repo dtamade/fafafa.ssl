@@ -20,8 +20,9 @@ proofs as intentional residuals.
 ## Remaining Queue
 
 1. `tests/test_freepascal_server_accept_skeleton.pas`
-   - Likely simple failure-text check.
-   - Action: inspect, then migrate if safe.
+   - Classification: `owner-migrate`.
+   - Plan: `docs/plans/2026-05-24-isslcertificateverification-server-accept-skeleton-owner-path.md`.
+   - Action: migrate accept-failure verify-result text to `ISSLCertificateVerification`.
 2. `tests/test_freepascal_client_cert_verify_flags_runtime.pas`
    - Mixed numeric result + text assertions.
    - Action: migrate to owner only if semantics stay clear; otherwise freeze as intentional runtime proof.
@@ -63,7 +64,6 @@ Stop this campaign when one of these is true:
 
 Target `tests/test_freepascal_server_accept_skeleton.pas`.
 
-Execution goal: classify this one file, migrate it to owner path if it is only
-failure-text runtime coverage, update only the required
+Execution goal: migrate this one file to owner path, update only the required
 allowlists, run the focused contracts plus target Pascal compile/run, review,
 then commit.

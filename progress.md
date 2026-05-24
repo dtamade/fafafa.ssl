@@ -312,3 +312,19 @@
 - Result:
   - root-test verify-result residual set is now 5 files
   - next target is `tests/test_freepascal_server_accept_skeleton.pas`
+
+## 2026-05-24 ISSLCertificateVerification Server Accept Skeleton Planning
+- Inspected `tests/test_freepascal_server_accept_skeleton.pas`.
+- Pre-edit classification: `owner-migrate`.
+- Reason: the only direct `GetVerifyResultString` read is used for accept-failure diagnostics, not mirror equivalence proof.
+- Added execution plan:
+  - `docs/plans/2026-05-24-isslcertificateverification-server-accept-skeleton-owner-path.md`
+- Starting verification passed:
+  - `bash tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+  - `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  - `bash tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
+- Next implementation round:
+  - migrate this one target file to `ISSLCertificateVerification.GetVerifyResultString`
+  - update the three allowlist/quarantine contracts
+  - compile/run the target Pascal test
+  - run `git diff --check`

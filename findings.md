@@ -1,5 +1,11 @@
 # Findings
 
+# 2026-05-24 ISSLCertificateVerification Server Accept Skeleton Planning
+- `tests/test_freepascal_server_accept_skeleton.pas` 的 direct `GetVerifyResultString` 只用于 accept 失败后的诊断文本，主要判断 `client finished` / `certificateverify signer` 一类失败原因。
+- 该文件的 `GetConnectionInfo` / `GetSelectedALPNProtocol` 相关逻辑是独立 owner surface，不需要一起改。
+- 预编辑分类：`owner-migrate`。
+- Starting contracts 通过：root residual allowlist、broad residual classification、compiler-deprecated quarantine 当前都仍与 5-file residual truth 对齐。
+
 # 2026-05-24 ISSLCertificateVerification Online OCSP Owner Path
 - `tests/test_freepascal_client_online_ocsp_runtime.pas` 的 revoked、signature verification、responder/delegated responder failure 文本断言已迁到本地 helper `GetCertificateVerifyResultString`。
 - helper 通过 `ISSLCertificateVerification.GetVerifyResultString` 读取失败文本，保留 online OCSP fail-closed 语义不变。
