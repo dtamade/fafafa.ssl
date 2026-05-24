@@ -41,6 +41,8 @@ reject_regex() {
 }
 
 require_file "docs/ROADMAP.md" "docs/ROADMAP.md must exist as the stable active roadmap entrypoint"
+require_file "docs/plans/2026-05-25-tsslconfig-scope-surgery-blueprint.md" \
+  "TSSLConfig scope-surgery blueprint plan must exist as the current active batch"
 require_fixed "docs/ROADMAP.md" "engineering_state: RELEASED" \
   "docs/ROADMAP.md must describe the post-release engineering state"
 require_fixed "docs/ROADMAP.md" "approval_gate: explicit scope selection required before the next implementation batch" \
@@ -55,6 +57,19 @@ require_fixed "docs/ROADMAP.md" 'current_release_status: `RELEASED`' \
   "docs/ROADMAP.md must expose the released status"
 require_fixed "docs/ROADMAP.md" 'wave_c_role: `closeout / approval / historical reference only`' \
   "docs/ROADMAP.md must limit Wave C to closeout / approval / history"
+require_fixed "docs/ROADMAP.md" 'current_active_batch: `docs/plans/2026-05-25-tsslconfig-scope-surgery-blueprint.md`' \
+  "docs/ROADMAP.md must point the current active batch at the TSSLConfig scope-surgery blueprint"
+require_fixed "docs/ROADMAP.md" 'next_route_candidate: `docs/plans/2026-05-25-tsslconfig-scope-surgery-blueprint.md`' \
+  "docs/ROADMAP.md must keep the next route candidate aligned to the TSSLConfig scope-surgery blueprint"
+require_fixed "docs/ROADMAP.md" '当前活跃批次转入 `TSSLConfig` scope surgery blueprint' \
+  "docs/ROADMAP.md must describe the active route as the TSSLConfig scope-surgery blueprint"
+
+require_fixed "docs/plans/2026-05-25-tsslconfig-scope-surgery-blueprint.md" \
+  "# TSSLConfig Scope Surgery Blueprint" \
+  "TSSLConfig scope-surgery plan must carry the expected title"
+require_fixed "docs/plans/2026-05-25-tsslconfig-scope-surgery-blueprint.md" \
+  "runtime behavior unchanged" \
+  "TSSLConfig scope-surgery plan must keep this batch non-runtime"
 
 require_fixed "docs/DOCUMENTATION_INDEX.md" "[ROADMAP.md](ROADMAP.md)" \
   "docs/DOCUMENTATION_INDEX.md must point to docs/ROADMAP.md as the active roadmap"

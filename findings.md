@@ -1,5 +1,18 @@
 # Findings
 
+# 2026-05-25 TSSLConfig Scope Surgery Blueprint
+- The previous active roadmap pointer was stale after commit `6335f0b`: it still
+  named `docs/plans/2026-05-25-connection-boundary-completion-waveb.md` even
+  though that wave had already been verified and committed.
+- `docs/plans/2026-05-24-framework-excellence-spec-and-evolution-roadmap.md`
+  already defines the next architecture wave as `TSSLConfig` scope surgery.
+- Existing `TSSLConfig` scope buckets, migration targets, active guidance, and
+  option-bridge contracts are already the right guardrails for the next slice.
+- This batch should keep runtime behavior unchanged and only activate the route
+  so the next code batch starts from the verified config-boundary blueprint.
+- Verification confirmed the route switch did not regress existing
+  `TSSLConfig` scope bucket, migration target, or active guidance contracts.
+
 # 2026-05-25 Wave B Connection Boundary Completion
 - `ISSLDiagnostics`, `ISSLSessionResumption`, `ISSLCertificateVerification`,
   and `ISSLOCSPStapling` now carry explicit `@preferred-access` and

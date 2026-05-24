@@ -1,3 +1,47 @@
+# Task Plan: TSSLConfig Scope Surgery Blueprint
+
+## Objective
+
+Move the active route from the finished connection-boundary wave to the
+`TSSLConfig` scope-surgery blueprint, keeping runtime behavior unchanged and
+making the next implementation slice explicit.
+
+## Current State
+
+- Wave B connection-boundary owner-surface sync has been committed.
+- Existing `TSSLConfig` truth is already split across scope buckets, migration
+  targets, active guidance, and option-bridge contracts.
+- `docs/ROADMAP.md` still pointed `current_active_batch` and
+  `next_route_candidate` at the finished Wave B plan.
+
+## Planned Batch
+
+- `docs/plans/2026-05-25-tsslconfig-scope-surgery-blueprint.md`
+- `docs/ROADMAP.md`
+- `tests/scripts/test_active_roadmap_references_contract.sh`
+- `task_plan.md`
+- `findings.md`
+- `progress.md`
+
+## Verification
+
+- First red check:
+  - `bash tests/scripts/test_active_roadmap_references_contract.sh`
+  - expected failure: missing
+    `docs/plans/2026-05-25-tsslconfig-scope-surgery-blueprint.md`
+- Green checks:
+  - `bash tests/scripts/test_active_roadmap_references_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_migration_targets_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+  - `git diff --check`
+
+## Review Conclusion
+
+- Verified. The active roadmap route now points at the `TSSLConfig` scope
+  surgery blueprint, and the existing `TSSLConfig` scope/migration/guidance
+  contracts stayed green. Runtime behavior remains unchanged.
+
 # Task Plan: Wave B Connection Boundary Completion
 
 ## Objective

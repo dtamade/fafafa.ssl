@@ -1,5 +1,24 @@
 # Progress Log
 
+# 2026-05-25 TSSLConfig Scope Surgery Blueprint
+- Started the next framework-excellence batch after Wave B closeout.
+- Wrote a red roadmap contract by updating
+  `tests/scripts/test_active_roadmap_references_contract.sh` to require the new
+  `docs/plans/2026-05-25-tsslconfig-scope-surgery-blueprint.md` active batch.
+- Red check behaved as expected:
+  - `bash tests/scripts/test_active_roadmap_references_contract.sh`
+  - result: failed because the new TSSLConfig plan did not exist yet.
+- Added the TSSLConfig scope-surgery blueprint plan and moved
+  `docs/ROADMAP.md` `current_active_batch` / `next_route_candidate` to it.
+- Updated root task plan and findings for this batch.
+- Verification passed:
+  - `bash tests/scripts/test_active_roadmap_references_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_migration_targets_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+  - `bash -n tests/scripts/test_active_roadmap_references_contract.sh`
+  - `git diff --check`
+
 # 2026-05-25 Wave B Connection Boundary Completion
 - Created the batch plan at
   `docs/plans/2026-05-25-connection-boundary-completion-waveb.md`.

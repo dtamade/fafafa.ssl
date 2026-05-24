@@ -16,8 +16,8 @@
 - current_workflow_surface: `.github/README.md`
 - wave_c_role: `closeout / approval / historical reference only`
 - product_mainline: `SSL/TLS backend completeness roadmap`
-- current_active_batch: `docs/plans/2026-05-25-connection-boundary-completion-waveb.md`
-- next_route_candidate: `docs/plans/2026-05-25-connection-boundary-completion-waveb.md`
+- current_active_batch: `docs/plans/2026-05-25-tsslconfig-scope-surgery-blueprint.md`
+- next_route_candidate: `docs/plans/2026-05-25-tsslconfig-scope-surgery-blueprint.md`
 - current_architecture_north_star: `docs/plans/2026-05-24-framework-excellence-spec-and-evolution-roadmap.md`
 - current_default_build: `python3 scripts/compile_all_modules.py`
 - current_default_gate: `bash scripts/run_minimal_ci_gate.sh --fast-local`
@@ -37,7 +37,8 @@
   - `v1.5.0` GitHub Release 已发布，source archive `fafafa-ssl-v1.5.0-source.tar.gz` 已上传
 - `Wave C` 现在只是 closeout / 历史参考，不再承载当前审批门或默认实施入口。
 - 当前真正还在推进的实现主线，是 pure Pascal backend 的 SSL/TLS completeness。
-- 当前活跃批次先收 connection-side owner surface truth sync，让 source / docs / roadmap 三处对齐。
+- 当前活跃批次转入 `TSSLConfig` scope surgery blueprint，让 mixed-scope config
+  record 的后续演进从已验证的字段分桶和 migration map 出发。
 - `KnownIssues` 已不再把 OCSP / CT / validation / resumption 写成剩余 gap；这些线只有 fresh RED 才应重开。
 
 ---
@@ -98,9 +99,13 @@ bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local
 3. 第二个 backend-private 单机持久化 concrete store 不只 prototype 已落地，第一批 durability hardening 也已经补齐：`TFreePascalDirectoryEarlyDataReplayStore` 现在通过现有 `IFreePascalEarlyDataReplayStore` / `TFreePascalStoreBackedEarlyDataReplayProvider` / `InstallStoreBackedReplayLedger(...)` 接线，已经直接锁住 directory-backed rebuild durability、expired-entry prune、runtime replay reject、corrupt `.entry` fail-closed / cleanup recovery、cross-process lock fail-closed、orphan lock ignore、`main > .tmpdir > .bakdir` 这条 bounded fallback recovery、`.tmpdir` residue 在 repeated replay reject / replay-only restart 下不会被误消费、`.tmpdir` / `.bakdir` fallback 在 `invalid_version` / `trailing_garbage` 两类 corruption 上继续 fail-closed、regular-file canonical `main` / `.tmpdir` / `.bakdir` blocker 在 direct/runtime first acquire 上 fail-closed、以及 `.tmpdir` / `.bakdir` regular-file blocker 在 update path 上 preserve existing replay truth；同时，`main` 缺失且 `corrupt .tmpdir + healthy .bakdir` 同时存在的双 fallback 冲突态现在也已经有 direct/runtime focused evidence：系统会继续 fail closed，不会 silent fallback 到 `.bakdir` 自愈，只有坏 `.tmpdir` 被显式移除后，健康 `.bakdir` replay truth 才恢复并重新 materialize canonical `main`。accepted update-path 的 runtime crash-window restart truth 现在也已经补上 focused evidence：existing replay truth 先 materialize 后，child accept blocked session 并立刻 simulated crash，restart 后 original / just-accepted replay truth 都继续 reject；directory-store `.bakdir` cleanup delete failure residue / stale `.bakdir` undeletable next-save fail-closed 现在也已经有 direct/runtime focused evidence；而更深一层的 update-path write-interruption / rename-denial 家族，`tempdir -> main` failure with restore success / restore failure、deterministic `tempdir -> main` denied、以及 deterministic `main -> .bakdir` denied，也已经有 direct/runtime focused evidence。当前批次把这条能力最小暴露到了 public surface：builder、`TSSLConfig`、`TSSLFactory` 都可以 opt-in 到 directory-backed replay store，且 file/directory 双配置会 fail fast；默认 shipped path 和 capability wording 仍保持不变。
 4. managed seam boundary 与 runtime parity evidence 已经补齐：shared in-memory managed lifecycle truth 已锁住，callback / file-backed / directory-backed non-managed providers 不会因为 local enabled / capacity toggle 被隐式 wipe；public-installed file-backed ledger 也继续保持 expired-entry prune 语义。
 5. focused gate、compile gate、builder / factory error contracts、runtime parity closeout、mixed public-path durability closeout、mixed public-path cross-process durability closeout、installer-to-public mixed cross-process convergence closeout、runtime file-store fail-closed/recovery/isolation closeout、store-path identity / cross-process boundary closeout、`SaveEntries(...)` boundaries closeout、backup restore failure recovery closeout、`.bak` residue semantics closeout、`.bak` fallback corruption closeout、deterministic permission/write-failure shapes closeout、directory-store durability hardening closeout、directory-store `.tmpdir` residue semantics closeout、directory-store filesystem blocker semantics closeout、directory-store blocker edge closeout、directory-store dual-fallback conflict closeout、directory-store runtime crash-update restart closeout、directory-store `.bakdir` residue semantics closeout、directory-store backup-assisted replace / backup restore failure closeout、以及 directory-store deterministic rename-denial closeout 都已经有 fresh evidence。
-6. 当前活跃批次是 connection boundary completion / owner-path truth sync：
-   - source comments、architecture doc 和 API reference 先对齐推荐 owner path 与 compatibility mirror 的语言
-   - 行为不变，先收口叙事与入口推荐
+6. connection boundary completion / owner-path truth sync 已经收口：
+   - source comments、architecture doc 和 API reference 已经对齐推荐 owner path 与 compatibility mirror 的语言
+   - 行为不变，只做了叙事与入口推荐收口
+7. 当前活跃批次转入 `TSSLConfig` scope surgery blueprint：
+   - 不重开已经完成的 option-bridge / logging / timeout owner truth
+   - 先把 roadmap 与 contract 指向新的 `TSSLConfig` blueprint
+   - 后续实现 slice 必须从现有 scope buckets / migration targets 出发，避免继续把 `TSSLConfig` 当成万能配置 record
 
 下一条最值得开的实现线：
 
@@ -108,12 +113,14 @@ bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local
 2. 如果还要继续扩 early-data，不再建议无 fresh RED 地继续开 directory-store family；当前 blocker queue 已经收口，剩余只有更深的 crash-window / write-interruption drift 值得在 fresh failing evidence 出现时再重开，而不是现在回头重开现有 file-backed `.bak` family、managed boundary 或现有 parity 接线。
 3. capability 等级继续保持 `experimental`；当前剩余 caveat 已经收口到 local persistent 路径、fail-closed 行为，以及尚未承诺 distributed / cross-host replay coordination。在没有 fresh RED 前，这条 caveat 应视为 post-release 阶段有意保留的最终 experimental boundary，而不是默认 future queue。
 4. OCSP / CT / validation 只在 fresh failing evidence 出现时重开，不再作为默认 future queue。
-5. 如果要继续推进更高层的架构演进，先看 [Framework excellence spec and evolution roadmap](plans/2026-05-24-framework-excellence-spec-and-evolution-roadmap.md)，再决定实现批次应该落在 `ISSLConnection`、`TSSLConfig`、facade 还是 pure Pascal excellence 线上。
+5. 高层架构演进当前已经选择 `TSSLConfig` scope surgery blueprint 作为下一批；第一条真实实现 slice 应优先评估 additive `TSSLContextConfig` / projection surface 是否能降低 mixed-scope 使用，而不是直接破坏 `v1.x` record 兼容。
 
 相关计划：
 
 - [Backend completeness roadmap](plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md)
 - [Framework excellence spec and evolution roadmap](plans/2026-05-24-framework-excellence-spec-and-evolution-roadmap.md)
+- [TSSLConfig scope surgery blueprint](plans/2026-05-25-tsslconfig-scope-surgery-blueprint.md)
+- [TSSLConfig public-surface slimming roadmap](plans/2026-05-18-tsslconfig-public-surface-slimming-roadmap.md)
 - [2026-04-12 root roadmap truth alignment and early-data next wave](plans/2026-04-12-root-roadmap-truth-alignment-and-early-data-next-wave.md)
 - [2026-04-13 FreePascal early-data builder opt-in](plans/2026-04-13-freepascal-early-data-antireplay-builder-optin.md)
 - [2026-04-13 FreePascal early-data replay-store factory parity and error contracts](plans/2026-04-13-freepascal-early-data-replay-store-factory-parity-and-error-contracts.md)
