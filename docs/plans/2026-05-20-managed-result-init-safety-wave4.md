@@ -78,3 +78,39 @@ fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/tls13_resumption_units -F
 fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/tls13_foundation_units -FEtmp/tls13_foundation_bin -otest_tls13_foundation tests/test_tls13_foundation.pas 2>&1 | rg "tls13\\.keyschedule|tls13\\.clienthello|Warning: Function result variable of a managed type does not seem to be initialized"
 git diff --check
 ```
+
+## Execution Result
+
+- Wave4 production targets were already in the intended type-safe result
+  initialization shape on current head:
+  - `HashTranscriptForSuite(...)`
+  - `HKDFExtractForSuite(...)`
+  - `HKDFExpandLabelForSuite(...)`
+  - `TLS13ComputePSKBinderForCipherSuite(...)`
+  - `BuildExtensionServerName(...)`
+  - `BuildExtensionALPN(...)`
+  - `BuildExtensionPreSharedKey(...)`
+  - `BuildTLS13ClientHelloBody(...)`
+  - `BuildTLS13ClientHelloBodyWithPSKCore(...)`
+  - `BuildTLS13ClientHelloHandshake(...)`
+  - `BuildTLS13ClientHelloHandshakeWithPSK(...)`
+  - `BuildTLS13ClientHelloHandshakeWithComputedPSKBinder(...)`
+- Focused verification passed:
+  - `bash -n tests/scripts/test_managed_result_init_safety_wave4_contract.sh`
+  - `bash tests/scripts/test_managed_result_init_safety_wave4_contract.sh`
+  - compile/run `tests/test_tls13_foundation.pas`
+  - compile/run `tests/test_tls13_resumption.pas`
+- Compile-log grep confirmed both `tls13.keyschedule` and
+  `tls13.clienthello` were rebuilt and no
+  `Warning: Function result variable of a managed type` remained in the wave4
+  focused logs.
+- No production edits were needed for this batch; the closeout records the
+  verified current truth and keeps the next wave unambiguous.
+
+## Next
+
+Continue with `docs/plans/2026-05-20-managed-result-init-safety-wave5.md`:
+
+- `src/fafafa.ssl.tls13.appschedule.pas`
+- `src/fafafa.ssl.tls13.serverhello.pas`
+- `tests/test_tls13_resumption.pas`

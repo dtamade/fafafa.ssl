@@ -1,35 +1,40 @@
-# Task Plan: Managed Result Initialization Safety Wave 3
+# Task Plan: Managed Result Initialization Safety Wave 4
 
 ## Objective
 
-Close the wave3 managed-result initialization batch for shared TLS 1.3
-primitive helpers and constant-time helpers, while keeping the focused
-verification gate stable and warning-clean.
+Close the wave4 managed-result initialization batch for shared TLS 1.3
+key-schedule and ClientHello builder helpers, while keeping verification
+focused on the runtime paths that compile those units.
 
 ## Current State
 
-- Wave 1 and wave 2 are closed and committed.
-- Wave3 production targets already satisfy the type-safe initialization
+- Wave 1, wave 2, and wave 3 are closed and committed.
+- Wave4 production targets already satisfy the type-safe initialization
   contract on current head:
-  - `CopyBytes(...)`
-  - `ConcatBytes(...)`
-  - `BuildTLS13HKDFLabel(...)`
-  - `HKDF_Expand_SHA256(...)`
-  - `HKDF_Expand_SHA384(...)`
-  - `TConstantTime.Select(...)`
-- The focused constant-time runtime test exposed a flaky wall-clock variance
-  assertion unrelated to managed-result initialization.
-- This round changed that test to keep deterministic equal/different compare
-  loops without using millisecond-resolution jitter as a pass/fail signal.
+  - `HashTranscriptForSuite(...)`
+  - `HKDFExtractForSuite(...)`
+  - `HKDFExpandLabelForSuite(...)`
+  - `TLS13ComputePSKBinderForCipherSuite(...)`
+  - `BuildExtensionServerName(...)`
+  - `BuildExtensionALPN(...)`
+  - `BuildExtensionPreSharedKey(...)`
+  - `BuildTLS13ClientHelloBody(...)`
+  - `BuildTLS13ClientHelloBodyWithPSKCore(...)`
+  - `BuildTLS13ClientHelloHandshake(...)`
+  - `BuildTLS13ClientHelloHandshakeWithPSK(...)`
+  - `BuildTLS13ClientHelloHandshakeWithComputedPSKBinder(...)`
+- The focused compile logs rebuilt both `tls13.keyschedule` and
+  `tls13.clienthello` without the managed-result warning class.
+- No production code edits were required in this batch.
 
 ## Verification
 
 Completed:
 
-- `bash -n tests/scripts/test_managed_result_init_safety_wave3_contract.sh`
-- `bash tests/scripts/test_managed_result_init_safety_wave3_contract.sh`
+- `bash -n tests/scripts/test_managed_result_init_safety_wave4_contract.sh`
+- `bash tests/scripts/test_managed_result_init_safety_wave4_contract.sh`
 - compile/run `tests/test_tls13_foundation.pas`
-- compile/run `tests/unit/test_constant_time.pas`
+- compile/run `tests/test_tls13_resumption.pas`
 - compile-log grep for `Warning: Function result variable of a managed type`
 
 Pending before commit:
@@ -49,5 +54,5 @@ Each round must have:
 
 ## Next Round
 
-If we continue after this batch, the next likely target is
-`docs/plans/2026-05-20-managed-result-init-safety-wave4.md`.
+If we continue after this batch, the next target is
+`docs/plans/2026-05-20-managed-result-init-safety-wave5.md`.

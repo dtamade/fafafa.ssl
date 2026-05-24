@@ -1,5 +1,27 @@
 # Progress Log
 
+## 2026-05-24 Managed Result Init Safety Wave 4
+- Goal: close the wave4 managed-result initialization batch for
+  `tls13.keyschedule` and `tls13.clienthello`.
+- Starting state: worktree clean; prior commits were
+  `b77fefc test: stabilize managed result safety wave3`,
+  `b367898 fix: close managed result safety wave2`, and
+  `6ae8f68 fix: close managed result safety harness warnings`.
+- Contract verification passed:
+  - `bash -n tests/scripts/test_managed_result_init_safety_wave4_contract.sh`
+  - `bash tests/scripts/test_managed_result_init_safety_wave4_contract.sh`
+- Focused compile/run passed:
+  - `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/tls13_foundation_units -FEtmp/tls13_foundation_bin -otest_tls13_foundation tests/test_tls13_foundation.pas 2>&1 | tee tmp/managed_result_wave4_tls13_foundation_compile.log`
+  - `./tmp/tls13_foundation_bin/test_tls13_foundation`
+  - `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/tls13_resumption_units -FEtmp/tls13_resumption_bin -otest_tls13_resumption tests/test_tls13_resumption.pas 2>&1 | tee tmp/managed_result_wave4_tls13_resumption_compile.log`
+  - `./tmp/tls13_resumption_bin/test_tls13_resumption`
+- Warning check:
+  - `rg -n "Warning: Function result variable of a managed type" tmp/managed_result_wave4_*_compile.log || true`
+  - Result: no matches.
+- Result: wave4 source targets were already in the safe shape; no production
+  code edits were needed. Updated the wave4 plan and root working records.
+- Next target: `docs/plans/2026-05-20-managed-result-init-safety-wave5.md`.
+
 ## 2026-05-24
 - Continued into `Managed Result Init Safety Wave 3`.
 - Rechecked focused contract and found the production targets already green:
