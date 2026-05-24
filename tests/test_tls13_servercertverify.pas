@@ -3106,66 +3106,66 @@ end;
 
 procedure TestBigIntQWordVectorSuiteWaveD;
 begin
-  AssertBigIntModMatchesQWord($FFFFFFFFFFFFFFF1, $FFFFFFFFFFFFFFC5, 'waved-mod-1');
-  AssertBigIntModMatchesQWord($8000000000000001, $7FFFFFFFFFFFFFFF, 'waved-mod-2');
-  AssertBigIntModMatchesQWord($1234567890ABCDEF, $1FFFFFFFF, 'waved-mod-3');
+  AssertBigIntModMatchesQWord(QWord($FFFFFFFFFFFFFFF1), QWord($FFFFFFFFFFFFFFC5), 'waved-mod-1');
+  AssertBigIntModMatchesQWord(QWord($8000000000000001), QWord($7FFFFFFFFFFFFFFF), 'waved-mod-2');
+  AssertBigIntModMatchesQWord(QWord($1234567890ABCDEF), QWord($1FFFFFFFF), 'waved-mod-3');
 
-  AssertBigIntModMulMatchesQWord($FFFFFFFFFFFFFFFD, $FFFFFFFFFFFFFFFB, $FFFFFFFFFFFFFFC5, 'waved-modmul-1');
-  AssertBigIntModMulMatchesQWord($0123456789ABCDEF, $0FEDCBA987654321, $7FFFFFFFFFFFFFFF, 'waved-modmul-2');
-  AssertBigIntModMulMatchesQWord($123456789ABCDEF0, $1111111111111111, $1FFFFFFFF, 'waved-modmul-3');
+  AssertBigIntModMulMatchesQWord(QWord($FFFFFFFFFFFFFFFD), QWord($FFFFFFFFFFFFFFFB), QWord($FFFFFFFFFFFFFFC5), 'waved-modmul-1');
+  AssertBigIntModMulMatchesQWord(QWord($0123456789ABCDEF), QWord($0FEDCBA987654321), QWord($7FFFFFFFFFFFFFFF), 'waved-modmul-2');
+  AssertBigIntModMulMatchesQWord(QWord($123456789ABCDEF0), QWord($1111111111111111), QWord($1FFFFFFFF), 'waved-modmul-3');
 
-  AssertBigIntModExpMatchesQWord($123456789ABCDEF0, $123456, $FFFFFFFFFFFFFFC5, 'waved-modexp-1');
-  AssertBigIntModExpMatchesQWord($7FFFFFFFFFFFFFFE, $2222, $7FFFFFFFFFFFFFFF, 'waved-modexp-2');
+  AssertBigIntModExpMatchesQWord(QWord($123456789ABCDEF0), QWord($123456), QWord($FFFFFFFFFFFFFFC5), 'waved-modexp-1');
+  AssertBigIntModExpMatchesQWord(QWord($7FFFFFFFFFFFFFFE), QWord($2222), QWord($7FFFFFFFFFFFFFFF), 'waved-modexp-2');
 
-  AssertBigIntSubModMatchesQWord($FFFFFFFFFFFFFFFE, $123456789ABCDEF0, $FFFFFFFFFFFFFFC5, 'waved-submod-1');
-  AssertBigIntSubModMatchesQWord($0000000000000001, $FFFFFFFFFFFFFFFE, $7FFFFFFFFFFFFFFF, 'waved-submod-2');
+  AssertBigIntSubModMatchesQWord(QWord($FFFFFFFFFFFFFFFE), QWord($123456789ABCDEF0), QWord($FFFFFFFFFFFFFFC5), 'waved-submod-1');
+  AssertBigIntSubModMatchesQWord(QWord($0000000000000001), QWord($FFFFFFFFFFFFFFFE), QWord($7FFFFFFFFFFFFFFF), 'waved-submod-2');
 end;
 
 procedure TestBigIntQWordVectorSuiteWaveF;
 begin
-  AssertBigIntModMatchesQWord($0102030405060708, $03, 'wavef-mod-1');
-  AssertBigIntModMatchesQWord($FFFFFFFFFFFFFFFE, $FF, 'wavef-mod-2');
-  AssertBigIntModMatchesQWord($7FFFFFFFFFFFFFFF, $0000000100000001, 'wavef-mod-3');
-  AssertBigIntModMatchesQWord($AAAAAAAAAAAAAAAA, $5555555555555557, 'wavef-mod-4');
-  AssertBigIntModMatchesQWord($123456789ABCDEF0, $11, 'wavef-mod-5');
-  AssertBigIntModMatchesQWord($DEADBEEFCAFEBABE, $FFFFFFFB, 'wavef-mod-6');
-  AssertBigIntModMatchesQWord($8000000000000000, $7FFFFFFFFFFFFFE7, 'wavef-mod-7');
-  AssertBigIntModMatchesQWord($13579BDF2468ACE0, $1000000000000001, 'wavef-mod-8');
-  AssertBigIntModMatchesQWord($FEDCBA9876543210, $1FFFFFFFFFFFFFFF, 'wavef-mod-9');
-  AssertBigIntModMatchesQWord($1122334455667788, $0101010101010101, 'wavef-mod-10');
+  AssertBigIntModMatchesQWord(QWord($0102030405060708), QWord($03), 'wavef-mod-1');
+  AssertBigIntModMatchesQWord(QWord($FFFFFFFFFFFFFFFE), QWord($FF), 'wavef-mod-2');
+  AssertBigIntModMatchesQWord(QWord($7FFFFFFFFFFFFFFF), QWord($0000000100000001), 'wavef-mod-3');
+  AssertBigIntModMatchesQWord(QWord($AAAAAAAAAAAAAAAA), QWord($5555555555555557), 'wavef-mod-4');
+  AssertBigIntModMatchesQWord(QWord($123456789ABCDEF0), QWord($11), 'wavef-mod-5');
+  AssertBigIntModMatchesQWord(QWord($DEADBEEFCAFEBABE), QWord($FFFFFFFB), 'wavef-mod-6');
+  AssertBigIntModMatchesQWord(QWord($8000000000000000), QWord($7FFFFFFFFFFFFFE7), 'wavef-mod-7');
+  AssertBigIntModMatchesQWord(QWord($13579BDF2468ACE0), QWord($1000000000000001), 'wavef-mod-8');
+  AssertBigIntModMatchesQWord(QWord($FEDCBA9876543210), QWord($1FFFFFFFFFFFFFFF), 'wavef-mod-9');
+  AssertBigIntModMatchesQWord(QWord($1122334455667788), QWord($0101010101010101), 'wavef-mod-10');
 
-  AssertBigIntModMulMatchesQWord($FFFFFFFFFFFFFFFD, $FFFFFFFFFFFFFFFB, $FFFFFFFFFFFFFFC5, 'wavef-modmul-1');
-  AssertBigIntModMulMatchesQWord($8000000000000000, $0000000000000002, $7FFFFFFFFFFFFFFF, 'wavef-modmul-2');
-  AssertBigIntModMulMatchesQWord($123456789ABCDEF0, $0FEDCBA987654321, $1FFFFFFFFFFFFFFF, 'wavef-modmul-3');
-  AssertBigIntModMulMatchesQWord($DEADBEEFCAFEBABE, $0000000100000001, $FFFFFFFF00000001, 'wavef-modmul-4');
-  AssertBigIntModMulMatchesQWord($AAAAAAAA55555555, $1111111122222222, $FFFFFFFB, 'wavef-modmul-5');
-  AssertBigIntModMulMatchesQWord($0123456789ABCDEF, $F0E1D2C3B4A59687, $7FFFFFFFFFFFFFE7, 'wavef-modmul-6');
-  AssertBigIntModMulMatchesQWord($00000000FFFFFFFF, $FFFFFFFF00000000, $FFFFFFFF, 'wavef-modmul-7');
-  AssertBigIntModMulMatchesQWord($13579BDF2468ACE1, $2468ACE113579BDF, $100000000000003D, 'wavef-modmul-8');
-  AssertBigIntModMulMatchesQWord($FFFFFFFFFFFFFFFE, $FFFFFFFFFFFFFFFE, $FFFFFFFFFFFFFFC5, 'wavef-modmul-9');
-  AssertBigIntModMulMatchesQWord($1122334455667788, $99AABBCCDDEEFF00, $7FFFFFFFFFFFFFED, 'wavef-modmul-10');
+  AssertBigIntModMulMatchesQWord(QWord($FFFFFFFFFFFFFFFD), QWord($FFFFFFFFFFFFFFFB), QWord($FFFFFFFFFFFFFFC5), 'wavef-modmul-1');
+  AssertBigIntModMulMatchesQWord(QWord($8000000000000000), QWord($0000000000000002), QWord($7FFFFFFFFFFFFFFF), 'wavef-modmul-2');
+  AssertBigIntModMulMatchesQWord(QWord($123456789ABCDEF0), QWord($0FEDCBA987654321), QWord($1FFFFFFFFFFFFFFF), 'wavef-modmul-3');
+  AssertBigIntModMulMatchesQWord(QWord($DEADBEEFCAFEBABE), QWord($0000000100000001), QWord($FFFFFFFF00000001), 'wavef-modmul-4');
+  AssertBigIntModMulMatchesQWord(QWord($AAAAAAAA55555555), QWord($1111111122222222), QWord($FFFFFFFB), 'wavef-modmul-5');
+  AssertBigIntModMulMatchesQWord(QWord($0123456789ABCDEF), QWord($F0E1D2C3B4A59687), QWord($7FFFFFFFFFFFFFE7), 'wavef-modmul-6');
+  AssertBigIntModMulMatchesQWord(QWord($00000000FFFFFFFF), QWord($FFFFFFFF00000000), QWord($FFFFFFFF), 'wavef-modmul-7');
+  AssertBigIntModMulMatchesQWord(QWord($13579BDF2468ACE1), QWord($2468ACE113579BDF), QWord($100000000000003D), 'wavef-modmul-8');
+  AssertBigIntModMulMatchesQWord(QWord($FFFFFFFFFFFFFFFE), QWord($FFFFFFFFFFFFFFFE), QWord($FFFFFFFFFFFFFFC5), 'wavef-modmul-9');
+  AssertBigIntModMulMatchesQWord(QWord($1122334455667788), QWord($99AABBCCDDEEFF00), QWord($7FFFFFFFFFFFFFED), 'wavef-modmul-10');
 
-  AssertBigIntModExpMatchesQWord($02, $3F, $7FFFFFFFFFFFFFFF, 'wavef-modexp-1');
-  AssertBigIntModExpMatchesQWord($03, $0400, $FFFFFFFF00000001, 'wavef-modexp-2');
-  AssertBigIntModExpMatchesQWord($123456789ABCDEF0, $12345, $FFFFFFFFFFFFFFC5, 'wavef-modexp-3');
-  AssertBigIntModExpMatchesQWord($FEDCBA9876543210, $2222, $7FFFFFFFFFFFFFE7, 'wavef-modexp-4');
-  AssertBigIntModExpMatchesQWord($AAAAAAAA55555555, $10001, $1FFFFFFFFFFFFFFF, 'wavef-modexp-5');
-  AssertBigIntModExpMatchesQWord($DEADBEEFCAFEBABE, $77, $FFFFFFFFFFFFFFF1, 'wavef-modexp-6');
-  AssertBigIntModExpMatchesQWord($0123456789ABCDEF, $ABCDE, $100000000000003D, 'wavef-modexp-7');
-  AssertBigIntModExpMatchesQWord($0000000000000005, $FFFFFFFF, $FFFFFFFFFFFFFFC5, 'wavef-modexp-8');
-  AssertBigIntModExpMatchesQWord($FFFFFFFF00000000, $11111111, $FFFFFFFB, 'wavef-modexp-9');
-  AssertBigIntModExpMatchesQWord($13579BDF2468ACE1, $87654321, $7FFFFFFFFFFFFFED, 'wavef-modexp-10');
+  AssertBigIntModExpMatchesQWord(QWord($02), QWord($3F), QWord($7FFFFFFFFFFFFFFF), 'wavef-modexp-1');
+  AssertBigIntModExpMatchesQWord(QWord($03), QWord($0400), QWord($FFFFFFFF00000001), 'wavef-modexp-2');
+  AssertBigIntModExpMatchesQWord(QWord($123456789ABCDEF0), QWord($12345), QWord($FFFFFFFFFFFFFFC5), 'wavef-modexp-3');
+  AssertBigIntModExpMatchesQWord(QWord($FEDCBA9876543210), QWord($2222), QWord($7FFFFFFFFFFFFFE7), 'wavef-modexp-4');
+  AssertBigIntModExpMatchesQWord(QWord($AAAAAAAA55555555), QWord($10001), QWord($1FFFFFFFFFFFFFFF), 'wavef-modexp-5');
+  AssertBigIntModExpMatchesQWord(QWord($DEADBEEFCAFEBABE), QWord($77), QWord($FFFFFFFFFFFFFFF1), 'wavef-modexp-6');
+  AssertBigIntModExpMatchesQWord(QWord($0123456789ABCDEF), QWord($ABCDE), QWord($100000000000003D), 'wavef-modexp-7');
+  AssertBigIntModExpMatchesQWord(QWord($0000000000000005), QWord($FFFFFFFF), QWord($FFFFFFFFFFFFFFC5), 'wavef-modexp-8');
+  AssertBigIntModExpMatchesQWord(QWord($FFFFFFFF00000000), QWord($11111111), QWord($FFFFFFFB), 'wavef-modexp-9');
+  AssertBigIntModExpMatchesQWord(QWord($13579BDF2468ACE1), QWord($87654321), QWord($7FFFFFFFFFFFFFED), 'wavef-modexp-10');
 
-  AssertBigIntSubModMatchesQWord($FFFFFFFFFFFFFFFE, $01, $FFFFFFFFFFFFFFC5, 'wavef-submod-1');
-  AssertBigIntSubModMatchesQWord($01, $FFFFFFFFFFFFFFFE, $FFFFFFFFFFFFFFC5, 'wavef-submod-2');
-  AssertBigIntSubModMatchesQWord($123456789ABCDEF0, $0FEDCBA987654321, $1FFFFFFFFFFFFFFF, 'wavef-submod-3');
-  AssertBigIntSubModMatchesQWord($0FEDCBA987654321, $123456789ABCDEF0, $1FFFFFFFFFFFFFFF, 'wavef-submod-4');
-  AssertBigIntSubModMatchesQWord($AAAAAAAAAAAAAAAA, $5555555555555555, $7FFFFFFFFFFFFFFF, 'wavef-submod-5');
-  AssertBigIntSubModMatchesQWord($5555555555555555, $AAAAAAAAAAAAAAAA, $7FFFFFFFFFFFFFFF, 'wavef-submod-6');
-  AssertBigIntSubModMatchesQWord($DEADBEEFCAFEBABE, $DEADBEEFCAFEBABE, $FFFFFFFF00000001, 'wavef-submod-7');
-  AssertBigIntSubModMatchesQWord($0000000000000000, $0000000000000001, $FFFFFFFFFFFFFFF1, 'wavef-submod-8');
-  AssertBigIntSubModMatchesQWord($FFFFFFFF00000000, $00000000FFFFFFFF, $FFFFFFFB, 'wavef-submod-9');
-  AssertBigIntSubModMatchesQWord($1122334455667788, $99AABBCCDDEEFF00, $7FFFFFFFFFFFFFED, 'wavef-submod-10');
+  AssertBigIntSubModMatchesQWord(QWord($FFFFFFFFFFFFFFFE), QWord($01), QWord($FFFFFFFFFFFFFFC5), 'wavef-submod-1');
+  AssertBigIntSubModMatchesQWord(QWord($01), QWord($FFFFFFFFFFFFFFFE), QWord($FFFFFFFFFFFFFFC5), 'wavef-submod-2');
+  AssertBigIntSubModMatchesQWord(QWord($123456789ABCDEF0), QWord($0FEDCBA987654321), QWord($1FFFFFFFFFFFFFFF), 'wavef-submod-3');
+  AssertBigIntSubModMatchesQWord(QWord($0FEDCBA987654321), QWord($123456789ABCDEF0), QWord($1FFFFFFFFFFFFFFF), 'wavef-submod-4');
+  AssertBigIntSubModMatchesQWord(QWord($AAAAAAAAAAAAAAAA), QWord($5555555555555555), QWord($7FFFFFFFFFFFFFFF), 'wavef-submod-5');
+  AssertBigIntSubModMatchesQWord(QWord($5555555555555555), QWord($AAAAAAAAAAAAAAAA), QWord($7FFFFFFFFFFFFFFF), 'wavef-submod-6');
+  AssertBigIntSubModMatchesQWord(QWord($DEADBEEFCAFEBABE), QWord($DEADBEEFCAFEBABE), QWord($FFFFFFFF00000001), 'wavef-submod-7');
+  AssertBigIntSubModMatchesQWord(QWord($0000000000000000), QWord($0000000000000001), QWord($FFFFFFFFFFFFFFF1), 'wavef-submod-8');
+  AssertBigIntSubModMatchesQWord(QWord($FFFFFFFF00000000), QWord($00000000FFFFFFFF), QWord($FFFFFFFB), 'wavef-submod-9');
+  AssertBigIntSubModMatchesQWord(QWord($1122334455667788), QWord($99AABBCCDDEEFF00), QWord($7FFFFFFFFFFFFFED), 'wavef-submod-10');
 end;
 
 procedure TestBigIntQWordVectorSuiteWaveI;

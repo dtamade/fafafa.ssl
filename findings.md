@@ -1,5 +1,21 @@
 # Findings
 
+# 2026-05-25 TLS13 ServerCertVerify Range-Check Cleanup
+- `tests/test_tls13_servercertverify.pas` hit a concentrated
+  `Warning: Range check error while evaluating constants` batch around the
+  `TestBigIntQWordVectorSuiteWaveD` and `TestBigIntQWordVectorSuiteWaveF`
+  QWord vector suites.
+- The warnings came from untyped 64-bit hex literals being evaluated as signed
+  constants before reaching `QWord`-typed helper parameters.
+- Wrapping those literals in explicit `QWord(...)` casts kept the same test
+  values and semantics while removing the range-check warning family.
+- Focused compile for `tests/test_tls13_servercertverify.pas` is clean for the
+  target warning family.
+- The target test binary passed.
+- The full TLS 1.3 completeness gate passed with `18` passed and `0` failed.
+- Residual gate warnings are separate families and should be handled in later
+  waves, not folded back into this batch.
+
 # 2026-05-24 Module Test Unreachable-Code Warning Cleanup
 - The broad module-test `Unreachable code` warnings were caused by direct
   compile-time constant comparisons in test assertion branches, not by dead

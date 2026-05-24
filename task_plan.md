@@ -1,4 +1,40 @@
-# Task Plan: Module Test Unreachable-Code Warning Cleanup
+# Task Plan: TLS13 ServerCertVerify Range-Check Warning Cleanup
+
+## Objective
+
+Close the `Warning: Range check error while evaluating constants` family in
+`tests/test_tls13_servercertverify.pas` without changing BigInt test semantics.
+
+## Current State
+
+- Focused red compile showed 62 warnings, with 47 range-check hits clustered in
+  `TestBigIntQWordVectorSuiteWaveD/F`.
+- The fix was to make the unsigned intent explicit with `QWord(...)` casts on
+  the 64-bit vector literals, matching the already-clean WaveI style.
+- Focused compile for `tests/test_tls13_servercertverify.pas` is clean for the
+  target range-check warning family.
+- The target binary passed.
+- The TLS 1.3 completeness gate passed with `18` passed and `0` failed.
+- Remaining gate warnings are different families:
+  `Case statement does not handle all possible cases`,
+  implicit string conversion, and one `Function result does not seem to be set`.
+
+## Verification
+
+- Focused red evidence:
+  - `tests/test_tls13_servercertverify.pas` compiled with 62 warnings before the
+    fix, including the range-check family at lines `3109-3168`.
+- Focused green evidence:
+  - `tmp/range_check_wave1_servercertverify_compile_green.log`
+  - `tmp/range_check_wave1_servercertverify_run.log`
+- Full gate evidence:
+  - `tmp/range_check_wave1_tls13_completeness.log`
+  - `tmp/test-reports/freepascal_tls13_completeness_range_check_wave1_20260525.md`
+
+## Next Queue
+
+- Treat the remaining `case statement`, string conversion, and
+  `function result` warnings as separate waves.
 
 ## Objective
 

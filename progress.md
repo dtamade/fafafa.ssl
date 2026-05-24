@@ -1,5 +1,22 @@
 # Progress Log
 
+## 2026-05-25 TLS13 ServerCertVerify Range-Check Cleanup
+- Restored context from the latest TLS 1.3 residual scan and confirmed the
+  previous completeness gate had already completed successfully.
+- Reproduced the target warning family with a focused compile of
+  `tests/test_tls13_servercertverify.pas`; the red compile showed 62 warnings,
+  including 47 range-check hits in the waveD/waveF QWord vectors.
+- Updated the waveD/waveF literals to explicit `QWord(...)` casts and reran
+  the focused compile; the target warning family disappeared.
+- Ran the target binary:
+  - `tmp/range_check_wave1_bin/test_tls13_servercertverify`
+- Ran the full TLS 1.3 completeness gate:
+  - `--run-id range_check_wave1_20260525`
+  - result: `18` passed, `0` failed
+- Current gate residual warnings are unrelated families:
+  case coverage, implicit string conversions, and one generic function-result
+  warning.
+
 ## 2026-05-24 Module Test Unreachable-Code Warning Cleanup
 - Goal: clear the `Warning: Unreachable code` batch exposed by broad module-test
   compile logs without changing module-test assertions.
