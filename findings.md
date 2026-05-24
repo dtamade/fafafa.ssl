@@ -1,5 +1,18 @@
 # Findings
 
+# 2026-05-24 Module Test Unreachable-Code Warning Cleanup
+- The broad module-test `Unreachable code` warnings were caused by direct
+  compile-time constant comparisons in test assertion branches, not by dead
+  runtime code.
+- Wrapping those constant operands in local `RuntimeInteger` helpers preserves
+  the expected-value checks while preventing FPC from folding the failure branch
+  away at compile time.
+- Focused compile for the 9 affected module tests found no remaining
+  `Warning: Unreachable code`.
+- `run_all_module_tests.sh --fast-local` passed with `22` passed, `0` failed,
+  and `0` skipped.
+- The new broad module-test compile logs contain no `Warning:` entries.
+
 # 2026-05-24 Managed Result Init Safety Post-Wave6 Residual Discovery
 - Post-wave6 broad module tests passed: `run_all_module_tests.sh --fast-local`
   reported `22` passed, `0` failed, and `0` skipped.

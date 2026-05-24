@@ -33,6 +33,11 @@ begin
   WriteLn('FAIL: ', Reason);
 end;
 
+function RuntimeInteger(AValue: Integer): Integer;
+begin
+  Result := AValue;
+end;
+
 procedure TestLoadPKCS12Module;
 begin
   StartTest('Load PKCS12 module');
@@ -49,15 +54,15 @@ procedure TestPKCS12Constants;
 begin
   StartTest('PKCS12 constants defined');
   try
-    if (PKCS12_KEY_ID <> 1) then
+    if (RuntimeInteger(PKCS12_KEY_ID) <> 1) then
       FailTest('PKCS12_KEY_ID incorrect')
-    else if (PKCS12_IV_ID <> 2) then
+    else if (RuntimeInteger(PKCS12_IV_ID) <> 2) then
       FailTest('PKCS12_IV_ID incorrect')
-    else if (PKCS12_MAC_ID <> 3) then
+    else if (RuntimeInteger(PKCS12_MAC_ID) <> 3) then
       FailTest('PKCS12_MAC_ID incorrect')
-    else if (PKCS12_DEFAULT_ITER <> 2048) then
+    else if (RuntimeInteger(PKCS12_DEFAULT_ITER) <> 2048) then
       FailTest('PKCS12_DEFAULT_ITER incorrect')
-    else if (PKCS12_MAC_KEY_LENGTH <> 20) then
+    else if (RuntimeInteger(PKCS12_MAC_KEY_LENGTH) <> 20) then
       FailTest('PKCS12_MAC_KEY_LENGTH incorrect')
     else
       PassTest;
@@ -71,17 +76,17 @@ procedure TestPBEAlgorithmNIDs;
 begin
   StartTest('PBE algorithm NID constants');
   try
-    if (NID_pbe_WithSHA1And128BitRC4 <> 144) then
+    if (RuntimeInteger(NID_pbe_WithSHA1And128BitRC4) <> 144) then
       FailTest('NID_pbe_WithSHA1And128BitRC4 incorrect')
-    else if (NID_pbe_WithSHA1And40BitRC4 <> 145) then
+    else if (RuntimeInteger(NID_pbe_WithSHA1And40BitRC4) <> 145) then
       FailTest('NID_pbe_WithSHA1And40BitRC4 incorrect')
-    else if (NID_pbe_WithSHA1And3_Key_TripleDES_CBC <> 146) then
+    else if (RuntimeInteger(NID_pbe_WithSHA1And3_Key_TripleDES_CBC) <> 146) then
       FailTest('NID_pbe_WithSHA1And3_Key_TripleDES_CBC incorrect')
-    else if (NID_pbe_WithSHA1And2_Key_TripleDES_CBC <> 147) then
+    else if (RuntimeInteger(NID_pbe_WithSHA1And2_Key_TripleDES_CBC) <> 147) then
       FailTest('NID_pbe_WithSHA1And2_Key_TripleDES_CBC incorrect')
-    else if (NID_pbe_WithSHA1And128BitRC2_CBC <> 148) then
+    else if (RuntimeInteger(NID_pbe_WithSHA1And128BitRC2_CBC) <> 148) then
       FailTest('NID_pbe_WithSHA1And128BitRC2_CBC incorrect')
-    else if (NID_pbe_WithSHA1And40BitRC2_CBC <> 149) then
+    else if (RuntimeInteger(NID_pbe_WithSHA1And40BitRC2_CBC) <> 149) then
       FailTest('NID_pbe_WithSHA1And40BitRC2_CBC incorrect')
     else
       PassTest;

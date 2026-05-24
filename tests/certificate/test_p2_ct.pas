@@ -35,6 +35,11 @@ begin
   WriteLn('FAIL: ', Reason);
 end;
 
+function RuntimeInteger(AValue: Integer): Integer;
+begin
+  Result := AValue;
+end;
+
 procedure TestLoadCTFunctions;
 begin
   StartTest('Load CT functions');
@@ -51,9 +56,9 @@ procedure TestCTLogEntryTypeConstants;
 begin
   StartTest('CT log entry type constants');
   try
-    if (CT_LOG_ENTRY_TYPE_X509 <> 0) then
+    if (RuntimeInteger(CT_LOG_ENTRY_TYPE_X509) <> 0) then
       FailTest('CT_LOG_ENTRY_TYPE_X509 incorrect')
-    else if (CT_LOG_ENTRY_TYPE_PRECERT <> 1) then
+    else if (RuntimeInteger(CT_LOG_ENTRY_TYPE_PRECERT) <> 1) then
       FailTest('CT_LOG_ENTRY_TYPE_PRECERT incorrect')
     else
       PassTest;
@@ -67,7 +72,7 @@ procedure TestSCTVersionConstants;
 begin
   StartTest('SCT version constants');
   try
-    if (SCT_VERSION_V1 <> 0) then
+    if (RuntimeInteger(SCT_VERSION_V1) <> 0) then
       FailTest('SCT_VERSION_V1 incorrect')
     else
       PassTest;
@@ -81,11 +86,11 @@ procedure TestSCTSourceConstants;
 begin
   StartTest('SCT source constants');
   try
-    if (SCT_SOURCE_TLS_EXTENSION <> 1) then
+    if (RuntimeInteger(SCT_SOURCE_TLS_EXTENSION) <> 1) then
       FailTest('SCT_SOURCE_TLS_EXTENSION incorrect')
-    else if (SCT_SOURCE_X509V3_EXTENSION <> 2) then
+    else if (RuntimeInteger(SCT_SOURCE_X509V3_EXTENSION) <> 2) then
       FailTest('SCT_SOURCE_X509V3_EXTENSION incorrect')
-    else if (SCT_SOURCE_OCSP_STAPLED_RESPONSE <> 3) then
+    else if (RuntimeInteger(SCT_SOURCE_OCSP_STAPLED_RESPONSE) <> 3) then
       FailTest('SCT_SOURCE_OCSP_STAPLED_RESPONSE incorrect')
     else
       PassTest;
@@ -99,11 +104,11 @@ procedure TestSCTValidationStatusConstants;
 begin
   StartTest('SCT validation status constants');
   try
-    if (SCT_VALIDATION_STATUS_VALID <> 2) then
+    if (RuntimeInteger(SCT_VALIDATION_STATUS_VALID) <> 2) then
       FailTest('SCT_VALIDATION_STATUS_VALID incorrect')
-    else if (SCT_VALIDATION_STATUS_INVALID <> 3) then
+    else if (RuntimeInteger(SCT_VALIDATION_STATUS_INVALID) <> 3) then
       FailTest('SCT_VALIDATION_STATUS_INVALID incorrect')
-    else if (SCT_VALIDATION_STATUS_UNVERIFIED <> 4) then
+    else if (RuntimeInteger(SCT_VALIDATION_STATUS_UNVERIFIED) <> 4) then
       FailTest('SCT_VALIDATION_STATUS_UNVERIFIED incorrect')
     else
       PassTest;

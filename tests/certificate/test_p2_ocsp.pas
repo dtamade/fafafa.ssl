@@ -36,6 +36,11 @@ begin
   WriteLn('FAIL: ', Reason);
 end;
 
+function RuntimeInteger(AValue: Integer): Integer;
+begin
+  Result := AValue;
+end;
+
 procedure TestLoadOCSPFunctions;
 begin
   StartTest('Load OCSP functions');
@@ -54,17 +59,17 @@ procedure TestOCSPResponseStatusConstants;
 begin
   StartTest('OCSP response status constants');
   try
-    if (OCSP_RESPONSE_STATUS_SUCCESSFUL <> 0) then
+    if (RuntimeInteger(OCSP_RESPONSE_STATUS_SUCCESSFUL) <> 0) then
       FailTest('OCSP_RESPONSE_STATUS_SUCCESSFUL incorrect')
-    else if (OCSP_RESPONSE_STATUS_MALFORMEDREQUEST <> 1) then
+    else if (RuntimeInteger(OCSP_RESPONSE_STATUS_MALFORMEDREQUEST) <> 1) then
       FailTest('OCSP_RESPONSE_STATUS_MALFORMEDREQUEST incorrect')
-    else if (OCSP_RESPONSE_STATUS_INTERNALERROR <> 2) then
+    else if (RuntimeInteger(OCSP_RESPONSE_STATUS_INTERNALERROR) <> 2) then
       FailTest('OCSP_RESPONSE_STATUS_INTERNALERROR incorrect')
-    else if (OCSP_RESPONSE_STATUS_TRYLATER <> 3) then
+    else if (RuntimeInteger(OCSP_RESPONSE_STATUS_TRYLATER) <> 3) then
       FailTest('OCSP_RESPONSE_STATUS_TRYLATER incorrect')
-    else if (OCSP_RESPONSE_STATUS_SIGREQUIRED <> 5) then
+    else if (RuntimeInteger(OCSP_RESPONSE_STATUS_SIGREQUIRED) <> 5) then
       FailTest('OCSP_RESPONSE_STATUS_SIGREQUIRED incorrect')
-    else if (OCSP_RESPONSE_STATUS_UNAUTHORIZED <> 6) then
+    else if (RuntimeInteger(OCSP_RESPONSE_STATUS_UNAUTHORIZED) <> 6) then
       FailTest('OCSP_RESPONSE_STATUS_UNAUTHORIZED incorrect')
     else
       PassTest;
@@ -78,11 +83,11 @@ procedure TestOCSPCertStatusConstants;
 begin
   StartTest('OCSP certificate status constants');
   try
-    if (V_OCSP_CERTSTATUS_GOOD <> 0) then
+    if (RuntimeInteger(V_OCSP_CERTSTATUS_GOOD) <> 0) then
       FailTest('V_OCSP_CERTSTATUS_GOOD incorrect')
-    else if (V_OCSP_CERTSTATUS_REVOKED <> 1) then
+    else if (RuntimeInteger(V_OCSP_CERTSTATUS_REVOKED) <> 1) then
       FailTest('V_OCSP_CERTSTATUS_REVOKED incorrect')
-    else if (V_OCSP_CERTSTATUS_UNKNOWN <> 2) then
+    else if (RuntimeInteger(V_OCSP_CERTSTATUS_UNKNOWN) <> 2) then
       FailTest('V_OCSP_CERTSTATUS_UNKNOWN incorrect')
     else
       PassTest;
@@ -96,13 +101,13 @@ procedure TestOCSPRevokedStatusConstants;
 begin
   StartTest('OCSP revoked status constants');
   try
-    if (OCSP_REVOKED_STATUS_UNSPECIFIED <> 0) then
+    if (RuntimeInteger(OCSP_REVOKED_STATUS_UNSPECIFIED) <> 0) then
       FailTest('OCSP_REVOKED_STATUS_UNSPECIFIED incorrect')
-    else if (OCSP_REVOKED_STATUS_KEYCOMPROMISE <> 1) then
+    else if (RuntimeInteger(OCSP_REVOKED_STATUS_KEYCOMPROMISE) <> 1) then
       FailTest('OCSP_REVOKED_STATUS_KEYCOMPROMISE incorrect')
-    else if (OCSP_REVOKED_STATUS_CACOMPROMISE <> 2) then
+    else if (RuntimeInteger(OCSP_REVOKED_STATUS_CACOMPROMISE) <> 2) then
       FailTest('OCSP_REVOKED_STATUS_CACOMPROMISE incorrect')
-    else if (OCSP_REVOKED_STATUS_AFFILIATIONCHANGED <> 3) then
+    else if (RuntimeInteger(OCSP_REVOKED_STATUS_AFFILIATIONCHANGED) <> 3) then
       FailTest('OCSP_REVOKED_STATUS_AFFILIATIONCHANGED incorrect')
     else
       PassTest;
@@ -116,15 +121,15 @@ procedure TestOCSPFlagConstants;
 begin
   StartTest('OCSP flag constants');
   try
-    if (OCSP_NOCERTS <> $1) then
+    if (RuntimeInteger(OCSP_NOCERTS) <> $1) then
       FailTest('OCSP_NOCERTS incorrect')
-    else if (OCSP_NOINTERN <> $2) then
+    else if (RuntimeInteger(OCSP_NOINTERN) <> $2) then
       FailTest('OCSP_NOINTERN incorrect')
-    else if (OCSP_NOSIGS <> $4) then
+    else if (RuntimeInteger(OCSP_NOSIGS) <> $4) then
       FailTest('OCSP_NOSIGS incorrect')
-    else if (OCSP_NOCHAIN <> $8) then
+    else if (RuntimeInteger(OCSP_NOCHAIN) <> $8) then
       FailTest('OCSP_NOCHAIN incorrect')
-    else if (OCSP_NOVERIFY <> $10) then
+    else if (RuntimeInteger(OCSP_NOVERIFY) <> $10) then
       FailTest('OCSP_NOVERIFY incorrect')
     else
       PassTest;

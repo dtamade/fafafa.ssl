@@ -35,6 +35,11 @@ begin
   WriteLn('FAIL: ', Reason);
 end;
 
+function RuntimeInteger(AValue: Integer): Integer;
+begin
+  Result := AValue;
+end;
+
 procedure TestLoadTSFunctions;
 begin
   StartTest('Load TS functions');
@@ -51,11 +56,11 @@ procedure TestTSStatusConstants;
 begin
   StartTest('TS status constants');
   try
-    if (TS_STATUS_GRANTED <> 0) then
+    if (RuntimeInteger(TS_STATUS_GRANTED) <> 0) then
       FailTest('TS_STATUS_GRANTED incorrect')
-    else if (TS_STATUS_GRANTED_WITH_MODS <> 1) then
+    else if (RuntimeInteger(TS_STATUS_GRANTED_WITH_MODS) <> 1) then
       FailTest('TS_STATUS_GRANTED_WITH_MODS incorrect')
-    else if (TS_STATUS_REJECTION <> 2) then
+    else if (RuntimeInteger(TS_STATUS_REJECTION) <> 2) then
       FailTest('TS_STATUS_REJECTION incorrect')
     else
       PassTest;
@@ -69,11 +74,11 @@ procedure TestTSInfoFlagConstants;
 begin
   StartTest('TS info flag constants');
   try
-    if (TS_INFO_VERSION <> $0001) then
+    if (RuntimeInteger(TS_INFO_VERSION) <> $0001) then
       FailTest('TS_INFO_VERSION incorrect')
-    else if (TS_INFO_POLICY <> $0002) then
+    else if (RuntimeInteger(TS_INFO_POLICY) <> $0002) then
       FailTest('TS_INFO_POLICY incorrect')
-    else if (TS_INFO_SERIAL <> $0008) then
+    else if (RuntimeInteger(TS_INFO_SERIAL) <> $0008) then
       FailTest('TS_INFO_SERIAL incorrect')
     else
       PassTest;
@@ -87,11 +92,11 @@ procedure TestTSVerifyFlagConstants;
 begin
   StartTest('TS verify flag constants');
   try
-    if (TS_VFY_VERSION <> $01) then
+    if (RuntimeInteger(TS_VFY_VERSION) <> $01) then
       FailTest('TS_VFY_VERSION incorrect')
-    else if (TS_VFY_POLICY <> $02) then
+    else if (RuntimeInteger(TS_VFY_POLICY) <> $02) then
       FailTest('TS_VFY_IMPRINT incorrect')
-    else if (TS_VFY_SIGNATURE <> $80) then
+    else if (RuntimeInteger(TS_VFY_SIGNATURE) <> $80) then
       FailTest('TS_VFY_SIGNATURE incorrect')
     else
       PassTest;

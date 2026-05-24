@@ -40,6 +40,11 @@ begin
   WriteLn('FAIL: ', Reason);
 end;
 
+function RuntimeInteger(AValue: Integer): Integer;
+begin
+  Result := AValue;
+end;
+
 procedure TestLoadCMSFunctions;
 begin
   StartTest('Load CMS functions');
@@ -58,15 +63,15 @@ procedure TestCMSTypeConstants;
 begin
   StartTest('CMS recipient info type constants');
   try
-    if (CMS_RECIPINFO_TRANS <> 0) then
+    if (RuntimeInteger(CMS_RECIPINFO_TRANS) <> 0) then
       FailTest('CMS_RECIPINFO_TRANS incorrect')
-    else if (CMS_RECIPINFO_AGREE <> 1) then
+    else if (RuntimeInteger(CMS_RECIPINFO_AGREE) <> 1) then
       FailTest('CMS_RECIPINFO_AGREE incorrect')
-    else if (CMS_RECIPINFO_KEK <> 2) then
+    else if (RuntimeInteger(CMS_RECIPINFO_KEK) <> 2) then
       FailTest('CMS_RECIPINFO_KEK incorrect')
-    else if (CMS_RECIPINFO_PASS <> 3) then
+    else if (RuntimeInteger(CMS_RECIPINFO_PASS) <> 3) then
       FailTest('CMS_RECIPINFO_PASS incorrect')
-    else if (CMS_RECIPINFO_OTHER <> 4) then
+    else if (RuntimeInteger(CMS_RECIPINFO_OTHER) <> 4) then
       FailTest('CMS_RECIPINFO_OTHER incorrect')
     else
       PassTest;
@@ -80,15 +85,15 @@ procedure TestCMSFlagConstants;
 begin
   StartTest('CMS flag constants');
   try
-    if (CMS_TEXT <> $1) then
+    if (RuntimeInteger(CMS_TEXT) <> $1) then
       FailTest('CMS_TEXT incorrect')
-    else if (CMS_NOCERTS <> $2) then
+    else if (RuntimeInteger(CMS_NOCERTS) <> $2) then
       FailTest('CMS_NOCERTS incorrect')
-    else if (CMS_DETACHED <> $40) then
+    else if (RuntimeInteger(CMS_DETACHED) <> $40) then
       FailTest('CMS_DETACHED incorrect')
-    else if (CMS_BINARY <> $80) then
+    else if (RuntimeInteger(CMS_BINARY) <> $80) then
       FailTest('CMS_BINARY incorrect')
-    else if (CMS_STREAM <> $1000) then
+    else if (RuntimeInteger(CMS_STREAM) <> $1000) then
       FailTest('CMS_STREAM incorrect')
     else
       PassTest;

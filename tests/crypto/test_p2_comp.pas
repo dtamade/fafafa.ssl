@@ -34,6 +34,11 @@ begin
   WriteLn('FAIL: ', Reason);
 end;
 
+function RuntimeInteger(AValue: Integer): Integer;
+begin
+  Result := AValue;
+end;
+
 procedure TestLoadCompFunctions;
 begin
   StartTest('Load COMP functions');
@@ -50,13 +55,13 @@ procedure TestCompConstants;
 begin
   StartTest('COMP compression method NID constants');
   try
-    if (NID_zlib_compression <> 125) then
+    if (RuntimeInteger(NID_zlib_compression) <> 125) then
       FailTest('NID_zlib_compression incorrect')
-    else if (NID_rle_compression <> 124) then
+    else if (RuntimeInteger(NID_rle_compression) <> 124) then
       FailTest('NID_rle_compression incorrect')
-    else if (NID_brotli_compression <> 1138) then
+    else if (RuntimeInteger(NID_brotli_compression) <> 1138) then
       FailTest('NID_brotli_compression incorrect')
-    else if (NID_zstd_compression <> 1139) then
+    else if (RuntimeInteger(NID_zstd_compression) <> 1139) then
       FailTest('NID_zstd_compression incorrect')
     else
       PassTest;
@@ -70,13 +75,13 @@ procedure TestCompLevelConstants;
 begin
   StartTest('COMP compression level constants');
   try
-    if (COMP_ZLIB_LEVEL_DEFAULT <> -1) then
+    if (RuntimeInteger(COMP_ZLIB_LEVEL_DEFAULT) <> -1) then
       FailTest('COMP_ZLIB_LEVEL_DEFAULT incorrect')
-    else if (COMP_ZLIB_LEVEL_NONE <> 0) then
+    else if (RuntimeInteger(COMP_ZLIB_LEVEL_NONE) <> 0) then
       FailTest('COMP_ZLIB_LEVEL_NONE incorrect')
-    else if (COMP_ZLIB_LEVEL_BEST_SPEED <> 1) then
+    else if (RuntimeInteger(COMP_ZLIB_LEVEL_BEST_SPEED) <> 1) then
       FailTest('COMP_ZLIB_LEVEL_BEST_SPEED incorrect')
-    else if (COMP_ZLIB_LEVEL_BEST <> 9) then
+    else if (RuntimeInteger(COMP_ZLIB_LEVEL_BEST) <> 9) then
       FailTest('COMP_ZLIB_LEVEL_BEST incorrect')
     else
       PassTest;
@@ -90,15 +95,15 @@ procedure TestCompStrategyConstants;
 begin
   StartTest('COMP compression strategy constants');
   try
-    if (COMP_ZLIB_STRATEGY_DEFAULT <> 0) then
+    if (RuntimeInteger(COMP_ZLIB_STRATEGY_DEFAULT) <> 0) then
       FailTest('COMP_ZLIB_STRATEGY_DEFAULT incorrect')
-    else if (COMP_ZLIB_STRATEGY_FILTERED <> 1) then
+    else if (RuntimeInteger(COMP_ZLIB_STRATEGY_FILTERED) <> 1) then
       FailTest('COMP_ZLIB_STRATEGY_FILTERED incorrect')
-    else if (COMP_ZLIB_STRATEGY_HUFFMAN_ONLY <> 2) then
+    else if (RuntimeInteger(COMP_ZLIB_STRATEGY_HUFFMAN_ONLY) <> 2) then
       FailTest('COMP_ZLIB_STRATEGY_HUFFMAN_ONLY incorrect')
-    else if (COMP_ZLIB_STRATEGY_RLE <> 3) then
+    else if (RuntimeInteger(COMP_ZLIB_STRATEGY_RLE) <> 3) then
       FailTest('COMP_ZLIB_STRATEGY_RLE incorrect')
-    else if (COMP_ZLIB_STRATEGY_FIXED <> 4) then
+    else if (RuntimeInteger(COMP_ZLIB_STRATEGY_FIXED) <> 4) then
       FailTest('COMP_ZLIB_STRATEGY_FIXED incorrect')
     else
       PassTest;
@@ -112,11 +117,11 @@ procedure TestCompWindowBitsConstants;
 begin
   StartTest('COMP window bits constants');
   try
-    if (COMP_ZLIB_WINDOW_BITS_DEFAULT <> 15) then
+    if (RuntimeInteger(COMP_ZLIB_WINDOW_BITS_DEFAULT) <> 15) then
       FailTest('COMP_ZLIB_WINDOW_BITS_DEFAULT incorrect')
-    else if (COMP_ZLIB_WINDOW_BITS_MIN <> 8) then
+    else if (RuntimeInteger(COMP_ZLIB_WINDOW_BITS_MIN) <> 8) then
       FailTest('COMP_ZLIB_WINDOW_BITS_MIN incorrect')
-    else if (COMP_ZLIB_WINDOW_BITS_MAX <> 15) then
+    else if (RuntimeInteger(COMP_ZLIB_WINDOW_BITS_MAX) <> 15) then
       FailTest('COMP_ZLIB_WINDOW_BITS_MAX incorrect')
     else
       PassTest;

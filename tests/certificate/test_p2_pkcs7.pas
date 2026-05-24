@@ -64,6 +64,11 @@ begin
   WriteLn('[FAIL] ', TestName, ': ', Reason);
 end;
 
+function RuntimeInteger(AValue: Integer): Integer;
+begin
+  Result := AValue;
+end;
+
 procedure Skip(const TestName, Reason: string; ACategory: TSkipCategory = scOther);
 begin
   Inc(TestsSkipped);
@@ -153,10 +158,10 @@ const
   TEST_NAME = 'PKCS7 type constants defined';
 begin
   // Check that key type constants have reasonable values
-  if (NID_pkcs7_signed > 0) and
-     (NID_pkcs7_enveloped > 0) and
-     (NID_pkcs7_signedAndEnveloped > 0) and
-     (NID_pkcs7_data > 0) then
+  if (RuntimeInteger(NID_pkcs7_signed) > 0) and
+     (RuntimeInteger(NID_pkcs7_enveloped) > 0) and
+     (RuntimeInteger(NID_pkcs7_signedAndEnveloped) > 0) and
+     (RuntimeInteger(NID_pkcs7_data) > 0) then
     Pass(TEST_NAME)
   else
     Fail(TEST_NAME, 'PKCS7 type constants not properly defined');

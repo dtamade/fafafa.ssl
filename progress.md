@@ -1,5 +1,36 @@
 # Progress Log
 
+## 2026-05-24 Module Test Unreachable-Code Warning Cleanup
+- Goal: clear the `Warning: Unreachable code` batch exposed by broad module-test
+  compile logs without changing module-test assertions.
+- Root cause: FPC folded direct compile-time constant comparisons such as
+  `if SOME_CONST <> Expected then FailTest(...)`.
+- Edited 9 module tests to route only those constant operands through local
+  `RuntimeInteger` helpers:
+  - `tests/certificate/test_p2_pkcs12.pas`
+  - `tests/certificate/test_p2_ocsp.pas`
+  - `tests/certificate/test_p2_ts.pas`
+  - `tests/certificate/test_p2_cms.pas`
+  - `tests/certificate/test_p2_ct.pas`
+  - `tests/certificate/test_p2_pkcs7.pas`
+  - `tests/crypto/test_p2_store.pas`
+  - `tests/crypto/test_p2_comp.pas`
+  - `tests/crypto/test_p4_engine.pas`
+- Focused compile passed for all 9 files.
+- Warning grep passed:
+  - `rg -n "Warning: Unreachable code" tmp/unreachable_code_wave1_*_compile.log`
+  - result: no matches
+- Broad module gate passed:
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc FAFAFA_FAST_LOCAL=1 FAFAFA_FPC_UNIT_OUTPUT_DIR=tmp/unreachable_code_wave1_module_units bash scripts/run_all_module_tests.sh --fast-local`
+  - result: `22` passed, `0` failed, `0` skipped
+- Broad compile warning grep passed:
+  - `rg -n "Warning:" tmp/test-reports/*20260524_235928_1700710*_compile.log`
+  - result: no matches
+- Review conclusion before commit:
+  - Behavior is unchanged: expected constants and failure messages are the same.
+  - The warning family is clean in focused and broad module-test compile logs.
+  - Remaining TLS 1.3 gate warnings belong to different warning families.
+
 ## 2026-05-24 Managed Result Init Safety Post-Wave6 Discovery
 - After commit `5fc756a test: close managed result safety wave6`, reran broad
   residual discovery instead of opening wave7 by assumption.

@@ -38,6 +38,11 @@ begin
   WriteLn('FAIL: ', Reason);
 end;
 
+function RuntimeInteger(AValue: Integer): Integer;
+begin
+  Result := AValue;
+end;
+
 procedure TestLoadStoreFunctions;
 begin
   StartTest('Load STORE functions');
@@ -63,17 +68,17 @@ procedure TestStoreInfoTypeConstants;
 begin
   StartTest('STORE INFO type constants defined');
   try
-    if (OSSL_STORE_INFO_NAME <> 1) then
+    if (RuntimeInteger(OSSL_STORE_INFO_NAME) <> 1) then
       FailTest('OSSL_STORE_INFO_NAME incorrect')
-    else if (OSSL_STORE_INFO_PARAMS <> 2) then
+    else if (RuntimeInteger(OSSL_STORE_INFO_PARAMS) <> 2) then
       FailTest('OSSL_STORE_INFO_PARAMS incorrect')
-    else if (OSSL_STORE_INFO_PUBKEY <> 3) then
+    else if (RuntimeInteger(OSSL_STORE_INFO_PUBKEY) <> 3) then
       FailTest('OSSL_STORE_INFO_PUBKEY incorrect')
-    else if (OSSL_STORE_INFO_PKEY <> 4) then
+    else if (RuntimeInteger(OSSL_STORE_INFO_PKEY) <> 4) then
       FailTest('OSSL_STORE_INFO_PKEY incorrect')
-    else if (OSSL_STORE_INFO_CERT <> 5) then
+    else if (RuntimeInteger(OSSL_STORE_INFO_CERT) <> 5) then
       FailTest('OSSL_STORE_INFO_CERT incorrect')
-    else if (OSSL_STORE_INFO_CRL <> 6) then
+    else if (RuntimeInteger(OSSL_STORE_INFO_CRL) <> 6) then
       FailTest('OSSL_STORE_INFO_CRL incorrect')
     else
       PassTest;
@@ -87,13 +92,13 @@ procedure TestStoreSearchTypeConstants;
 begin
   StartTest('STORE SEARCH type constants defined');
   try
-    if (OSSL_STORE_SEARCH_BY_NAME <> 1) then
+    if (RuntimeInteger(OSSL_STORE_SEARCH_BY_NAME) <> 1) then
       FailTest('OSSL_STORE_SEARCH_BY_NAME incorrect')
-    else if (OSSL_STORE_SEARCH_BY_ISSUER_SERIAL <> 2) then
+    else if (RuntimeInteger(OSSL_STORE_SEARCH_BY_ISSUER_SERIAL) <> 2) then
       FailTest('OSSL_STORE_SEARCH_BY_ISSUER_SERIAL incorrect')
-    else if (OSSL_STORE_SEARCH_BY_KEY_FINGERPRINT <> 3) then
+    else if (RuntimeInteger(OSSL_STORE_SEARCH_BY_KEY_FINGERPRINT) <> 3) then
       FailTest('OSSL_STORE_SEARCH_BY_KEY_FINGERPRINT incorrect')
-    else if (OSSL_STORE_SEARCH_BY_ALIAS <> 4) then
+    else if (RuntimeInteger(OSSL_STORE_SEARCH_BY_ALIAS) <> 4) then
       FailTest('OSSL_STORE_SEARCH_BY_ALIAS incorrect')
     else
       PassTest;

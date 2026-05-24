@@ -33,6 +33,11 @@ begin
   WriteLn('FAIL: ', Reason);
 end;
 
+function RuntimeInteger(AValue: Integer): Integer;
+begin
+  Result := AValue;
+end;
+
 procedure TestLoadEngineFunctions;
 begin
   StartTest('Load ENGINE functions');
@@ -159,19 +164,19 @@ procedure TestEngineConstants;
 begin
   StartTest('ENGINE method flag constants');
   try
-    if (ENGINE_METHOD_RSA <> $0001) then
+    if (RuntimeInteger(ENGINE_METHOD_RSA) <> $0001) then
       FailTest('ENGINE_METHOD_RSA incorrect')
-    else if (ENGINE_METHOD_DSA <> $0002) then
+    else if (RuntimeInteger(ENGINE_METHOD_DSA) <> $0002) then
       FailTest('ENGINE_METHOD_DSA incorrect')
-    else if (ENGINE_METHOD_DH <> $0004) then
+    else if (RuntimeInteger(ENGINE_METHOD_DH) <> $0004) then
       FailTest('ENGINE_METHOD_DH incorrect')
-    else if (ENGINE_METHOD_RAND <> $0008) then
+    else if (RuntimeInteger(ENGINE_METHOD_RAND) <> $0008) then
       FailTest('ENGINE_METHOD_RAND incorrect')
-    else if (ENGINE_METHOD_CIPHERS <> $0040) then
+    else if (RuntimeInteger(ENGINE_METHOD_CIPHERS) <> $0040) then
       FailTest('ENGINE_METHOD_CIPHERS incorrect')
-    else if (ENGINE_METHOD_DIGESTS <> $0080) then
+    else if (RuntimeInteger(ENGINE_METHOD_DIGESTS) <> $0080) then
       FailTest('ENGINE_METHOD_DIGESTS incorrect')
-    else if (ENGINE_METHOD_ALL <> $FFFF) then
+    else if (RuntimeInteger(ENGINE_METHOD_ALL) <> $FFFF) then
       FailTest('ENGINE_METHOD_ALL incorrect')
     else
       PassTest;
