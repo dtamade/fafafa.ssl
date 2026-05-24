@@ -1,5 +1,11 @@
 # Findings
 
+# 2026-05-24 ISSLSessionResumption Residual Slimming
+- `tests/test_mbedtls_connection_session_reused_contract.pas` and `tests/test_openssl_connection_session_reused_contract.pas` now prove their session-reuse semantics through `ISSLSessionResumption`.
+- The migration exposed an interface/manual-free lifetime issue in both tests; fixing it by letting the interface reference own the connection removed `EInvalidPointer` teardown failures.
+- `tests/scripts/test_isslsessionresumption_runtime_residual_classification_contract.sh` now treats `tests/contract/test_backend_contract.pas` as the only remaining direct-core session-resumption residual.
+- `src/fafafa.ssl.connection.base.pas` now records session-resumption direct-core usage as contract-mirror-only.
+
 # 2026-05-24 ISSLDiagnostics Residual Slimming
 - `tests/winssl/test_winssl_monitoring.pas` and the diagnostics blocks in `tests/winssl/test_winssl_connection_edge_cases.pas` now use `ISSLDiagnostics` owner path instead of direct core getters.
 - `tests/scripts/test_issldiagnostics_compiler_deprecated_contract.sh` now treats `tests/contract/test_backend_contract.pas` as the only remaining direct-core diagnostics residual.

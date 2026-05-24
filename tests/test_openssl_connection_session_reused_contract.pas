@@ -67,7 +67,8 @@ procedure TestIsSessionReusedShouldDegradeSafelyWhenHelperIsUnavailable;
 var
   LContext: ISSLContext;
   LStream: TMemoryStream;
-  LConn: TOpenSSLConnection;
+  LConn: ISSLConnection;
+  LResumption: ISSLSessionResumption;
   LOriginalSSLSessionReused: TSSL_session_reused;
   LRaised: Boolean;
   LResult: Boolean;
@@ -75,10 +76,6 @@ var
 begin
   WriteLn;
   WriteLn('=== OpenSSL connection session reused guard ===');
-  // INTENTIONAL_SESSION_REUSED_SEMANTIC_PROOF:
-  // keep the direct core IsSessionReused read here because this focused
-  // contract validates the compatibility path when SSL_session_reused is
-  // unavailable.
 
   if (not Assigned(SSL_new)) or
      (not Assigned(SSL_set_bio)) or
@@ -97,10 +94,11 @@ begin
   WarmupStreamConnectionConstructor(LContext);
 
   LStream := TMemoryStream.Create;
-  LConn := nil;
   LOriginalSSLSessionReused := SSL_session_reused;
   try
-    LConn := TOpenSSLConnection.Create(LContext, LStream);
+    LConn := TOpenSSLConnection.Create(LContext, LStream) as ISSLConnection;
+    AssertTrue('connection exposes ISSLSessionResumption owner path',
+      Supports(LConn, ISSLSessionResumption, LResumption));
 
     LRaised := False;
     LResult := True;
@@ -109,7 +107,7 @@ begin
     SSL_session_reused := nil;
     try
       try
-        LResult := LConn.IsSessionReused;
+        LResult := LResumption.IsSessionReused;
       except
         on E: Exception do
         begin
@@ -127,8 +125,8 @@ begin
       LResult = False,
       'expected IsSessionReused to preserve its False contract');
   finally
-    if Assigned(LConn) then
-      LConn.Free;
+    LResumption := nil;
+    LConn := nil;
     LStream.Free;
   end;
 end;

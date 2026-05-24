@@ -52,7 +52,8 @@ end;
 
 procedure TestSetSessionMustNotPreclaimResumedHandshake;
 var
-  LConn: TMbedTLSConnection;
+  LConn: ISSLConnection;
+  LResumption: ISSLSessionResumption;
   LStream: TMemoryStream;
   LSession: ISSLSession;
   LNativeAccess: ISSLNativeHandleAccess;
@@ -66,10 +67,6 @@ var
 begin
   WriteLn;
   WriteLn('=== MbedTLS session reused semantic truth ===');
-  // INTENTIONAL_SESSION_REUSED_SEMANTIC_PROOF:
-  // keep direct core SetSession / IsSessionReused reads here because this
-  // focused contract proves that configuring a session is not the same as
-  // observing a post-handshake resumed result.
 
   LOriginalSSLInit := mbedtls_ssl_init;
   LOriginalSSLFree := mbedtls_ssl_free;
@@ -89,10 +86,11 @@ begin
   GSetSessionCalls := 0;
 
   LStream := TMemoryStream.Create;
-  LConn := nil;
   try
-    LConn := TMbedTLSConnection.Create(nil, nil, LStream);
+    LConn := TMbedTLSConnection.Create(nil, nil, LStream) as ISSLConnection;
     LSession := TMbedTLSSession.Create;
+    AssertTrue('connection exposes ISSLSessionResumption owner path',
+      Supports(LConn, ISSLSessionResumption, LResumption));
     AssertTrue('deserialized real MbedTLS session is available for injection proof',
       LSession.Deserialize(TBytes.Create(1, 2, 3, 4)));
     AssertTrue('deserialized real MbedTLS session keeps a native handle',
@@ -101,19 +99,19 @@ begin
       'expected the deserialized TMbedTLSSession to retain a native session handle');
 
     AssertTrue('fresh connection starts with IsSessionReused=False',
-      not LConn.IsSessionReused);
+      not LResumption.IsSessionReused);
 
-    LConn.SetSession(LSession);
+    LResumption.SetSession(LSession);
 
     AssertTrue('SetSession still attempts native mbedtls_ssl_set_session when helper exists',
       GSetSessionCalls = 1,
       'expected fake mbedtls_ssl_set_session to be called exactly once');
     AssertTrue('SetSession must not claim a resumed handshake before Connect/DoHandshake',
-      not LConn.IsSessionReused,
+      not LResumption.IsSessionReused,
       'configured session should not be reported as an actually reused handshake');
   finally
-    if Assigned(LConn) then
-      LConn.Free;
+    LResumption := nil;
+    LConn := nil;
     LStream.Free;
     mbedtls_ssl_init := LOriginalSSLInit;
     mbedtls_ssl_free := LOriginalSSLFree;

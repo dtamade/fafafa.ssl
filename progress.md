@@ -1,6 +1,21 @@
 # Progress Log
 
 ## 2026-05-24
+- Slimmed the session-resumption residual set after diagnostics closed to contract-mirror-only.
+- Migrated backend semantic tests to `ISSLSessionResumption`:
+  - `tests/test_mbedtls_connection_session_reused_contract.pas`
+  - `tests/test_openssl_connection_session_reused_contract.pas`
+- Fixed `EInvalidPointer` teardown failures by avoiding manual `Free` while interface references own the connection object.
+- Updated residual contracts and source comments so direct-core session-resumption usage is only allowed in `tests/contract/test_backend_contract.pas`.
+- Revalidated:
+  - `bash tests/scripts/test_isslsessionresumption_runtime_residual_classification_contract.sh`
+  - `bash tests/scripts/test_isslsessionresumption_compiler_deprecated_contract.sh`
+  - `bash tests/scripts/test_isslsessionresumption_runtime_owner_path_contract.sh`
+  - MbedTLS session reused contract compile/run
+  - OpenSSL session reused contract compile/run
+  - `git diff --check`
+
+## 2026-05-24
 - Slimmed the diagnostics residual set further by migrating WinSSL monitoring and edge-case diagnostics reads to `ISSLDiagnostics`.
 - Updated `tests/scripts/test_issldiagnostics_compiler_deprecated_contract.sh` so only `tests/contract/test_backend_contract.pas` remains in the direct-core diagnostics residual set.
 - Synced `src/fafafa.ssl.connection.base.pas` and the diagnostics plan doc to the slimmer truth.

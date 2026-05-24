@@ -34,29 +34,32 @@ forbid_fixed() {
 }
 
 require_fixed "$conn_base_file" \
-  'direct core session-resumption 当前只剩 contract mirror proof 和 backend-specific semantic truth proofs。' \
-  "base connection residual note has not been tightened to semantic-truth classification"
+  'direct core session-resumption 当前只剩 contract mirror proof。' \
+  "base connection residual note has not been tightened to contract-mirror-only classification"
 
 require_fixed "$backend_contract" \
   'INTENTIONAL_CORE_SURFACE: keep these direct core session-resumption' \
   "backend contract lost the explicit compatibility-mirror marker"
 
+for file in "$mbedtls_contract" "$openssl_contract"; do
+  require_fixed "$file" \
+    'ISSLSessionResumption' \
+    "$file no longer exercises session-resumption owner path"
+  forbid_fixed "$file" \
+    'INTENTIONAL_SESSION_REUSED_SEMANTIC_PROOF' \
+    "$file still describes semantic proof as direct-core residual"
+done
+
 require_fixed "$mbedtls_contract" \
-  'INTENTIONAL_SESSION_REUSED_SEMANTIC_PROOF' \
-  "mbedtls session-reused contract is not explicitly marked as semantic proof"
+  'LResumption.SetSession(LSession);' \
+  "mbedtls semantic proof no longer exercises owner-path SetSession"
 require_fixed "$mbedtls_contract" \
-  'LConn.SetSession(LSession);' \
-  "mbedtls semantic proof no longer exercises direct core SetSession"
-require_fixed "$mbedtls_contract" \
-  'not LConn.IsSessionReused' \
-  "mbedtls semantic proof no longer exercises direct core IsSessionReused"
+  'not LResumption.IsSessionReused' \
+  "mbedtls semantic proof no longer exercises owner-path IsSessionReused"
 
 require_fixed "$openssl_contract" \
-  'INTENTIONAL_SESSION_REUSED_SEMANTIC_PROOF' \
-  "openssl session-reused contract is not explicitly marked as semantic proof"
-require_fixed "$openssl_contract" \
-  'LResult := LConn.IsSessionReused;' \
-  "openssl semantic proof no longer exercises direct core IsSessionReused"
+  'LResult := LResumption.IsSessionReused;' \
+  "openssl semantic proof no longer exercises owner-path IsSessionReused"
 
 forbid_fixed "$winssl_mock_file" \
   'function GetSession: ISSLSession;' \
@@ -76,7 +79,7 @@ actual_residuals="$(
     tests --glob '!tests/scripts/**' | sort
 )"
 
-expected_residuals=$'tests/contract/test_backend_contract.pas\ntests/test_mbedtls_connection_session_reused_contract.pas\ntests/test_openssl_connection_session_reused_contract.pas'
+expected_residuals=$'tests/contract/test_backend_contract.pas'
 
 if [[ "$actual_residuals" != "$expected_residuals" ]]; then
   echo "[FAIL] session-resumption residual file set drifted"
