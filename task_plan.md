@@ -1,3 +1,40 @@
+# Task Plan: TLS13 Source Note Cleanup Wave1
+
+## Objective
+
+Clear the repeated source-level compiler `Note:` families exposed by the TLS 1.3
+completeness gate, starting with the shared backend/provider units and keeping
+behavior unchanged.
+
+## Current State
+
+- The source-note batch is complete on current evidence.
+- Focused compiles, the full source rebuild, and the TLS 1.3 completeness gate
+  are all green for the targeted source note families.
+- The remaining gate `Note:` output is test-harness-only in
+  `test_freepascal_tls13_early_data.pas`, so the next batch should target that
+  file separately.
+
+## Planned Batch
+
+- `src/fafafa.ssl.openssl.api.store.pas`
+- `src/fafafa.ssl.pkcs11.provider.pas`
+- `src/fafafa.ssl.cert.pinning.pas`
+- `src/fafafa.ssl.wolfssl.lib.pas`
+
+## Verification
+
+- Recompile the affected source units.
+- Grep the focused logs for the target `Note:` families.
+- Rerun the TLS 1.3 completeness gate with a fresh run id.
+- Finish with `git diff --check` and a commit.
+
+## Next Queue
+
+- `tests/test_freepascal_tls13_early_data.pas`
+- Its `Note:` families are still visible in the gate log and should be handled
+  as the next distinct batch.
+
 # Task Plan: TLS13 Warning-Wave Clearance
 
 ## Objective

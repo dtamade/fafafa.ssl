@@ -52,7 +52,7 @@ type
     function BuildStoreURI(const AConfig: TPKCS11Config): string;
     
     { Load key using OSSL_STORE API }
-    function LoadKeyFromStore(const AURI: string; const APIN: string): PEVP_PKEY;
+    function LoadKeyFromStore(const AURI: string): PEVP_PKEY;
   public
     constructor Create;
     destructor Destroy; override;
@@ -137,22 +137,20 @@ begin
   Result := TPKCS11URIParser.Generate(URI);
 end;
 
-function TProviderBackend.LoadKeyFromStore(const AURI: string; const APIN: string): PEVP_PKEY;
+function TProviderBackend.LoadKeyFromStore(const AURI: string): PEVP_PKEY;
 var
   StoreCtx: POSSL_STORE_CTX;
   Info: POSSL_STORE_INFO;
   InfoType: Integer;
   Key: PEVP_PKEY;
   URIAnsi: AnsiString;
-  PINAnsi: AnsiString;
   UIMethod: PUI_METHOD;
 begin
   Result := nil;
   Key := nil;
   
-  // Convert strings to ANSI
+  // Convert URI to ANSI for OSSL_STORE.
   URIAnsi := AnsiString(AURI);
-  PINAnsi := AnsiString(APIN);
   
   // Create UI method for PIN (use simple password UI)
   UIMethod := CreateSimplePasswordUI('Enter PIN: ');
@@ -220,7 +218,6 @@ end;
 function TProviderBackend.LoadPrivateKey(const AConfig: TPKCS11Config): PEVP_PKEY;
 var
   URI: string;
-  PIN: string;
 begin
   // Validate configuration
   ValidateConfig(AConfig);
@@ -228,14 +225,14 @@ begin
   // Load provider if not already loaded
   LoadProvider;
   
-  // Resolve PIN
-  PIN := ResolvePIN(AConfig);
+  // Preserve PIN-required validation; OSSL_STORE handles provider-side PIN IO.
+  ResolvePIN(AConfig);
   
   // Build OSSL_STORE URI
   URI := BuildStoreURI(AConfig);
   
   // Load key from store
-  Result := LoadKeyFromStore(URI, PIN);
+  Result := LoadKeyFromStore(URI);
 end;
 
 function TProviderBackend.LoadCertificate(const AConfig: TPKCS11Config): PX509;
@@ -245,7 +242,6 @@ var
   InfoType: Integer;
   Cert: PX509;
   URI: string;
-  PIN: string;
 begin
   Result := nil;
   
@@ -255,8 +251,8 @@ begin
   // Load provider if not already loaded
   LoadProvider;
   
-  // Resolve PIN
-  PIN := ResolvePIN(AConfig);
+  // Preserve PIN-required validation; OSSL_STORE handles provider-side PIN IO.
+  ResolvePIN(AConfig);
   
   // Build OSSL_STORE URI
   URI := BuildStoreURI(AConfig);

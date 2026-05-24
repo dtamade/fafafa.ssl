@@ -188,7 +188,6 @@ end;
 function TWolfSSLLibrary.DetectCapabilities: Boolean;
 var
   LVer: string;
-  LParts: array of string;
   LMajor, LMinor, LPatch: Integer;
 begin
   Result := False;
@@ -207,7 +206,6 @@ begin
   LMajor := 0;
   LMinor := 0;
   LPatch := 0;
-  SetLength(LParts, 0);
 
   // 简单解析 major.minor.patch
   if Pos('.', LVer) > 0 then

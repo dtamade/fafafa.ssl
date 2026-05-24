@@ -448,12 +448,11 @@ end;
 procedure TPinValidator.AddPinBase64(const ABase64Hash: string; AType: TPinType;
   const ADescription: string; AIsBackup: Boolean);
 var
-  Pin: TCertificatePin;
   HashBytes: TBytes;
 begin
-  Pin := TCertificatePin.FromBase64(ABase64Hash, AType, ADescription, AIsBackup);
   SetLength(HashBytes, 32);
-  Move(Pin.Hash[0], HashBytes[0], 32);
+  with TCertificatePin.FromBase64(ABase64Hash, AType, ADescription, AIsBackup) do
+    Move(Hash[0], HashBytes[0], 32);
   AddPin(HashBytes, AType, ADescription, AIsBackup);
 end;
 

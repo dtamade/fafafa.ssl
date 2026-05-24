@@ -1,5 +1,25 @@
 # Findings
 
+# 2026-05-25 TLS13 Source Note Cleanup Wave1
+- The latest TLS 1.3 completeness gate still showed repeated source-level
+  `Note:` families, separate from the already-closed `Warning:` cleanup.
+- Repeated note families from the gate log:
+  - `openssl.api.store`: `PasswordAnsi`, `Cert`
+  - `pkcs11.provider`: `PINAnsi`, `PIN`
+  - `cert.pinning`: `Pin`
+  - `wolfssl.lib`: `LParts`
+- The source batch should stay focused on dead locals and placeholder state in
+  the shared backend/provider units first.
+- `openssl.api.store` and `pkcs11.provider` look like straightforward dead
+  locals / dead conversions.
+- `cert.pinning` needs a careful refactor so the hash-copy behavior stays
+  unchanged while the unused local warning path disappears.
+- After the edits, focused unit compiles and the full TLS 1.3 completeness gate
+  no longer show those source note families.
+- The only remaining gate notes are the early-data harness locals in
+  `tests/test_freepascal_tls13_early_data.pas`, which should be tracked as the
+  next batch.
+
 # 2026-05-25 TLS13 Warning-Wave Clearance
 - The remaining TLS 1.3 completeness warning families after the range-check
   cleanup were:

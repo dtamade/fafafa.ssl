@@ -1,5 +1,25 @@
 # Progress Log
 
+# 2026-05-25 TLS13 Source Note Cleanup Wave1
+- Restored the latest repo state and confirmed the worktree is ahead of
+  `origin/master` with no local dirty files before this batch.
+- Pulled the latest TLS 1.3 completeness log and isolated the repeated source
+  `Note:` families:
+  - `openssl.api.store`: `PasswordAnsi`, `Cert`
+  - `pkcs11.provider`: `PINAnsi`, `PIN`
+  - `cert.pinning`: `Pin`
+  - `wolfssl.lib`: `LParts`
+- Chose a source-first batch to keep the scope narrow and the verification
+  cheap before any gate rerun.
+- Edited the four source units to remove dead locals / placeholder state while
+  keeping the PIN validation side effect in `pkcs11.provider`.
+- Focused unit compiles came back clean for the targeted source note families.
+- `compile_all_modules.py --rebuild` completed `186/186` modules with `0`
+  warnings.
+- The TLS 1.3 completeness gate passed with `18` tests passed and `0` failed.
+- The gate still shows test-harness notes only in
+  `test_freepascal_tls13_early_data.pas`, which should be the next batch.
+
 ## 2026-05-25 TLS13 Warning-Wave Clearance
 - Continued without asking for confirmation and cleared the remaining warning
   families from the TLS 1.3 completeness gate.
