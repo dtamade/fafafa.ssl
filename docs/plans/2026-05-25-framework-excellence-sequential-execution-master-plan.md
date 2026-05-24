@@ -33,7 +33,7 @@ wrong.
 
 ## Stage 0: Route Control Sync
 
-**Status:** in progress in the planning batch that creates this file.
+**Status:** complete in commit `f16298a`.
 
 **Purpose:** Make the repo's active entrypoint point to this sequential plan so
 the next sessions do not drift back to older route-selection documents.
@@ -58,6 +58,8 @@ git diff --check
 `current_active_batch` and `next_route_candidate`.
 
 ## Stage 1: TSSLContextConfig factory direct application
+
+**Status:** complete in the Stage 1 implementation batch.
 
 **Purpose:** Reduce the remaining legacy bounce where
 `TSSLFactory.CreateContext(const TSSLContextConfig)` projects back through
@@ -86,6 +88,7 @@ git diff --check
 **Verification:**
 
 ```bash
+bash tests/scripts/test_tsslcontextconfig_factory_direct_application_contract.sh
 bash tests/scripts/test_tsslcontextconfig_surface_contract.sh
 bash tests/scripts/test_tsslcontextconfig_builder_adoption_contract.sh
 bash tests/scripts/test_tsslconfig_option_bridge_precedence_freeze_contract.sh

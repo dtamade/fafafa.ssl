@@ -1,3 +1,53 @@
+# Task Plan: TSSLContextConfig Factory Direct Application
+
+## Objective
+
+Complete Stage 1 of the framework-excellence sequential master plan by making
+`TSSLFactory.CreateContext(const TSSLContextConfig)` apply context-safe fields
+directly, instead of projecting the new surface back through legacy
+`TSSLConfig` as its main internal transport.
+
+## Current State
+
+- `TSSLContextConfig` surface adoption is already additive and public.
+- `TSSLContextBuilder` already routes stable context-scoped fields through the
+  `TSSLContextConfig` factory overload.
+- Before this batch, the factory overload still bounced through
+  `SSLConfigFromContextConfig(...)`, which could let legacy normalization rewrite
+  the new surface's option truth.
+
+## Planned Batch
+
+- Add a focused direct-application contract for the factory overload.
+- Add runtime coverage proving a disabled `ssoEnableSessionCache` option stays
+  disabled even when `SessionCacheSize > 0`.
+- Introduce direct context-safe normalization/application helpers in
+  `src/fafafa.ssl.factory.pas`.
+- Keep `TSSLFactory.CreateContext(const TSSLConfig)` compatible.
+- Update API reference and working records.
+
+## Verification
+
+- RED:
+  - `bash tests/scripts/test_tsslcontextconfig_factory_direct_application_contract.sh`
+  - failed first because `NormalizeContextConfigOptions(...)` and the direct
+    apply helper did not exist.
+- GREEN:
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc bash tests/scripts/test_tsslcontextconfig_factory_direct_application_contract.sh`
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc bash tests/scripts/test_tsslcontextconfig_surface_contract.sh`
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc bash tests/scripts/test_tsslcontextconfig_builder_adoption_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_option_bridge_precedence_freeze_contract.sh`
+  - `bash -n tests/scripts/test_tsslcontextconfig_factory_direct_application_contract.sh`
+  - `git diff --check`
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc python3 scripts/compile_all_modules.py --rebuild`
+
+## Review Conclusion
+
+- Verified. The context-safe factory overload now has its own direct
+  normalization/application path and no longer uses legacy `TSSLConfig` as the
+  main transport for new `TSSLContextConfig` callers. Adjacent builder,
+  additive-surface, and legacy option-bridge contracts stayed green.
+
 # Task Plan: Framework Excellence Sequential Execution Master Plan
 
 ## Objective

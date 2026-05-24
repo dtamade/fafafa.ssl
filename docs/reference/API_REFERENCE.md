@@ -60,7 +60,8 @@
 
 - `CreateDefaultContextConfig(...)` 创建 context-safe baseline。
 - `ContextConfigFromSSLConfig(...)` 从 legacy `TSSLConfig` 投影出 context-safe 子集。
-- `SSLConfigFromContextConfig(...)` 投影回现有 `TSSLConfig`，再复用当前 factory/backend 路径。
+- `SSLConfigFromContextConfig(...)` 保留为兼容投影 helper，方便需要 legacy `TSSLConfig` 的调用方桥接。
+- `TSSLFactory.CreateContext(const TSSLContextConfig)` 会直接应用 context-safe 字段，不再为了新入口主路径投影回 legacy `TSSLConfig`。
 - `TSSLFactory.CreateContext(const TSSLContextConfig)` 是 additive overload；它不改变已有 `TSSLConfig` overload 行为。
 
 ---

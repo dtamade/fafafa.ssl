@@ -1,5 +1,42 @@
 # Progress Log
 
+# 2026-05-25 TSSLContextConfig Factory Direct Application
+- Started Stage 1 from the sequential master plan after commit
+  `f16298a docs: add framework excellence execution plan`.
+- Added focused RED coverage:
+  - `tests/scripts/test_tsslcontextconfig_factory_direct_application_contract.sh`
+  - runtime assertion in `tests/test_tsslcontextconfig_surface.pas` proving
+    disabled `ssoEnableSessionCache` remains disabled on the direct factory
+    path even when `SessionCacheSize > 0`.
+- RED check:
+  - `bash tests/scripts/test_tsslcontextconfig_factory_direct_application_contract.sh`
+  - result: failed because the direct context-safe normalization/application
+    helpers did not exist and the overload still used the legacy projection
+    path.
+- Implemented the direct factory path:
+  - added `NormalizeContextConfigOptions(...)`
+  - added `ApplyContextConfigToContext(...)`
+  - shared verify-mode, system-roots, replay-store validation, and early-data
+    value helpers where that reduced duplication without widening ownership.
+  - changed `TSSLFactory.CreateContext(const TSSLContextConfig)` to normalize,
+    validate, create, and apply context-safe values directly.
+- Fixed a refactor follow-up before final verification:
+  - updated stale `ApplySystemRootsIfRequested(...)` call sites to pass
+    `UseSystemRoots`.
+  - replaced the removed context-config-specific replay-store validator call
+    with `ValidateReplayStoreContextScope(...)`.
+- Focused verification passed:
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc bash tests/scripts/test_tsslcontextconfig_factory_direct_application_contract.sh`
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc bash tests/scripts/test_tsslcontextconfig_surface_contract.sh`
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc bash tests/scripts/test_tsslcontextconfig_builder_adoption_contract.sh`
+    - result: `77` passed, `0` failed.
+  - `bash tests/scripts/test_tsslconfig_option_bridge_precedence_freeze_contract.sh`
+  - `bash -n tests/scripts/test_tsslcontextconfig_factory_direct_application_contract.sh`
+  - `git diff --check`
+- Full compile verification passed:
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc python3 scripts/compile_all_modules.py --rebuild`
+  - result: `186/186` compiled, `0` failures, `0` warnings.
+
 # 2026-05-25 Framework Excellence Sequential Execution Master Plan
 - Started a planning batch after commit
   `a715d14 feat: route builder through context-safe config`.

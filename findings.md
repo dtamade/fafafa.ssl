@@ -1,5 +1,22 @@
 # Findings
 
+# 2026-05-25 TSSLContextConfig Factory Direct Application
+- `TSSLFactory.CreateContext(const TSSLContextConfig)` should not use legacy
+  `TSSLConfig` as the main internal transport for new context-safe callers.
+- The direct path now normalizes only `TSSLContextConfig` fields and applies the
+  stable context-safe values directly to `ISSLContext`.
+- `TSSLContextConfig.Options` is the source of truth for context-safe options.
+  A caller can keep `ssoEnableSessionCache` disabled even when
+  `SessionCacheSize > 0`; legacy option-bridge booleans must not re-enable it
+  on the new path.
+- Existing `TSSLFactory.CreateContext(const TSSLConfig)` compatibility behavior
+  remains separate and still uses legacy normalization and request-scope
+  validation.
+- Replay-store validation is shared at the value level, but ownership is not
+  broadened: PEM, PKCS#11, HTTP hooks, OCSP response-file loading, and
+  backend-gated custom cipher overrides remain outside this generic
+  context-safe factory helper unless a focused future test proves otherwise.
+
 # 2026-05-25 Framework Excellence Sequential Execution Master Plan
 - The user explicitly selected the full queue instead of another ambiguous
   route-selection loop: roadmap sync, `TSSLConfig` continuation, facade

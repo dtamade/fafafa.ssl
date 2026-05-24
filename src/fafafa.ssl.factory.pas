@@ -446,12 +446,15 @@ begin
   AConfig.EnableOCSPStapling := ssoEnableOCSPStapling in AConfig.Options;
 end;
 
-function ResolveContextVerifyModeForCreation(
-  const AConfig: TSSLConfig;
-  AContextType: TSSLContextType
+function ResolveVerifyModeForContextCreation(
+  AVerifyMode: TSSLVerifyModes;
+  AContextType: TSSLContextType;
+  const ACAFile: string;
+  const ACAPath: string;
+  AUseSystemRoots: Boolean
 ): TSSLVerifyModes;
 begin
-  Result := AConfig.VerifyMode;
+  Result := AVerifyMode;
 
   if AContextType <> sslCtxServer then
     Exit;
@@ -469,20 +472,34 @@ begin
     Exit;
 
   if (sslVerifyPeer in Result) and
-    ((Trim(AConfig.CAFile) <> '') or
-     (Trim(AConfig.CAPath) <> '') or
-     (AConfig.UseSystemRoots)) then
+    ((Trim(ACAFile) <> '') or
+     (Trim(ACAPath) <> '') or
+     (AUseSystemRoots)) then
     Exit;
 
   Result := [];
 end;
 
+function ResolveContextVerifyModeForCreation(
+  const AConfig: TSSLConfig;
+  AContextType: TSSLContextType
+): TSSLVerifyModes;
+begin
+  Result := ResolveVerifyModeForContextCreation(
+    AConfig.VerifyMode,
+    AContextType,
+    AConfig.CAFile,
+    AConfig.CAPath,
+    AConfig.UseSystemRoots
+  );
+end;
+
 procedure ApplySystemRootsIfRequested(const AContext: ISSLContext;
-  const AConfig: TSSLConfig; const LLib: ISSLLibrary);
+  AUseSystemRoots: Boolean; const LLib: ISSLLibrary);
 var
   LStore: ISSLCertificateStore;
 begin
-  if (AContext = nil) or (not AConfig.UseSystemRoots) then
+  if (AContext = nil) or (not AUseSystemRoots) then
     Exit;
 
   LStore := TSSLFactory.CreateCertificateStore(LLib.GetLibraryType);
@@ -541,6 +558,42 @@ begin
   );
 end;
 
+procedure ValidateReplayStoreContextScope(
+  AContextType: TSSLContextType;
+  const AReplayStoreFile: string;
+  const AReplayStoreDirectory: string;
+  ALibraryType: TSSLLibraryType;
+  const ACallSite: string
+);
+begin
+  if not ContextTypeSupportsServerReplayStore(AContextType) then
+  begin
+    if Trim(AReplayStoreFile) <> '' then
+      raise ESSLConfigurationException.CreateWithContext(
+        ReplayStoreClientScopeMessage(
+          'server_early_data_replay_store_file',
+          ACallSite
+        ),
+        sslErrConfiguration,
+        ACallSite,
+        0,
+        ALibraryType
+      );
+
+    if Trim(AReplayStoreDirectory) <> '' then
+      raise ESSLConfigurationException.CreateWithContext(
+        ReplayStoreClientScopeMessage(
+          'server_early_data_replay_store_directory',
+          ACallSite
+        ),
+        sslErrConfiguration,
+        ACallSite,
+        0,
+        ALibraryType
+      );
+  end;
+end;
+
 procedure LogContextLevelServerNameCompatibilityWarning(const ACallSite: string);
 begin
   TSecurityLog.Warning(
@@ -589,35 +642,21 @@ begin
       AConfig.LibraryType
     );
 
-  if not ContextTypeSupportsServerReplayStore(AContextType) then
-  begin
-    if Trim(AConfig.ServerEarlyDataReplayStoreFile) <> '' then
-      raise ESSLConfigurationException.CreateWithContext(
-        ReplayStoreClientScopeMessage(
-          'server_early_data_replay_store_file',
-          ACallSite
-        ),
-        sslErrConfiguration,
-        ACallSite,
-        0,
-        AConfig.LibraryType
-      );
-
-    if Trim(AConfig.ServerEarlyDataReplayStoreDirectory) <> '' then
-      raise ESSLConfigurationException.CreateWithContext(
-        ReplayStoreClientScopeMessage(
-          'server_early_data_replay_store_directory',
-          ACallSite
-        ),
-        sslErrConfiguration,
-        ACallSite,
-        0,
-        AConfig.LibraryType
-      );
-  end;
+  ValidateReplayStoreContextScope(
+    AContextType,
+    AConfig.ServerEarlyDataReplayStoreFile,
+    AConfig.ServerEarlyDataReplayStoreDirectory,
+    AConfig.LibraryType,
+    ACallSite
+  );
 end;
 
-procedure ApplyEarlyDataContextConfig(const AContext: ISSLContext; const AConfig: TSSLConfig);
+procedure ApplyEarlyDataContextValues(
+  const AContext: ISSLContext;
+  AClientEnabled: Boolean;
+  AServerPolicy: TSSLEarlyDataServerPolicy;
+  AServerMaxEarlyDataSize: Cardinal
+);
 var
   LEarlyDataContext: ISSLEarlyDataContext;
 begin
@@ -625,21 +664,36 @@ begin
     Exit;
 
   if ContextTypeSupportsClientEarlyData(AContext.GetContextType) and
-    (LEarlyDataContext.GetClientEarlyDataEnabled <> AConfig.ClientEarlyDataEnabled) then
-    LEarlyDataContext.SetClientEarlyDataEnabled(AConfig.ClientEarlyDataEnabled);
+    (LEarlyDataContext.GetClientEarlyDataEnabled <> AClientEnabled) then
+    LEarlyDataContext.SetClientEarlyDataEnabled(AClientEnabled);
 
   if ContextTypeSupportsServerEarlyData(AContext.GetContextType) then
   begin
-    if LEarlyDataContext.GetServerMaxEarlyDataSize <> AConfig.ServerMaxEarlyDataSize then
-      LEarlyDataContext.SetServerMaxEarlyDataSize(AConfig.ServerMaxEarlyDataSize);
+    if LEarlyDataContext.GetServerMaxEarlyDataSize <> AServerMaxEarlyDataSize then
+      LEarlyDataContext.SetServerMaxEarlyDataSize(AServerMaxEarlyDataSize);
 
-    if LEarlyDataContext.GetServerEarlyDataPolicy <> AConfig.ServerEarlyDataPolicy then
-      LEarlyDataContext.SetServerEarlyDataPolicy(AConfig.ServerEarlyDataPolicy);
+    if LEarlyDataContext.GetServerEarlyDataPolicy <> AServerPolicy then
+      LEarlyDataContext.SetServerEarlyDataPolicy(AServerPolicy);
   end;
 end;
 
-procedure ApplyEarlyDataReplayStoreConfig(const AContext: ISSLContext;
-  const AConfig: TSSLConfig; const ACallSite: string);
+procedure ApplyEarlyDataContextConfig(const AContext: ISSLContext; const AConfig: TSSLConfig);
+begin
+  ApplyEarlyDataContextValues(
+    AContext,
+    AConfig.ClientEarlyDataEnabled,
+    AConfig.ServerEarlyDataPolicy,
+    AConfig.ServerMaxEarlyDataSize
+  );
+end;
+
+procedure ApplyEarlyDataReplayStoreValues(
+  const AContext: ISSLContext;
+  const AReplayStoreFile: string;
+  const AReplayStoreDirectory: string;
+  ALibraryType: TSSLLibraryType;
+  const ACallSite: string
+);
 var
   LInstaller: IFreePascalContextEarlyDataReplayInstaller;
   LDirectoryInstaller: IFreePascalContextEarlyDataReplayDirectoryInstaller;
@@ -648,18 +702,18 @@ begin
     (not ContextTypeSupportsServerReplayStore(AContext.GetContextType)) then
     Exit;
 
-  if (Trim(AConfig.ServerEarlyDataReplayStoreFile) <> '') and
-    (Trim(AConfig.ServerEarlyDataReplayStoreDirectory) <> '') then
+  if (Trim(AReplayStoreFile) <> '') and
+    (Trim(AReplayStoreDirectory) <> '') then
     raise ESSLConfigurationException.CreateWithContext(
       'Configured server_early_data_replay_store_file and ' +
       'server_early_data_replay_store_directory are mutually exclusive; configure not both',
       sslErrConfiguration,
       ACallSite,
       0,
-      AConfig.LibraryType
+      ALibraryType
     );
 
-  if Trim(AConfig.ServerEarlyDataReplayStoreFile) <> '' then
+  if Trim(AReplayStoreFile) <> '' then
   begin
     if not Supports(AContext, IFreePascalContextEarlyDataReplayInstaller, LInstaller) then
       raise ESSLConfigurationException.CreateWithContext(
@@ -667,20 +721,20 @@ begin
         sslErrConfiguration,
         ACallSite,
         0,
-        AConfig.LibraryType
+        ALibraryType
       );
 
-    if not LInstaller.InstallFileBackedReplayLedger(AConfig.ServerEarlyDataReplayStoreFile) then
+    if not LInstaller.InstallFileBackedReplayLedger(AReplayStoreFile) then
       raise ESSLConfigurationException.CreateWithContext(
         'Configured server_early_data_replay_store_file could not install the requested replay store',
         sslErrConfiguration,
         ACallSite,
         0,
-        AConfig.LibraryType
+        ALibraryType
       );
   end;
 
-  if Trim(AConfig.ServerEarlyDataReplayStoreDirectory) <> '' then
+  if Trim(AReplayStoreDirectory) <> '' then
   begin
     if not Supports(AContext, IFreePascalContextEarlyDataReplayDirectoryInstaller,
       LDirectoryInstaller) then
@@ -689,20 +743,129 @@ begin
         sslErrConfiguration,
         ACallSite,
         0,
-        AConfig.LibraryType
+        ALibraryType
       );
 
     if not LDirectoryInstaller.InstallDirectoryBackedReplayLedger(
-      AConfig.ServerEarlyDataReplayStoreDirectory
+      AReplayStoreDirectory
     ) then
       raise ESSLConfigurationException.CreateWithContext(
         'Configured server_early_data_replay_store_directory could not install the requested replay store',
         sslErrConfiguration,
         ACallSite,
         0,
-        AConfig.LibraryType
+        ALibraryType
       );
   end;
+end;
+
+procedure ApplyEarlyDataReplayStoreConfig(const AContext: ISSLContext;
+  const AConfig: TSSLConfig; const ACallSite: string);
+begin
+  ApplyEarlyDataReplayStoreValues(
+    AContext,
+    AConfig.ServerEarlyDataReplayStoreFile,
+    AConfig.ServerEarlyDataReplayStoreDirectory,
+    AConfig.LibraryType,
+    ACallSite
+  );
+end;
+
+procedure NormalizeContextConfigOptions(var AConfig: TSSLContextConfig);
+begin
+  if AConfig.SessionTimeout <= 0 then
+    AConfig.SessionTimeout := SSL_DEFAULT_SESSION_TIMEOUT;
+
+  if AConfig.SessionCacheSize <= 0 then
+    AConfig.SessionCacheSize := SSL_DEFAULT_SESSION_CACHE_SIZE;
+
+  if AConfig.VerifyDepth <= 0 then
+    AConfig.VerifyDepth := SSL_DEFAULT_VERIFY_DEPTH;
+
+  if AConfig.CipherList = '' then
+    AConfig.CipherList := SSL_DEFAULT_CIPHER_LIST;
+
+  if AConfig.CipherSuites = '' then
+    AConfig.CipherSuites := SSL_DEFAULT_TLS13_CIPHERSUITES;
+
+  if (AConfig.PreferredVersion <> sslProtocolUnknown) and
+    (AConfig.ProtocolVersions <> []) and
+    not (AConfig.PreferredVersion in AConfig.ProtocolVersions) then
+    AConfig.PreferredVersion := sslProtocolUnknown;
+end;
+
+procedure ApplyContextConfigToContext(
+  const AContext: ISSLContext;
+  const AConfig: TSSLContextConfig;
+  const ALibrary: ISSLLibrary;
+  const ACallSite: string
+);
+var
+  LVerifyMode: TSSLVerifyModes;
+begin
+  if AContext = nil then
+    Exit;
+
+  LVerifyMode := ResolveVerifyModeForContextCreation(
+    AConfig.VerifyMode,
+    AConfig.ContextType,
+    AConfig.CAFile,
+    AConfig.CAPath,
+    AConfig.UseSystemRoots
+  );
+
+  AContext.SetOptions(AConfig.Options);
+  AContext.SetSessionCacheSize(AConfig.SessionCacheSize);
+  AContext.SetSessionTimeout(AConfig.SessionTimeout);
+  AContext.SetSessionCacheMode(ssoEnableSessionCache in AConfig.Options);
+
+  if AConfig.ProtocolVersions <> [] then
+    AContext.SetProtocolVersions(AConfig.ProtocolVersions);
+
+  if AConfig.PreferredVersion <> sslProtocolUnknown then
+    AContext.SetPreferredVersion(AConfig.PreferredVersion);
+
+  if AConfig.CertificateFile <> '' then
+    AContext.LoadCertificate(AConfig.CertificateFile);
+
+  if AConfig.PrivateKeyFile <> '' then
+    AContext.LoadPrivateKey(AConfig.PrivateKeyFile, AConfig.PrivateKeyPassword);
+
+  ApplySystemRootsIfRequested(AContext, AConfig.UseSystemRoots, ALibrary);
+
+  if AConfig.CAFile <> '' then
+    AContext.LoadCAFile(AConfig.CAFile);
+
+  if AConfig.CAPath <> '' then
+    AContext.LoadCAPath(AConfig.CAPath);
+
+  AContext.SetVerifyMode(LVerifyMode);
+
+  if AConfig.VerifyDepth > 0 then
+    AContext.SetVerifyDepth(AConfig.VerifyDepth);
+
+  if AConfig.CipherList <> '' then
+    AContext.SetCipherList(AConfig.CipherList);
+
+  if AConfig.CipherSuites <> '' then
+    AContext.SetCipherSuites(AConfig.CipherSuites);
+
+  if AConfig.ALPNProtocols <> '' then
+    AContext.SetALPNProtocols(AConfig.ALPNProtocols);
+
+  ApplyEarlyDataContextValues(
+    AContext,
+    AConfig.ClientEarlyDataEnabled,
+    AConfig.ServerEarlyDataPolicy,
+    AConfig.ServerMaxEarlyDataSize
+  );
+  ApplyEarlyDataReplayStoreValues(
+    AContext,
+    AConfig.ServerEarlyDataReplayStoreFile,
+    AConfig.ServerEarlyDataReplayStoreDirectory,
+    AConfig.LibraryType,
+    ACallSite
+  );
 end;
 
 class procedure TSSLFactory.NormalizeConfig(var AConfig: TSSLConfig);
@@ -1169,7 +1332,7 @@ begin
     Result.SetSessionTimeout(LConfig.SessionTimeout);
     Result.SetSessionCacheMode(ssoEnableSessionCache in LConfig.Options);
 
-    ApplySystemRootsIfRequested(Result, LConfig, LLib);
+    ApplySystemRootsIfRequested(Result, LConfig.UseSystemRoots, LLib);
 
     if LConfig.ServerName <> '' then
       LogContextLevelServerNameCompatibilityWarning(
@@ -1221,7 +1384,7 @@ begin
   if LConfig.PrivateKeyFile <> '' then
     Result.LoadPrivateKey(LConfig.PrivateKeyFile, LConfig.PrivateKeyPassword);
 
-  ApplySystemRootsIfRequested(Result, LConfig, LLib);
+  ApplySystemRootsIfRequested(Result, LConfig.UseSystemRoots, LLib);
 
   if LConfig.CAFile <> '' then
     Result.LoadCAFile(LConfig.CAFile);
@@ -1254,8 +1417,28 @@ begin
 end;
 
 class function TSSLFactory.CreateContext(const AConfig: TSSLContextConfig): ISSLContext;
+var
+  LLib: ISSLLibrary;
+  LConfig: TSSLContextConfig;
 begin
-  Result := CreateContext(SSLConfigFromContextConfig(AConfig));
+  LConfig := AConfig;
+  NormalizeContextConfigOptions(LConfig);
+  ValidateReplayStoreContextScope(
+    LConfig.ContextType,
+    LConfig.ServerEarlyDataReplayStoreFile,
+    LConfig.ServerEarlyDataReplayStoreDirectory,
+    LConfig.LibraryType,
+    'TSSLFactory.CreateContext(const AConfig: TSSLContextConfig)'
+  );
+
+  LLib := GetLibrary(LConfig.LibraryType);
+  Result := LLib.CreateContext(LConfig.ContextType);
+  ApplyContextConfigToContext(
+    Result,
+    LConfig,
+    LLib,
+    'TSSLFactory.CreateContext(const AConfig: TSSLContextConfig)'
+  );
 end;
 
 class function TSSLFactory.CreateCertificate(ALibType: TSSLLibraryType): ISSLCertificate;

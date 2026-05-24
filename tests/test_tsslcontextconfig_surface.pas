@@ -118,6 +118,23 @@ begin
     LContext.GetALPNProtocols = 'h2');
 end;
 
+procedure Test_FactoryCreateContextPreservesContextSafeOptionTruth;
+var
+  LConfig: TSSLContextConfig;
+  LContext: ISSLContext;
+begin
+  LConfig := CreateDefaultContextConfig(sslCtxClient);
+  LConfig.LibraryType := sslFreePascal;
+  LConfig.SessionCacheSize := 9;
+  Exclude(LConfig.Options, ssoEnableSessionCache);
+
+  LContext := TSSLFactory.CreateContext(LConfig);
+  AssertTrue('factory preserves context-safe disabled session cache mode',
+    not LContext.GetSessionCacheMode);
+  AssertTrue('factory preserves context-safe disabled session cache option',
+    not (ssoEnableSessionCache in LContext.GetOptions));
+end;
+
 begin
   WriteLn('========================================');
   WriteLn('  fafafa.ssl TSSLContextConfig 测试');
@@ -126,6 +143,7 @@ begin
   Test_DefaultBaseline;
   Test_ProjectionDropsMixedScopeFields;
   Test_FactoryCreateContextAcceptsContextConfig;
+  Test_FactoryCreateContextPreservesContextSafeOptionTruth;
 
   WriteLn('所有测试通过！');
 end.
