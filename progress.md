@@ -197,3 +197,28 @@
   - `fpc -B -Fu./src -Fu./tests -FUtmp/test_fp_alpn_owner_server/units -FEtmp/test_fp_alpn_owner_server/bin tests/test_freepascal_server_accept_skeleton.pas`
   - `tmp/test_fp_alpn_owner_server/bin/test_freepascal_server_accept_skeleton`
   - `git diff --check`
+
+## 2026-05-24 ISSLCertificateVerification FreePascal Basic Owner Path
+- Revalidated the starting residual contracts before editing:
+  - `bash tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+  - `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  - `bash tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
+- Migrated `tests/test_freepascal_backend_basic.pas` TLS 1.2 client/server failure text checks to `ISSLCertificateVerification.GetVerifyResultString` via `Supports(...)`.
+- Removed that file from:
+  - `tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+  - `tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  - `tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
+- Focused verification passed:
+  - `bash tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+  - `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  - `bash tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh`
+  - `bash tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+- Pascal compile/run passed:
+  - `/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc -B -Fu./src -Fu./tests -FUtmp/test_freepascal_backend_basic_owner/units -FEtmp/test_freepascal_backend_basic_owner/bin tests/test_freepascal_backend_basic.pas`
+  - `tmp/test_freepascal_backend_basic_owner/bin/test_freepascal_backend_basic`
+- Result:
+  - `tests/test_freepascal_backend_basic.pas` is no longer a direct-core verify-result residual.
+  - root-test verify-result residual set is now 9 files.
+- Final combined verification initially exposed only one hygiene issue:
+  - `git diff --check` reported `task_plan.md:49: new blank line at EOF.`
+  - Removed the trailing blank line and reran final checks.

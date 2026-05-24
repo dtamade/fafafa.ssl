@@ -1,5 +1,12 @@
 # Findings
 
+# 2026-05-24 ISSLCertificateVerification FreePascal Basic Owner Path
+- `tests/test_freepascal_backend_basic.pas` 的 TLS 1.2 client/server failure text checks 不是 core mirror 等价 proof；它们只需要读取验证失败文本，因此适合迁到 `ISSLCertificateVerification.GetVerifyResultString`。
+- 本批保留 FreePascal backend fail-closed / unsupported 语义不变，只把读取路径从 deprecated `ISSLConnection.GetVerifyResultString` compatibility mirror 切到 owner interface。
+- 迁移后该文件不再需要 `INTENTIONAL_VERIFY_RESULT_CORE_SURFACE` 注释，也不再需要 verify-result deprecated-warning quarantine。
+- `tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh` 和 broad residual classification 现在把 root-test direct-core verify-result residual set 从 10 个文件缩到 9 个文件。
+- `tests/scripts/test_getverifyresult_compiler_deprecated_contract.sh` 的 suppressed file list 同步移除了 `tests/test_freepascal_backend_basic.pas`。
+
 # 2026-05-24 ISSLSessionResumption Residual Slimming
 - `tests/test_mbedtls_connection_session_reused_contract.pas` and `tests/test_openssl_connection_session_reused_contract.pas` now prove their session-reuse semantics through `ISSLSessionResumption`.
 - The migration exposed an interface/manual-free lifetime issue in both tests; fixing it by letting the interface reference own the connection removed `EInvalidPointer` teardown failures.

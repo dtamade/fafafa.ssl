@@ -69,7 +69,6 @@ declare -a suppressed_files=(
   "tests/mbedtls/test_mbedtls_safe.pas"
   "tests/mbedtls/test_mbedtls_simple_connection.pas"
   "tests/openssl/test_openssl_server_ocsp_stapling_runtime.pas"
-  "tests/test_freepascal_backend_basic.pas"
   "tests/test_freepascal_client_cert_verify_flags_runtime.pas"
   "tests/test_freepascal_client_certificate_flight_requirements.pas"
   "tests/test_freepascal_client_chain_trust_runtime.pas"

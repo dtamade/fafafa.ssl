@@ -8,12 +8,6 @@ uses
   fafafa.ssl.factory,
   fafafa.ssl.base;
 
-// INTENTIONAL_VERIFY_RESULT_CORE_SURFACE: this root-test runtime file
-// intentionally keeps direct core GetVerifyResult/GetVerifyResultString
-// coverage as fail-closed/backend proof. Generic ISSLCertificateVerification
-// owner-path guidance is frozen elsewhere.
-{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-
 procedure AssertTrue(ACondition: Boolean; const AMessage: string);
 begin
   if not ACondition then
@@ -75,6 +69,7 @@ var
   LTLS12ServerCtx: ISSLContext;
   LTLS12ClientConn: ISSLConnection;
   LTLS12ServerConn: ISSLConnection;
+  LCertVerify: ISSLCertificateVerification;
   LClientStream: TMemoryStream;
   LServerStream: TMemoryStream;
   LVerifyText: string;
@@ -427,12 +422,16 @@ begin
     AssertTrue(LTLS12ClientConn.GetError(-1) = sslErrUnsupported,
       'TLS1.2 client connect failure should be classified as unsupported');
 
-    LVerifyText := LowerCase(LTLS12ClientConn.GetVerifyResultString);
+    AssertTrue(Supports(LTLS12ClientConn, ISSLCertificateVerification, LCertVerify),
+      'TLS1.2 client connection should expose certificate verification interface');
+    LVerifyText := LowerCase(LCertVerify.GetVerifyResultString);
     AssertTrue(Pos('unsupported', LVerifyText) > 0,
       'TLS1.2 client connect failure text should include unsupported');
     AssertTrue(Pos('not implemented', LVerifyText) = 0,
       'TLS1.2 client connect failure text should not include not implemented');
   finally
+    LCertVerify := nil;
+    LTLS12ClientConn := nil;
     LClientStream.Free;
   end;
 
@@ -448,12 +447,16 @@ begin
     AssertTrue(LTLS12ServerConn.GetError(-1) = sslErrUnsupported,
       'TLS1.2 server accept failure should be classified as unsupported');
 
-    LVerifyText := LowerCase(LTLS12ServerConn.GetVerifyResultString);
+    AssertTrue(Supports(LTLS12ServerConn, ISSLCertificateVerification, LCertVerify),
+      'TLS1.2 server connection should expose certificate verification interface');
+    LVerifyText := LowerCase(LCertVerify.GetVerifyResultString);
     AssertTrue(Pos('unsupported', LVerifyText) > 0,
       'TLS1.2 server accept failure text should include unsupported');
     AssertTrue(Pos('not implemented', LVerifyText) = 0,
       'TLS1.2 server accept failure text should not include not implemented');
   finally
+    LCertVerify := nil;
+    LTLS12ServerConn := nil;
     LServerStream.Free;
   end;
 

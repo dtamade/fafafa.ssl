@@ -33,7 +33,6 @@ require_pattern() {
 }
 
 expected_hits="$(cat <<'EOF'
-tests/test_freepascal_backend_basic.pas
 tests/test_freepascal_client_cert_verify_flags_runtime.pas
 tests/test_freepascal_client_certificate_flight_requirements.pas
 tests/test_freepascal_client_chain_trust_runtime.pas
@@ -50,7 +49,6 @@ actual_hits="$(rg -lP '\b(?!LCertVerify\b|CertVerify\b)[A-Za-z0-9_\.]+\.GetVerif
 compare_file_list "root-test direct-core verify-result residual file set" "$actual_hits" "$expected_hits"
 
 declare -a residual_files=(
-  "tests/test_freepascal_backend_basic.pas"
   "tests/test_freepascal_client_cert_verify_flags_runtime.pas"
   "tests/test_freepascal_client_certificate_flight_requirements.pas"
   "tests/test_freepascal_client_chain_trust_runtime.pas"
@@ -76,7 +74,6 @@ for file in "${residual_files[@]}"; do
   done
 done
 
-require_pattern "tests/test_freepascal_backend_basic.pas" "GetVerifyResultString"
 require_pattern "tests/test_freepascal_client_cert_verify_flags_runtime.pas" "GetVerifyResult"
 require_pattern "tests/test_freepascal_client_cert_verify_flags_runtime.pas" "GetVerifyResultString"
 require_pattern "tests/test_freepascal_client_certificate_flight_requirements.pas" "GetVerifyResultString"
