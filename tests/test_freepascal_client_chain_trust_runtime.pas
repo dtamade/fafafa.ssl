@@ -35,12 +35,6 @@ type
     tcStore
   );
 
-// INTENTIONAL_VERIFY_RESULT_CORE_SURFACE: this root-test runtime file
-// intentionally keeps direct core GetVerifyResult/GetVerifyResultString
-// coverage as fail-closed/backend proof. Generic ISSLCertificateVerification
-// owner-path guidance is frozen elsewhere.
-{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-
 procedure Fail(const AMessage: string);
 begin
   WriteLn('❌ ', AMessage);
@@ -133,6 +127,24 @@ end;
 function ContainsTextInsensitive(const AValue, ASubText: string): Boolean;
 begin
   Result := Pos(LowerCase(ASubText), LowerCase(AValue)) > 0;
+end;
+
+function GetCertificateVerifyResult(const AConn: ISSLConnection): Integer;
+var
+  LCertVerify: ISSLCertificateVerification;
+begin
+  AssertTrue(Supports(AConn, ISSLCertificateVerification, LCertVerify),
+    'Connection should expose certificate verification interface');
+  Result := LCertVerify.GetVerifyResult;
+end;
+
+function GetCertificateVerifyResultString(const AConn: ISSLConnection): string;
+var
+  LCertVerify: ISSLCertificateVerification;
+begin
+  AssertTrue(Supports(AConn, ISSLCertificateVerification, LCertVerify),
+    'Connection should expose certificate verification interface');
+  Result := LCertVerify.GetVerifyResultString;
 end;
 
 function GenerateCASignedServerMaterial(
@@ -617,10 +629,10 @@ begin
 
     AssertTrue(LConn.Connect,
       ALabel + ' should allow scripted CA-signed certificate to connect');
-    AssertEqualsInt(0, LConn.GetVerifyResult,
+    AssertEqualsInt(0, GetCertificateVerifyResult(LConn),
       ALabel + ' should surface verify success');
     AssertTrue(
-      SameText(LConn.GetVerifyResultString, 'OK'),
+      SameText(GetCertificateVerifyResultString(LConn), 'OK'),
       ALabel + ' should surface verify OK string'
     );
   finally
@@ -639,10 +651,10 @@ begin
   try
     LConn := LCtx.CreateConnection(LStream);
     AssertTrue(LConn <> nil, 'Fresh FreePascal connection should be created');
-    AssertEqualsInt(-1, LConn.GetVerifyResult,
+    AssertEqualsInt(-1, GetCertificateVerifyResult(LConn),
       'Fresh connection must not report verify success before handshake');
     AssertTrue(
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'not verified'),
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'not verified'),
       'Fresh connection should surface not-verified diagnostic before handshake'
     );
   finally
@@ -667,11 +679,11 @@ begin
 
     AssertTrue(not LConn.Connect,
       'CA-signed certificate should fail when no trust material is configured');
-    AssertEqualsInt(Ord(sslErrCertificateUntrusted), LConn.GetVerifyResult,
+    AssertEqualsInt(Ord(sslErrCertificateUntrusted), GetCertificateVerifyResult(LConn),
       'Untrusted CA-signed certificate should surface sslErrCertificateUntrusted');
     AssertTrue(
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'trust') or
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'untrusted'),
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'trust') or
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'untrusted'),
       'Untrusted CA-signed certificate should mention trust failure'
     );
   finally
@@ -697,10 +709,10 @@ begin
 
     AssertTrue(LConn.Connect,
       'Configured CA file should allow scripted CA-signed certificate to connect');
-    AssertEqualsInt(0, LConn.GetVerifyResult,
+    AssertEqualsInt(0, GetCertificateVerifyResult(LConn),
       'Trusted scripted handshake should surface verify success');
     AssertTrue(
-      SameText(LConn.GetVerifyResultString, 'OK'),
+      SameText(GetCertificateVerifyResultString(LConn), 'OK'),
       'Trusted scripted handshake should surface verify OK string'
     );
   finally
@@ -848,11 +860,11 @@ begin
 
     AssertTrue(not LConn.Connect,
       'Self-signed certificate should fail when allow-self-signed flag is absent');
-    AssertEqualsInt(Ord(sslErrCertificateUntrusted), LConn.GetVerifyResult,
+    AssertEqualsInt(Ord(sslErrCertificateUntrusted), GetCertificateVerifyResult(LConn),
       'Untrusted self-signed certificate should surface sslErrCertificateUntrusted');
     AssertTrue(
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'trust') or
-      ContainsTextInsensitive(LConn.GetVerifyResultString, 'untrusted'),
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'trust') or
+      ContainsTextInsensitive(GetCertificateVerifyResultString(LConn), 'untrusted'),
       'Self-signed failure should mention trust'
     );
   finally

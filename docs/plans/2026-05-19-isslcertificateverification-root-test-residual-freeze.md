@@ -11,7 +11,6 @@
 - `tests/test_freepascal_backend_basic.pas`
 - `tests/test_freepascal_client_cert_verify_flags_runtime.pas`
 - `tests/test_freepascal_client_certificate_flight_requirements.pas`
-- `tests/test_freepascal_client_chain_trust_runtime.pas`
 - `tests/test_freepascal_client_ct_sct_surface.pas`
 - `tests/test_freepascal_client_ocsp_stapling_runtime.pas`
 - `tests/test_freepascal_client_online_ocsp_runtime.pas`
@@ -78,7 +77,8 @@ git diff --check
 - `tests/test_freepascal_backend_basic.pas` 的 TLS 1.2 fail-closed 文本断言
   已在 `2026-05-24-isslcertificateverification-freepascal-basic-owner-path.md`
   迁到 `ISSLCertificateVerification.GetVerifyResultString`。
-- 当前 root-test direct-core verify-result residual subgroup 已从原冻结名单继续缩到
-  9 个文件；以
-  `tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+- `tests/test_freepascal_client_chain_trust_runtime.pas` 已后续迁到
+  `ISSLCertificateVerification` owner path，并从 root residual allowlist 移除。
+- 当前 root-test direct-core verify-result residual subgroup 已缩到 2 个文件；
+  以 `tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
   为最新 file-set truth。

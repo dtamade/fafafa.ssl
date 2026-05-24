@@ -1,5 +1,11 @@
 # Findings
 
+# 2026-05-24 ISSLCertificateVerification Client Chain Trust Owner Path
+- `tests/test_freepascal_client_chain_trust_runtime.pas` 的 trust-status 与 not-verified / OK 断言已迁到本地 helper `GetCertificateVerifyResult` / `GetCertificateVerifyResultString`。
+- 两个 helper 都通过 `ISSLCertificateVerification` 读取 owner surface，保留 CA-signed / self-signed / trust-store parity 语义不变。
+- 该文件已移出 root residual、broad residual、compiler-deprecated quarantine allowlist；root-test direct-core verify-result residual set 从 3 个文件缩到 2 个文件。
+- 目标测试编译运行通过；编译输出仍有 4 个既有 managed result initialization warning，没有引入新的失败。
+
 # 2026-05-24 ISSLCertificateVerification Client Cert Verify Flags Owner Path
 - `tests/test_freepascal_client_cert_verify_flags_runtime.pas` 的 mixed numeric/text verify-result 断言已迁到本地 helper `GetCertificateVerifyResult` / `GetCertificateVerifyResultString`。
 - 两个 helper 都通过 `ISSLCertificateVerification` 读取 owner surface，保留 hostname / expiry / strict-chain / revocation / CRL fail-closed 语义不变。
