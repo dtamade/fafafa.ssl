@@ -210,6 +210,7 @@ implementation
 
 uses
   fafafa.ssl.exceptions,
+  fafafa.ssl.memutils,
   fafafa.ssl.freepascal.earlydatareplay.dirstore,
   fafafa.ssl.freepascal.earlydatareplay.fileprovider,
   fafafa.ssl.freepascal.connection;
@@ -264,6 +265,7 @@ end;
 
 destructor TFreePascalContext.Destroy;
 begin
+  SecureZeroBytes(FPrivateKeyData);
   FCRLMaterial.Free;
   inherited Destroy;
 end;

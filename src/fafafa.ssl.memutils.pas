@@ -96,6 +96,11 @@ begin
     dmb
   end;
   {$ENDIF}
+  {$IFDEF CPUAARCH64}
+  asm
+    dmb sy
+  end;
+  {$ENDIF}
   {$ENDIF}
 end;
 

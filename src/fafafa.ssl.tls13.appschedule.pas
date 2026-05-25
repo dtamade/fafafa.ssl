@@ -89,7 +89,8 @@ implementation
 uses
   fafafa.ssl.crypto.hash,
   fafafa.ssl.tls13.primitives,
-  fafafa.ssl.tls13.keyschedule;
+  fafafa.ssl.tls13.keyschedule,
+  fafafa.ssl.memutils;
 
 const
   TLS13_SHA256_HASH_SIZE = 32;
@@ -113,7 +114,16 @@ end;
 
 procedure ClearTLS13ApplicationSecrets(var ASecrets: TTLS13ApplicationSecrets);
 begin
-  InitTLS13ApplicationSecrets(ASecrets);
+  SecureZeroBytes(ASecrets.TranscriptHash);
+  SecureZeroBytes(ASecrets.ResumptionTranscriptHash);
+  SecureZeroBytes(ASecrets.DerivedSecret);
+  SecureZeroBytes(ASecrets.MasterSecret);
+  SecureZeroBytes(ASecrets.ClientApplicationTrafficSecret);
+  SecureZeroBytes(ASecrets.ServerApplicationTrafficSecret);
+  SecureZeroBytes(ASecrets.ClientApplicationKey);
+  SecureZeroBytes(ASecrets.ServerApplicationKey);
+  SecureZeroBytes(ASecrets.ClientApplicationIV);
+  SecureZeroBytes(ASecrets.ServerApplicationIV);
 end;
 
 function HashTranscriptForSuite(ACipherSuite: Word; const AData: TBytes): TBytes; forward;

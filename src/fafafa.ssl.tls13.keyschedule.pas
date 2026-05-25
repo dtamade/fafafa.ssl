@@ -91,7 +91,8 @@ implementation
 uses
   fafafa.ssl.crypto.hash,
   fafafa.ssl.tls13.primitives,
-  fafafa.ssl.tls13.finished;
+  fafafa.ssl.tls13.finished,
+  fafafa.ssl.memutils;
 
 const
   TLS13_SHA256_HASH_SIZE = 32;
@@ -125,12 +126,25 @@ end;
 
 procedure ClearTLS13EarlyDataSecrets(var ASecrets: TTLS13EarlyDataSecrets);
 begin
-  InitTLS13EarlyDataSecrets(ASecrets);
+  SecureZeroBytes(ASecrets.TranscriptHash);
+  SecureZeroBytes(ASecrets.EarlySecret);
+  SecureZeroBytes(ASecrets.ClientEarlyTrafficSecret);
+  SecureZeroBytes(ASecrets.ClientEarlyKey);
+  SecureZeroBytes(ASecrets.ClientEarlyIV);
 end;
 
 procedure ClearTLS13HandshakeSecrets(var ASecrets: TTLS13HandshakeSecrets);
 begin
-  InitTLS13HandshakeSecrets(ASecrets);
+  SecureZeroBytes(ASecrets.TranscriptHash);
+  SecureZeroBytes(ASecrets.EarlySecret);
+  SecureZeroBytes(ASecrets.DerivedSecret);
+  SecureZeroBytes(ASecrets.HandshakeSecret);
+  SecureZeroBytes(ASecrets.ClientHandshakeTrafficSecret);
+  SecureZeroBytes(ASecrets.ServerHandshakeTrafficSecret);
+  SecureZeroBytes(ASecrets.ClientHandshakeKey);
+  SecureZeroBytes(ASecrets.ServerHandshakeKey);
+  SecureZeroBytes(ASecrets.ClientHandshakeIV);
+  SecureZeroBytes(ASecrets.ServerHandshakeIV);
 end;
 
 function TLS13CipherSuiteIsSHA256(ACipherSuite: Word): Boolean;

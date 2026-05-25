@@ -214,6 +214,8 @@ uses
   fafafa.ssl.crypto.hash,
   fafafa.ssl.certchain,
   fafafa.ssl.random,
+  fafafa.ssl.memutils,
+  fafafa.ssl.crypto.constant_time,
   fafafa.ssl.ct.sct,
   fafafa.ssl.native_handle,
   fafafa.ssl.net.hooks,
@@ -654,9 +656,7 @@ end;
 
 function BytesEqual(const ALeft, ARight: TBytes): Boolean;
 begin
-  Result := (Length(ALeft) = Length(ARight));
-  if Result and (Length(ALeft) > 0) then
-    Result := CompareMem(@ALeft[0], @ARight[0], Length(ALeft));
+  Result := TConstantTime.CompareBytes(ALeft, ARight) = 1;
 end;
 
 function ClientHelloHasExtension(const AHandshake: TBytes; AExtensionType: Word): Boolean;
@@ -1075,6 +1075,8 @@ begin
 end;
 
 function TFreePascalConnection.RecvTLSRecord(out AHeader: TTLSRecordHeader; out APayload, ARecord: TBytes): Boolean;
+const
+  TLS_MAX_CIPHERTEXT_LENGTH = 16384 + 256;
 var
   LHeaderBytes: TBytes;
 begin
@@ -1086,6 +1088,9 @@ begin
     Exit;
 
   if not ParseTLSRecordHeader(LHeaderBytes, AHeader) then
+    Exit;
+
+  if AHeader.Length > TLS_MAX_CIPHERTEXT_LENGTH then
     Exit;
 
   if not RecvExact(APayload, AHeader.Length) then
@@ -4937,13 +4942,13 @@ end;
 procedure TFreePascalConnection.DoClose;
 begin
   ClearPeerCertificateCache;
-  SetLength(FX25519PrivateKey, 0);
-  SetLength(FX25519PublicKey, 0);
-  SetLength(FHandshakeSharedSecret, 0);
+  SecureZeroBytes(FX25519PrivateKey);
+  SecureZeroBytes(FX25519PublicKey);
+  SecureZeroBytes(FHandshakeSharedSecret);
   ClearTLS13EarlyDataSecrets(FEarlyDataSecrets);
   ClearTLS13HandshakeSecrets(FHandshakeSecrets);
-  SetLength(FServerFinishedKey, 0);
-  SetLength(FClientFinishedKey, 0);
+  SecureZeroBytes(FServerFinishedKey);
+  SecureZeroBytes(FClientFinishedKey);
   FEarlyDataSeq := 0;
   FServerHandshakeSeq := 0;
   FClientHandshakeSeq := 0;

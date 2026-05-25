@@ -105,16 +105,9 @@ var
   GCryptProv: HCRYPTPROV = 0;
   GCryptProvInitialized: Boolean = False;
   GCryptProvLock: TRTLCriticalSection;
-  GCryptProvLockInitialized: Boolean = False;
 
 procedure InitializeCryptProvider;
 begin
-  if not GCryptProvLockInitialized then
-  begin
-    InitCriticalSection(GCryptProvLock);
-    GCryptProvLockInitialized := True;
-  end;
-
   EnterCriticalSection(GCryptProvLock);
   try
     if not GCryptProvInitialized then
@@ -130,22 +123,19 @@ end;
 
 procedure FinalizeCryptProvider;
 begin
-  if GCryptProvLockInitialized then
-  begin
-    EnterCriticalSection(GCryptProvLock);
-    try
-      if GCryptProvInitialized and (GCryptProv <> 0) then
-      begin
-        CryptReleaseContext(GCryptProv, 0);
-        GCryptProv := 0;
-        GCryptProvInitialized := False;
-      end;
-    finally
-      LeaveCriticalSection(GCryptProvLock);
+  EnterCriticalSection(GCryptProvLock);
+  try
+    if GCryptProvInitialized and (GCryptProv <> 0) then
+    begin
+      CryptReleaseContext(GCryptProv, 0);
+      GCryptProv := 0;
+      GCryptProvInitialized := False;
     end;
-    DoneCriticalSection(GCryptProvLock);
-    GCryptProvLockInitialized := False;
+  finally
+    LeaveCriticalSection(GCryptProvLock);
   end;
+  DoneCriticalSection(GCryptProvLock);
+end;
 end;
 
 function SecureRandomBytes(ABuffer: PByte; ACount: Integer): Boolean;
@@ -255,6 +245,7 @@ end;
 
 {$IFDEF WINDOWS}
 initialization
+  InitCriticalSection(GCryptProvLock);
 
 finalization
   FinalizeCryptProvider;
