@@ -62,9 +62,9 @@ require_absent "$winssl_doc" "| TPM | ✅ 支持 | 硬件密钥 |" \
 require_absent "$winssl_doc" "原生支持智能卡和 TPM" \
   "WinSSL capability doc still markets hardware-key support as a published backend advantage"
 
-require_present "$winssl_doc" "| 智能卡 / PKCS#11 | ❌ 当前 capability 不发布 |" \
+require_present "$winssl_doc" "| 智能卡 / PKCS#11                | ❌ 当前 capability 不发布 |" \
   "WinSSL capability doc no longer records the current non-published smart-card/PKCS#11 truth"
-require_present "$winssl_doc" "| TPM | ❌ 当前 capability 不发布 |" \
+require_present "$winssl_doc" "| TPM                             | ❌ 当前 capability 不发布 |" \
   "WinSSL capability doc no longer records the current non-published TPM truth"
 
 echo "[PASS] hardware-key capability truth remains aligned with shipped source and active backend docs"

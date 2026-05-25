@@ -72,9 +72,9 @@ require_fixed "$api_reference" "当前 WinSSL 仅发布 password-protected PFX/P
 require_fixed "$api_reference" "当前 WinSSL 不发布 bare DER / PKCS#8 private-key load surface；如需这类输入，请改用 PFX/P12 或切换 OpenSSL backend。" \
   "API reference must record current WinSSL DER/PKCS#8 truth"
 
-require_fixed "$winssl_matrix" "| Password-protected private keys | ⚠️ 部分 | 当前仅 password-protected PFX/P12 import path 已发布；PEM private-key password path 仍为 unsupported |" \
+require_fixed "$winssl_matrix" "| Password-protected private keys | ⚠️ 部分                   | 当前仅 password-protected PFX/P12 import path 已发布；PEM private-key password path 仍为 unsupported" \
   "WinSSL matrix must keep the password-protected key partial-publication row"
-require_fixed "$winssl_matrix" "| DER / PKCS#8 private keys | ❌ 当前 capability 不发布 | 目前没有 shipped bare DER / PKCS#8 private-key load path；请改用 PFX/P12 或 OpenSSL backend |" \
+require_fixed "$winssl_matrix" "| DER / PKCS#8 private keys       | ❌ 当前 capability 不发布 | 目前没有 shipped bare DER / PKCS#8 private-key load path；请改用 PFX/P12 或 OpenSSL backend" \
   "WinSSL matrix must record the current DER/PKCS#8 private-key truth"
 
 require_fixed "$winssl_design" "- 当前 password-protected private key surface = PFX/P12 import；PEM private-key password path 仍未发布" \

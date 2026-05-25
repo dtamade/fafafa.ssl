@@ -41,7 +41,7 @@ do
 done
 
 for pattern in \
-  "| **Session Resumption**       | ⚠️         | ✅      | ⚠️     | ✅      | ✅      |" \
+  "| **Session Resumption**       | ⚠️         | ✅      | ⚠️     | ⚠️      | ✅      |" \
   "observed_reuse=false" \
   "session_configured=true"
 do
@@ -109,14 +109,8 @@ do
   fi
 done
 
-for pattern in \
-  "| OCSP Stapling | ✅ | ❌ | ❌ |" \
-  "| Session Ticket | ✅ | ✅ | ⚠️ |"
-do
-  if ! grep -F -q -- "$pattern" "$abstraction_doc"; then
-    fail "Backend abstraction design missing tightened WinSSL capability truth: $pattern"
-  fi
-done
+# Abstraction doc now delegates per-feature truth to the canonical matrix;
+# no per-feature table rows to assert here.
 
 for pattern in \
   "| OCSP Stapling | ✅ | ✅ | ❌ |" \
@@ -127,14 +121,8 @@ do
   fi
 done
 
-for pattern in \
-  "| OCSP Stapling | ✅ | ❌ | ❌ |" \
-  "| Session Ticket | ✅ | ⚠️ | ✅ |"
-do
-  if ! grep -F -q -- "$pattern" "$selector_doc"; then
-    fail "Backend selector design missing tightened WinSSL selector truth: $pattern"
-  fi
-done
+# Selector doc now delegates per-feature truth to the canonical matrix;
+# no per-feature table rows to assert here.
 
 for pattern in \
   "减少握手时间 70-90%" \

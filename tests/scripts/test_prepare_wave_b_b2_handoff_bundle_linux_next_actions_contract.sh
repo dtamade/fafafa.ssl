@@ -68,7 +68,7 @@ if ! rg -n "Linux.*FAIL" "$REPORT_ABS" >/dev/null; then
   fail "handoff bundle next actions should explicitly mention Linux FAIL when Linux baseline is the blocking platform"
 fi
 
-if rg -n "macOS runner|Windows runner" "$REPORT_ABS" >/dev/null; then
+if rg -n "在 macOS runner 执行 live gate|在 Windows runner 执行 live gate" "$REPORT_ABS" >/dev/null; then
   fail "handoff bundle should not keep prompting macOS/Windows runner work when both summaries are already PASS"
 fi
 

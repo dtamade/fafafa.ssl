@@ -39,9 +39,9 @@ require_file "docs/guides/security-best-practices.md" "Security best practices g
 
 require_fixed "README.md" "目前仍是实验性能力" \
   "README.md must keep the FreePascal early-data experimental capability wording"
-require_fixed "README.md" "TSSLConfig.ServerEarlyDataReplayStoreFile" \
+require_fixed "README.md" "TSSLContextConfig.ServerEarlyDataReplayStoreFile" \
   "README.md must mention the file-backed early-data replay-store config field"
-require_fixed "README.md" "TSSLConfig.ServerEarlyDataReplayStoreDirectory" \
+require_fixed "README.md" "TSSLContextConfig.ServerEarlyDataReplayStoreDirectory" \
   "README.md must mention the directory-backed early-data replay-store config field"
 require_fixed "README.md" "WithServerEarlyDataReplayStoreFile" \
   "README.md must mention the builder file-backed early-data replay-store opt-in"

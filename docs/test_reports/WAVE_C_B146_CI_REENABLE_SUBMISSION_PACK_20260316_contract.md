@@ -1,14 +1,14 @@
 # Wave C B146 CI Re-enable Submission Pack
 
 - run_id: 20260316_contract
-- generated_at: 2026-03-16 13:18:28 +0800
+- generated_at: 2026-05-25 12:31:00 +0800
 - submission_state: **READY_TO_SUBMIT**
 
 ## Inputs
 
-- signoff_record: tmp/test_wave_c_b149_1773638308/signoff.md
-- prereq_report: tmp/test_wave_c_b149_1773638308/prereq.md
-- packet_report: tmp/test_wave_c_b149_1773638308/packet.md
+- signoff_record: tmp/test_wave_c_b149_1779683460/signoff.md
+- prereq_report: tmp/test_wave_c_b149_1779683460/prereq.md
+- packet_report: tmp/test_wave_c_b149_1779683460/packet.md
 
 ## Gate Checks
 

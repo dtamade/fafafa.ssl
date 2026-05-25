@@ -88,7 +88,7 @@ require_fixed "$api_reference" '在向 LoadPrivateKey(..., APassword) / LoadPriv
 require_fixed "$api_reference" "当前 WinSSL 仅发布 password-protected PFX/P12 import path；PEM private-key password path 仍为 unsupported。" \
   "API reference must record current WinSSL partial password-protected key truth"
 
-require_fixed "$winssl_matrix" "| Password-protected private keys | ⚠️ 部分 | 当前仅 password-protected PFX/P12 import path 已发布；PEM private-key password path 仍为 unsupported |" \
+require_fixed "$winssl_matrix" "| Password-protected private keys | ⚠️ 部分                   | 当前仅 password-protected PFX/P12 import path 已发布；PEM private-key password path 仍为 unsupported" \
   "WinSSL capability matrix must record current password-protected key partial-publication truth"
 
 echo "[PASS] password-protected key capability truth remains aligned with source/docs/runtime contract"

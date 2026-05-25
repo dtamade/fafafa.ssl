@@ -41,7 +41,7 @@ require_fixed "$builder" "BuildClient ignores it" \
   "builder must keep the current client-side WithSNI ignore truth"
 require_fixed "$builder" "BuildServer ignores it and server-side connections ignore it" \
   "builder must keep the current server-side WithSNI ignore truth"
-require_fixed "$architecture" '当前 public Pascal surface 只声明了 `ISSLClientConnection`' \
+require_fixed "$architecture" '当前 public Pascal source 只声明了 `ISSLClientConnection`' \
   "ARCHITECTURE must explicitly state that only ISSLClientConnection exists today"
 require_fixed "$v2_doc" '当前 public Pascal source 尚未声明 `ISSLServerConnection`。' \
   "INTERFACE_DESIGN_V2 must explicitly state the current ISSLServerConnection absence"

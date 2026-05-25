@@ -1,8 +1,8 @@
 # Wave C B148 CI Re-enable Approval Brief
 
 - run_id: 20260316_contract
-- generated_at: 2026-03-16 13:18:28 +0800
-- source_pack: tmp/test_wave_c_b149_1773638308/packet.md
+- generated_at: 2026-05-25 12:31:00 +0800
+- source_pack: tmp/test_wave_c_b149_1779683460/packet.md
 - brief_state: **READY_FOR_APPROVAL**
 - signoff_state: READY_FOR_APPROVAL
 - enable_state: HOLD

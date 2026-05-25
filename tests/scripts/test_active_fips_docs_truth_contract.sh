@@ -3,8 +3,6 @@ set -euo pipefail
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source_file="$root_dir/src/fafafa.ssl.winssl.lib.pas"
-abstraction_doc="$root_dir/docs/reference/BACKEND_ABSTRACTION_LAYER_DESIGN.md"
-selector_doc="$root_dir/docs/reference/BACKEND_SELECTOR_DESIGN.md"
 platform_doc="$root_dir/docs/PLATFORM_SUPPORT.md"
 winssl_design="$root_dir/docs/reference/WINSSL_DESIGN.md"
 winssl_guide="$root_dir/docs/guides/WINSSL_USER_GUIDE.md"
@@ -37,27 +35,9 @@ require_absent() {
   fi
 }
 
-require_absent "$abstraction_doc" "| FIPS | ✅ | ❌ | ✅ |" \
-  "Backend abstraction design doc still advertises stale OpenSSL FIPS truth"
-require_absent "$abstraction_doc" "| FIPS | ❌ 默认构建 | ❌ | ✅ |" \
-  "Backend abstraction design doc still advertises WinSSL FIPS capability as published truth"
-require_present "$abstraction_doc" "| FIPS | ❌ 默认构建 | ❌ | ❌ |" \
-  "Backend abstraction design doc no longer records current default-build / WinSSL FIPS truth"
-require_present "$abstraction_doc" "OpenSSL 如需 FIPS 需要专门模块/构建；当前默认 backend capability 不发布 FIPS。" \
-  "Backend abstraction design doc no longer records the OpenSSL FIPS note"
-require_present "$abstraction_doc" "WinSSL 目前只提供 Windows FIPS policy/helper 检测，不把它发布成 backend capability。" \
-  "Backend abstraction design doc no longer records the WinSSL FIPS helper-vs-capability boundary"
-
-require_absent "$selector_doc" "| FIPS | ✅ | ✅ | ❌ |" \
-  "Backend selector design doc still advertises stale OpenSSL FIPS truth"
-require_absent "$selector_doc" "| FIPS | ❌ 默认构建 | ✅ | ❌ |" \
-  "Backend selector design doc still advertises WinSSL FIPS capability as published truth"
-require_present "$selector_doc" "| FIPS | ❌ 默认构建 | ❌ | ❌ |" \
-  "Backend selector design doc no longer records current default-build / WinSSL FIPS truth"
-require_present "$selector_doc" "OpenSSL 如需进入 FIPS 路线，必须先满足专门模块/构建前提；默认 capability 不能当成已满足。" \
-  "Backend selector design doc no longer records the OpenSSL FIPS selector note"
-require_present "$selector_doc" 'WinSSL 的 `fafafa.ssl.winssl.enterprise` 目前提供的是系统 FIPS policy 检测 helper，不是 `ISSLLibrary.GetCapabilities.SupportsFIPSMode=True` 的已发布 backend capability。' \
-  "Backend selector design doc no longer records the WinSSL FIPS helper-vs-capability boundary"
+# BACKEND_ABSTRACTION_LAYER_DESIGN.md and BACKEND_SELECTOR_DESIGN.md were refactored
+# to no longer maintain capability tables (they now defer to docs/BACKEND_CAPABILITY_MATRIX.md).
+# FIPS truth assertions now check docs/PLATFORM_SUPPORT.md and other active docs.
 
 require_absent "$platform_doc" "| **FIPS 模式** | 支持                | 支持         |" \
   "Platform support doc still markets OpenSSL default-build FIPS support"

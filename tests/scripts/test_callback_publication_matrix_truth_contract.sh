@@ -34,7 +34,7 @@ require_fixed "$backend_matrix_file" '- `WinSSL`: 仅 verify/info callback 已�
 require_fixed "$backend_matrix_file" '- `FreePascal` / `WolfSSL` / `MbedTLS`: `SupportsCallbacks=False`，verify/password/info setter 当前都已 fail-closed' \
   "backend capability matrix must record unpublished callback backend fail-closed truth"
 
-require_fixed "$winssl_matrix_file" "| Context callbacks | ⚠️ 部分 | 当前仅 verify/info runtime path 已发布；password callback 仍为 unsupported |" \
+require_fixed "$winssl_matrix_file" "| Context callbacks               | ⚠️ 部分                   | 当前仅 verify/info runtime path 已发布；password callback 仍为 unsupported" \
   "WinSSL backend matrix must record callback publication granularity"
 require_fixed "$winssl_matrix_file" '> `SupportsCallbacks=True` 在 WinSSL 上当前是 coarse-grained publication flag：' \
   "WinSSL backend matrix must explain the coarse-grained callback flag"

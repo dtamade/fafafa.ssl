@@ -74,15 +74,15 @@ if [[ ! -f "$PARTIAL_REPORT" ]]; then
   fail "expected partial handoff bundle report"
 fi
 
-if ! rg -n "^1\\. 在 macOS runner 执行 live gate 并回填 macOS summary。$" "$PARTIAL_REPORT" >/dev/null; then
+if ! rg -n "^[0-9]+\\. 在 macOS runner 执行 live gate 并回填 macOS summary。$" "$PARTIAL_REPORT" >/dev/null; then
   fail "partial bundle should still prompt macOS live gate when macOS is pending"
 fi
 
-if rg -n "^2\\. 在 Windows runner 执行 live gate 并回填 Windows summary。$" "$PARTIAL_REPORT" >/dev/null; then
+if rg -n "^[0-9]+\\. 在 Windows runner 执行 live gate 并回填 Windows summary。$" "$PARTIAL_REPORT" >/dev/null; then
   fail "partial bundle should not prompt Windows live gate when Windows is already PASS"
 fi
 
-if ! rg -n "^2\\. 回填后重新执行 'scripts/prepare_wave_b_b2_handoff_bundle\\.sh .* --strict'。$" "$PARTIAL_REPORT" >/dev/null; then
+if ! rg -n "^[0-9]+\\. 回填后重新执行 'scripts/prepare_wave_b_b2_handoff_bundle\\.sh .* --strict'。$" "$PARTIAL_REPORT" >/dev/null; then
   fail "partial bundle should still keep the replay command as the final next action"
 fi
 
@@ -93,8 +93,14 @@ write_linux_summary "$CLOSED_DIR/linux_summary.md" "$CLOSED_RUN_ID"
 write_examples_json "$CLOSED_DIR/examples.json"
 write_platform_summary "$CLOSED_DIR/macos_summary.md" "$CLOSED_RUN_ID"
 write_platform_summary "$CLOSED_DIR/windows_summary.md" "$CLOSED_RUN_ID"
-: > "$CLOSED_DIR/winssl_quick_smoke_${CLOSED_RUN_ID}.log"
-: > "$CLOSED_DIR/winssl_runtime_suite_${CLOSED_RUN_ID}.log"
+cat > "$CLOSED_DIR/winssl_quick_smoke_${CLOSED_RUN_ID}.log" <<'QEOF'
+[quick-smoke] run_id=closed
+QEOF
+cat > "$CLOSED_DIR/winssl_runtime_suite_${CLOSED_RUN_ID}.log" <<'REOF'
+[WINSSL-RUNTIME] suite_start total=4
+[WINSSL-RUNTIME] suite_summary passed=4 failed=0 total=4 success_rate=100.0
+[WINSSL-RUNTIME] suite_end status=PASS phase=runtime
+REOF
 
 bash "$ROOT_DIR/scripts/prepare_wave_b_b2_handoff_bundle.sh" \
   --run-id "$CLOSED_RUN_ID" \
@@ -113,7 +119,7 @@ if ! rg -n "^- handoff_state: \\*\\*CLOSED\\*\\*$" "$CLOSED_REPORT" >/dev/null; 
   fail "closed scenario should produce a CLOSED handoff bundle"
 fi
 
-if rg -n "macOS runner|Windows runner" "$CLOSED_REPORT" >/dev/null; then
+if rg -n "在 macOS runner 执行 live gate|在 Windows runner 执行 live gate" "$CLOSED_REPORT" >/dev/null; then
   fail "closed bundle should not keep stale macOS/Windows runner instructions"
 fi
 

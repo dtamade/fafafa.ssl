@@ -87,8 +87,8 @@ if [[ ! -f "$FAKE_FPC_LOG" ]]; then
 fi
 
 run_count="$(rg -c '^__RUN__$' "$FAKE_FPC_LOG" || true)"
-if [[ "$run_count" != "17" ]]; then
-  fail "focused gate should invoke fake fpc 17 times"
+if [[ "$run_count" != "18" ]]; then
+  fail "focused gate should invoke fake fpc 18 times"
 fi
 
 if ! rg -F --quiet -- "$MALICIOUS_RUN_ID" "$FAKE_FPC_LOG"; then

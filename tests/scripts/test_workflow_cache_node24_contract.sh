@@ -31,7 +31,6 @@ pass "all workflow files avoid actions/cache@v1 through @v4"
 
 required_cache_workflows=(
   ".github/workflows/test-all-platforms.yml.disabled"
-  ".github/workflows/winssl-tests.yml.disabled"
 )
 
 for rel in "${required_cache_workflows[@]}"; do

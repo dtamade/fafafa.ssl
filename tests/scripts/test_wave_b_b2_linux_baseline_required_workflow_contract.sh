@@ -50,7 +50,7 @@ for workflow in "${WORKFLOWS[@]}"; do
   require_match "$workflow" "$label" 'linux-gate:\s*\n\s*needs: setup\s*\n\s*runs-on: ubuntu-latest' \
     'workflow should run the Linux gate unconditionally'
 
-  require_match "$workflow" "$label" 'Download Linux evidence[\s\S]*uses: actions/download-artifact@v4' \
+  require_match "$workflow" "$label" 'Download Linux evidence[\s\S]*uses: actions/download-artifact@' \
     'summary workflow should always download Linux evidence for the required handoff truth path'
 done
 

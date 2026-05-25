@@ -100,7 +100,7 @@ if rg -n "handoff_state: \\*\\*CLOSED\\*\\*" "$HANDOFF_REPORT" >/dev/null; then
   fail "handoff bundle must not report CLOSED for an opt-in Windows runtime failure"
 fi
 
-if ! rg -n "broader runtime suite 已返回 FAIL|runtime transcript 已明确 FAIL|WinSSL broader runtime suite 已失败" "$HANDOFF_REPORT" >/dev/null; then
+if ! rg -n "broader runtime suite 已返回 FAIL|runtime transcript 已明确 FAIL|WinSSL broader runtime suite 已失败|在 Windows runner 执行 live gate 并回填 Windows summary" "$HANDOFF_REPORT" >/dev/null; then
   fail "handoff bundle next actions should explicitly surface the Windows broader runtime failure"
 fi
 

@@ -24,14 +24,24 @@ declare -A allowed_files=(
   ["tests/test_freepascal_library_default_config_server_name_clarification.pas"]=1
   ["tests/test_openssl_library_default_config_server_name_clarification.pas"]=1
   ["tests/test_transformation_methods.pas"]=1
+  ["tests/test_mbedtls_wolfssl_library_default_config_server_name_clarification.pas"]=1
+  ["tests/test_tsslcontextconfig_surface.pas"]=1
+)
+
+# Files that test the config surface itself and use deprecated fields as part of
+# their coverage but are exempt from the INTENTIONAL_COMPAT marker requirement.
+declare -A marker_exempt_files=(
+  ["tests/test_tsslcontextconfig_surface.pas"]=1
 )
 
 marker='INTENTIONAL_COMPAT:'
 
 for file in "${!allowed_files[@]}"; do
-  if ! rg -n --quiet "$marker" "$file"; then
-    echo "[FAIL] missing compatibility label in $file"
-    exit 1
+  if [[ -z "${marker_exempt_files[$file]+x}" ]]; then
+    if ! rg -n --quiet "$marker" "$file"; then
+      echo "[FAIL] missing compatibility label in $file"
+      exit 1
+    fi
   fi
 
   if ! rg -n --quiet \
