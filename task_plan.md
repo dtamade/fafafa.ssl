@@ -1,44 +1,44 @@
-# Task Plan: Stage 3 Facade Main Entry Builder Guidance
+# Task Plan: Stage 3 Public Import Guidance Convergence
 
 ## Objective
 
-Stage 3 first slice: update the facade unit header to teach
-`TSSLContextBuilder` as the ordinary entrypoint, replacing the old
-`TSSLFactory.CreateContext(sslCtxClient)` primary example.
+Stage 3 second slice: update `docs/README.md` "快速开始" section to teach
+builder as the ordinary entrypoint, replacing the old factory-direct pattern.
 
 ## Current State
 
-- Stage 2 is complete: all active public guidance labels `TSSLConfig` as v1.x
-  compatibility and points new code at `TSSLContextConfig` / builder.
-- The facade unit header (`src/fafafa.ssl.pas`) still showed
-  `TSSLFactory.CreateContext(sslCtxClient)` as the primary usage example.
-- README and GETTING_STARTED already teach the two-unit pattern
-  `uses fafafa.ssl, fafafa.ssl.context.builder;`.
+- Stage 3 first slice updated the facade unit header to teach builder.
+- `docs/README.md` "快速开始" still used `TSSLFactory.CreateContext(sslCtxClient)`
+  as the primary example without builder.
+- Root README and GETTING_STARTED already teach the two-unit pattern.
 
 ## Planned Batch
 
-- Extend `test_facade_main_entry_truth_contract.sh` to require builder guidance.
-- Update facade unit header to show builder as the ordinary path.
+- Extend `test_public_unit_import_guidance_truth_contract.sh` to require
+  `docs/README.md` teaches builder.
+- Update `docs/README.md` "快速开始" to use `TSSLContextBuilder`.
+- Split the direct `ISSLConnection` path into a separate "lower-level" block.
 - Run focused contracts, full compile, shell syntax, and whitespace checks.
 
 ## Verification
 
 - RED:
-  - `bash tests/scripts/test_facade_main_entry_truth_contract.sh`
-  - failed because `src/fafafa.ssl.pas` did not mention `TSSLContextBuilder`.
+  - `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - failed because `docs/README.md` did not import `fafafa.ssl.context.builder`.
 - GREEN:
+  - `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
   - `bash tests/scripts/test_facade_main_entry_truth_contract.sh`
   - `bash tests/scripts/test_tsslconfig_stage2_public_guidance_truth_contract.sh`
   - `bash tests/scripts/test_tsslconfig_stage2_active_docs_examples_drift_contract.sh`
   - `bash tests/scripts/test_active_roadmap_references_contract.sh`
   - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc python3 scripts/compile_all_modules.py --rebuild`
-  - `bash -n tests/scripts/test_facade_main_entry_truth_contract.sh`
+  - `bash -n tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
   - `git diff --check`
 
 ## Review Conclusion
 
-- Verified. The facade unit header now teaches the two-unit pattern with
-  `TSSLContextBuilder` as the ordinary entrypoint. Stage 3 first slice complete.
+- Verified. `docs/README.md` "快速开始" now teaches builder as the ordinary
+  entrypoint. All active public-facing docs converge on the two-unit pattern.
 
 - The previous batch completed builder ordinary material projection through
   `TSSLContextConfig`.

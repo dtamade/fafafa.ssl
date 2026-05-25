@@ -1,5 +1,17 @@
 # Findings
 
+# 2026-05-25 Stage 3 Public Import Guidance Convergence
+- `docs/README.md` "快速开始" section was the most visible remaining drift:
+  it used `TSSLFactory.CreateContext(sslCtxClient)` + `Ctx.SetVerifyMode(...)` as
+  the first code example users see, while the root README and GETTING_STARTED
+  already taught builder.
+- The fix splits the old combined example into two blocks: builder + connector
+  as the primary path, and direct `ISSLConnection` as a clearly labeled
+  lower-level alternative.
+- After this batch, all active public-facing docs (facade header, root README,
+  docs/README, GETTING_STARTED, FAQ, ARCHITECTURE, INTEGRATION_GUIDE) converge
+  on `uses fafafa.ssl, fafafa.ssl.context.builder;` as the ordinary import.
+
 # 2026-05-25 Stage 3 Facade Main Entry Builder Guidance
 - The facade unit header (`src/fafafa.ssl.pas`) still showed
   `TSSLFactory.CreateContext(sslCtxClient)` as the primary usage example, even

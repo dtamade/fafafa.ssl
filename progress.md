@@ -1,5 +1,34 @@
 # Progress Log
 
+# 2026-05-25 Stage 3 Public Import Guidance Convergence
+- Continued Stage 3 after commit
+  `50ca050 feat: teach builder as ordinary entrypoint in facade header`.
+- Identified `docs/README.md` "快速开始" drift: still used
+  `TSSLFactory.CreateContext(sslCtxClient)` as the primary example.
+- Extended RED coverage:
+  - `tests/scripts/test_public_unit_import_guidance_truth_contract.sh` now
+    requires `docs/README.md` to import `fafafa.ssl.context.builder`, use
+    `TSSLContextBuilder`, and not teach factory-direct as primary.
+- RED check:
+  - `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - result: failed because `docs/README.md` did not import
+    `fafafa.ssl.context.builder`.
+- Implemented the guidance update:
+  - replaced "快速开始" with builder + connector as primary path.
+  - split direct `ISSLConnection` into a separate lower-level block.
+- Focused verification passed:
+  - `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - `bash tests/scripts/test_facade_main_entry_truth_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_stage2_public_guidance_truth_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_stage2_active_docs_examples_drift_contract.sh`
+  - `bash tests/scripts/test_active_roadmap_references_contract.sh`
+- Full compile verification passed:
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc python3 scripts/compile_all_modules.py --rebuild`
+  - result: 186/186 compiled, 0 failures, 0 warnings.
+- Hygiene verification passed:
+  - `bash -n tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - `git diff --check`
+
 # 2026-05-25 Stage 3 Facade Main Entry Builder Guidance
 - Started Stage 3 after Stage 2 completion in commit
   `4e7bb4d docs: complete stage2 active docs/examples drift cleanup`.

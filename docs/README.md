@@ -29,20 +29,23 @@ fafafa.ssl 是 Free Pascal 的高性能 SSL/TLS 库，支持 OpenSSL、WinSSL、
 ## 快速开始
 
 ```pascal
-uses fafafa.ssl;
+uses
+  fafafa.ssl,
+  fafafa.ssl.context.builder;
 
 var
   Ctx: ISSLContext;
   TLS: TSSLConnector;
   Stream: TSSLStream;
-  Conn: ISSLConnection;
-  ClientConn: ISSLClientConnection;
 begin
-  // 创建客户端上下文
-  Ctx := TSSLFactory.CreateContext(sslCtxClient);
-  Ctx.SetVerifyMode([sslVerifyPeer]);
+  // 推荐入口：通过 TSSLContextBuilder 构建上下文
+  Ctx := TSSLContextBuilder.Create
+    .WithTLS12And13
+    .WithVerifyPeer
+    .WithSystemRoots
+    .BuildClient;
 
-  // 推荐入口：先用 Connector 建立 TLS
+  // 通过 Connector 建立 TLS
   TLS := TSSLConnector.FromContext(Ctx);
   Stream := TLS.ConnectSocket(YourConnectedSocket, 'example.com');
   try
@@ -51,11 +54,19 @@ begin
   finally
     Stream.Free;
   end;
+end;
+```
 
-  // 直接路径：如果你自己管理 ISSLConnection，SNI 仍应设在连接上
+如果你需要更低层的 `ISSLConnection` 控制：
+
+```pascal
+var
+  Conn: ISSLConnection;
+  ClientConn: ISSLClientConnection;
+begin
   Conn := Ctx.CreateConnection(YourSocket);
   ClientConn := Conn as ISSLClientConnection;
-  ClientConn.SetServerName('example.com');  // SNI + hostname verification 是连接级配置
+  ClientConn.SetServerName('example.com');
 
   if Conn.Connect then
   begin

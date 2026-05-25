@@ -38,8 +38,17 @@ winssl_guide="docs/guides/WINSSL_USER_GUIDE.md"
 mbedtls_guide="docs/guides/MBEDTLS_USER_GUIDE.md"
 troubleshooting="docs/guides/TROUBLESHOOTING.md"
 api_reference="docs/reference/API_REFERENCE.md"
+docs_readme="docs/README.md"
 
 echo "[TEST] public unit/import guidance truth contract"
+
+# docs/README.md quick-start must teach builder as the ordinary entrypoint
+require_fixed "$docs_readme" "fafafa.ssl.context.builder" \
+  "docs/README.md quick-start must import fafafa.ssl.context.builder"
+require_fixed "$docs_readme" "TSSLContextBuilder" \
+  "docs/README.md quick-start must use TSSLContextBuilder"
+require_absent "$docs_readme" 'Ctx := TSSLFactory.CreateContext(sslCtxClient);' \
+  "docs/README.md quick-start must not teach factory-direct as the primary context creation"
 
 require_fixed "$user_guide" "SysUtils, fafafa.ssl;" \
   "USER_GUIDE must use the current public facade unit in active examples"
