@@ -1,5 +1,22 @@
 # Findings
 
+# 2026-05-25 Stage 5 Architecture Contracts Runner & Remaining Drift
+- Two more stale contracts found after the initial 3-fix batch:
+  - API_REFERENCE SNI count was 11 but is now 9 (2 examples replaced by
+    builder/TSSLContextConfig in Stage 2 guidance sync). The `LHost` variable
+    pattern was also removed.
+  - The early-data connector test file was listed in the residual context-SNI
+    classification contract, but it only uses connection-level SNI (correct
+    pattern). Removed from the check list.
+- Created `scripts/run_architecture_contracts.sh` as the fast development loop:
+  13 contracts in ~1.2s. This is the "faster default development loop" part of
+  Stage 5's exit condition.
+- The gate hierarchy is now:
+  1. Architecture contracts (< 2s) — doc/guidance truth
+  2. Full compile (< 2min) — code correctness
+  3. Minimal CI gate (< 4min) — full local verification
+  4. GitHub Actions — before merge
+
 # 2026-05-25 Stage 5 Fix Stale Contract Drift
 - Running all 94 architecture-relevant contracts (1:39 total) revealed 3
   failures that represent real documentation drift:

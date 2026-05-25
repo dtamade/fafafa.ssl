@@ -1,5 +1,23 @@
 # Progress Log
 
+# 2026-05-25 Stage 5 Architecture Contracts Runner & Remaining Drift
+- Fixed 2 additional stale contracts:
+  - `test_api_reference_connection_level_sni_omissions_contract.sh`: count
+    reduced from 11 to 9 (2 examples replaced by builder in Stage 2), removed
+    stale `LHost` check.
+  - `test_residual_context_sni_classification_contract.sh`: removed
+    `test_tls_connector_early_data_contract.pas` from check list (file only
+    uses connection-level SNI, not context-level).
+- Created `scripts/run_architecture_contracts.sh`:
+  - Runs 13 core architecture/guidance contracts in ~1.2s.
+  - Documents the gate hierarchy in header comment.
+  - Provides a fast development loop for doc/guidance changes.
+- Gate hierarchy now clear:
+  1. `scripts/run_architecture_contracts.sh` (< 2s, doc/guidance truth)
+  2. `python3 scripts/compile_all_modules.py --rebuild` (< 2min, code compiles)
+  3. `scripts/run_minimal_ci_gate.sh --fast-local` (< 4min, full local gate)
+  4. GitHub Actions CI (before merge)
+
 # 2026-05-25 Stage 5 Fix Stale Contract Drift
 - Started Stage 5 after Stage 3 completion and Stage 4 assessment.
 - Ran all 94 architecture-relevant contracts; found 3 failures.

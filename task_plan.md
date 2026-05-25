@@ -1,40 +1,20 @@
-# Task Plan: Stage 5 Fix Stale Contract Drift
+# Task Plan: Stage 5 Architecture Contracts Runner
 
 ## Objective
 
-Stage 5 first slice: fix three failing architecture contracts that represent
-real documentation drift discovered during the contract sweep.
-
-## Current State
-
-- Stage 0-3 complete. Stage 4 blocked on fresh RED.
-- Running all architecture-relevant contracts revealed 3 failures:
-  - `test_platform_support_guidance_convergence_contract.sh` — expected
-    `docs/ROADMAP.md` but file uses relative `ROADMAP.md`.
-  - `test_landing_docs_connection_level_sni_guidance_contract.sh` — USER_GUIDE
-    missing direct `ISSLClientConnection.SetServerName(...)` example.
-  - `test_migration_troubleshooting_connection_level_sni_omissions_contract.sh`
-    — MIGRATION_GUIDE missing direct connection SNI code example.
+Stage 5 second slice: fix remaining stale contracts and create a fast
+architecture contracts runner as the quick development loop.
 
 ## Verification
 
-- RED: three contracts failed.
-- GREEN:
-  - `bash tests/scripts/test_platform_support_guidance_convergence_contract.sh`
-  - `bash tests/scripts/test_landing_docs_connection_level_sni_guidance_contract.sh`
-  - `bash tests/scripts/test_migration_troubleshooting_connection_level_sni_omissions_contract.sh`
-  - `bash tests/scripts/test_user_guide_ordinary_entrypoint_truth_contract.sh`
-  - `bash tests/scripts/test_facade_main_entry_truth_contract.sh`
-  - `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
-  - `bash tests/scripts/test_active_examples_public_import_truth_contract.sh`
-  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc python3 scripts/compile_all_modules.py --rebuild`
-  - `git diff --check`
+- `bash tests/scripts/test_api_reference_connection_level_sni_omissions_contract.sh`
+- `bash tests/scripts/test_residual_context_sni_classification_contract.sh`
+- `bash scripts/run_architecture_contracts.sh` (13 contracts, ~1.2s)
+- `git diff --check`
 
 ## Review Conclusion
 
-- Verified. Three stale contract failures fixed: platform support contract
-  accepts relative paths, USER_GUIDE and MIGRATION_GUIDE now include direct
-  connection SNI examples in appropriate locations.
+- All architecture contracts green. Fast development loop established.
 
 - The previous batch completed builder ordinary material projection through
   `TSSLContextConfig`.

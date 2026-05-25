@@ -9,7 +9,7 @@ cd "$PROJECT_ROOT"
 
 file="docs/reference/API_REFERENCE.md"
 
-expected_lservername_count=11
+expected_lservername_count=9
 actual_lservername_count="$(
   { rg -o --fixed-strings "(LConn as ISSLClientConnection).SetServerName(LServerName);" "$file" || true; } | wc -l | tr -d ' '
 )"
@@ -24,7 +24,6 @@ fi
 declare -a checks=(
   "(LConn1 as ISSLClientConnection).SetServerName('api.example.com');"
   "(LConn2 as ISSLClientConnection).SetServerName('api.example.com');"
-  "(LConn as ISSLClientConnection).SetServerName(LHost);"
 )
 
 for needle in "${checks[@]}"; do

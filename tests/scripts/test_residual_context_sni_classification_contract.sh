@@ -8,7 +8,6 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 cd "$PROJECT_ROOT"
 
 declare -A expected_labels=(
-  ["tests/test_tls_connector_early_data_contract.pas"]="INTENTIONAL_COMPAT"
   ["tests/mbedtls/test_mbedtls_context_contract.pas"]="INTENTIONAL_API_SURFACE"
   ["tests/wolfssl/test_wolfssl_context_contract.pas"]="INTENTIONAL_API_SURFACE"
   ["tests/winssl/test_winssl_library_basic.pas"]="INTENTIONAL_API_SURFACE"
