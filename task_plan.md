@@ -1,44 +1,33 @@
-# Task Plan: Stage 3 Public Import Guidance Convergence
+# Task Plan: Stage 3 Completion & Stage 4 Assessment
 
 ## Objective
 
-Stage 3 second slice: update `docs/README.md` "快速开始" section to teach
-builder as the ordinary entrypoint, replacing the old factory-direct pattern.
+Mark Stage 3 as complete after all four verification contracts pass. Assess
+Stage 4 readiness by running the FreePascal TLS 1.3 completeness gate.
 
 ## Current State
 
-- Stage 3 first slice updated the facade unit header to teach builder.
-- `docs/README.md` "快速开始" still used `TSSLFactory.CreateContext(sslCtxClient)`
-  as the primary example without builder.
-- Root README and GETTING_STARTED already teach the two-unit pattern.
+- Stage 3 verification contracts all pass:
+  - `test_facade_main_entry_truth_contract.sh`
+  - `test_public_unit_import_guidance_truth_contract.sh`
+  - `test_active_examples_public_import_truth_contract.sh`
+  - `test_user_guide_ordinary_entrypoint_truth_contract.sh`
+- FreePascal TLS 1.3 completeness gate passes with no failures.
+- No fresh RED evidence for Stage 4 FreePascal backend excellence.
 
-## Planned Batch
+## Stage 4 Assessment
 
-- Extend `test_public_unit_import_guidance_truth_contract.sh` to require
-  `docs/README.md` teaches builder.
-- Update `docs/README.md` "快速开始" to use `TSSLContextBuilder`.
-- Split the direct `ISSLConnection` path into a separate "lower-level" block.
-- Run focused contracts, full compile, shell syntax, and whitespace checks.
+- `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local`
+- Result: PASS. All runtime alignment tests verified.
+- Per master plan rules: Stage 4 should not be opened without fresh RED
+  evidence of a real correctness, interop, performance, or observability gap.
 
-## Verification
+## Conclusion
 
-- RED:
-  - `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
-  - failed because `docs/README.md` did not import `fafafa.ssl.context.builder`.
-- GREEN:
-  - `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
-  - `bash tests/scripts/test_facade_main_entry_truth_contract.sh`
-  - `bash tests/scripts/test_tsslconfig_stage2_public_guidance_truth_contract.sh`
-  - `bash tests/scripts/test_tsslconfig_stage2_active_docs_examples_drift_contract.sh`
-  - `bash tests/scripts/test_active_roadmap_references_contract.sh`
-  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc python3 scripts/compile_all_modules.py --rebuild`
-  - `bash -n tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
-  - `git diff --check`
-
-## Review Conclusion
-
-- Verified. `docs/README.md` "快速开始" now teaches builder as the ordinary
-  entrypoint. All active public-facing docs converge on the two-unit pattern.
+- Stage 0 through Stage 3 are complete.
+- Stage 4 is blocked on fresh RED evidence.
+- Stage 5 (performance/operational excellence) can be assessed next if the
+  user wants to continue.
 
 - The previous batch completed builder ordinary material projection through
   `TSSLContextConfig`.

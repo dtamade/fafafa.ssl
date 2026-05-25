@@ -1,5 +1,16 @@
 # Findings
 
+# 2026-05-25 Stage 3 Completion & Stage 4 Assessment
+- Stage 3 exit condition is met: all four verification contracts pass, all
+  active public-facing docs and examples converge on the curated facade and
+  builder / connector path.
+- FreePascal TLS 1.3 completeness gate passes with no failures. There is no
+  fresh RED evidence for Stage 4 (FreePascal backend excellence).
+- Per master plan operating rules, Stage 4 should not be opened without fresh
+  evidence of a real correctness, interop, performance, or observability gap.
+- The framework-excellence sequential plan has completed Stages 0-3. Stage 4
+  and Stage 5 are available when fresh evidence justifies them.
+
 # 2026-05-25 Stage 3 Public Import Guidance Convergence
 - `docs/README.md` "快速开始" section was the most visible remaining drift:
   it used `TSSLFactory.CreateContext(sslCtxClient)` + `Ctx.SetVerifyMode(...)` as

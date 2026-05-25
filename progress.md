@@ -1,5 +1,20 @@
 # Progress Log
 
+# 2026-05-25 Stage 3 Completion & Stage 4 Assessment
+- Ran all four Stage 3 verification contracts:
+  - `bash tests/scripts/test_facade_main_entry_truth_contract.sh` → PASS
+  - `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh` → PASS
+  - `bash tests/scripts/test_active_examples_public_import_truth_contract.sh` → PASS
+  - `bash tests/scripts/test_user_guide_ordinary_entrypoint_truth_contract.sh` → PASS
+- Stage 3 exit condition met: ordinary docs and examples converge on the
+  curated facade and builder / connector path.
+- Marked Stage 3 as complete in the master plan.
+- Ran FreePascal TLS 1.3 completeness gate:
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local`
+  - result: PASS. All runtime alignment tests verified.
+- No fresh RED evidence for Stage 4. Stage 4 remains blocked.
+- Framework-excellence sequential plan Stages 0-3 complete.
+
 # 2026-05-25 Stage 3 Public Import Guidance Convergence
 - Continued Stage 3 after commit
   `50ca050 feat: teach builder as ordinary entrypoint in facade header`.

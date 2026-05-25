@@ -148,6 +148,11 @@ compatibility settings.
 
 ## Stage 3: Curated facade simplification
 
+**Status:** complete. All active public-facing docs and examples converge on
+`uses fafafa.ssl, fafafa.ssl.context.builder;` with builder / connector /
+acceptor as the primary entrypoint. Advanced surfaces remain available but
+clearly labeled.
+
 **Purpose:** Make the ordinary user path shorter and more obvious:
 `uses fafafa.ssl, fafafa.ssl.context.builder;` with builder / connector /
 acceptor as the primary entrypoint.
