@@ -1,5 +1,21 @@
 # Progress Log
 
+# 2026-05-25 Security Audit Round 2 Fixes
+- Conducted second-round deep review (Claude architect-reviewer).
+- Found 11 new issues (2 Critical, 3 High, 4 Medium, 2 Low).
+- Fixed all Critical and High issues:
+  - C-1: PasswordCallbackThunk password secure-zeroed after use.
+  - C-2: AEAD TempBuffer cleared in all 4 encrypt/decrypt functions.
+  - H-1: OpenSSL error queue cleared via RequireValidContext (covers
+    all 12+ context operations) and before InternalHandshake.
+  - H-2: 10+ unchecked enum casts in ImportFromJSON/ImportFromINI now
+    validated with IsValid*Ordinal range-check helpers.
+  - H-3: Session cache file permissions set to 0600 on Unix.
+- Full compile: 186/186 passed, 0 failures, 0 warnings.
+- Architecture contracts: 13/13 green.
+- Two rounds of security audit complete. All Critical and High fixed.
+  Remaining Medium/Low items are defense-in-depth improvements.
+
 # 2026-05-25 Security Audit Fixes (Claude + Codex Joint Review)
 - Conducted joint deep review with Codex: 19 findings total (3 Critical,
   5 High, 6 Medium, 5 Low).

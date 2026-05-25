@@ -136,7 +136,6 @@ begin
   end;
   DoneCriticalSection(GCryptProvLock);
 end;
-end;
 
 function SecureRandomBytes(ABuffer: PByte; ACount: Integer): Boolean;
 begin

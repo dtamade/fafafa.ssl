@@ -2060,8 +2060,10 @@ begin
       if IndexOfName('explicit_backend') >= 0 then
       begin
         if IsValidLibraryTypeOrdinal(Integers['explicit_backend']) then
+        begin
           LImportedExplicitBackend := TSSLLibraryType(Integers['explicit_backend']);
-        LHasExplicitBackend := True;
+          LHasExplicitBackend := True;
+        end;
       end;
       if IndexOfName('auto_select_backend') >= 0 then
       begin

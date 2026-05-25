@@ -9,7 +9,8 @@ uses
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.consts,
-  fafafa.ssl.openssl.base;
+  fafafa.ssl.openssl.base,
+  fafafa.ssl.memutils;
 
 type
   { AEAD 加密结果 }
@@ -195,7 +196,7 @@ begin
 
   finally
     if Length(TempBuffer) > 0 then
-      FillChar(TempBuffer[0], Length(TempBuffer), 0);
+      SecureZeroMemory(@TempBuffer[0], Length(TempBuffer));
     EVP_CIPHER_CTX_free(Ctx);
   end;
 end;
@@ -338,7 +339,7 @@ begin
 
   finally
     if Length(TempBuffer) > 0 then
-      FillChar(TempBuffer[0], Length(TempBuffer), 0);
+      SecureZeroMemory(@TempBuffer[0], Length(TempBuffer));
     EVP_CIPHER_CTX_free(Ctx);
   end;
 end;
@@ -446,7 +447,7 @@ begin
 
   finally
     if Length(TempBuffer) > 0 then
-      FillChar(TempBuffer[0], Length(TempBuffer), 0);
+      SecureZeroMemory(@TempBuffer[0], Length(TempBuffer));
     EVP_CIPHER_CTX_free(Ctx);
   end;
 end;
@@ -555,7 +556,7 @@ begin
 
   finally
     if Length(TempBuffer) > 0 then
-      FillChar(TempBuffer[0], Length(TempBuffer), 0);
+      SecureZeroMemory(@TempBuffer[0], Length(TempBuffer));
     EVP_CIPHER_CTX_free(Ctx);
   end;
 end;
