@@ -137,6 +137,7 @@ type
       out AError: string
     ): Boolean;
     function ValidateClientPeerCertificateTrust: Boolean;
+    function ValidateCertificatePinIfEnabled: Boolean;
     function ValidateClientPeerCertificateFlags: Boolean;
     function ValidateClientOCSPStapling: Boolean;
     function ValidateClientOnlineOCSP: Boolean;
@@ -1969,7 +1970,41 @@ begin
       LVerifyResult.Warnings.Free;
   end;
 
+  if not ValidateCertificatePinIfEnabled then
+    Exit;
+
   Result := True;
+end;
+
+function TFreePascalConnection.ValidateCertificatePinIfEnabled: Boolean;
+var
+  LPinValidator: IFreePascalContextPinValidation;
+  LFingerprintHex: string;
+  LFingerprint: TBytes;
+  I: Integer;
+begin
+  Result := True;
+  if FContext = nil then
+    Exit;
+  if not FContext.GetCertificatePinningEnabled then
+    Exit;
+  if not Supports(FContext, IFreePascalContextPinValidation, LPinValidator) then
+    Exit;
+  if FPeerCertificate = nil then
+  begin
+    SetHandshakeError(sslErrCertificate, 'Certificate pinning enabled but no peer certificate available');
+    Result := False;
+    Exit;
+  end;
+  LFingerprintHex := FPeerCertificate.GetFingerprintSHA256;
+  SetLength(LFingerprint, Length(LFingerprintHex) div 2);
+  for I := 0 to High(LFingerprint) do
+    LFingerprint[I] := StrToInt('$' + Copy(LFingerprintHex, I * 2 + 1, 2));
+  if not LPinValidator.ValidateCertificatePin(LFingerprint) then
+  begin
+    SetHandshakeError(sslErrCertificate, 'Certificate pinning validation failed: peer certificate does not match any configured pin');
+    Result := False;
+  end;
 end;
 
 function TFreePascalConnection.ValidateClientPeerCertificateFlags: Boolean;

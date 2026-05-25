@@ -41,6 +41,7 @@ type
     ISSLServerOCSPStaplingContext,
     IFreePascalContextMaterial,
     IFreePascalContextTrustStore,
+    IFreePascalContextPinValidation,
     IFreePascalContextRevocationMaterial,
     IFreePascalContextServerStaplingMaterial,
     IFreePascalContextEarlyDataReplayProviderInstaller,
@@ -169,6 +170,7 @@ type
     procedure SetCertificatePinningEnabled(AEnabled: Boolean);
     function GetCertificatePinningEnabled: Boolean;
     procedure ClearCertificatePins;
+    function ValidateCertificatePin(const ACertFingerprint: TBytes): Boolean;
 
     function CreateConnection(ASocket: THandle): ISSLConnection; overload;
     function CreateConnection(AStream: TStream): ISSLConnection; overload;
@@ -211,6 +213,7 @@ implementation
 uses
   fafafa.ssl.exceptions,
   fafafa.ssl.memutils,
+  fafafa.ssl.crypto.constant_time,
   fafafa.ssl.freepascal.earlydatareplay.dirstore,
   fafafa.ssl.freepascal.earlydatareplay.fileprovider,
   fafafa.ssl.freepascal.connection;
@@ -862,6 +865,30 @@ end;
 procedure TFreePascalContext.ClearCertificatePins;
 begin
   SetLength(FPins, 0);
+end;
+
+function TFreePascalContext.ValidateCertificatePin(const ACertFingerprint: TBytes): Boolean;
+var
+  I: Integer;
+  LPinHex, LCertHex: string;
+  LPinBytes, LCertBytes: TBytes;
+begin
+  if (not FPinningEnabled) or (Length(FPins) = 0) then
+  begin
+    Result := True;
+    Exit;
+  end;
+  LCertBytes := ACertFingerprint;
+  for I := 0 to High(FPins) do
+  begin
+    LPinBytes := FPins[I].Hash;
+    if TConstantTime.CompareBytes(LPinBytes, LCertBytes) = 1 then
+    begin
+      Result := True;
+      Exit;
+    end;
+  end;
+  Result := False;
 end;
 
 function TFreePascalContext.CreateConnection(ASocket: THandle): ISSLConnection;

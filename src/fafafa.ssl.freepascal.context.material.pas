@@ -32,6 +32,11 @@ type
     function BuildVerificationStore: ISSLCertificateStore;
   end;
 
+  IFreePascalContextPinValidation = interface
+    ['{A8D3F2E1-7B4C-4E9A-B1C6-3D5F8A2E9C7B}']
+    function ValidateCertificatePin(const ACertFingerprint: TBytes): Boolean;
+  end;
+
   IFreePascalContextRevocationMaterial = interface
     ['{0ED2CC0C-5A69-4A77-AB60-894F17AA2C6D}']
     procedure ClearCRLMaterial;
