@@ -123,10 +123,13 @@ FreePascal 的 `0-RTT / early data` 目前仍是实验性能力，但默认 ship
 - `WithServerEarlyDataReplayStoreFile(...)`
 - `WithServerEarlyDataReplayStoreDirectory(...)`
 
-用 config/factory 时，可选这两个字段：
+用 context-safe config/factory 时，可选这两个字段：
 
-- `TSSLConfig.ServerEarlyDataReplayStoreFile`
-- `TSSLConfig.ServerEarlyDataReplayStoreDirectory`
+- `TSSLContextConfig.ServerEarlyDataReplayStoreFile`
+- `TSSLContextConfig.ServerEarlyDataReplayStoreDirectory`
+
+Legacy `TSSLConfig` 字段仍保留给 `v1.x` 兼容调用方；新代码优先使用
+`TSSLContextConfig` 或 builder。
 
 `file` 和 `directory` 是 mutually exclusive opt-ins，不能同时配置。
 
@@ -147,13 +150,13 @@ Ctx := TSSLContextBuilder.Create
   .BuildServer;
 ```
 
-Config/factory 示例：
+Context-safe factory 示例：
 
 ```pascal
 var
-  LConfig: TSSLConfig;
+  LConfig: TSSLContextConfig;
 begin
-  LConfig := CreateDefaultConfig(sslCtxServer);
+  LConfig := CreateDefaultContextConfig(sslCtxServer);
   LConfig.LibraryType := sslFreePascal;
   LConfig.ContextType := sslCtxServer;
   LConfig.PreferredVersion := sslProtocolTLS13;

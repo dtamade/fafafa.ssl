@@ -1,3 +1,56 @@
+# Task Plan: Stage 2 Public Guidance Truth Sync
+
+## Objective
+
+Complete the next Stage 2 scope-surgery slice by aligning public guidance with
+the code that already landed: `TSSLContextConfig` is now the preferred
+factory/config path for new context-safe callers, while legacy `TSSLConfig`
+remains a `v1.x` compatibility record.
+
+## Current State
+
+- The previous batch completed builder ordinary material projection through
+  `TSSLContextConfig`.
+- `docs/ROADMAP.md` still undercounted Stage 2 progress and still pointed the
+  next code-heavy slice at factory direct application, which was already done.
+- README and API reference still presented the FreePascal replay-store factory
+  example through legacy `TSSLConfig`, even though the context-safe factory path
+  now directly owns those fields.
+
+## Planned Batch
+
+- Add a focused public-guidance truth contract.
+- Update `docs/ROADMAP.md` so it records all four completed Stage 2 slices.
+- Move README and API replay-store factory examples to `TSSLContextConfig`.
+- Keep legacy `TSSLConfig` compatibility visible, but no longer teach it as the
+  recommended new factory/config path.
+- Run focused guidance contracts, the `TSSLContextConfig` runtime contract, full
+  module compile, shell syntax, and whitespace checks.
+
+## Verification
+
+- RED:
+  - `bash tests/scripts/test_tsslconfig_stage2_public_guidance_truth_contract.sh`
+  - failed first because `docs/ROADMAP.md` still said
+    "`TSSLConfig` scope surgery 已经完成前两条实现 slice".
+- GREEN:
+  - `bash tests/scripts/test_tsslconfig_stage2_public_guidance_truth_contract.sh`
+  - `bash tests/scripts/test_active_roadmap_references_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_migration_targets_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+  - `bash tests/scripts/test_tsslcontextconfig_surface_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc python3 scripts/compile_all_modules.py --rebuild`
+  - `bash -n tests/scripts/test_tsslconfig_stage2_public_guidance_truth_contract.sh`
+  - `git diff --check`
+
+## Review Conclusion
+
+- Verified. The public route and replay-store guidance now match the current
+  implementation state: builder and `TSSLContextConfig` are the preferred paths,
+  legacy `TSSLConfig` stays documented as compatibility, and Stage 2 no longer
+  points the next work item at a completed factory-direct slice.
+
 # Task Plan: TSSLContextConfig Builder Material Projection
 
 ## Objective

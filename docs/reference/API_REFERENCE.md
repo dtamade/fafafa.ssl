@@ -199,22 +199,22 @@
 
 FreePascal server-side `0-RTT / early data` 默认 shipped path 已经会把 replay truth 落到本地持久化 replay-store 路径。当前 capability 仍保持 `experimental`；如果默认路径不可用或不可写，恢复的 early data 会 fail-closed reject。public API 仍然开放 file / directory 两条 opt-in 路径，用来显式指定 replay-store 的落点。
 
-### Use `TSSLConfig` with `TSSLFactory.CreateContext(...)`
+### Use `TSSLContextConfig` with `TSSLFactory.CreateContext(...)`
 
-`TSSLConfig` 目前提供两个 server-only replay-store 字段：
+`TSSLContextConfig` 目前提供两个 server-only replay-store 字段：
 
-- `TSSLConfig.ServerEarlyDataReplayStoreFile`
-- `TSSLConfig.ServerEarlyDataReplayStoreDirectory`
+- `TSSLContextConfig.ServerEarlyDataReplayStoreFile`
+- `TSSLContextConfig.ServerEarlyDataReplayStoreDirectory`
 
 `TSSLConfig.ServerName` 不属于推荐的 client SNI 配置路径。当前 `TSSLFactory.CreateContext(...)` 对它的 client-side 行为是 warning + ignore；客户端请改用 `ISSLClientConnection.SetServerName(...)` 或 `TSSLConnector.Connect*(..., ServerName)`。
 
-这两个字段属于 context-scoped、server-only opt-in，用于 `TSSLFactory.CreateContext(const AConfig)` 的 FreePascal server path。它们是 mutually exclusive 配置，不能同时设置；同时设置时，factory 会 fail fast。
+这两个字段属于 context-scoped、server-only opt-in，用于 `TSSLFactory.CreateContext(const TSSLContextConfig)` 的 FreePascal server path。它们是 mutually exclusive 配置，不能同时设置；同时设置时，factory 会 fail fast。
 
 ```pascal
 var
-  LConfig: TSSLConfig;
+  LConfig: TSSLContextConfig;
 begin
-  LConfig := CreateDefaultConfig(sslCtxServer);
+  LConfig := CreateDefaultContextConfig(sslCtxServer);
   LConfig.LibraryType := sslFreePascal;
   LConfig.ContextType := sslCtxServer;
   LConfig.PreferredVersion := sslProtocolTLS13;
@@ -232,6 +232,14 @@ begin
   Ctx := TSSLFactory.CreateContext(LConfig);
 end;
 ```
+
+### Legacy `TSSLConfig` compatibility path
+
+`TSSLConfig.ServerEarlyDataReplayStoreFile` 和
+`TSSLConfig.ServerEarlyDataReplayStoreDirectory` 仍保留给 `v1.x`
+兼容调用方。新代码如果需要 factory/config 入口，优先使用
+`TSSLContextConfig`，避免把 library-scoped defaults、connection-scoped hints
+或 compatibility-only SNI 字段重新带回普通 context 创建路径。
 
 当前口径：
 

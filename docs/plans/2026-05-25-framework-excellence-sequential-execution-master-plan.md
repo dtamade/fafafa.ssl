@@ -106,7 +106,10 @@ context-safe callers.
 batch: ordinary builder certificate/key/trust file material now flows through
 `TSSLContextConfig`; PEM, PKCS#11, HTTP hooks, OCSP response-file loading,
 replay-store installers, and backend-gated custom cipher overrides remain on
-their owner-specific post-create paths.
+their owner-specific post-create paths. Public guidance has also been synced:
+the active roadmap, README, and API reference now treat builder /
+`TSSLContextConfig` as the preferred new path while keeping legacy
+`TSSLConfig` as `v1.x` compatibility.
 
 **Purpose:** Continue moving callers and docs away from the mixed-scope
 `TSSLConfig` mental model while preserving `v1.x` compatibility.

@@ -1,5 +1,22 @@
 # Findings
 
+# 2026-05-25 Stage 2 Public Guidance Truth Sync
+- Stage 2 implementation had moved faster than the public route text:
+  `docs/ROADMAP.md` still described only two completed `TSSLConfig` surgery
+  slices and still pointed the next code-heavy slice at the already-completed
+  `TSSLContextConfig` factory direct path.
+- The public replay-store factory examples should now teach
+  `TSSLContextConfig`, because factory direct application and builder material
+  projection have made that surface the preferred context-safe config path.
+- Legacy `TSSLConfig` must remain documented, but only as a `v1.x`
+  compatibility path. Keeping it as the first factory/config replay-store
+  example would reintroduce the mixed-scope mental model Stage 2 is explicitly
+  removing.
+- The focused guidance contract now protects three things together:
+  roadmap progress count, next-route wording, and README/API replay-store
+  factory examples. This prevents future batches from completing code slices
+  while leaving active docs pointed at stale architecture.
+
 # 2026-05-25 TSSLContextConfig Builder Material Projection
 - Ordinary builder file/trust material is now stable enough to belong in
   `TSSLContextConfig`: certificate file, private key file/password, CA file,

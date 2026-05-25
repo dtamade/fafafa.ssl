@@ -103,13 +103,15 @@ bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local
 6. connection boundary completion / owner-path truth sync 已经收口：
    - source comments、architecture doc 和 API reference 已经对齐推荐 owner path 与 compatibility mirror 的语言
    - 行为不变，只做了叙事与入口推荐收口
-7. `TSSLConfig` scope surgery 已经完成前两条实现 slice：
+7. `TSSLConfig` scope surgery 已经完成四条实现 slice：
    - `TSSLContextConfig` additive surface / projection / factory overload 已落地
    - `TSSLContextBuilder` 已通过 `TSSLContextConfig` 创建 context，同时保留 post-create owner responsibilities
+   - `TSSLFactory.CreateContext(const TSSLContextConfig)` 已经直接应用 context-safe fields，不再为了新入口主路径投影回 legacy `TSSLConfig`
+   - builder ordinary certificate/key/trust material 已经通过 `TSSLContextConfig` 投影；PEM、PKCS#11、HTTP hooks、OCSP response-file、replay-store installer 与 custom cipher override 仍保留在 owner-specific post-create path
 8. 当前活跃批次转入 framework excellence sequential execution master plan：
    - 不重开已经完成的 option-bridge / logging / timeout owner truth
    - 后续实现 slice 必须从现有 scope buckets / migration targets 出发，避免继续把 `TSSLConfig` 当成万能配置 record
-   - 执行顺序固定为 factory direct context-safe path、`TSSLConfig` scope-surgery completion、facade simplification、FreePascal excellence、performance / ops excellence
+   - 下一条 Stage 2 切片继续收 active docs/examples 与 high-level guidance，再进入 facade simplification、FreePascal excellence、performance / ops excellence
 
 下一条最值得开的实现线：
 
@@ -117,7 +119,7 @@ bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local
 2. 如果还要继续扩 early-data，不再建议无 fresh RED 地继续开 directory-store family；当前 blocker queue 已经收口，剩余只有更深的 crash-window / write-interruption drift 值得在 fresh failing evidence 出现时再重开，而不是现在回头重开现有 file-backed `.bak` family、managed boundary 或现有 parity 接线。
 3. capability 等级继续保持 `experimental`；当前剩余 caveat 已经收口到 local persistent 路径、fail-closed 行为，以及尚未承诺 distributed / cross-host replay coordination。在没有 fresh RED 前，这条 caveat 应视为 post-release 阶段有意保留的最终 experimental boundary，而不是默认 future queue。
 4. OCSP / CT / validation 只在 fresh failing evidence 出现时重开，不再作为默认 future queue。
-5. 高层架构演进当前已经选择 sequential master plan；下一条代码-heavy slice 是 `TSSLContextConfig` factory direct application，用来减少新 context-safe 调用继续绕回 legacy `TSSLConfig` 的内部 bounce。
+5. 高层架构演进当前已经选择 sequential master plan；factory direct path 与 builder material projection 已完成，下一条 Stage 2 切片应继续收 active docs/examples 与 high-level guidance，避免 public docs 继续把 legacy `TSSLConfig` 教成普通新入口。
 
 相关计划：
 

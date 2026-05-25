@@ -1,5 +1,44 @@
 # Progress Log
 
+# 2026-05-25 Stage 2 Public Guidance Truth Sync
+- Continued Stage 2 after commit
+  `25e4745 feat: project builder material through context config`.
+- Identified public-guidance drift:
+  - `docs/ROADMAP.md` still said `TSSLConfig` scope surgery had completed only
+    the first two implementation slices.
+  - the same roadmap still pointed the next code-heavy slice at
+    `TSSLContextConfig` factory direct application, which had already landed.
+  - README and API reference still taught the FreePascal replay-store
+    factory/config example through legacy `TSSLConfig`.
+- Added RED coverage:
+  - `tests/scripts/test_tsslconfig_stage2_public_guidance_truth_contract.sh`
+- RED check:
+  - `bash tests/scripts/test_tsslconfig_stage2_public_guidance_truth_contract.sh`
+  - result: failed because `docs/ROADMAP.md` did not contain
+    "`TSSLConfig` scope surgery 已经完成四条实现 slice".
+- Implemented the guidance sync:
+  - updated `docs/ROADMAP.md` to record the four completed Stage 2 slices:
+    additive `TSSLContextConfig`, builder adoption, factory direct application,
+    and builder material projection.
+  - updated README replay-store guidance to prefer `TSSLContextConfig` for
+    factory/config examples while keeping legacy `TSSLConfig` as `v1.x`
+    compatibility.
+  - updated API reference replay-store guidance with the same preferred /
+    compatibility split.
+- Focused verification passed:
+  - `bash tests/scripts/test_tsslconfig_stage2_public_guidance_truth_contract.sh`
+  - `bash tests/scripts/test_active_roadmap_references_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_migration_targets_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+  - `bash tests/scripts/test_tsslcontextconfig_surface_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+- Full compile verification passed:
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc python3 scripts/compile_all_modules.py --rebuild`
+  - result: `186/186` compiled, `0` failures, `0` warnings.
+- Hygiene verification passed after record updates:
+  - `bash -n tests/scripts/test_tsslconfig_stage2_public_guidance_truth_contract.sh`
+  - `git diff --check`
+
 # 2026-05-25 TSSLContextConfig Builder Material Projection
 - Continued Stage 2 after commit
   `0db8165 feat: apply context config directly in factory`.
