@@ -141,15 +141,19 @@ var
   LInvalidSession: ISSLSession;
   LLoadedSession: ISSLSession;
   LTempFile: string;
+  LSharedKey: TBytes;
 begin
   WriteLn('=== Session Cache Persistence Count Contract ===');
 
   LTempFile := 'tmp/test_session_cache_persistence_contract.dat';
+  SetLength(LSharedKey, 32);
+  FillChar(LSharedKey[0], 32, $AA);
   ForceDirectories(ExtractFileDir(LTempFile));
   DeleteFile(LTempFile);
 
   LSourceCache := TSSLSessionCache.Create;
   try
+    LSourceCache.SetPersistenceKey(LSharedKey);
     LValidSession := TMockSession.Create('valid-session', True);
     LInvalidSession := TMockSession.Create('invalid-session', False);
 
@@ -164,6 +168,7 @@ begin
 
   LLoadedCache := TSSLSessionCache.Create;
   try
+    LLoadedCache.SetPersistenceKey(LSharedKey);
     LLoadedCache.SetSessionCreateFunc(@CreateSessionFromBytes);
     Require(LLoadedCache.LoadFromFile(LTempFile),
       'LoadFromFile succeeds after SaveToFile skipped invalid entries');

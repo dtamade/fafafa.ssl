@@ -132,6 +132,9 @@ type
     // 会话创建回调
     procedure SetSessionCreateFunc(AFunc: TSessionCreateFunc);
 
+    // 持久化密钥（跨实例加载需要相同密钥）
+    procedure SetPersistenceKey(const AKey: TBytes);
+
     property MaxSessions: Integer read FMaxSessions write FMaxSessions;
     property DefaultTimeout: Integer read FDefaultTimeout write FDefaultTimeout;
     property SessionCreateFunc: TSessionCreateFunc read FSessionCreateFunc write FSessionCreateFunc;
@@ -675,6 +678,17 @@ begin
   FLock.Enter;
   try
     FSessionCreateFunc := AFunc;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TSSLSessionCache.SetPersistenceKey(const AKey: TBytes);
+begin
+  FLock.Enter;
+  try
+    SecureZeroBytes(FIntegrityKey);
+    FIntegrityKey := Copy(AKey, 0, Length(AKey));
   finally
     FLock.Leave;
   end;
