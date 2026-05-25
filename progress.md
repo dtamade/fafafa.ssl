@@ -1,5 +1,21 @@
 # Progress Log
 
+# 2026-05-25 Security Audit Final Polish
+- Fixed remaining Medium issues from both audit rounds:
+  - Cipher suite validation: SetCipherList/SetCipherSuites now raise
+    ESSLConfigurationException on invalid strings.
+  - FillChar on managed types: replaced with Default() in session cache.
+  - Merge() enum validation: completed coverage for verify_modes,
+    server_early_data_policy, explicit_backend.
+  - PEM size limits: LoadCertificatePEM/LoadPrivateKeyPEM now enforce
+    MAX_CERTIFICATE_SIZE and MAX_PRIVATE_KEY_SIZE.
+  - Double-checked locking: eliminated in OpenSSL context registry.
+- Codex retrospective confirmed all fixes correct.
+- Final state: 186/186 compiled, 0 failures, 0 warnings.
+- All Critical (5/5) and High (8/8) security issues resolved.
+- Medium: 8/10 resolved. Remaining 2 are defense-in-depth (session
+  cache HMAC, factory lock scope) with low practical risk.
+
 # 2026-05-25 Security Audit Round 2 Fixes
 - Conducted second-round deep review (Claude architect-reviewer).
 - Found 11 new issues (2 Critical, 3 High, 4 Medium, 2 Low).
