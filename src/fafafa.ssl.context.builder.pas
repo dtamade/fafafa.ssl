@@ -188,8 +188,9 @@ uses
   fafafa.ssl.factory,
   fafafa.ssl.exceptions,
   fafafa.ssl.freepascal.context.material,
+  fafafa.ssl.base64,
   fafafa.ssl.logging,
-  fpjson, jsonparser;  // JSON support for Phase 2.1.3
+  fpjson, jsonparser;
 
 procedure LogBuilderContextLevelServerNameCompatibilityWarning(
   const ACallSite: string;
@@ -2141,6 +2142,7 @@ var
   LVerifyMode: TSSLVerifyMode;
   LOption: TSSLOption;
   LProtocolStr, LVerifyStr, LOptionsStr: string;
+  LDecodedBytes: TBytes;
 begin
   LLines := TStringList.Create;
   try
@@ -2178,7 +2180,19 @@ begin
     // Certificate configuration
     LLines.Add('[Certificates]');
     LLines.Add('certificate_file=' + FCertificateFile);
+    if FCertificatePEM <> '' then
+    begin
+      SetLength(LDecodedBytes, Length(FCertificatePEM));
+      Move(FCertificatePEM[1], LDecodedBytes[0], Length(FCertificatePEM));
+      LLines.Add('certificate_pem_b64=' + TBase64Utils.Encode(LDecodedBytes));
+    end;
     LLines.Add('private_key_file=' + FPrivateKeyFile);
+    if FPrivateKeyPEM <> '' then
+    begin
+      SetLength(LDecodedBytes, Length(FPrivateKeyPEM));
+      Move(FPrivateKeyPEM[1], LDecodedBytes[0], Length(FPrivateKeyPEM));
+      LLines.Add('private_key_pem_b64=' + TBase64Utils.Encode(LDecodedBytes));
+    end;
     LLines.Add('pkcs11_uri=' + FPKCS11URI);
     if IsSerializablePKCS11PINSourceMethod(FPKCS11PINMethod) then
     begin
@@ -2292,6 +2306,7 @@ var
   LHasAutoSelectBackend: Boolean;
   LHasVerifyModes: Boolean;
   LAutoSelectBackend: Boolean;
+  LDecodedBytes: TBytes;
   J: Integer;
 begin
   Result := Self;
@@ -2357,10 +2372,30 @@ begin
           FCertificateFile := LValue;
           FCertificatePEM := '';
         end
+        else if LKey = 'certificate_pem_b64' then
+        begin
+          if TBase64Utils.TryDecode(LValue, LDecodedBytes) then
+          begin
+            SetLength(FCertificatePEM, Length(LDecodedBytes));
+            if Length(LDecodedBytes) > 0 then
+              Move(LDecodedBytes[0], FCertificatePEM[1], Length(LDecodedBytes));
+            FCertificateFile := '';
+          end;
+        end
         else if LKey = 'private_key_file' then
         begin
           FPrivateKeyFile := LValue;
           FPrivateKeyPEM := '';
+        end
+        else if LKey = 'private_key_pem_b64' then
+        begin
+          if TBase64Utils.TryDecode(LValue, LDecodedBytes) then
+          begin
+            SetLength(FPrivateKeyPEM, Length(LDecodedBytes));
+            if Length(LDecodedBytes) > 0 then
+              Move(LDecodedBytes[0], FPrivateKeyPEM[1], Length(LDecodedBytes));
+            FPrivateKeyFile := '';
+          end;
         end
         else if LKey = 'pkcs11_uri' then
           FPKCS11URI := LValue
@@ -3127,8 +3162,10 @@ begin
   else if LFieldLower = 'verify_depth' then
     FVerifyDepth := StrToIntDef(AValue, FVerifyDepth)
   else if LFieldLower = 'session_cache_enabled' then
-    FSessionCacheEnabled := (LowerCase(AValue) = 'true');
-  // If field not recognized, silently ignore (defensive programming)
+    FSessionCacheEnabled := (LowerCase(AValue) = 'true')
+  else
+    raise ESSLConfigurationException.CreateFmt(
+      'Unknown builder override field: "%s"', [AField]);
 end;
 
 { v1.3.0: Automatic backend selection methods }
