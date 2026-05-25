@@ -254,6 +254,7 @@ type
     FProtocolVersions: TSSLProtocolVersions;
     FVerifyMode: TSSLVerifyModes;
     FVerifyModeExplicit: Boolean;
+    FDevelopmentPreset: Boolean;
     FVerifyDepth: Integer;
     FCertificateFile: string;
     FCertificatePEM: string;
@@ -460,18 +461,15 @@ end;
 { Preset Configurations - Phase 2.1.1 }
 
 class function TSSLContextBuilder.Development: ISSLContextBuilder;
+var
+  LBuilder: TSSLContextBuilderImpl;
 begin
-  {
-    Development preset:
-    - Relaxed verification for easier testing
-    - Session cache disabled for easier debugging
-    - TLS 1.2 and 1.3 support
-    - Detailed logging enabled (via options)
-  }
-  Result := TSSLContextBuilderImpl.Create
+  LBuilder := TSSLContextBuilderImpl.Create;
+  LBuilder.FDevelopmentPreset := True;
+  Result := LBuilder
     .WithTLS12And13
-    .WithVerifyNone  // Relaxed for development - accept self-signed certs
-    .WithSessionCache(False)  // Easier debugging without session cache
+    .WithVerifyNone
+    .WithSessionCache(False)
     .WithOption(ssoEnableSessionTickets);
 end;
 
@@ -1518,6 +1516,9 @@ begin
   // Check verification settings
   if (not AForServer) and (not (sslVerifyPeer in LVerifyMode)) then
     Result.AddWarning('Certificate verification is disabled - insecure for production');
+
+  if ABuilder.FDevelopmentPreset then
+    Result.AddWarning('Development preset active - not suitable for production deployment');
 
   // Check CA configuration when verification is enabled
   if (sslVerifyPeer in LVerifyMode) and

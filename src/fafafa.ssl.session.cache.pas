@@ -27,7 +27,11 @@ interface
 uses
   SysUtils, Classes, SyncObjs, DateUtils, fgl,
   {$IFDEF UNIX}BaseUnix,{$ENDIF}
-  fafafa.ssl.base;
+  fafafa.ssl.base,
+  fafafa.ssl.random,
+  fafafa.ssl.tls13.primitives,
+  fafafa.ssl.crypto.constant_time,
+  fafafa.ssl.memutils;
 
 const
   DEFAULT_SESSION_TIMEOUT = 300;  // 5 分钟
@@ -98,6 +102,7 @@ type
     FDefaultTimeout: Integer;
     FPutCount: Integer;
     FSessionCreateFunc: TSessionCreateFunc;
+    FIntegrityKey: TBytes;
 
     function GenerateCacheKey(const AHostName: string; APort: Word): string;
     procedure CleanupExpired;
@@ -185,12 +190,15 @@ begin
   FDefaultTimeout := ADefaultTimeout;
   FPutCount := 0;
   FSessionCreateFunc := nil;
+  SetLength(FIntegrityKey, 32);
+  SecureRandomBytes(@FIntegrityKey[0], 32);
 
   FillChar(FStats, SizeOf(FStats), 0);
 end;
 
 destructor TSSLSessionCache.Destroy;
 begin
+  SecureZeroBytes(FIntegrityKey);
   FCache.Free;
   FLock.Free;
   FStatsLock.Free;
@@ -474,42 +482,42 @@ begin
       FpChmod(AFileName, &600);
       {$ENDIF}
       try
-        // 写入版本号
-        I := 1;
+        // 写入版本号 (v2 = HMAC protected)
+        I := 2;
         Stream.WriteBuffer(I, SizeOf(Integer));
-        
+
         // 先写占位计数；真实条目数只统计实际写入的有效记录。
         CountPosition := Stream.Position;
         Count := 0;
         Stream.WriteBuffer(Count, SizeOf(Integer));
         WrittenCount := 0;
-        
+
         // 写入每个条目
         for I := 0 to FCache.Count - 1 do
         begin
           Key := FCache.Keys[I];
           Entry := FCache.Data[I];
-          
+
           // 只保存有效的会话
           if not Entry.IsValid or Entry.IsExpired(FDefaultTimeout) then
             Continue;
-          
+
           // 写入主机名
           DataLen := Length(Entry.HostName);
           Stream.WriteBuffer(DataLen, SizeOf(Integer));
           if DataLen > 0 then
             Stream.WriteBuffer(Entry.HostName[1], DataLen);
-          
+
           // 写入端口
           Stream.WriteBuffer(Entry.Port, SizeOf(Word));
-          
+
           // 序列化会话数据
           SessionData := Entry.Session.Serialize;
           DataLen := Length(SessionData);
           Stream.WriteBuffer(DataLen, SizeOf(Integer));
           if DataLen > 0 then
             Stream.WriteBuffer(SessionData[0], DataLen);
-          
+
           // 写入时间戳
           Stream.WriteBuffer(Entry.CreatedAt, SizeOf(TDateTime));
           Stream.WriteBuffer(Entry.LastAccessedAt, SizeOf(TDateTime));
@@ -519,7 +527,15 @@ begin
 
         Stream.Position := CountPosition;
         Stream.WriteBuffer(WrittenCount, SizeOf(Integer));
-        
+
+        // Append HMAC-SHA256 over entire file content
+        Stream.Position := 0;
+        SetLength(SessionData, Stream.Size);
+        Stream.ReadBuffer(SessionData[0], Stream.Size);
+        SessionData := HMAC_SHA256(FIntegrityKey, SessionData);
+        Stream.Position := Stream.Size;
+        Stream.WriteBuffer(SessionData[0], 32);
+
         Result := True;
       finally
         Stream.Free;
@@ -542,6 +558,7 @@ var
   Entry: TSessionCacheEntry;
   Session: ISSLSession;
   Key: string;
+  LFileData, LStoredMAC, LComputedMAC: TBytes;
 begin
   Result := False;
 
@@ -555,10 +572,29 @@ begin
 
       Stream := TFileStream.Create(AFileName, fmOpenRead);
       try
+        if Stream.Size < SizeOf(Integer) then
+          Exit;
+
         // 读取版本号
         Stream.ReadBuffer(Version, SizeOf(Integer));
-        if Version <> 1 then
+        if not (Version in [1, 2]) then
           Exit;
+
+        // v2: verify HMAC before parsing
+        if Version = 2 then
+        begin
+          if Stream.Size < SizeOf(Integer) + 32 then
+            Exit;
+          Stream.Position := 0;
+          SetLength(LFileData, Stream.Size - 32);
+          Stream.ReadBuffer(LFileData[0], Length(LFileData));
+          SetLength(LStoredMAC, 32);
+          Stream.ReadBuffer(LStoredMAC[0], 32);
+          LComputedMAC := HMAC_SHA256(FIntegrityKey, LFileData);
+          if TConstantTime.CompareBytes(LStoredMAC, LComputedMAC) <> 1 then
+            Exit;
+          Stream.Position := SizeOf(Integer);
+        end;
 
         // 读取条目数
         Stream.ReadBuffer(Count, SizeOf(Integer));
