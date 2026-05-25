@@ -37,6 +37,7 @@ uses
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.stack,
   fafafa.ssl.openssl.api.bio,
+  fafafa.ssl.openssl.api.err,
   fafafa.ssl.openssl.api.ocsp,
   fafafa.ssl.openssl.x509.chain,
   fafafa.ssl.openssl.certificate,
@@ -1575,6 +1576,8 @@ begin
 
   if (FSSL = nil) or (not HasStreamTransport) then
     Exit;
+
+  if Assigned(ERR_clear_error) then ERR_clear_error();
 
   if (not Assigned(SSL_do_handshake)) or (not Assigned(SSL_get_error)) then
     Exit;

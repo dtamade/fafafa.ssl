@@ -726,6 +726,36 @@ begin
     AMethod := pmNone;
 end;
 
+function IsValidProtocolVersionOrdinal(AValue: Integer): Boolean;
+begin
+  Result := (AValue >= Ord(Low(TSSLProtocolVersion))) and
+            (AValue <= Ord(High(TSSLProtocolVersion)));
+end;
+
+function IsValidVerifyModeOrdinal(AValue: Integer): Boolean;
+begin
+  Result := (AValue >= Ord(Low(TSSLVerifyMode))) and
+            (AValue <= Ord(High(TSSLVerifyMode)));
+end;
+
+function IsValidOptionOrdinal(AValue: Integer): Boolean;
+begin
+  Result := (AValue >= Ord(Low(TSSLOption))) and
+            (AValue <= Ord(High(TSSLOption)));
+end;
+
+function IsValidEarlyDataPolicyOrdinal(AValue: Integer): Boolean;
+begin
+  Result := (AValue >= Ord(Low(TSSLEarlyDataServerPolicy))) and
+            (AValue <= Ord(High(TSSLEarlyDataServerPolicy)));
+end;
+
+function IsValidLibraryTypeOrdinal(AValue: Integer): Boolean;
+begin
+  Result := (AValue >= Ord(Low(TSSLLibraryType))) and
+            (AValue <= Ord(High(TSSLLibraryType)));
+end;
+
 function TryParsePKCS11PINMethodValue(const AValue: string; out AMethod: TPKCS11PINMethod): Boolean;
 var
   LOrdinal: Integer;
@@ -1922,7 +1952,8 @@ begin
         LProtocols := Arrays['protocols'];
         FProtocolVersions := [];
         for I := 0 to LProtocols.Count - 1 do
-          Include(FProtocolVersions, TSSLProtocolVersion(LProtocols.Integers[I]));
+          if IsValidProtocolVersionOrdinal(LProtocols.Integers[I]) then
+            Include(FProtocolVersions, TSSLProtocolVersion(LProtocols.Integers[I]));
       end;
 
       // Verification mode
@@ -1931,7 +1962,8 @@ begin
         LVerify := Arrays['verify_modes'];
         FVerifyMode := [];
         for I := 0 to LVerify.Count - 1 do
-          Include(FVerifyMode, TSSLVerifyMode(LVerify.Integers[I]));
+          if IsValidVerifyModeOrdinal(LVerify.Integers[I]) then
+            Include(FVerifyMode, TSSLVerifyMode(LVerify.Integers[I]));
       end;
 
       if IndexOfName('verify_mode_explicit') >= 0 then
@@ -2017,7 +2049,8 @@ begin
       if IndexOfName('client_early_data_enabled') >= 0 then
         FClientEarlyDataEnabled := Booleans['client_early_data_enabled'];
       if IndexOfName('server_early_data_policy') >= 0 then
-        FServerEarlyDataPolicy := TSSLEarlyDataServerPolicy(Integers['server_early_data_policy']);
+        if IsValidEarlyDataPolicyOrdinal(Integers['server_early_data_policy']) then
+          FServerEarlyDataPolicy := TSSLEarlyDataServerPolicy(Integers['server_early_data_policy']);
       if IndexOfName('server_max_early_data_size') >= 0 then
         FServerMaxEarlyDataSize := Cardinal(Integers['server_max_early_data_size']);
       if IndexOfName('server_early_data_replay_store_file') >= 0 then
@@ -2026,7 +2059,8 @@ begin
         FServerEarlyDataReplayStoreDirectory := Strings['server_early_data_replay_store_directory'];
       if IndexOfName('explicit_backend') >= 0 then
       begin
-        LImportedExplicitBackend := TSSLLibraryType(Integers['explicit_backend']);
+        if IsValidLibraryTypeOrdinal(Integers['explicit_backend']) then
+          LImportedExplicitBackend := TSSLLibraryType(Integers['explicit_backend']);
         LHasExplicitBackend := True;
       end;
       if IndexOfName('auto_select_backend') >= 0 then
@@ -2047,7 +2081,8 @@ begin
         LOptions := Arrays['options'];
         FOptions := [];
         for I := 0 to LOptions.Count - 1 do
-          Include(FOptions, TSSLOption(LOptions.Integers[I]));
+          if IsValidOptionOrdinal(LOptions.Integers[I]) then
+            Include(FOptions, TSSLOption(LOptions.Integers[I]));
       end;
 
       // OCSP Stapling
@@ -2295,14 +2330,16 @@ begin
           LParts.CommaText := LValue;
           FProtocolVersions := [];
           for J := 0 to LParts.Count - 1 do
-            Include(FProtocolVersions, TSSLProtocolVersion(StrToIntDef(LParts[J], 0)));
+            if IsValidProtocolVersionOrdinal(StrToIntDef(LParts[J], -1)) then
+              Include(FProtocolVersions, TSSLProtocolVersion(StrToIntDef(LParts[J], 0)));
         end
         else if LKey = 'verify_modes' then
         begin
           LParts.CommaText := LValue;
           FVerifyMode := [];
           for J := 0 to LParts.Count - 1 do
-            Include(FVerifyMode, TSSLVerifyMode(StrToIntDef(LParts[J], 0)));
+            if IsValidVerifyModeOrdinal(StrToIntDef(LParts[J], -1)) then
+              Include(FVerifyMode, TSSLVerifyMode(StrToIntDef(LParts[J], 0)));
           LHasVerifyModes := True;
         end
         else if LKey = 'verify_mode_explicit' then
@@ -2363,9 +2400,10 @@ begin
         else if LKey = 'client_early_data_enabled' then
           FClientEarlyDataEnabled := (LowerCase(LValue) = 'true')
         else if LKey = 'server_early_data_policy' then
-          FServerEarlyDataPolicy := TSSLEarlyDataServerPolicy(
-            StrToIntDef(LValue, Ord(sslEarlyDataServerReject))
-          )
+        begin
+          if IsValidEarlyDataPolicyOrdinal(StrToIntDef(LValue, -1)) then
+            FServerEarlyDataPolicy := TSSLEarlyDataServerPolicy(StrToIntDef(LValue, Ord(sslEarlyDataServerReject)));
+        end
         else if LKey = 'server_max_early_data_size' then
           FServerMaxEarlyDataSize := Cardinal(StrToIntDef(LValue, Integer(FServerMaxEarlyDataSize)))
         else if LKey = 'server_early_data_replay_store_file' then
@@ -2374,8 +2412,11 @@ begin
           FServerEarlyDataReplayStoreDirectory := LValue
         else if LKey = 'explicit_backend' then
         begin
-          LImportedExplicitBackend := TSSLLibraryType(StrToIntDef(LValue, Ord(sslOpenSSL)));
-          LHasExplicitBackend := True;
+          if IsValidLibraryTypeOrdinal(StrToIntDef(LValue, -1)) then
+          begin
+            LImportedExplicitBackend := TSSLLibraryType(StrToIntDef(LValue, Ord(sslOpenSSL)));
+            LHasExplicitBackend := True;
+          end;
         end
         else if LKey = 'auto_select_backend' then
         begin
@@ -2404,7 +2445,8 @@ begin
           LParts.CommaText := LValue;
           FOptions := [];
           for J := 0 to LParts.Count - 1 do
-            Include(FOptions, TSSLOption(StrToIntDef(LParts[J], 0)));
+            if IsValidOptionOrdinal(StrToIntDef(LParts[J], -1)) then
+              Include(FOptions, TSSLOption(StrToIntDef(LParts[J], 0)));
         end
         else if LKey = 'ocsp_stapling_enabled' then
           FOCSPStaplingEnabled := (LowerCase(LValue) = 'true')
@@ -2621,7 +2663,8 @@ begin
       begin
         FProtocolVersions := [];
         for I := 0 to LProtocols.Count - 1 do
-          Include(FProtocolVersions, TSSLProtocolVersion(LProtocols.Integers[I]));
+          if IsValidProtocolVersionOrdinal(LProtocols.Integers[I]) then
+            Include(FProtocolVersions, TSSLProtocolVersion(LProtocols.Integers[I]));
       end;
     end;
 
@@ -3003,9 +3046,12 @@ begin
   else if LFieldLower = 'client_early_data_enabled' then
     FClientEarlyDataEnabled := (LowerCase(AValue) = 'true')
   else if LFieldLower = 'server_early_data_policy' then
-    FServerEarlyDataPolicy := TSSLEarlyDataServerPolicy(
-      StrToIntDef(AValue, Ord(FServerEarlyDataPolicy))
-    )
+  begin
+    if IsValidEarlyDataPolicyOrdinal(StrToIntDef(AValue, -1)) then
+      FServerEarlyDataPolicy := TSSLEarlyDataServerPolicy(
+        StrToIntDef(AValue, Ord(FServerEarlyDataPolicy))
+      );
+  end
   else if LFieldLower = 'server_max_early_data_size' then
     FServerMaxEarlyDataSize := Cardinal(StrToIntDef(AValue, Integer(FServerMaxEarlyDataSize)))
   else if LFieldLower = 'server_early_data_replay_store_file' then

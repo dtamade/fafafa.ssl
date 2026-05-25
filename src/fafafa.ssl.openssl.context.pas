@@ -228,7 +228,8 @@ uses
   fafafa.ssl.openssl.api.pkcs,
   fafafa.ssl.openssl.api.pkcs12,
   fafafa.ssl.openssl.api.rsa,
-  fafafa.ssl.memutils;  // Rust-quality: Secure memory handling
+  fafafa.ssl.openssl.api.err,
+  fafafa.ssl.memutils;
 
 var
   GContextRegistry: TList = nil;
@@ -1109,6 +1110,7 @@ begin
       sslErrNotInitialized,
       AMethodName
     );
+  if Assigned(ERR_clear_error) then ERR_clear_error();
 end;
 
 function TOpenSSLContext.HasClientOCSPCapability: Boolean;
