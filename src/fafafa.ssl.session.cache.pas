@@ -252,7 +252,7 @@ begin
   
   Key := GenerateCacheKey(AHostName, APort);
   
-  FillChar(Entry, SizeOf(Entry), 0);
+  Entry := Default(TSessionCacheEntry);
   Entry.Session := ASession;
   Entry.HostName := AHostName;
   Entry.Port := APort;
@@ -591,7 +591,7 @@ begin
           end;
 
           // 读取时间戳
-          FillChar(Entry, SizeOf(Entry), 0);
+          Entry := Default(TSessionCacheEntry);
           Stream.ReadBuffer(Entry.CreatedAt, SizeOf(TDateTime));
           Stream.ReadBuffer(Entry.LastAccessedAt, SizeOf(TDateTime));
           Stream.ReadBuffer(Entry.AccessCount, SizeOf(Integer));

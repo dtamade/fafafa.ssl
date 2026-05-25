@@ -1982,7 +1982,9 @@ begin
   if (Trim(ACipherList) <> '') and (FSSLContext <> nil) and Assigned(SSL_CTX_set_cipher_list) then
   begin
     CipherListA := AnsiString(ACipherList);
-    SSL_CTX_set_cipher_list(FSSLContext, PAnsiChar(CipherListA));
+    if SSL_CTX_set_cipher_list(FSSLContext, PAnsiChar(CipherListA)) <> 1 then
+      raise ESSLConfigurationException.Create(
+        'Invalid cipher list: "' + ACipherList + '"');
   end;
 end;
 
@@ -2005,7 +2007,9 @@ begin
   if (Trim(ACipherSuites) <> '') and (FSSLContext <> nil) and Assigned(SSL_CTX_set_ciphersuites) then
   begin
     CipherSuitesA := AnsiString(ACipherSuites);
-    SSL_CTX_set_ciphersuites(FSSLContext, PAnsiChar(CipherSuitesA));
+    if SSL_CTX_set_ciphersuites(FSSLContext, PAnsiChar(CipherSuitesA)) <> 1 then
+      raise ESSLConfigurationException.Create(
+        'Invalid TLS 1.3 cipher suites: "' + ACipherSuites + '"');
   end;
 end;
 

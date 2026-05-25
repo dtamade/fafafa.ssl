@@ -2676,7 +2676,8 @@ begin
       LVerify := LObj.Arrays['verify_modes'];
       FVerifyMode := [];
       for I := 0 to LVerify.Count - 1 do
-        Include(FVerifyMode, TSSLVerifyMode(LVerify.Integers[I]));
+        if IsValidVerifyModeOrdinal(LVerify.Integers[I]) then
+          Include(FVerifyMode, TSSLVerifyMode(LVerify.Integers[I]));
       LHasVerifyModes := True;
     end;
 
@@ -2757,7 +2758,8 @@ begin
       FClientEarlyDataEnabled := LObj.Booleans['client_early_data_enabled'];
 
     if LObj.IndexOfName('server_early_data_policy') >= 0 then
-      FServerEarlyDataPolicy := TSSLEarlyDataServerPolicy(LObj.Integers['server_early_data_policy']);
+      if IsValidEarlyDataPolicyOrdinal(LObj.Integers['server_early_data_policy']) then
+        FServerEarlyDataPolicy := TSSLEarlyDataServerPolicy(LObj.Integers['server_early_data_policy']);
 
     if LObj.IndexOfName('server_max_early_data_size') >= 0 then
       FServerMaxEarlyDataSize := Cardinal(LObj.Integers['server_max_early_data_size']);
@@ -2785,8 +2787,11 @@ begin
 
     if LObj.IndexOfName('explicit_backend') >= 0 then
     begin
-      LImportedExplicitBackend := TSSLLibraryType(LObj.Integers['explicit_backend']);
-      LHasExplicitBackend := True;
+      if IsValidLibraryTypeOrdinal(LObj.Integers['explicit_backend']) then
+      begin
+        LImportedExplicitBackend := TSSLLibraryType(LObj.Integers['explicit_backend']);
+        LHasExplicitBackend := True;
+      end;
     end;
 
     if LObj.IndexOfName('auto_select_backend') >= 0 then
