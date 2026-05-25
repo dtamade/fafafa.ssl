@@ -194,6 +194,7 @@ end.
 ```
 
 上面为了快速演示 HTTP 文本往返，使用了 `ReadString` / `WriteString`。它们仍是 `v1.x` convenience-core 文本 helper；如果你在框架、事件循环或分帧协议里集成，优先使用 `Read` / `Write` 或 `TSSLStream`。
+
 如果你要固定 backend、或直接读取挂在连接对象上的 low-level owner surface，再回到 `ISSLLibrary` / `ISSLContext` / `CreateConnection(...)`。
 
 ### 场景 2: HTTPS 服务器
@@ -249,6 +250,20 @@ end.
 
 服务端示例同理：这里保留 `ReadString` / `WriteString` 是为了让文本请求/响应示例更直观；真正接入 HTTP/SMTP/自定义 framed protocol 时，建议让上层协议自己管理边界，并改走 `Read` / `Write` 或 `TSSLStream`。
 如果你要固定 backend、或直接读取挂在连接对象上的 low-level owner surface，再回到 `ISSLLibrary` / `ISSLContext` / `CreateConnection(...)`。
+
+如果你需要更低层的 direct connection 控制（不用 `TSSLConnector`），SNI 必须在连接上显式设置：
+
+```pascal
+var
+  LClientConn: ISSLClientConnection;
+begin
+  LConn := LContext.CreateConnection(YourSocket);
+  LClientConn := LConn as ISSLClientConnection;
+  LClientConn.SetServerName('example.com');
+  if not LConn.Connect then
+    raise Exception.Create('TLS handshake failed');
+end;
+```
 
 ### 场景 3: 证书验证与管理
 

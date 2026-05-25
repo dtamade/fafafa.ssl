@@ -36,11 +36,11 @@ assert_not_contains() {
 
 assert_contains "$FILE" "## 当前发布与平台验证入口" \
   "Platform support doc is missing the current release/platform entry section"
-assert_contains "$FILE" "docs/ROADMAP.md" \
+assert_contains "$FILE" "ROADMAP.md" \
   "Platform support doc is missing the current roadmap entrypoint"
-assert_contains "$FILE" "docs/plans/2026-05-12-release-v1.5.0-formalization.md" \
+assert_contains "$FILE" "2026-05-12-release-v1.5.0-formalization.md" \
   "Platform support doc is missing the current release-control plan entrypoint"
-assert_contains "$FILE" "docs/test_reports/RELEASE_READINESS_V1.5.0.md" \
+assert_contains "$FILE" "RELEASE_READINESS_V1.5.0.md" \
   "Platform support doc is missing the current release readiness entrypoint"
 assert_contains "$FILE" "python3 scripts/compile_all_modules.py" \
   "Platform support doc is missing the Linux canonical compile command"

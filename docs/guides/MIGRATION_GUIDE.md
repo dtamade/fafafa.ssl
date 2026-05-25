@@ -26,7 +26,18 @@
 - 旧的 `fafafa.ssl.abstract.intf` 已经收进当前公开接口面；新代码优先使用 `fafafa.ssl`，需要核对核心接口定义时再回到 `fafafa.ssl.base` 的 source truth。
 - client hostname/SNI 不再推荐存进 context；改成每条连接自己带上 hostname。
 - 如果你想少写样板代码，优先从 `TSSLConnector` / `TSSLStream` 入手，而不是直接围绕 backend 单元做初始化。
-- 如果你必须继续使用原始 `ISSLConnection`，也要显式走 `ISSLClientConnection.SetServerName(...)`。
+- 如果你必须继续使用原始 `ISSLConnection`，也要显式走 `ISSLClientConnection.SetServerName(...)`：
+
+```pascal
+var
+  LConn: ISSLConnection;
+begin
+  LConn := LContext.CreateConnection(YourSocket);
+  (LConn as ISSLClientConnection).SetServerName('example.com');
+  if not LConn.Connect then
+    raise Exception.Create('TLS handshake failed');
+end;
+```
 
 ## 从 Synapse 迁移
 

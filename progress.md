@@ -1,5 +1,29 @@
 # Progress Log
 
+# 2026-05-25 Stage 5 Fix Stale Contract Drift
+- Started Stage 5 after Stage 3 completion and Stage 4 assessment.
+- Ran all 94 architecture-relevant contracts; found 3 failures.
+- Fixed `test_platform_support_guidance_convergence_contract.sh`:
+  - relaxed path assertions to accept relative paths.
+- Fixed `docs/guides/USER_GUIDE.md`:
+  - added direct connection SNI example after scenarios section (not inside
+    "场景 1" to avoid conflicting with ordinary-entrypoint contract).
+- Fixed `docs/guides/MIGRATION_GUIDE.md`:
+  - added direct connection SNI code example.
+- Focused verification passed:
+  - `bash tests/scripts/test_platform_support_guidance_convergence_contract.sh`
+  - `bash tests/scripts/test_landing_docs_connection_level_sni_guidance_contract.sh`
+  - `bash tests/scripts/test_migration_troubleshooting_connection_level_sni_omissions_contract.sh`
+  - `bash tests/scripts/test_user_guide_ordinary_entrypoint_truth_contract.sh`
+  - `bash tests/scripts/test_facade_main_entry_truth_contract.sh`
+  - `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - `bash tests/scripts/test_active_examples_public_import_truth_contract.sh`
+- Full compile verification passed:
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc python3 scripts/compile_all_modules.py --rebuild`
+  - result: 186/186 compiled, 0 failures, 0 warnings.
+- Hygiene verification passed:
+  - `git diff --check`
+
 # 2026-05-25 Stage 3 Completion & Stage 4 Assessment
 - Ran all four Stage 3 verification contracts:
   - `bash tests/scripts/test_facade_main_entry_truth_contract.sh` → PASS

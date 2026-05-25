@@ -1,33 +1,40 @@
-# Task Plan: Stage 3 Completion & Stage 4 Assessment
+# Task Plan: Stage 5 Fix Stale Contract Drift
 
 ## Objective
 
-Mark Stage 3 as complete after all four verification contracts pass. Assess
-Stage 4 readiness by running the FreePascal TLS 1.3 completeness gate.
+Stage 5 first slice: fix three failing architecture contracts that represent
+real documentation drift discovered during the contract sweep.
 
 ## Current State
 
-- Stage 3 verification contracts all pass:
-  - `test_facade_main_entry_truth_contract.sh`
-  - `test_public_unit_import_guidance_truth_contract.sh`
-  - `test_active_examples_public_import_truth_contract.sh`
-  - `test_user_guide_ordinary_entrypoint_truth_contract.sh`
-- FreePascal TLS 1.3 completeness gate passes with no failures.
-- No fresh RED evidence for Stage 4 FreePascal backend excellence.
+- Stage 0-3 complete. Stage 4 blocked on fresh RED.
+- Running all architecture-relevant contracts revealed 3 failures:
+  - `test_platform_support_guidance_convergence_contract.sh` — expected
+    `docs/ROADMAP.md` but file uses relative `ROADMAP.md`.
+  - `test_landing_docs_connection_level_sni_guidance_contract.sh` — USER_GUIDE
+    missing direct `ISSLClientConnection.SetServerName(...)` example.
+  - `test_migration_troubleshooting_connection_level_sni_omissions_contract.sh`
+    — MIGRATION_GUIDE missing direct connection SNI code example.
 
-## Stage 4 Assessment
+## Verification
 
-- `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local`
-- Result: PASS. All runtime alignment tests verified.
-- Per master plan rules: Stage 4 should not be opened without fresh RED
-  evidence of a real correctness, interop, performance, or observability gap.
+- RED: three contracts failed.
+- GREEN:
+  - `bash tests/scripts/test_platform_support_guidance_convergence_contract.sh`
+  - `bash tests/scripts/test_landing_docs_connection_level_sni_guidance_contract.sh`
+  - `bash tests/scripts/test_migration_troubleshooting_connection_level_sni_omissions_contract.sh`
+  - `bash tests/scripts/test_user_guide_ordinary_entrypoint_truth_contract.sh`
+  - `bash tests/scripts/test_facade_main_entry_truth_contract.sh`
+  - `bash tests/scripts/test_public_unit_import_guidance_truth_contract.sh`
+  - `bash tests/scripts/test_active_examples_public_import_truth_contract.sh`
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc python3 scripts/compile_all_modules.py --rebuild`
+  - `git diff --check`
 
-## Conclusion
+## Review Conclusion
 
-- Stage 0 through Stage 3 are complete.
-- Stage 4 is blocked on fresh RED evidence.
-- Stage 5 (performance/operational excellence) can be assessed next if the
-  user wants to continue.
+- Verified. Three stale contract failures fixed: platform support contract
+  accepts relative paths, USER_GUIDE and MIGRATION_GUIDE now include direct
+  connection SNI examples in appropriate locations.
 
 - The previous batch completed builder ordinary material projection through
   `TSSLContextConfig`.

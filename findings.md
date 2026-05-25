@@ -1,5 +1,23 @@
 # Findings
 
+# 2026-05-25 Stage 5 Fix Stale Contract Drift
+- Running all 94 architecture-relevant contracts (1:39 total) revealed 3
+  failures that represent real documentation drift:
+  - `test_platform_support_guidance_convergence_contract.sh` was too strict
+    about path format: expected `docs/ROADMAP.md` but `PLATFORM_SUPPORT.md`
+    correctly uses relative `ROADMAP.md` since it's already in `docs/`.
+  - `test_landing_docs_connection_level_sni_guidance_contract.sh` expected
+    USER_GUIDE to show direct `ISSLClientConnection.SetServerName(...)` but
+    the guide had been updated to teach only the connector path.
+  - `test_migration_troubleshooting_connection_level_sni_omissions_contract.sh`
+    expected MIGRATION_GUIDE to show a code example for direct connection SNI.
+- The fix: relax the platform support contract to accept relative paths, and
+  add direct connection SNI examples to USER_GUIDE (after scenarios, not inside
+  the primary client scenario) and MIGRATION_GUIDE.
+- Important constraint discovered: `test_user_guide_ordinary_entrypoint_truth_contract.sh`
+  explicitly rejects low-level patterns inside the "场景 1" section. Direct
+  connection examples must go after the scenarios section.
+
 # 2026-05-25 Stage 3 Completion & Stage 4 Assessment
 - Stage 3 exit condition is met: all four verification contracts pass, all
   active public-facing docs and examples converge on the curated facade and
