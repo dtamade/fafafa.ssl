@@ -727,25 +727,9 @@ begin
     );
 end;
 
-procedure EnsureContextRegistry;
-begin
-  // Double-checked locking pattern for thread-safe lazy initialization
-  if GContextRegistry = nil then
-  begin
-    GContextLock.BeginWrite;
-    try
-      if GContextRegistry = nil then
-        GContextRegistry := TList.Create;
-    finally
-      GContextLock.EndWrite;
-    end;
-  end;
-end;
-
 procedure RegisterContextInstance(const AContext: TOpenSSLContext);
 begin
   if (AContext = nil) or (AContext.FSSLContext = nil) then Exit;
-  EnsureContextRegistry;
   GContextLock.BeginWrite;
   try
     if GContextRegistry.IndexOf(AContext) = -1 then
@@ -2677,8 +2661,8 @@ begin
 end;
 
 initialization
-  // Phase 3.3 P1-2: 使用读写锁替代临界区，提升多线程性能
   GContextLock := TMultiReadExclusiveWriteSynchronizer.Create;
+  GContextRegistry := TList.Create;
 
 finalization
   // Clean up context registry and critical section
