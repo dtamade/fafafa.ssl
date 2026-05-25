@@ -481,6 +481,12 @@ procedure TFreePascalContext.LoadCertificatePEM(const APEM: string);
 var
   LAnsi: AnsiString;
 begin
+  if Length(APEM) = 0 then
+    RaiseInvalidParameter('APEM');
+  if Length(APEM) > MAX_CERTIFICATE_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'Certificate PEM exceeds maximum allowed size (%d > %d bytes)',
+      [Length(APEM), MAX_CERTIFICATE_SIZE]);
   LAnsi := AnsiString(APEM);
   SetLength(FCertificateData, Length(LAnsi));
   if Length(LAnsi) > 0 then
@@ -491,6 +497,12 @@ procedure TFreePascalContext.LoadPrivateKeyPEM(const APEM: string; const APasswo
 var
   LAnsi: AnsiString;
 begin
+  if Length(APEM) = 0 then
+    RaiseInvalidParameter('APEM');
+  if Length(APEM) > MAX_PRIVATE_KEY_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'Private key PEM exceeds maximum allowed size (%d > %d bytes)',
+      [Length(APEM), MAX_PRIVATE_KEY_SIZE]);
   LAnsi := AnsiString(APEM);
   SetLength(FPrivateKeyData, Length(LAnsi));
   if Length(LAnsi) > 0 then
