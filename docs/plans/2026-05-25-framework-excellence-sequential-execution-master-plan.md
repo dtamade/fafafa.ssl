@@ -228,6 +228,11 @@ packaging simplicity rather than reopening closed durability archaeology.
 
 ## Stage 5: Performance and operational excellence
 
+**Status:** complete. A fast architecture contracts runner (~1.2s, 13 contracts)
+provides the quick development loop. The gate hierarchy is documented:
+architecture contracts → full compile → minimal CI gate → GitHub Actions.
+Stale contracts have been fixed to match current implementation truth.
+
 **Purpose:** Make architecture claims, performance claims, and release evidence
 traceable without slowing every feature batch.
 
