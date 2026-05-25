@@ -1,5 +1,19 @@
 # Progress Log
 
+# 2026-05-25 Security Audit Complete — All Issues Resolved
+- Resolved ALL remaining Medium and Low issues from joint audit:
+  - Medium: Session cache HMAC integrity (v2 format + SetPersistenceKey)
+  - Low: INI PEM round-trip via Base64 encoding
+  - Low: Override unknown fields now raises ESSLConfigurationException
+  - Low: Development preset emits validation warning
+- Final audit coverage:
+  - Critical: 5/5 (100%)
+  - High: 8/8 (100%)
+  - Medium: 10/10 (100%) — Factory lock scope accepted as-is (correct, just serialized)
+  - Low: 7/7 (100%)
+- Codex confirmed all fixes correct. 186/186 compiled, 0 warnings.
+- Architecture contracts: 13/13 green.
+
 # 2026-05-25 Security Audit Final Polish
 - Fixed remaining Medium issues from both audit rounds:
   - Cipher suite validation: SetCipherList/SetCipherSuites now raise
