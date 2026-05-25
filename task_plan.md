@@ -1,13 +1,54 @@
-# Task Plan: Stage 2 Public Guidance Truth Sync
+# Task Plan: Stage 2 Active Docs/Examples Drift Cleanup
 
 ## Objective
 
-Complete the next Stage 2 scope-surgery slice by aligning public guidance with
-the code that already landed: `TSSLContextConfig` is now the preferred
-factory/config path for new context-safe callers, while legacy `TSSLConfig`
-remains a `v1.x` compatibility record.
+Final Stage 2 sweep: ensure active docs (`INTEGRATION_GUIDE`, `GETTING_STARTED`)
+and examples (`example_factory_usage`) no longer teach `TSSLConfig` as the
+recommended new path without a legacy/compatibility label.
 
 ## Current State
+
+- Previous batch (commit `1596f35`) synced ROADMAP, README, and API_REFERENCE.
+- Three active files still presented `TSSLConfig` as an unlabeled alternative:
+  - `docs/INTEGRATION_GUIDE.md` replay-store example used `TSSLConfig` without
+    mentioning `TSSLContextConfig` or labeling it as legacy.
+  - `docs/guides/GETTING_STARTED.md` showed `TSSLConfig` factory alternative
+    without v1.x compatibility label.
+  - `examples/example_factory_usage.pas` `DemoConfiguration` used `TSSLConfig`
+    without noting builder is preferred.
+
+## Planned Batch
+
+- Add a focused active-docs/examples drift contract.
+- Update `INTEGRATION_GUIDE.md` replay-store example to use `TSSLContextConfig`.
+- Label `GETTING_STARTED.md` TSSLConfig alternative as v1.x compatibility.
+- Label `example_factory_usage.pas` DemoConfiguration as v1.x compatibility.
+- Run focused contracts, full compile, shell syntax, and whitespace checks.
+
+## Verification
+
+- RED:
+  - `bash tests/scripts/test_tsslconfig_stage2_active_docs_examples_drift_contract.sh`
+  - failed first because `docs/INTEGRATION_GUIDE.md` did not mention
+    `TSSLContextConfig`.
+- GREEN:
+  - `bash tests/scripts/test_tsslconfig_stage2_active_docs_examples_drift_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_stage2_public_guidance_truth_contract.sh`
+  - `bash tests/scripts/test_active_roadmap_references_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_migration_targets_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+  - `bash tests/scripts/test_tsslcontextconfig_surface_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc python3 scripts/compile_all_modules.py --rebuild`
+  - `bash -n tests/scripts/test_tsslconfig_stage2_active_docs_examples_drift_contract.sh`
+  - `git diff --check`
+
+## Review Conclusion
+
+- Verified. Active docs and examples now label `TSSLConfig` usage as v1.x
+  compatibility and point new code at `TSSLContextConfig` / builder. Stage 2
+  exit condition is met: no active public guidance treats `TSSLConfig` as the
+  universal or recommended new path.
 
 - The previous batch completed builder ordinary material projection through
   `TSSLContextConfig`.

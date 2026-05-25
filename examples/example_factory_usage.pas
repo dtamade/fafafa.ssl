@@ -190,7 +190,7 @@ var
   Config: TSSLConfig;
   Ctx: ISSLContext;
 begin
-  PrintSeparator('使用配置对象');
+  PrintSeparator('使用配置对象 (v1.x 兼容路径; 新代码推荐 TSSLContextBuilder)');
 
   WriteLn('创建配置对象...');
 

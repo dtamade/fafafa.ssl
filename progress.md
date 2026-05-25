@@ -1,5 +1,43 @@
 # Progress Log
 
+# 2026-05-25 Stage 2 Active Docs/Examples Drift Cleanup
+- Continued Stage 2 after commit
+  `1596f35 docs: align stage2 public guidance`.
+- Scanned active docs/examples for remaining TSSLConfig-as-recommended drift.
+- Identified three files with unlabeled TSSLConfig usage:
+  - `docs/INTEGRATION_GUIDE.md` replay-store example
+  - `docs/guides/GETTING_STARTED.md` factory alternative
+  - `examples/example_factory_usage.pas` DemoConfiguration
+- Added RED coverage:
+  - `tests/scripts/test_tsslconfig_stage2_active_docs_examples_drift_contract.sh`
+- RED check:
+  - `bash tests/scripts/test_tsslconfig_stage2_active_docs_examples_drift_contract.sh`
+  - result: failed because `docs/INTEGRATION_GUIDE.md` did not mention
+    `TSSLContextConfig`.
+- Implemented the drift fix:
+  - updated `INTEGRATION_GUIDE.md` replay-store example to use
+    `TSSLContextConfig` / `CreateDefaultContextConfig(...)` with v1.x compat note.
+  - updated `GETTING_STARTED.md` to label TSSLConfig alternative as v1.x
+    compatibility path.
+  - updated `example_factory_usage.pas` DemoConfiguration title to note v1.x
+    compatibility and builder preference.
+- Focused verification passed:
+  - `bash tests/scripts/test_tsslconfig_stage2_active_docs_examples_drift_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_stage2_public_guidance_truth_contract.sh`
+  - `bash tests/scripts/test_active_roadmap_references_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_migration_targets_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+  - `bash tests/scripts/test_tsslcontextconfig_surface_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+- Full compile verification passed:
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc python3 scripts/compile_all_modules.py --rebuild`
+  - result: 186/186 compiled, 0 failures, 0 warnings.
+- Hygiene verification passed:
+  - `bash -n tests/scripts/test_tsslconfig_stage2_active_docs_examples_drift_contract.sh`
+  - `git diff --check`
+- Stage 2 exit condition met: no active public guidance or example treats
+  `TSSLConfig` as the universal or recommended new path.
+
 # 2026-05-25 Stage 2 Public Guidance Truth Sync
 - Continued Stage 2 after commit
   `25e4745 feat: project builder material through context config`.

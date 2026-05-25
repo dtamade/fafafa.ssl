@@ -1,5 +1,22 @@
 # Findings
 
+# 2026-05-25 Stage 2 Active Docs/Examples Drift Cleanup
+- After the ROADMAP/README/API_REFERENCE sync, three active files still taught
+  `TSSLConfig` as an unlabeled alternative for new code:
+  - `docs/INTEGRATION_GUIDE.md` replay-store example used `TSSLConfig` /
+    `CreateDefaultConfig(...)` without mentioning `TSSLContextConfig` or labeling
+    the path as legacy.
+  - `docs/guides/GETTING_STARTED.md` showed `TSSLConfig` factory alternative
+    with the phrasing "如果你不用 builder，而是走..." which implied it was a
+    normal alternative rather than a v1.x compatibility path.
+  - `examples/example_factory_usage.pas` `DemoConfiguration` used `TSSLConfig`
+    without any note that builder / `TSSLContextConfig` is preferred for new code.
+- The fix is minimal: update the INTEGRATION_GUIDE example to use
+  `TSSLContextConfig`, add v1.x compatibility labels to the GETTING_STARTED
+  alternative and the factory example procedure title.
+- With this batch, Stage 2 exit condition is met: no active public guidance or
+  example treats `TSSLConfig` as the universal or recommended new path.
+
 # 2026-05-25 Stage 2 Public Guidance Truth Sync
 - Stage 2 implementation had moved faster than the public route text:
   `docs/ROADMAP.md` still described only two completed `TSSLConfig` surgery

@@ -289,27 +289,30 @@ end;
 
 你的 `TStream` 仍然负责底层连接的生命周期（打开/关闭/超时/取消）。
 
-如果你在 FreePascal server 侧想把 resumed early-data 的 anti-replay truth 从默认内存 ledger 接到一个 file-backed replay store，可以走 `TSSLConfig` / `TSSLFactory` 这条最小 opt-in：
+如果你在 FreePascal server 侧想把 resumed early-data 的 anti-replay truth 从默认内存 ledger 接到一个 file-backed replay store，推荐走 `TSSLContextConfig` / `TSSLFactory` context-safe 路径：
 
 ```pascal
 uses
-  fafafa.ssl;
+  fafafa.ssl,
+  fafafa.ssl.context.builder;
 
 var
-  Config: TSSLConfig;
+  LConfig: TSSLContextConfig;
   ServerCtx: ISSLContext;
 begin
-  Config := CreateDefaultConfig(sslCtxServer);
-  Config.LibraryType := sslFreePascal;
-  Config.CertificateFile := 'server.crt';
-  Config.PrivateKeyFile := 'server.key';
-  Config.ServerEarlyDataPolicy := sslEarlyDataServerAccept;
-  Config.ServerMaxEarlyDataSize := 16384;
-  Config.ServerEarlyDataReplayStoreFile := '/var/lib/myapp/early-data.replay';
+  LConfig := CreateDefaultContextConfig(sslCtxServer);
+  LConfig.LibraryType := sslFreePascal;
+  LConfig.CertificateFile := 'server.crt';
+  LConfig.PrivateKeyFile := 'server.key';
+  LConfig.ServerEarlyDataPolicy := sslEarlyDataServerAccept;
+  LConfig.ServerMaxEarlyDataSize := 16384;
+  LConfig.ServerEarlyDataReplayStoreFile := '/var/lib/myapp/early-data.replay';
 
-  ServerCtx := TSSLFactory.CreateContext(Config);
+  ServerCtx := TSSLFactory.CreateContext(LConfig);
 end;
 ```
+
+> v1.x 兼容：旧代码仍可使用 `TSSLConfig` + `CreateDefaultConfig(...)` 走同样的 factory 路径，行为不变。
 
 这条路径当前有四个边界：
 
