@@ -37,11 +37,11 @@ require_fixed "README.md" '- Wave C closeout / 审批参考：`docs/test_reports
 require_fixed "README.md" '- 历史手册仅作参考：`docs/test_reports/WAVE_C_B121_ONE_PAGE_RUNBOOK_2026-02-08.md`、`docs/test_reports/WAVE_C_B127_LOCAL_GUARD_TROUBLESHOOTING_2026-02-09.md`。' \
   "README is missing the historical-only label for B121/B127"
 
-require_fixed "docs/README.md" "## 当前工程入口（release-control）" \
-  "docs/README.md is missing the release-control entrypoint section"
-require_fixed "docs/README.md" '- 当前 release-control plan：`plans/2026-05-12-release-v1.5.0-formalization.md`' \
+require_fixed "docs/README.md" "## 当前工程入口（post-release）" \
+  "docs/README.md is missing the post-release entrypoint section"
+require_fixed "docs/README.md" '当前已发布 release-control plan：`plans/2026-05-12-release-v1.5.0-formalization.md`' \
   "docs/README.md is missing the current release-control plan link"
-require_fixed "docs/README.md" '- 当前 release readiness：`test_reports/RELEASE_READINESS_V1.5.0.md`' \
+require_fixed "docs/README.md" '当前已发布 release readiness：`test_reports/RELEASE_READINESS_V1.5.0.md`' \
   "docs/README.md is missing the current release readiness link"
 require_fixed "docs/README.md" '- 当前 workflow surface：`../.github/README.md`' \
   "docs/README.md is missing the workflow surface link"
@@ -55,12 +55,12 @@ require_fixed "docs/README.md" "python3 scripts/check_code_style.py src" \
   "docs/README.md is missing the canonical style gate command"
 require_fixed "docs/README.md" "bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local" \
   "docs/README.md is missing the canonical phase2 dry-run command"
-require_fixed "docs/README.md" 'Wave C closeout / 审批参考：`test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md`、`test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`' \
+require_fixed "docs/README.md" 'Wave C closeout / 历史参考：`test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md`、`test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`' \
   "docs/README.md is missing the Wave C closeout / approval label"
 require_fixed "docs/README.md" '历史参考：`test_reports/WAVE_C_B121_ONE_PAGE_RUNBOOK_2026-02-08.md`、`test_reports/WAVE_C_B127_LOCAL_GUARD_TROUBLESHOOTING_2026-02-09.md`' \
   "docs/README.md is missing the historical-only Wave C references"
 
-require_fixed "docs/DOCUMENTATION_INDEX.md" "## 🧭 当前工程入口（release-control）" \
+require_fixed "docs/DOCUMENTATION_INDEX.md" "## 🧭 当前工程入口（post-release）" \
   "docs/DOCUMENTATION_INDEX.md is missing the release-control entrypoint section"
 require_fixed "docs/DOCUMENTATION_INDEX.md" "**[plans/2026-05-12-release-v1.5.0-formalization.md](plans/2026-05-12-release-v1.5.0-formalization.md)**" \
   "docs/DOCUMENTATION_INDEX.md is missing the release-control plan link"

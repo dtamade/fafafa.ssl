@@ -46,7 +46,7 @@ assert_not_contains "$PITFALLS" \
   "COMMON_PITFALLS still teaches the removed singleton custom-path API"
 
 assert_contains "$FAQ" \
-  '普通新代码推荐直接 `uses fafafa.ssl;` + `TSSLContextBuilder` / `TSSLConnector`；只有在你明确固定某个 backend 时，才需要关心 backend-specific 依赖。' \
+  '普通新代码推荐直接 `uses fafafa.ssl, fafafa.ssl.context.builder;`，然后通过 `TSSLContextBuilder` / `TSSLConnector` 建立 TLS；只有在你明确固定某个 backend 时，才需要关心 backend-specific 依赖。' \
   "FAQ should teach the current preferred entrypoint"
 assert_contains "$FAQ" \
   'Windows 可以直接使用 `WinSSL` backend，不要求安装 OpenSSL。' \

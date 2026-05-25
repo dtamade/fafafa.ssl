@@ -1,5 +1,25 @@
 # Progress Log
 
+# 2026-05-25 Stage 5 Broader Contract Sweep
+- Ran full contract suite: 503 contracts total.
+- Initial result: 482 pass / 21 fail.
+- Fixed 5 more stale contracts in this batch:
+  - `test_faq_and_common_pitfalls_entrypoint_truth_contract.sh`: updated to
+    match current two-unit pattern wording.
+  - `test_release_control_entrypoint_convergence_contract.sh`: updated section
+    names from "release-control" to "post-release" and label from "审批参考"
+    to "历史参考".
+  - `test_builder_empty_verifymode_validation_contract.sh`: fixed regex
+    escaping (parentheses) and updated pattern to match refactored local var.
+- Final result: 484 pass / 19 fail.
+- Remaining 19 failures are from closed development waves or out-of-scope:
+  - 4 Wave B/B2 handoff contracts (wave closed)
+  - 1 workflow cache contract (disabled file)
+  - 2 FreePascal TLS13 gate runtime contracts
+  - 12 capability docs / SNI classification / interface audit (stale)
+- These do not block the framework-excellence plan and can be addressed in
+  future focused batches when their respective areas are reopened.
+
 # 2026-05-25 Stage 5 Architecture Contracts Runner & Remaining Drift
 - Fixed 2 additional stale contracts:
   - `test_api_reference_connection_level_sni_omissions_contract.sh`: count

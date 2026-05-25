@@ -18,7 +18,7 @@ binary="$bin_dir/test_builder_empty_verifymode_validation_entry"
 
 printf '[TEST] builder empty verify-mode validation parity contract\n'
 
-if ! rg -n --quiet 'if not \(sslVerifyPeer in ABuilder\.FVerifyMode\) then' "$builder_file"; then
+if ! rg -n --quiet --fixed-strings 'not (sslVerifyPeer in LVerifyMode)' "$builder_file"; then
   fail "builder validation must treat missing sslVerifyPeer as disabled certificate verification"
 fi
 
