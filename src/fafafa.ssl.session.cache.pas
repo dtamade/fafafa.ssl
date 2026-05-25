@@ -558,12 +558,16 @@ begin
 
         // 读取条目数
         Stream.ReadBuffer(Count, SizeOf(Integer));
+        if (Count < 0) or (Count > 100000) then
+          Exit;
 
         // 读取每个条目
         for I := 0 to Count - 1 do
         begin
           // 读取主机名
           Stream.ReadBuffer(DataLen, SizeOf(Integer));
+          if (DataLen < 0) or (DataLen > 65535) then
+            Exit;
           SetLength(HostName, DataLen);
           if DataLen > 0 then
             Stream.ReadBuffer(HostName[1], DataLen);
@@ -574,6 +578,8 @@ begin
           // 读取会话数据
           SetLength(SessionData, 0);
           Stream.ReadBuffer(DataLen, SizeOf(Integer));
+          if (DataLen < 0) or (DataLen > 1048576) then
+            Exit;
           if DataLen > 0 then
           begin
             SetLength(SessionData, DataLen);

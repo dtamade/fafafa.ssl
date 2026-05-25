@@ -1523,7 +1523,7 @@ var
   LType: TSSLLibraryType;
   LLib: ISSLLibrary;
 begin
-  Result := 'fafafa.ssl v1.0' + LineEnding;
+  Result := 'fafafa.ssl v' + FAFAFA_SSL_VERSION_STRING + LineEnding;
   Result := Result + '可用的SSL库:' + LineEnding;
   
   for LType := Low(TSSLLibraryType) to High(TSSLLibraryType) do

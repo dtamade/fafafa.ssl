@@ -366,7 +366,7 @@ begin
   if FContext = nil then
     Exit(TSSLOperationResult.Err(sslErrInvalidParam, 'Context is required'));
 
-  if ASocket = 0 then
+  if ASocket = THandle(-1) then
     Exit(TSSLOperationResult.Err(sslErrInvalidParam, 'Socket is required'));
 
   try
@@ -544,7 +544,7 @@ begin
   if FContext = nil then
     Exit(TSSLOperationResult.Err(sslErrInvalidParam, 'Context is required'));
 
-  if ASocket = 0 then
+  if ASocket = THandle(-1) then
     Exit(TSSLOperationResult.Err(sslErrInvalidParam, 'Socket is required'));
 
   try
