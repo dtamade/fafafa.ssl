@@ -1,29 +1,32 @@
 {
   fafafa.ssl - 统一SSL/TLS库主单元
-  
+
   版本: 1.0
   作者: fafafa.ssl 开发团队
   创建: 2025-09-28
-  
+
   描述:
     fafafa.ssl 库的主入口单元，导出所有公共接口和类型。
-    
+    普通用户推荐搭配 fafafa.ssl.context.builder 使用。
+
   使用示例:
-    uses fafafa.ssl;
-    
+    uses
+      fafafa.ssl,
+      fafafa.ssl.context.builder;
+
     var
       LContext: ISSLContext;
       LConnector: TSSLConnector;
       LStream: TSSLStream;
     begin
-      // 创建客户端上下文
-      LContext := TSSLFactory.CreateContext(sslCtxClient);
-      
-      // 配置上下文
-      LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
-      LContext.SetVerifyMode([sslVerifyPeer]);
-      
-      // 推荐入口：通过 facade connector 建立 TLS
+      // 推荐入口：通过 TSSLContextBuilder 构建上下文
+      LContext := TSSLContextBuilder.Create
+        .WithTLS12And13
+        .WithVerifyPeer
+        .WithSystemRoots
+        .BuildClient;
+
+      // 通过 facade connector 建立 TLS
       LConnector := TSSLConnector.FromContext(LContext);
       LStream := LConnector.ConnectSocket(YourConnectedSocket, 'example.com');
       try

@@ -39,6 +39,21 @@ if ! rg -F -n --quiet 'TSSLConnector.FromContext(LContext)' "$facade_file"; then
   exit 1
 fi
 
+if ! rg -F -n --quiet 'TSSLContextBuilder' "$facade_file"; then
+  echo "[FAIL] src/fafafa.ssl.pas must mention TSSLContextBuilder as the ordinary entrypoint"
+  exit 1
+fi
+
+if ! rg -F -n --quiet 'fafafa.ssl.context.builder' "$facade_file"; then
+  echo "[FAIL] src/fafafa.ssl.pas must reference fafafa.ssl.context.builder as the ordinary builder unit"
+  exit 1
+fi
+
+if ! rg -F -n --quiet 'BuildClient' "$facade_file"; then
+  echo "[FAIL] src/fafafa.ssl.pas header example must show BuildClient as the ordinary builder call"
+  exit 1
+fi
+
 if ! rg -F -n --quiet 'TSSLFactory.CreateContext(sslCtxClient' "$factory_file"; then
   echo "[FAIL] src/fafafa.ssl.factory.pas examples no longer use sslCtxClient truth"
   exit 1

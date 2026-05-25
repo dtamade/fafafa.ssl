@@ -1,54 +1,44 @@
-# Task Plan: Stage 2 Active Docs/Examples Drift Cleanup
+# Task Plan: Stage 3 Facade Main Entry Builder Guidance
 
 ## Objective
 
-Final Stage 2 sweep: ensure active docs (`INTEGRATION_GUIDE`, `GETTING_STARTED`)
-and examples (`example_factory_usage`) no longer teach `TSSLConfig` as the
-recommended new path without a legacy/compatibility label.
+Stage 3 first slice: update the facade unit header to teach
+`TSSLContextBuilder` as the ordinary entrypoint, replacing the old
+`TSSLFactory.CreateContext(sslCtxClient)` primary example.
 
 ## Current State
 
-- Previous batch (commit `1596f35`) synced ROADMAP, README, and API_REFERENCE.
-- Three active files still presented `TSSLConfig` as an unlabeled alternative:
-  - `docs/INTEGRATION_GUIDE.md` replay-store example used `TSSLConfig` without
-    mentioning `TSSLContextConfig` or labeling it as legacy.
-  - `docs/guides/GETTING_STARTED.md` showed `TSSLConfig` factory alternative
-    without v1.x compatibility label.
-  - `examples/example_factory_usage.pas` `DemoConfiguration` used `TSSLConfig`
-    without noting builder is preferred.
+- Stage 2 is complete: all active public guidance labels `TSSLConfig` as v1.x
+  compatibility and points new code at `TSSLContextConfig` / builder.
+- The facade unit header (`src/fafafa.ssl.pas`) still showed
+  `TSSLFactory.CreateContext(sslCtxClient)` as the primary usage example.
+- README and GETTING_STARTED already teach the two-unit pattern
+  `uses fafafa.ssl, fafafa.ssl.context.builder;`.
 
 ## Planned Batch
 
-- Add a focused active-docs/examples drift contract.
-- Update `INTEGRATION_GUIDE.md` replay-store example to use `TSSLContextConfig`.
-- Label `GETTING_STARTED.md` TSSLConfig alternative as v1.x compatibility.
-- Label `example_factory_usage.pas` DemoConfiguration as v1.x compatibility.
+- Extend `test_facade_main_entry_truth_contract.sh` to require builder guidance.
+- Update facade unit header to show builder as the ordinary path.
 - Run focused contracts, full compile, shell syntax, and whitespace checks.
 
 ## Verification
 
 - RED:
-  - `bash tests/scripts/test_tsslconfig_stage2_active_docs_examples_drift_contract.sh`
-  - failed first because `docs/INTEGRATION_GUIDE.md` did not mention
-    `TSSLContextConfig`.
+  - `bash tests/scripts/test_facade_main_entry_truth_contract.sh`
+  - failed because `src/fafafa.ssl.pas` did not mention `TSSLContextBuilder`.
 - GREEN:
-  - `bash tests/scripts/test_tsslconfig_stage2_active_docs_examples_drift_contract.sh`
+  - `bash tests/scripts/test_facade_main_entry_truth_contract.sh`
   - `bash tests/scripts/test_tsslconfig_stage2_public_guidance_truth_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_stage2_active_docs_examples_drift_contract.sh`
   - `bash tests/scripts/test_active_roadmap_references_contract.sh`
-  - `bash tests/scripts/test_tsslconfig_migration_targets_contract.sh`
-  - `bash tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
-  - `bash tests/scripts/test_tsslcontextconfig_surface_contract.sh`
-  - `bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
   - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc python3 scripts/compile_all_modules.py --rebuild`
-  - `bash -n tests/scripts/test_tsslconfig_stage2_active_docs_examples_drift_contract.sh`
+  - `bash -n tests/scripts/test_facade_main_entry_truth_contract.sh`
   - `git diff --check`
 
 ## Review Conclusion
 
-- Verified. Active docs and examples now label `TSSLConfig` usage as v1.x
-  compatibility and point new code at `TSSLContextConfig` / builder. Stage 2
-  exit condition is met: no active public guidance treats `TSSLConfig` as the
-  universal or recommended new path.
+- Verified. The facade unit header now teaches the two-unit pattern with
+  `TSSLContextBuilder` as the ordinary entrypoint. Stage 3 first slice complete.
 
 - The previous batch completed builder ordinary material projection through
   `TSSLContextConfig`.

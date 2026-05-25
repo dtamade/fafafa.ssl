@@ -1,5 +1,32 @@
 # Progress Log
 
+# 2026-05-25 Stage 3 Facade Main Entry Builder Guidance
+- Started Stage 3 after Stage 2 completion in commit
+  `4e7bb4d docs: complete stage2 active docs/examples drift cleanup`.
+- Identified facade header drift: `src/fafafa.ssl.pas` still showed
+  `TSSLFactory.CreateContext(sslCtxClient)` as the primary example.
+- Extended RED coverage:
+  - `tests/scripts/test_facade_main_entry_truth_contract.sh` now requires
+    `TSSLContextBuilder`, `fafafa.ssl.context.builder`, and `BuildClient`.
+- RED check:
+  - `bash tests/scripts/test_facade_main_entry_truth_contract.sh`
+  - result: failed because `src/fafafa.ssl.pas` did not mention
+    `TSSLContextBuilder`.
+- Implemented the facade header update:
+  - replaced the old `TSSLFactory.CreateContext(sslCtxClient)` example with
+    the two-unit pattern using `TSSLContextBuilder.Create.WithTLS12And13...BuildClient`.
+- Focused verification passed:
+  - `bash tests/scripts/test_facade_main_entry_truth_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_stage2_public_guidance_truth_contract.sh`
+  - `bash tests/scripts/test_tsslconfig_stage2_active_docs_examples_drift_contract.sh`
+  - `bash tests/scripts/test_active_roadmap_references_contract.sh`
+- Full compile verification passed:
+  - `FAFAFA_FPC_EXE=/opt/fpcupdeluxe/fpc/bin/x86_64-linux/fpc python3 scripts/compile_all_modules.py --rebuild`
+  - result: 186/186 compiled, 0 failures, 0 warnings.
+- Hygiene verification passed:
+  - `bash -n tests/scripts/test_facade_main_entry_truth_contract.sh`
+  - `git diff --check`
+
 # 2026-05-25 Stage 2 Active Docs/Examples Drift Cleanup
 - Continued Stage 2 after commit
   `1596f35 docs: align stage2 public guidance`.

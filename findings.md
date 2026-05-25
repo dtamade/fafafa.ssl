@@ -1,5 +1,15 @@
 # Findings
 
+# 2026-05-25 Stage 3 Facade Main Entry Builder Guidance
+- The facade unit header (`src/fafafa.ssl.pas`) still showed
+  `TSSLFactory.CreateContext(sslCtxClient)` as the primary usage example, even
+  though README and GETTING_STARTED already teach builder as the ordinary path.
+- The fix is to update the header comment to show the two-unit pattern
+  (`uses fafafa.ssl, fafafa.ssl.context.builder;`) with `TSSLContextBuilder`
+  and `BuildClient` as the primary example.
+- This is the first Stage 3 slice: making the facade itself teach the ordinary
+  path consistently with the rest of the active docs.
+
 # 2026-05-25 Stage 2 Active Docs/Examples Drift Cleanup
 - After the ROADMAP/README/API_REFERENCE sync, three active files still taught
   `TSSLConfig` as an unlabeled alternative for new code:
