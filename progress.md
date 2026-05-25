@@ -1,5 +1,28 @@
 # Progress Log
 
+# 2026-05-25 Security Audit Fixes (Claude + Codex Joint Review)
+- Conducted joint deep review with Codex: 19 findings total (3 Critical,
+  5 High, 6 Medium, 5 Low).
+- Fixed all Critical and most High issues in one batch:
+  - Critical #1: TLS 1.3 key schedule secrets now use SecureZeroBytes
+    before releasing memory (keyschedule.pas, appschedule.pas).
+  - Critical #2: FreePascal context destructor now secure-zeros
+    FPrivateKeyData.
+  - Critical #3: FreePascal connection DoClose now secure-zeros
+    X25519 private key, shared secret, and finished keys.
+  - High #4: PSK binder validation now uses TConstantTime.CompareBytes
+    instead of short-circuit CompareMem.
+  - High #5: TLS record length now validated against RFC 8446 max
+    (16640 bytes) before allocation.
+  - High #6: Windows CryptProvider lock initialization moved to unit
+    initialization section, eliminating TOCTOU race.
+  - Medium #8: Added AARCH64 memory barrier to SecureZeroMemory.
+- Full compile verification: 186/186 passed, 0 failures, 0 warnings.
+- Remaining items for future batches:
+  - High #7: Certificate Pinning API not enforced at runtime
+  - High #8: Builder config import enum range validation
+  - Medium #9-14: Thread safety, session cache, PEM size limits, etc.
+
 # 2026-05-25 Stage 5 Broader Contract Sweep
 - Ran full contract suite: 503 contracts total.
 - Initial result: 482 pass / 21 fail.
