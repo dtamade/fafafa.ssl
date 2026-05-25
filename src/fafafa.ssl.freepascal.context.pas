@@ -78,6 +78,7 @@ type
     FPinningEnabled: Boolean;
     FPins: array of TFreePascalPin;
     FResumptionCache: array of TFreePascalResumptionCacheEntry;
+    FResumptionLock: TRTLCriticalSection;
     FDefaultEarlyDataReplayLedger: IFreePascalManagedEarlyDataReplayLedger;
     FActiveEarlyDataReplayLedger: IFreePascalEarlyDataReplayLedger;
 
@@ -248,6 +249,7 @@ begin
   FPinningEnabled := False;
   SetLength(FPins, 0);
   SetLength(FResumptionCache, 0);
+  InitCriticalSection(FResumptionLock);
   if AType in [sslCtxServer, sslCtxBoth] then
     FDefaultEarlyDataReplayLedger :=
       TFreePascalDefaultPersistentEarlyDataReplayLedger.Create(
@@ -269,6 +271,7 @@ end;
 destructor TFreePascalContext.Destroy;
 begin
   SecureZeroBytes(FPrivateKeyData);
+  DoneCriticalSection(FResumptionLock);
   FCRLMaterial.Free;
   inherited Destroy;
 end;
@@ -1090,15 +1093,20 @@ begin
   if not CanIssueSessionTickets or (Length(ATicket) = 0) then
     Exit;
 
-  PruneResumptionCache;
-  LKey := TicketKey(ATicket);
-  for I := 0 to High(FResumptionCache) do
-    if FResumptionCache[I].Key = LKey then
-    begin
-      if FResumptionCache[I].Session <> nil then
-        ASession := FResumptionCache[I].Session.Clone;
-      Exit(ASession <> nil);
-    end;
+  EnterCriticalSection(FResumptionLock);
+  try
+    PruneResumptionCache;
+    LKey := TicketKey(ATicket);
+    for I := 0 to High(FResumptionCache) do
+      if FResumptionCache[I].Key = LKey then
+      begin
+        if FResumptionCache[I].Session <> nil then
+          ASession := FResumptionCache[I].Session.Clone;
+        Exit(ASession <> nil);
+      end;
+  finally
+    LeaveCriticalSection(FResumptionLock);
+  end;
 end;
 
 procedure TFreePascalContext.StoreResumptionSession(ASession: ISSLSession);
@@ -1125,26 +1133,31 @@ begin
   if LKey = '' then
     Exit;
 
-  PruneResumptionCache;
-  LEntryIndex := -1;
-  for I := 0 to High(FResumptionCache) do
-    if FResumptionCache[I].Key = LKey then
+  EnterCriticalSection(FResumptionLock);
+  try
+    PruneResumptionCache;
+    LEntryIndex := -1;
+    for I := 0 to High(FResumptionCache) do
+      if FResumptionCache[I].Key = LKey then
+      begin
+        LEntryIndex := I;
+        Break;
+      end;
+
+    if LEntryIndex >= 0 then
     begin
-      LEntryIndex := I;
-      Break;
+      FResumptionCache[LEntryIndex].Session := LStoredSession;
+      Exit;
     end;
 
-  if LEntryIndex >= 0 then
-  begin
+    LEntryIndex := Length(FResumptionCache);
+    SetLength(FResumptionCache, LEntryIndex + 1);
+    FResumptionCache[LEntryIndex].Key := LKey;
     FResumptionCache[LEntryIndex].Session := LStoredSession;
-    Exit;
+    EnforceResumptionCacheLimit;
+  finally
+    LeaveCriticalSection(FResumptionLock);
   end;
-
-  LEntryIndex := Length(FResumptionCache);
-  SetLength(FResumptionCache, LEntryIndex + 1);
-  FResumptionCache[LEntryIndex].Key := LKey;
-  FResumptionCache[LEntryIndex].Session := LStoredSession;
-  EnforceResumptionCacheLimit;
 end;
 
 function TFreePascalContext.InstallFileBackedReplayLedger(
