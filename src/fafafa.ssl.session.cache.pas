@@ -26,6 +26,7 @@ interface
 
 uses
   SysUtils, Classes, SyncObjs, DateUtils, fgl,
+  {$IFDEF UNIX}BaseUnix,{$ENDIF}
   fafafa.ssl.base;
 
 const
@@ -469,6 +470,9 @@ begin
   try
     try
       Stream := TFileStream.Create(AFileName, fmCreate);
+      {$IFDEF UNIX}
+      FpChmod(AFileName, &600);
+      {$ENDIF}
       try
         // 写入版本号
         I := 1;

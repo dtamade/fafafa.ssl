@@ -192,8 +192,10 @@ begin
     end;
     
     Result.Success := True;
-    
+
   finally
+    if Length(TempBuffer) > 0 then
+      FillChar(TempBuffer[0], Length(TempBuffer), 0);
     EVP_CIPHER_CTX_free(Ctx);
   end;
 end;
@@ -331,10 +333,12 @@ begin
     SetLength(Result.PlainText, TotalLen);
     if TotalLen > 0 then
       Move(TempBuffer[0], Result.PlainText[0], TotalLen);
-    
+
     Result.Success := True;
-    
+
   finally
+    if Length(TempBuffer) > 0 then
+      FillChar(TempBuffer[0], Length(TempBuffer), 0);
     EVP_CIPHER_CTX_free(Ctx);
   end;
 end;
@@ -439,8 +443,10 @@ begin
     end;
     
     Result.Success := True;
-    
+
   finally
+    if Length(TempBuffer) > 0 then
+      FillChar(TempBuffer[0], Length(TempBuffer), 0);
     EVP_CIPHER_CTX_free(Ctx);
   end;
 end;
@@ -546,8 +552,10 @@ begin
       Move(TempBuffer[0], Result.PlainText[0], TotalLen);
     
     Result.Success := True;
-    
+
   finally
+    if Length(TempBuffer) > 0 then
+      FillChar(TempBuffer[0], Length(TempBuffer), 0);
     EVP_CIPHER_CTX_free(Ctx);
   end;
 end;

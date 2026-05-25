@@ -933,10 +933,14 @@ begin
   Password := '';
   if not Context.FPasswordCallback(Password, rwflag <> 0) then Exit;
   PasswordAnsi := AnsiString(Password);
-  if Length(PasswordAnsi) >= size then Exit;
-  if Length(PasswordAnsi) > 0 then Move(PasswordAnsi[1], buf^, Length(PasswordAnsi));
-  buf[Length(PasswordAnsi)] := #0;
-  Result := Length(PasswordAnsi);
+  try
+    if Length(PasswordAnsi) >= size then Exit;
+    if Length(PasswordAnsi) > 0 then Move(PasswordAnsi[1], buf^, Length(PasswordAnsi));
+    buf[Length(PasswordAnsi)] := #0;
+    Result := Length(PasswordAnsi);
+  finally
+    SecureZeroString(PasswordAnsi);
+  end;
 end;
 
 procedure InfoCallbackThunk(ssl: PSSL; where: Integer; ret: Integer); cdecl;
