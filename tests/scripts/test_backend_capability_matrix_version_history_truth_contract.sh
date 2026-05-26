@@ -25,14 +25,14 @@ release_notes="docs/RELEASE_NOTES.md"
 
 echo "[TEST] backend capability matrix version-history truth contract"
 
-require_fixed "$base_unit" "FAFAFA_SSL_VERSION_STRING = '1.5.0';" \
-  "Source version truth must remain v1.5.0"
+require_fixed "$base_unit" "FAFAFA_SSL_VERSION_STRING = '1.6.0';" \
+  "Source version truth must remain v1.6.0"
 require_fixed "$roadmap" '- `v1.5.0` 的发布链已经闭环' \
   "Roadmap must keep the current v1.5.0 release-control truth"
-require_fixed "$release_notes" '**当前稳定版本**: `v1.5.0`（已发布）' \
+require_fixed "$release_notes" '**当前稳定版本**: `v1.6.0`（已发布）' \
   "Release notes must keep the current stable release truth"
 
-require_fixed "$matrix" '**当前稳定版本**: `v1.5.0`' \
+require_fixed "$matrix" '**当前稳定版本**: `v1.6.0`' \
   "Top-level backend matrix must publish the current stable version first"
 require_fixed "$matrix" '- [当前路线图](ROADMAP.md)' \
   "Top-level backend matrix must point readers to the current roadmap"

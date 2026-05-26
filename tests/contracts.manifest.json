@@ -1,0 +1,116 @@
+{
+  "version": "1.0.0",
+  "description": "Contract tier manifest for fafafa.ssl quality gates",
+  "tiers": {
+    "core": {
+      "description": "Every development iteration. Must pass in < 5s.",
+      "max_count": 30
+    },
+    "release": {
+      "description": "Before release/push. Must pass in < 60s.",
+      "max_count": 30
+    },
+    "full": {
+      "description": "Periodic comprehensive check. Target < 200 active.",
+      "max_count": 200
+    }
+  },
+  "contracts": [
+    {
+      "path": "tests/scripts/test_facade_main_entry_truth_contract.sh",
+      "tier": "core",
+      "category": "public-entrypoint",
+      "protects": "ordinary user import path and connector entry stay current"
+    },
+    {
+      "path": "tests/scripts/test_public_unit_import_guidance_truth_contract.sh",
+      "tier": "core",
+      "category": "public-entrypoint",
+      "protects": "all public docs teach builder+facade as the ordinary import"
+    },
+    {
+      "path": "tests/scripts/test_active_examples_public_import_truth_contract.sh",
+      "tier": "core",
+      "category": "public-entrypoint",
+      "protects": "active examples use current public units"
+    },
+    {
+      "path": "tests/scripts/test_user_guide_ordinary_entrypoint_truth_contract.sh",
+      "tier": "core",
+      "category": "public-entrypoint",
+      "protects": "user guide teaches builder/connector as primary path"
+    },
+    {
+      "path": "tests/scripts/test_active_roadmap_references_contract.sh",
+      "tier": "core",
+      "category": "route-control",
+      "protects": "roadmap, release plan, and readiness docs stay linked"
+    },
+    {
+      "path": "tests/scripts/test_tsslconfig_stage2_public_guidance_truth_contract.sh",
+      "tier": "core",
+      "category": "config-boundary",
+      "protects": "TSSLContextConfig is taught as recommended factory path"
+    },
+    {
+      "path": "tests/scripts/test_tsslconfig_stage2_active_docs_examples_drift_contract.sh",
+      "tier": "core",
+      "category": "config-boundary",
+      "protects": "active docs/examples don't teach TSSLConfig as new path"
+    },
+    {
+      "path": "tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh",
+      "tier": "core",
+      "category": "config-boundary",
+      "protects": "TSSLConfig guidance stays as compatibility, not recommended"
+    },
+    {
+      "path": "tests/scripts/test_tsslconfig_migration_targets_contract.sh",
+      "tier": "core",
+      "category": "config-boundary",
+      "protects": "migration targets and slimming roadmap stay aligned"
+    },
+    {
+      "path": "tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh",
+      "tier": "core",
+      "category": "config-boundary",
+      "protects": "TSSLConfig scope buckets stay correctly classified"
+    },
+    {
+      "path": "tests/scripts/test_platform_support_guidance_convergence_contract.sh",
+      "tier": "core",
+      "category": "platform",
+      "protects": "platform docs point to current release/gate commands"
+    },
+    {
+      "path": "tests/scripts/test_landing_docs_connection_level_sni_guidance_contract.sh",
+      "tier": "core",
+      "category": "api-safety",
+      "protects": "landing docs teach connection-level SNI correctly"
+    },
+    {
+      "path": "tests/scripts/test_migration_troubleshooting_connection_level_sni_omissions_contract.sh",
+      "tier": "core",
+      "category": "api-safety",
+      "protects": "migration/troubleshooting docs include SNI guidance"
+    },
+    {
+      "path": "tests/scripts/test_release_control_entrypoint_convergence_contract.sh",
+      "tier": "release",
+      "category": "release",
+      "protects": "release-control navigation and Wave C boundaries"
+    },
+    {
+      "path": "tests/scripts/test_backend_capability_matrix_version_history_truth_contract.sh",
+      "tier": "release",
+      "category": "release",
+      "protects": "capability matrix and version history stay current"
+    },
+    {
+      "path": "tests/scripts/test_v1_5_0_static_pascal_audit_contract.sh",
+      "tier": "release",
+      "category": "release",
+      "protects": "no placeholder markers in active source"
+    }
+  ]
+}
