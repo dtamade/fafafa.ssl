@@ -43,7 +43,7 @@ and code stay aligned. They are organized in tiers:
 
 - **Core** (13): Public API entrypoints, config boundaries, platform guidance
 - **Release** (3): Version truth, release workflow, static audit
-- **Full** (388): All remaining active contracts
+- **Full** (not yet populated): Remaining 388 scripts exist but are not yet tiered into the manifest. Run individually as needed.
 
 Manifest: `tests/contracts.manifest.json`
 Runner: `scripts/run_contracts.py`
@@ -57,8 +57,8 @@ Runner: `scripts/run_contracts.py`
 ### Contract Principles
 
 - Contracts protect **security boundaries** and **public API correctness**
-- Do NOT add contracts that check documentation wording/phrasing
-- Each contract must explain what real risk it prevents
+- Avoid fragile wording checks with no risk explanation
+- Contracts that protect release/API/security truth via precise text matching are acceptable
 
 ## Architecture Overview
 

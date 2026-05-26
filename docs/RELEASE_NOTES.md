@@ -1,6 +1,6 @@
 # fafafa.ssl Release Notes
 
-**当前稳定版本**: `v1.6.0`（已发布）
+**当前稳定版本**: `v1.6.0`（开发中，未正式发布）
 **当前发布入口**: [当前路线图](ROADMAP.md) · [Release Readiness v1.5.0](test_reports/RELEASE_READINESS_V1.5.0.md)
 
 > 说明：本页保留 `v1.0.0` 的历史发布快照，方便回看早期里程碑；如果你要判断当前 stable release、workflow 或平台真相，请以上述 `v1.5.0` 入口为准。

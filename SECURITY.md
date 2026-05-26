@@ -31,7 +31,7 @@ If you discover a security vulnerability in fafafa.ssl, please report it respons
 fafafa.ssl follows these security principles:
 
 - **Secure defaults**: TLS 1.2+ only, peer verification enabled by default
-- **Constant-time operations**: All cryptographic comparisons use `TConstantTime.CompareBytes`
+- **Constant-time operations**: Cryptographic comparisons use `TConstantTime.CompareBytes`
 - **Secure memory**: Key material is zeroed with `SecureZeroMemory` before deallocation
 - **Fail-closed**: Unknown states reject rather than accept
 - **Input validation**: All external inputs (PEM, certificates, config) are size-limited and validated
@@ -39,6 +39,6 @@ fafafa.ssl follows these security principles:
 
 ## Audit History
 
-- 2026-05-25: Comprehensive security audit (Claude + Codex joint review)
+- 2026-05-25: Internal security review
   - 2 rounds, 30 findings total
   - All Critical (5/5), High (8/8), Medium (10/10), Low (7/7) resolved
