@@ -40,6 +40,7 @@ implementation
 uses
   fafafa.ssl.tls13.bigint,
   fafafa.ssl.tls13.primitives,
+  fafafa.ssl.tls13.servercertverify,
   fafafa.ssl.crypto.hash;
 
 const
@@ -102,15 +103,20 @@ begin
   end;
 end;
 
+const
+  SHA256_DIGEST_INFO_PREFIX: array[0..18] of Byte = (
+    $30, $31, $30, $0d, $06, $09, $60, $86, $48, $01,
+    $65, $03, $04, $02, $01, $05, $00, $04, $20
+  );
+  SHA384_DIGEST_INFO_PREFIX: array[0..18] of Byte = (
+    $30, $41, $30, $0d, $06, $09, $60, $86, $48, $01,
+    $65, $03, $04, $02, $02, $05, $00, $04, $30
+  );
+
 function VerifyRSASignature(ASubject, AIssuer: TX509Certificate): Boolean;
 var
   LTBSData, LSignature, LModulus, LExponent: TBytes;
-  LRecovered: TBytes;
-  LDigest: TBytes;
-  LError: string;
-  LAlgName: string;
-  LPadEnd, I, LDigestInfoLen: Integer;
-  LActualDigest: TBytes;
+  LError, LAlgName: string;
 begin
   Result := False;
   LTBSData := ASubject.RawTBSCertificate;
@@ -118,45 +124,14 @@ begin
   LModulus := AIssuer.PublicKeyInfo.RSAModulus;
   LExponent := AIssuer.PublicKeyInfo.RSAExponent;
 
-  if (Length(LModulus) = 0) or (Length(LExponent) = 0) then
-    Exit;
-
-  if not TryBigIntModExpFromUnsignedBytes(LSignature, LExponent, LModulus, LRecovered, LError) then
-    Exit;
-
-  if not TryBigIntToFixedLengthFromUnsignedBytes(LRecovered, Length(LModulus), LRecovered, LError) then
-    Exit;
-
-  if (Length(LRecovered) < 11) or (LRecovered[0] <> $00) or (LRecovered[1] <> $01) then
+  if (Length(LModulus) = 0) or (Length(LExponent) = 0) or (Length(LSignature) = 0) then
     Exit;
 
   LAlgName := LowerCase(ASubject.SignatureAlgorithm.Name);
-  if Pos('sha256', LAlgName) > 0 then
-    LDigest := SHA256(LTBSData)
-  else if Pos('sha384', LAlgName) > 0 then
-    LDigest := SHA384(LTBSData)
-  else
-    Exit;
-
-  LPadEnd := -1;
-  for I := 2 to Length(LRecovered) - 1 do
-    if LRecovered[I] = $00 then
-    begin
-      LPadEnd := I;
-      Break;
-    end;
-
-  if LPadEnd < 0 then
-    Exit;
-
-  LDigestInfoLen := Length(LRecovered) - LPadEnd - 1;
-  if LDigestInfoLen <= Length(LDigest) then
-    Exit;
-
-  SetLength(LActualDigest, Length(LDigest));
-  Move(LRecovered[Length(LRecovered) - Length(LDigest)], LActualDigest[0], Length(LDigest));
-
-  Result := CompareMem(@LDigest[0], @LActualDigest[0], Length(LDigest));
+  if (Pos('sha256', LAlgName) > 0) or (Pos('sha-256', LAlgName) > 0) then
+    Result := TryVerifyRSAPKCS1v15SignatureSHA256(LTBSData, LSignature, LModulus, LExponent, LError)
+  else if (Pos('sha384', LAlgName) > 0) or (Pos('sha-384', LAlgName) > 0) then
+    Result := TryVerifyRSAPKCS1v15SignatureSHA384(LTBSData, LSignature, LModulus, LExponent, LError);
 end;
 
 function MatchHostname(const AHostname: string; ACert: TX509Certificate): Boolean;

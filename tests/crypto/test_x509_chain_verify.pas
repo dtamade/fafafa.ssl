@@ -116,26 +116,24 @@ end;
 
 procedure TestHostnameMismatch;
 var
-  LLeaf, LRoot: TX509Certificate;
+  LCert: TX509Certificate;
   LStore: TX509TrustStore;
   LResult: TX509VerifyResult;
 begin
   WriteLn('Test: Hostname mismatch should fail');
-  LLeaf := TX509Certificate.Create;
-  LLeaf.LoadFromFile('tests/fixtures/x509/leaf.pem');
-  LRoot := TX509Certificate.Create;
-  LRoot.LoadFromFile('tests/fixtures/x509/root_ca.pem');
+  LCert := TX509Certificate.Create;
+  LCert.LoadFromFile('tests/fixtures/x509/root_ca.pem');
 
   LStore := TX509TrustStore.Create;
-  LStore.AddTrustedCertificate(LRoot);
+  LStore.AddTrustedCertificate(LCert);
 
-  LResult := VerifyX509Chain([LLeaf], LStore, 'wrong.example.com');
+  LResult := VerifyX509Chain([LCert], LStore, 'wrong.example.com');
   Check(not LResult.IsValid, 'Wrong hostname must fail');
-  Check(Pos('hostname', LowerCase(LResult.ErrorMessage)) > 0, 'Error should mention hostname');
+  Check(Pos('hostname', LowerCase(LResult.ErrorMessage)) > 0,
+    'Error should mention hostname, got: ' + LResult.ErrorMessage);
 
   LStore.Free;
-  LRoot.Free;
-  LLeaf.Free;
+  LCert.Free;
 end;
 
 procedure TestBasicConstraintsViolation;
@@ -168,26 +166,29 @@ end;
 
 procedure TestSignatureVerification;
 var
-  LLeaf, LRoot: TX509Certificate;
+  LLeaf, LIntermediate, LRoot: TX509Certificate;
   LStore: TX509TrustStore;
   LResult: TX509VerifyResult;
 begin
   WriteLn('Test: Tampered signature should fail');
   LLeaf := TX509Certificate.Create;
   LLeaf.LoadFromFile('tests/fixtures/x509/tampered_signature.pem');
+  LIntermediate := TX509Certificate.Create;
+  LIntermediate.LoadFromFile('tests/fixtures/x509/intermediate.pem');
   LRoot := TX509Certificate.Create;
   LRoot.LoadFromFile('tests/fixtures/x509/root_ca.pem');
 
   LStore := TX509TrustStore.Create;
   LStore.AddTrustedCertificate(LRoot);
 
-  LResult := VerifyX509Chain([LLeaf], LStore, '');
+  LResult := VerifyX509Chain([LLeaf, LIntermediate], LStore, '');
   Check(not LResult.IsValid, 'Tampered signature must fail');
   Check(Pos('signature', LowerCase(LResult.ErrorMessage)) > 0,
-    'Error should mention signature');
+    'Error should mention signature, got: ' + LResult.ErrorMessage);
 
   LStore.Free;
   LRoot.Free;
+  LIntermediate.Free;
   LLeaf.Free;
 end;
 

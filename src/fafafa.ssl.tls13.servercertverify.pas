@@ -79,6 +79,16 @@ function TryBuildTLS13CertificateVerifySignature(
   out AError: string
 ): Boolean;
 
+function TryVerifyRSAPKCS1v15SignatureSHA256(
+  const AMessage, ASignature, AModulus, APublicExponent: TBytes;
+  out AError: string
+): Boolean;
+
+function TryVerifyRSAPKCS1v15SignatureSHA384(
+  const AMessage, ASignature, AModulus, APublicExponent: TBytes;
+  out AError: string
+): Boolean;
+
 implementation
 
 uses
