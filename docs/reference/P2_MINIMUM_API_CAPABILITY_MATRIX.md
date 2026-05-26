@@ -8,7 +8,6 @@
 
 ## 先看结论
 
-- OpenSSL 3.5.4 基线下，P2 模块测试集已通过（见 `docs/test_reports/P2_MODULES_TEST_REPORT.md`）。
 - `TSSLBackendCapabilities` 已能直接表达 **PKCS12**，并部分表达 **OCSP / Store**。
 - **PKCS7 / CMS / TS** 当前没有一对一能力字段，使用“模块加载状态 + 测试结果”作为显式支持依据。
 
@@ -46,7 +45,6 @@
 - 能力矩阵结构：`src/fafafa.ssl.base.pas` 中的 `TSSLBackendCapabilities`。
 - OpenSSL 字段赋值：`src/fafafa.ssl.openssl.backed.pas` 的 `TOpenSSLLibrary.GetCapabilities`。
 - 序列化输出：`src/fafafa.ssl.capability.serializer.pas`，示例文件：`capability_openssl.json`、`capability_openssl.xml`。
-- P2 测试汇总：`docs/test_reports/P2_MODULES_TEST_REPORT.md`。
 
 ---
 
@@ -94,5 +92,4 @@ python3 scripts/compile_all_modules.py
 然后查看：
 
 ```bash
-cat docs/test_reports/P2_MODULES_TEST_REPORT.md
 ```

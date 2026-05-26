@@ -19,7 +19,6 @@ fresh output 为准。
 - `tests/benchmarks/baselines/crypto_baseline.json`
 - `tests/benchmarks/baselines/random_pool_baseline.json`
 - `tests/benchmarks/baselines/tls_handshake_baseline.json`
-- `docs/test_reports/PHASE2_PERFORMANCE_METRICS_TEMPLATE.md`
 
 如果要发布新的性能结论，请附带本次命令、运行环境、输出目录和生成时间。
 
@@ -142,4 +141,3 @@ bash tests/benchmarks/run_all_benchmarks.sh --iterations 1000 --tls-iterations 1
 - `tests/benchmarks/baselines/crypto_baseline.json`
 - `tests/benchmarks/baselines/random_pool_baseline.json`
 - `tests/benchmarks/baselines/tls_handshake_baseline.json`
-- `docs/test_reports/PHASE2_PERFORMANCE_METRICS_TEMPLATE.md`

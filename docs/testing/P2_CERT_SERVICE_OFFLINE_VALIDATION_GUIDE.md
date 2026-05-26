@@ -122,9 +122,6 @@ bash scripts/run_all_module_tests.sh --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT
 ## 8. 关联文档
 
 - `docs/testing/P2_OFFLINE_FIXTURE_GUIDE.md`
-- `docs/test_reports/P2_MODULES_TEST_REPORT.md`
-- `docs/test_reports/P2_OCSP_MODULE_REPORT.md`
-- `docs/test_reports/P2_TS_MODULE_REPORT.md`
 - `docs/guides/OCSP_USAGE_GUIDE.md`
 - `docs/guides/TS_USAGE_GUIDE.md`
 - `docs/guides/CT_IMPLEMENTATION_GUIDE.md`

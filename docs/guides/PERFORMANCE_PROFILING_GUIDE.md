@@ -303,7 +303,6 @@ end.
 
 ## 性能目标参考
 
-下面这些数值最多只能作为“你自己 profiling 时可以关注的量级形状”，不能当成当前长期 truth；最新 baseline 请回到 `scripts/run_phase2_performance_baseline.sh`、`tests/benchmarks/run_all_benchmarks.sh`，并按 `docs/test_reports/PHASE2_PERFORMANCE_METRICS_TEMPLATE.md` 记录环境与结果。
 
 | 操作             | 目标时间   | 说明     |
 | ---------------- | ---------- | -------- |
@@ -317,5 +316,3 @@ end.
 ## 相关文档
 
 - `scripts/run_phase2_performance_baseline.sh` - 性能基准脚本
-- `docs/test_reports/PHASE2_BASELINE_EXECUTION_SUMMARY.md` - 基准结果
-- `docs/test_reports/PHASE2_PERFORMANCE_METRICS_TEMPLATE.md` - 指标模板

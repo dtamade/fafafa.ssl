@@ -186,6 +186,7 @@ type
   public
     constructor Create(AContext: ISSLContext; ASocket: THandle); overload;
     constructor Create(AContext: ISSLContext; AStream: TStream); overload;
+    destructor Destroy; override;
 
     procedure SetServerName(const AServerName: string);
     function GetServerName: string;
@@ -998,6 +999,23 @@ begin
   FEarlyDataStatus := sslEarlyDataNone;
   FEarlyDataLimit := 0;
   SetLength(FEarlyDataPayload, 0);
+end;
+
+destructor TFreePascalConnection.Destroy;
+begin
+  SecureZeroBytes(FX25519PrivateKey);
+  SecureZeroBytes(FX25519PublicKey);
+  SecureZeroBytes(FHandshakeSharedSecret);
+  ClearTLS13EarlyDataSecrets(FEarlyDataSecrets);
+  ClearTLS13HandshakeSecrets(FHandshakeSecrets);
+  SecureZeroBytes(FServerFinishedKey);
+  SecureZeroBytes(FClientFinishedKey);
+  ClearTLS13ApplicationSecrets(FApplicationSecrets);
+  SecureZeroBytes(FOCSPResponse);
+  SetLength(FEarlyDataPayload, 0);
+  SetLength(FApplicationReadBuffer, 0);
+  SetLength(FPostHandshakeBuffer, 0);
+  inherited Destroy;
 end;
 
 function TFreePascalConnection.SendData(const ABuffer; ASize: Integer): Integer;
@@ -3768,7 +3786,6 @@ var
   LFragment: TBytes;
   LCopyLen: Integer;
   LRemainLen: Integer;
-  LRemain: TBytes;
 begin
   if not FHandshakeComplete then
   begin
@@ -3788,10 +3805,7 @@ begin
       Exit(-1);
 
     if Length(LFragment) > 0 then
-    begin
-      SetLength(FApplicationReadBuffer, Length(LFragment));
-      Move(LFragment[0], FApplicationReadBuffer[0], Length(LFragment));
-    end;
+      FApplicationReadBuffer := LFragment;
   end;
 
   LCopyLen := ACount;
@@ -3803,9 +3817,8 @@ begin
   LRemainLen := Length(FApplicationReadBuffer) - LCopyLen;
   if LRemainLen > 0 then
   begin
-    SetLength(LRemain, LRemainLen);
-    Move(FApplicationReadBuffer[LCopyLen], LRemain[0], LRemainLen);
-    FApplicationReadBuffer := LRemain;
+    Move(FApplicationReadBuffer[LCopyLen], FApplicationReadBuffer[0], LRemainLen);
+    SetLength(FApplicationReadBuffer, LRemainLen);
   end
   else
     SetLength(FApplicationReadBuffer, 0);
@@ -4970,8 +4983,61 @@ begin
 end;
 
 function TFreePascalConnection.DoShutdown: Boolean;
+var
+  LAlertPayload: TBytes;
+  LInnerPlaintext: TBytes;
+  LAAD: TBytes;
+  LNonce: TBytes;
+  LEncrypted: TBytes;
+  LRecord: TBytes;
+  LError: string;
 begin
   Result := True;
+
+  if not FApplicationSecrets.Valid then
+    Exit;
+
+  if not TLS13AEADIsSupported(FApplicationSecrets.CipherSuite) then
+    Exit;
+
+  SetLength(LAlertPayload, 2);
+  LAlertPayload[0] := 1; // warning level
+  LAlertPayload[1] := 0; // close_notify
+
+  LInnerPlaintext := BuildTLS13InnerPlaintext(LAlertPayload, TLS_CONTENT_TYPE_ALERT);
+
+  try
+    if FIsServerMode then
+      LNonce := BuildTLS13RecordNonce(FApplicationSecrets.ServerApplicationIV, FServerApplicationSeq)
+    else
+      LNonce := BuildTLS13RecordNonce(FApplicationSecrets.ClientApplicationIV, FClientApplicationSeq);
+  except
+    Exit;
+  end;
+
+  LAAD := BuildTLS13RecordAAD(Word(Length(LInnerPlaintext) + TLS13AEADTagLength(FApplicationSecrets.CipherSuite)));
+
+  if FIsServerMode then
+  begin
+    if not TryTLS13AEADEncrypt(
+      FApplicationSecrets.CipherSuite,
+      FApplicationSecrets.ServerApplicationKey,
+      LNonce, LAAD, LInnerPlaintext, LEncrypted, LError) then
+      Exit;
+    IncrementTLS13Sequence(FServerApplicationSeq);
+  end
+  else
+  begin
+    if not TryTLS13AEADEncrypt(
+      FApplicationSecrets.CipherSuite,
+      FApplicationSecrets.ClientApplicationKey,
+      LNonce, LAAD, LInnerPlaintext, LEncrypted, LError) then
+      Exit;
+    IncrementTLS13Sequence(FClientApplicationSeq);
+  end;
+
+  LRecord := BuildTLSPlaintext(TLS_CONTENT_TYPE_APPLICATION_DATA, LEncrypted);
+  SendAll(LRecord);
 end;
 
 procedure TFreePascalConnection.DoClose;

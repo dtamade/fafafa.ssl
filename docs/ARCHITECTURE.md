@@ -621,7 +621,6 @@ fafafa.ssl 使用的设计模式：
 如果后续要继续推进架构演进：
 
 - 架构分层真相继续回到本页与 `docs/reference/ARCHITECTURE.md`
-- 执行顺序、批次优先级、完成度判断继续回到 `ROADMAP.md` 与对应 `docs/plans/...`
 - 整体北极星、关键设计原则与长期演进顺序继续回到 `plans/2026-05-24-framework-excellence-spec-and-evolution-roadmap.md`
 
 ---

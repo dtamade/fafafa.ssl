@@ -6,8 +6,6 @@
 
 如果你是在继续当前工程的验证或收口，先看这两页，再按下面的默认命令推进：
 
-- [Wave C 当前 canonical 收口状态](../test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md)
-- [Wave C 当前 local-first / pre-CI 链路](../test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md)
 - `python3 scripts/compile_all_modules.py`
 - `bash scripts/run_minimal_ci_gate.sh --fast-local`
 - `bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local`
@@ -346,8 +344,6 @@ fafafa.ssl/
 
 ## 下一步
 
-1. **先看当前工程状态**: [Wave C 当前 canonical 收口状态](../test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md)
-2. **再看当前验证链路**: [Wave C 当前 local-first / pre-CI 链路](../test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md)
 3. **浏览主文档**: [README.md](../README.md)
 4. **查看详细快速开始**: [QUICKSTART.md](QUICKSTART.md)
 5. **查看 API**: [API_REFERENCE.md](../reference/API_REFERENCE.md)

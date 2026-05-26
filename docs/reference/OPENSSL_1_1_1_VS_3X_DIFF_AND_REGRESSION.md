@@ -98,14 +98,11 @@ bash scripts/run_all_module_tests.sh --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT
 - 差异项有“符号名 + 行为 + 测试策略”三元说明。
 - 3.x 基线命令可复现，报告可追溯。
 - 1.1.1 与 3.x 的分支行为有明确解释，不以“偶然通过”作为结论。
-- `docs/DOCUMENTATION_INDEX.md` 与 `docs/plans/Q1_2026_P2_VALIDATION_PLAN.md` 已同步入口。
 
 ---
 
 ## 关联文档
 
 - `docs/reference/P2_MINIMUM_API_CAPABILITY_MATRIX.md`
-- `docs/test_reports/P2_MODULES_TEST_REPORT.md`
-- `docs/plans/Q1_2026_P2_VALIDATION_PLAN.md`
 - `docs/testing/P2_OFFLINE_FIXTURE_GUIDE.md`
 

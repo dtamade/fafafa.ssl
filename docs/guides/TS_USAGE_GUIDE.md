@@ -112,6 +112,5 @@ bash scripts/run_all_module_tests.sh --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT
 
 ## 7. 相关文档
 
-- `docs/test_reports/P2_TS_MODULE_REPORT.md`
 - `docs/reference/P2_MINIMUM_API_CAPABILITY_MATRIX.md`
 - `docs/reference/OPENSSL_1_1_1_VS_3X_DIFF_AND_REGRESSION.md`

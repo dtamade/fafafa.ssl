@@ -51,6 +51,7 @@ uses
   fafafa.ssl.exceptions,
   fafafa.ssl.factory,
   fafafa.ssl.tls,
+  fafafa.ssl.quick,
   fafafa.ssl.cert.advanced;
 
 // ============================================================================
@@ -172,6 +173,9 @@ type
   TSSLConnector = fafafa.ssl.tls.TSSLConnector;
   TSSLAcceptor = fafafa.ssl.tls.TSSLAcceptor;
   TSSLStream = fafafa.ssl.tls.TSSLStream;
+
+  // 快捷 API
+  TSSLQuick = fafafa.ssl.quick.TSSLQuick;
 
   // 从 fafafa.ssl.base 导出 - 证书验证标志
   TSSLCertVerifyFlag = fafafa.ssl.base.TSSLCertVerifyFlag;

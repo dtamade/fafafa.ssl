@@ -401,7 +401,6 @@ SetCustomLibraryPaths('/custom/path/libcrypto.so', '/custom/path/libssl.so');
 
 建议先参考：
 - `docs/guides/OCSP_USAGE_GUIDE.md`
-- `docs/test_reports/P2_OCSP_MODULE_REPORT.md`
 
 命令行快速排查仍可使用：
 ```bash

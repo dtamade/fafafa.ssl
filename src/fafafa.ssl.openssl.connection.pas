@@ -1180,9 +1180,16 @@ end;
 { OCSP 方法覆盖 }
 
 function TOpenSSLConnection.DoGetOCSPStaplingEnabled: Boolean;
+var
+  RespLen: clong;
+  RespPtr: PByte;
 begin
-  // 兼容符号函数与宏回退：是否存在 stapled 响应
-  Result := Length(DoGetOCSPResponse) > 0;
+  Result := False;
+  if (FSSL = nil) or (not Assigned(SSL_get_tlsext_status_ocsp_resp)) then
+    Exit;
+  RespPtr := nil;
+  RespLen := SSL_get_tlsext_status_ocsp_resp(FSSL, @RespPtr);
+  Result := (RespLen > 0) and (RespPtr <> nil);
 end;
 
 function TOpenSSLConnection.DoGetOCSPResponse: TBytes;

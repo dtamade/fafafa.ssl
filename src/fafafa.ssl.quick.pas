@@ -31,6 +31,12 @@ type
   { TSSLQuick - Simple one-liner SSL/TLS operations }
   TSSLQuick = class
   public
+    { ==================== Quick Context Creation ==================== }
+
+    class function SecureClient: ISSLContext; static;
+    class function SecureServer(const ACertFile, AKeyFile: string;
+      const AKeyPassword: string = ''): ISSLContext; static;
+
     { ==================== Quick Certificate Generation ==================== }
     
     {**
@@ -67,6 +73,33 @@ uses
   fafafa.ssl.safety;
 
 { TSSLQuick }
+
+class function TSSLQuick.SecureClient: ISSLContext;
+var
+  LBuilder: ISSLContextBuilder;
+begin
+  LBuilder := TSSLContextBuilder.Create;
+  Result := LBuilder
+    .WithTLS12And13
+    .WithVerifyPeer
+    .WithSystemRoots
+    .WithSafeDefaults
+    .BuildClient;
+end;
+
+class function TSSLQuick.SecureServer(const ACertFile, AKeyFile: string;
+  const AKeyPassword: string): ISSLContext;
+var
+  LBuilder: ISSLContextBuilder;
+begin
+  LBuilder := TSSLContextBuilder.Create;
+  Result := LBuilder
+    .WithTLS12And13
+    .WithCertificate(ACertFile)
+    .WithPrivateKey(AKeyFile, AKeyPassword)
+    .WithSafeDefaults
+    .BuildServer;
+end;
 
 class function TSSLQuick.GenerateSelfSigned(const ACommonName: string;
   AValidDays: Integer): IKeyPairWithCertificate;

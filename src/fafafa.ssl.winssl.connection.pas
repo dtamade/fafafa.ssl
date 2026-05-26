@@ -1376,6 +1376,7 @@ begin
   if not IsSuccess(Status) then
   begin
     DeleteSecurityContext(@FCtxtHandle);
+    InitSecHandle(FCtxtHandle);
     FConnected := False;
     Exit;
   end;
@@ -1433,6 +1434,7 @@ begin
   end;
 
   DeleteSecurityContext(@FCtxtHandle);
+  InitSecHandle(FCtxtHandle);
   FConnected := False;
   Result := True;
 end;

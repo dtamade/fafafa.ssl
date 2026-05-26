@@ -105,7 +105,6 @@ python3 scripts/compile_all_modules.py
 并在报告中确认没有新增失败：
 
 ```bash
-cat docs/test_reports/P2_MODULES_TEST_REPORT.md
 ls -1 tmp/test-reports/test_report_*.txt | tail -n 3
 ```
 

@@ -263,6 +263,8 @@ end;
 
 destructor TWolfSSLConnection.Destroy;
 begin
+  if FConnected then
+    DoShutdown;
   if FWolfSSL <> nil then
   begin
     if Assigned(wolfSSL_free) then

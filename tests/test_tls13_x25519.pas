@@ -34,6 +34,7 @@ function HexToBytes(const AHex: string): TBytes;
 var
   I, LLen: Integer;
 begin
+  Result := nil;
   LLen := Length(AHex);
   if (LLen = 0) or ((LLen and 1) <> 0) then
     Fail('Invalid hex length');

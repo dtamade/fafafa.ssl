@@ -262,7 +262,6 @@ fpc -B -Fu./src \
 ./tmp/platform_support_macos/test_openssl_simple
 ```
 
-如需继续对齐当前 release-control 状态，先回到 `ROADMAP.md`、`plans/2026-05-12-release-v1.5.0-formalization.md` 与 `test_reports/RELEASE_READINESS_V1.5.0.md`；只有在需要核对 Wave C closeout / approval 材料时，再回看 `WAVE_C_CLOSEOUT_STATUS_2026-03-18.md` 与 `WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`。
 
 ### 平台特定注意事项
 

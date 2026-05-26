@@ -152,5 +152,4 @@ bash scripts/run_all_module_tests.sh --modules Store --verbose
 ```
 
 补充：
-- Store 模块报告：`docs/test_reports/P2_STORE_MODULE_REPORT.md`
 - 跨平台差异：`docs/reference/STORE_CROSS_PLATFORM_DIFFERENCES.md`

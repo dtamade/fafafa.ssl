@@ -274,6 +274,3 @@ end.
   - `python3 scripts/compile_all_modules.py`
   - `bash scripts/run_minimal_ci_gate.sh --fast-local`
   - `bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local`
-- 如果你要看当前 Wave C / local-first 入口，先看：
-  - `docs/test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md`
-  - `docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`

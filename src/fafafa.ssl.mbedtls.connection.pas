@@ -273,6 +273,8 @@ end;
 
 destructor TMbedTLSConnection.Destroy;
 begin
+  if FConnected then
+    DoShutdown;
   FreeSSLContext;
   inherited Destroy;
 end;
