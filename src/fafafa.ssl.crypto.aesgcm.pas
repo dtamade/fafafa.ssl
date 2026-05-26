@@ -7,6 +7,13 @@ interface
 uses
   SysUtils;
 
+type
+  TAESBlock = array[0..15] of Byte;
+  TAESExpandedKey = array[0..59] of UInt32;
+
+procedure AESKeyExpand(const AKey: TBytes; out AExpandedKey: TAESExpandedKey; out ANr: Integer);
+procedure AESEncryptBlock(const AInput: TAESBlock; out AOutput: TAESBlock; const AExpandedKey: TAESExpandedKey; ANr: Integer);
+
 function PurePascalAESGCMEncrypt(
   const AKey, AIV, APlaintext, AAAD: TBytes;
   out ACiphertext, ATag: TBytes
@@ -21,10 +28,6 @@ implementation
 
 uses
   fafafa.ssl.crypto.constant_time;
-
-type
-  TAESBlock = array[0..15] of Byte;
-  TAESExpandedKey = array[0..59] of UInt32;
 
 const
   AES_BLOCK_SIZE = 16;
