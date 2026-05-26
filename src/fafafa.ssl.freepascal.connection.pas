@@ -220,108 +220,17 @@ uses
   fafafa.ssl.crypto.constant_time,
   fafafa.ssl.ct.sct,
   fafafa.ssl.native_handle,
-  fafafa.ssl.net.hooks,
-  fafafa.ssl.openssl.loader,
-  fafafa.ssl.openssl.base,
-  fafafa.ssl.openssl.api.ocsp,
-  fafafa.ssl.openssl.api.ct,
-  fafafa.ssl.openssl.api.stack,
-  fafafa.ssl.openssl.api.x509;
+  fafafa.ssl.net.hooks;
 
 const
   X509_EXTENSION_EMBEDDED_SIGNED_CERTIFICATE_TIMESTAMP = '1.3.6.1.4.1.11129.2.4.2';
+  SCT_VALIDATION_STATUS_NOT_SET = 0;
+  SCT_VALIDATION_STATUS_UNVERIFIED = 4;
 
 function TryEnsureOpenSSLCTValidationAvailable(out AError: string): Boolean;
 begin
-  AError := '';
+  AError := 'Pure Pascal CT signature verification not yet implemented';
   Result := False;
-
-  try
-    if not TSSLFactory.IsLibraryAvailable(sslOpenSSL) then
-    begin
-      AError := 'OpenSSL library is unavailable';
-      Exit;
-    end;
-
-    LoadCTFunctions;
-    LoadStackFunctions;
-  except
-    on E: Exception do
-    begin
-      AError := 'Failed to initialize OpenSSL CT validation modules: ' + E.Message;
-      Exit;
-    end;
-  end;
-
-  if not Assigned(o2i_SCT) or
-    not Assigned(CT_POLICY_EVAL_CTX_new) or
-    not Assigned(CT_POLICY_EVAL_CTX_free) or
-    not Assigned(CT_POLICY_EVAL_CTX_set1_cert) or
-    not Assigned(SCT_validate) or
-    not Assigned(SCT_get_validation_status) or
-    not Assigned(SCT_free) then
-  begin
-    AError := 'Required OpenSSL CT functions are unavailable';
-    Exit;
-  end;
-
-  Result := True;
-end;
-
-function TryCreateOpenSSLCertificateFromCertificate(
-  ACertificate: ISSLCertificate;
-  out AOpenSSLCertificate: ISSLCertificate;
-  out AX509: PX509;
-  out AError: string
-): Boolean;
-var
-  LDER: TBytes;
-  LHandle: Pointer;
-begin
-  AOpenSSLCertificate := nil;
-  AX509 := nil;
-  AError := '';
-  Result := False;
-
-  if ACertificate = nil then
-  begin
-    AError := 'Certificate is unavailable';
-    Exit;
-  end;
-
-  LDER := ACertificate.SaveToDER;
-  if Length(LDER) = 0 then
-  begin
-    AError := 'Certificate DER is empty';
-    Exit;
-  end;
-
-  try
-    AOpenSSLCertificate := TSSLFactory.CreateCertificate(sslOpenSSL);
-  except
-    on E: Exception do
-    begin
-      AError := 'Failed to create OpenSSL certificate: ' + E.Message;
-      Exit;
-    end;
-  end;
-
-  if (AOpenSSLCertificate = nil) or (not AOpenSSLCertificate.LoadFromDER(LDER)) then
-  begin
-    AError := 'Failed to materialize OpenSSL certificate from DER';
-    AOpenSSLCertificate := nil;
-    Exit;
-  end;
-
-  if not TryGetNativeHandle(AOpenSSLCertificate, LHandle) or (LHandle = nil) then
-  begin
-    AError := 'OpenSSL certificate native handle is unavailable';
-    AOpenSSLCertificate := nil;
-    Exit;
-  end;
-
-  AX509 := PX509(LHandle);
-  Result := True;
 end;
 
 function CountValidSignedCertificateTimestamps(
@@ -334,49 +243,6 @@ begin
   for I := 0 to High(AResults) do
     if AResults[I].IsValid then
       Inc(Result);
-end;
-
-procedure PopulateSignedCertificateTimestampValidationResult(
-  ASCT: PSCT;
-  const AOptions: TSCTValidationOptions;
-  out AResult: TSCTValidationResult
-);
-begin
-  AResult.IsValid := False;
-  AResult.Status := SCT_VALIDATION_STATUS_NOT_SET;
-  AResult.ErrorMessage := '';
-  AResult.LogName := '';
-  AResult.Timestamp := 0;
-
-  if ASCT = nil then
-  begin
-    AResult.ErrorMessage := 'Null SCT';
-    Exit;
-  end;
-
-  if Assigned(SCT_get_timestamp) then
-    AResult.Timestamp := SCT_get_timestamp(ASCT);
-
-  if Assigned(SCT_get_validation_status) then
-    AResult.Status := SCT_get_validation_status(ASCT);
-
-  case AResult.Status of
-    SCT_VALIDATION_STATUS_VALID:
-      AResult.IsValid := True;
-    SCT_VALIDATION_STATUS_UNKNOWN_LOG:
-      begin
-        AResult.ErrorMessage := 'Unknown CT log';
-        AResult.IsValid := AOptions.AllowUnknownLogs;
-      end;
-    SCT_VALIDATION_STATUS_INVALID:
-      AResult.ErrorMessage := 'Invalid SCT signature';
-    SCT_VALIDATION_STATUS_UNVERIFIED:
-      AResult.ErrorMessage := 'SCT could not be verified';
-    SCT_VALIDATION_STATUS_UNKNOWN_VERSION:
-      AResult.ErrorMessage := 'Unknown SCT version';
-  else
-    AResult.ErrorMessage := 'Unknown validation status';
-  end;
 end;
 
 function CheckCertificateTransparencyPolicy(
@@ -398,44 +264,32 @@ begin
   Result := Length(AResults) >= AOptions.MinimumSCTCount;
 end;
 
+function ReadUInt16(const AData: TBytes; AOffset: Integer): Integer; inline;
+begin
+  Result := (Integer(AData[AOffset]) shl 8) or Integer(AData[AOffset + 1]);
+end;
+
 function TryCollectSignedCertificateTimestampValidationResults(
   const ASignedCertificateTimestampList: TBytes;
-  ALeafX509: PX509;
-  AIssuerX509: PX509;
+  ACertificate: ISSLCertificate;
   const AOptions: TSCTValidationOptions;
   out AResults: TSCTValidationResultArray;
   out AError: string
 ): Boolean;
 var
-  LEvalContext: PCT_POLICY_EVAL_CTX;
-  LCurrentTime: UInt64;
   LListLength: Integer;
   LOffset: Integer;
   LSCTLength: Integer;
   LCount: Integer;
   I: Integer;
-  LSCT: PSCT;
-  LCursor: PByte;
 begin
   SetLength(AResults, 0);
   AError := '';
   Result := False;
 
-  if (Length(ASignedCertificateTimestampList) = 0) or (ALeafX509 = nil) then
+  if (Length(ASignedCertificateTimestampList) = 0) or (ACertificate = nil) then
   begin
-    AError := 'OpenSSL CT validation inputs are incomplete';
-    Exit;
-  end;
-
-  if not Assigned(CT_POLICY_EVAL_CTX_new) or
-    not Assigned(CT_POLICY_EVAL_CTX_free) or
-    not Assigned(CT_POLICY_EVAL_CTX_set1_cert) or
-    not Assigned(o2i_SCT) or
-    not Assigned(SCT_validate) or
-    not Assigned(SCT_get_validation_status) or
-    not Assigned(SCT_free) then
-  begin
-    AError := 'Required OpenSSL CT evaluation functions are unavailable';
+    AError := 'CT validation inputs are incomplete';
     Exit;
   end;
 
@@ -475,73 +329,16 @@ begin
   end;
 
   SetLength(AResults, LCount);
-
-  LEvalContext := CT_POLICY_EVAL_CTX_new();
-  if LEvalContext = nil then
+  for I := 0 to LCount - 1 do
   begin
-    AError := 'Failed to create OpenSSL CT evaluation context';
-    Exit;
+    AResults[I].IsValid := False;
+    AResults[I].Status := SCT_VALIDATION_STATUS_UNVERIFIED;
+    AResults[I].ErrorMessage := 'Pure Pascal CT signature verification pending';
+    AResults[I].LogName := '';
+    AResults[I].Timestamp := 0;
   end;
 
-  try
-    CT_POLICY_EVAL_CTX_set1_cert(LEvalContext, ALeafX509);
-
-    if (AIssuerX509 <> nil) and Assigned(CT_POLICY_EVAL_CTX_set1_issuer) then
-      CT_POLICY_EVAL_CTX_set1_issuer(LEvalContext, AIssuerX509);
-
-    if Assigned(CT_POLICY_EVAL_CTX_set_time) then
-    begin
-      LCurrentTime := UInt64(DateTimeToUnix(Now) * 1000);
-      LCurrentTime := LCurrentTime + UInt64(AOptions.ClockDriftTolerance);
-      CT_POLICY_EVAL_CTX_set_time(LEvalContext, LCurrentTime);
-    end;
-
-    LOffset := 2;
-    for I := 0 to LCount - 1 do
-    begin
-      LSCTLength := ReadUInt16(ASignedCertificateTimestampList, LOffset);
-      Inc(LOffset, 2);
-
-      LSCT := nil;
-      LCursor := @ASignedCertificateTimestampList[LOffset];
-      try
-        if o2i_SCT(@LSCT, @LCursor, NativeUInt(LSCTLength)) = nil then
-        begin
-          AResults[I].IsValid := False;
-          AResults[I].Status := SCT_VALIDATION_STATUS_NOT_SET;
-          AResults[I].ErrorMessage := 'Failed to decode SCT';
-          AResults[I].LogName := '';
-          AResults[I].Timestamp := 0;
-        end
-        else
-        begin
-          try
-            SCT_validate(LSCT, LEvalContext);
-          except
-            on E: Exception do
-            begin
-              AResults[I].IsValid := False;
-              AResults[I].Status := SCT_VALIDATION_STATUS_NOT_SET;
-              AResults[I].ErrorMessage := 'OpenSSL SCT_validate failed: ' + E.Message;
-              AResults[I].LogName := '';
-              AResults[I].Timestamp := 0;
-            end;
-          end;
-
-          PopulateSignedCertificateTimestampValidationResult(LSCT, AOptions, AResults[I]);
-        end;
-      finally
-        if LSCT <> nil then
-          SCT_free(LSCT);
-      end;
-
-      Inc(LOffset, LSCTLength);
-    end;
-  finally
-    CT_POLICY_EVAL_CTX_free(LEvalContext);
-  end;
-
-  Result := Length(AResults) > 0;
+  Result := LCount > 0;
 end;
 
 function BuildCertificateTransparencyValidationStatus(
@@ -1369,11 +1166,6 @@ end;
 procedure TFreePascalConnection.RefreshCertificateTransparencyValidationState;
 var
   LError: string;
-  LLeafCertificate: ISSLCertificate;
-  LIssuerCertificate: ISSLCertificate;
-  LIssuerSource: ISSLCertificate;
-  LLeafX509: PX509;
-  LIssuerX509: PX509;
   LOptions: TSCTValidationOptions;
   LResults: TSCTValidationResultArray;
 begin
@@ -1390,40 +1182,11 @@ begin
     Exit;
   end;
 
-  if not TryCreateOpenSSLCertificateFromCertificate(
-    FPeerCertificate,
-    LLeafCertificate,
-    LLeafX509,
-    LError
-  ) then
-  begin
-    FCertificateTransparencyValidationStatus := 'Validation unavailable: ' + LError;
-    Exit;
-  end;
-
-  if not TryResolvePeerIssuerCertificate(LIssuerSource, LError) then
-  begin
-    FCertificateTransparencyValidationStatus := 'Validation unavailable: ' + LError;
-    Exit;
-  end;
-
-  if not TryCreateOpenSSLCertificateFromCertificate(
-    LIssuerSource,
-    LIssuerCertificate,
-    LIssuerX509,
-    LError
-  ) then
-  begin
-    FCertificateTransparencyValidationStatus := 'Validation unavailable: ' + LError;
-    Exit;
-  end;
-
   LOptions := CreateDefaultValidationOptions;
   try
     if not TryCollectSignedCertificateTimestampValidationResults(
       FSignedCertificateTimestampList,
-      LLeafX509,
-      LIssuerX509,
+      FPeerCertificate,
       LOptions,
       LResults,
       LError
@@ -1444,11 +1207,7 @@ begin
     );
   except
     on E: Exception do
-    begin
-      FHasCertificateTransparencyValidationResult := False;
-      FCertificateTransparencyPolicySatisfied := False;
-      FCertificateTransparencyValidationStatus := 'Validation unavailable: ' + E.Message;
-    end;
+      FCertificateTransparencyValidationStatus := 'Validation failed: ' + E.Message;
   end;
 end;
 
@@ -2202,20 +1961,6 @@ function TFreePascalConnection.ValidateClientOnlineOCSP: Boolean;
 var
   LVerifyMode: TSSLVerifyModes;
   LVerifyFlags: TSSLCertVerifyFlags;
-  LLeafCertificate: TX509Certificate;
-  LIssuerCertificate: TX509Certificate;
-  LLeafOpenSSLCertificate: ISSLCertificate;
-  LIssuerOpenSSLCertificate: ISSLCertificate;
-  LIssuerSource: ISSLCertificate;
-  LLeafX509: PX509;
-  LIssuerX509: PX509;
-  LHTTPHooksAccess: ISSLHttpHooksAccess;
-  LHTTPHooks: TSSLHTTPHooks;
-  LHTTPHooksScope: TSSLHTTPHooksScope;
-  LOCSPURL: string;
-  LError: string;
-  LOCSPCheck: TOCSPCheckResult;
-  LTimeoutSec: Integer;
 begin
   Result := False;
 
@@ -2236,142 +1981,8 @@ begin
   if not (sslCertVerifyCheckOCSP in LVerifyFlags) then
     Exit(True);
 
-  if FPeerCertificate = nil then
-  begin
-    SetHandshakeError(sslErrCertificate, 'Peer certificate is required for online OCSP verification');
-    Exit;
-  end;
-
-  if not TSSLFactory.IsLibraryAvailable(sslOpenSSL) then
-  begin
-    SetHandshakeError(sslErrUnsupported,
-      'Online OCSP verification requires the OpenSSL helper library');
-    Exit;
-  end;
-
-  if not TryBuildPeerOCSPCertificatePair(LLeafCertificate, LIssuerCertificate, LError) then
-  begin
-    SetHandshakeError(sslErrCertificate,
-      'Peer certificate online OCSP context is unavailable: ' + LError);
-    Exit;
-  end;
-
-  try
-    LOCSPURL := Trim(GetOCSPURLFromCertificate(LLeafCertificate));
-  finally
-    LLeafCertificate.Free;
-    LIssuerCertificate.Free;
-  end;
-
-  if LOCSPURL = '' then
-  begin
-    SetHandshakeError(sslErrVerificationFailed,
-      'Peer certificate OCSP responder URL was not found in AIA');
-    Exit;
-  end;
-
-  if not LoadOpenSSLOCSP(TOpenSSLLoader.GetLibraryHandle(osslLibCrypto)) then
-  begin
-    SetHandshakeError(sslErrUnsupported,
-      'Online OCSP verification helper is unavailable');
-    Exit;
-  end;
-
-  if not TryCreateOpenSSLCertificateFromCertificate(
-    FPeerCertificate,
-    LLeafOpenSSLCertificate,
-    LLeafX509,
-    LError
-  ) then
-  begin
-    SetHandshakeError(sslErrVerificationFailed,
-      'Online OCSP verification could not materialize peer certificate: ' + LError);
-    Exit;
-  end;
-
-  if not TryResolvePeerIssuerCertificate(LIssuerSource, LError) then
-  begin
-    SetHandshakeError(sslErrVerificationFailed,
-      'Online OCSP verification could not resolve issuer certificate: ' + LError);
-    Exit;
-  end;
-
-  if not TryCreateOpenSSLCertificateFromCertificate(
-    LIssuerSource,
-    LIssuerOpenSSLCertificate,
-    LIssuerX509,
-    LError
-  ) then
-  begin
-    SetHandshakeError(sslErrVerificationFailed,
-      'Online OCSP verification could not materialize issuer certificate: ' + LError);
-    Exit;
-  end;
-
-  LTimeoutSec := 10;
-  if FTimeout > 0 then
-  begin
-    LTimeoutSec := FTimeout div 1000;
-    if LTimeoutSec <= 0 then
-      LTimeoutSec := 1;
-  end;
-
-  LHTTPHooks := TSSLHTTPHooks.Empty;
-  if Supports(FContext, ISSLHttpHooksAccess, LHTTPHooksAccess) then
-    LHTTPHooks := TSSLHTTPHooks.Create(
-      LHTTPHooksAccess.GetHTTPGetCallback,
-      LHTTPHooksAccess.GetHTTPPostCallback
-    );
-
-  if not LHTTPHooks.IsEmpty then
-  begin
-    LHTTPHooksScope := TSSLHTTPHooksScope.Push(LHTTPHooks);
-    try
-      LOCSPCheck := CheckCertificateStatusDetailed(
-        LLeafX509,
-        LIssuerX509,
-        LOCSPURL,
-        LTimeoutSec,
-        nil
-      );
-    finally
-      LHTTPHooksScope.Pop;
-    end;
-  end
-  else
-    LOCSPCheck := CheckCertificateStatusDetailed(
-      LLeafX509,
-      LIssuerX509,
-      LOCSPURL,
-      LTimeoutSec,
-      nil
-    );
-
-  if not LOCSPCheck.Verified then
-  begin
-    LError := Trim(LOCSPCheck.ErrorMessage);
-    if LError = '' then
-      LError := 'OCSP verification failed';
-    SetHandshakeError(
-      sslErrVerificationFailed,
-      'Peer certificate online OCSP verification failed: ' + LError
-    );
-    Exit;
-  end;
-
-  case LOCSPCheck.CertStatus of
-    V_OCSP_CERTSTATUS_GOOD:
-      Result := True;
-    V_OCSP_CERTSTATUS_REVOKED:
-      SetHandshakeError(sslErrCertificateRevoked,
-        'Peer certificate has been revoked (OCSP)');
-    V_OCSP_CERTSTATUS_UNKNOWN:
-      SetHandshakeError(sslErrCertificateUnknown,
-        'Peer certificate OCSP status is unknown');
-  else
-    SetHandshakeError(sslErrVerificationFailed,
-      'Peer certificate OCSP verification failed');
-  end;
+  SetHandshakeError(sslErrUnsupported,
+    'Pure Pascal online OCSP verification not yet implemented');
 end;
 
 function TFreePascalConnection.ValidateClientCertificateTransparency: Boolean;
