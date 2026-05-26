@@ -11,7 +11,7 @@
 | Phase | 目标 | 状态 | 退出标准 |
 |-------|------|------|----------|
 | P0 | 纯 Pascal 与安全策略基线 | ✅ 完成 | 无 C 库依赖，capability truth 对齐 |
-| P1 | 纯 Pascal 密码基础 | 待开始 | AES-256-GCM + HMAC-SHA384 + TLS1.2 PRF 纯 Pascal |
+| P1 | 纯 Pascal 密码基础 | ✅ 完成 | AES-256-GCM + HMAC-SHA384 + TLS1.2 PRF 纯 Pascal |
 | P2 | RSA 与 CBC 兼容密码 | 待开始 | RSA KEX/签名 + CBC+HMAC 常量时间 |
 | P3 | X.509 完整链验证 | 待开始 | RFC 5280 路径验证 + 主机名 + 信任锚 |
 | P4 | CRL/OCSP 完整吊销 | 待开始 | CRL + OCSP stapling + online OCSP |
