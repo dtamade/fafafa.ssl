@@ -4,8 +4,8 @@
  *
  * 当前支持：
  * - TLS_CHACHA20_POLY1305_SHA256（纯 Pascal）
- * - TLS_AES_128_GCM_SHA256（通过 OpenSSL EVP AEAD）
- * - TLS_AES_256_GCM_SHA384（通过 OpenSSL EVP AEAD）
+ * - TLS_AES_128_GCM_SHA256（纯 Pascal）
+ * - TLS_AES_256_GCM_SHA384（纯 Pascal）
  *}
 
 unit fafafa.ssl.tls13.aead;
@@ -39,10 +39,7 @@ implementation
 uses
   fafafa.ssl.tls13.wire,
   fafafa.ssl.tls13.chacha20poly1305,
-  fafafa.ssl.openssl.loader,
-  fafafa.ssl.openssl.api.core,
-  fafafa.ssl.openssl.api.evp,
-  fafafa.ssl.openssl.api.aead;
+  fafafa.ssl.crypto.aesgcm;
 
 function TLS13AEADTagLength(ACipherSuite: Word): Integer;
 begin
@@ -64,39 +61,6 @@ begin
   else
     Result := 0;
   end;
-end;
-
-function EnsureAESGCMAvailable(out AError: string): Boolean;
-begin
-  Result := False;
-  AError := '';
-
-  try
-    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
-      LoadOpenSSLCore;
-
-    if not TOpenSSLLoader.IsModuleLoaded(osmEVP) then
-      if not LoadEVP(GetCryptoLibHandle) then
-      begin
-        AError := 'Failed to load OpenSSL EVP module';
-        Exit(False);
-      end;
-  except
-    on E: Exception do
-    begin
-      AError := 'OpenSSL initialization failed: ' + E.Message;
-      Exit(False);
-    end;
-  end;
-
-  Result := Assigned(EVP_aes_128_gcm) and
-            Assigned(EVP_aes_256_gcm) and
-            Assigned(EVP_CIPHER_CTX_new) and
-            Assigned(EVP_EncryptInit_ex) and
-            Assigned(EVP_DecryptInit_ex);
-
-  if not Result then
-    AError := 'OpenSSL AES-GCM primitives are unavailable';
 end;
 
 function ValidateAESGCMInputs(
@@ -177,16 +141,12 @@ begin
 end;
 
 function TLS13AEADIsSupported(ACipherSuite: Word): Boolean;
-var
-  LError: string;
 begin
   case ACipherSuite of
-    TLS13_CIPHER_CHACHA20_POLY1305_SHA256:
-      Result := True;
-
+    TLS13_CIPHER_CHACHA20_POLY1305_SHA256,
     TLS13_CIPHER_AES_128_GCM_SHA256,
     TLS13_CIPHER_AES_256_GCM_SHA384:
-      Result := EnsureAESGCMAvailable(LError);
+      Result := True;
   else
     Result := False;
   end;
@@ -199,7 +159,8 @@ function TryTLS13AEADEncrypt(
   out AError: string
 ): Boolean;
 var
-  LAEADResult: TAEADEncryptResult;
+  LCipherText: TBytes;
+  LTag: TBytes;
 begin
   SetLength(AEncrypted, 0);
   AError := '';
@@ -221,25 +182,19 @@ begin
         if not ValidateAESGCMInputs(ACipherSuite, AKey, ANonce, AError) then
           Exit(False);
 
-        if not EnsureAESGCMAvailable(AError) then
-          Exit(False);
-
-        LAEADResult := AES_GCM_Encrypt(AKey, ANonce, APlaintext, AAAD);
-        if not LAEADResult.Success then
+        if not PurePascalAESGCMEncrypt(AKey, ANonce, APlaintext, AAAD, LCipherText, LTag) then
         begin
           AError := 'AES-GCM encryption failed';
-          if LAEADResult.ErrorMessage <> '' then
-            AError := AError + ': ' + LAEADResult.ErrorMessage;
           Exit(False);
         end;
 
-        if Length(LAEADResult.Tag) <> 16 then
+        if Length(LTag) <> 16 then
         begin
-          AError := Format('AES-GCM encryption returned invalid tag length: %d', [Length(LAEADResult.Tag)]);
+          AError := Format('AES-GCM encryption returned invalid tag length: %d', [Length(LTag)]);
           Exit(False);
         end;
 
-        CombineCipherTextAndTag(LAEADResult.CipherText, LAEADResult.Tag, AEncrypted);
+        CombineCipherTextAndTag(LCipherText, LTag, AEncrypted);
         Result := True;
       end;
   else
@@ -259,7 +214,6 @@ function TryTLS13AEADDecrypt(
 var
   LCipherText: TBytes;
   LTag: TBytes;
-  LAEADResult: TAEADDecryptResult;
 begin
   SetLength(APlaintext, 0);
   AError := '';
@@ -281,25 +235,18 @@ begin
         if not ValidateAESGCMInputs(ACipherSuite, AKey, ANonce, AError) then
           Exit(False);
 
-        if not EnsureAESGCMAvailable(AError) then
-          Exit(False);
-
         if not SplitCipherTextAndTag(AEncrypted, LCipherText, LTag) then
         begin
           AError := 'AES-GCM encrypted payload must include 16-byte authentication tag';
           Exit(False);
         end;
 
-        LAEADResult := AES_GCM_Decrypt(AKey, ANonce, LCipherText, LTag, AAAD);
-        if not LAEADResult.Success then
+        if not PurePascalAESGCMDecrypt(AKey, ANonce, LCipherText, LTag, AAAD, APlaintext) then
         begin
           AError := 'AES-GCM decryption/authentication failed';
-          if LAEADResult.ErrorMessage <> '' then
-            AError := AError + ': ' + LAEADResult.ErrorMessage;
           Exit(False);
         end;
 
-        APlaintext := LAEADResult.PlainText;
         Result := True;
       end;
   else
