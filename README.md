@@ -1,6 +1,6 @@
 # fafafa.ssl - Multi-backend SSL/TLS Library for FreePascal
 
-[![Version](https://img.shields.io/badge/Version-v1.5.0-blue)]()
+[![Version](https://img.shields.io/badge/Version-v1.6.0-blue)]()
 [![TLS](https://img.shields.io/badge/TLS-1.2%20%7C%201.3-blue)](https://tools.ietf.org/html/rfc8446)
 [![FPC](https://img.shields.io/badge/FreePascal-3.2.0%2B-orange)](https://www.freepascal.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)

@@ -45,7 +45,7 @@
 Supports OpenSSL, WolfSSL, MbedTLS and Windows Schannel
 Provides a consistent interface across all SSL/TLS backends"/>
     <License Value="MIT License"/>
-    <Version Major="1" Minor="5" Release="0" Build="0"/>
+    <Version Major="1" Minor="6" Release="0" Build="0"/>
     <Files Count="10">
       <Item1>
         <Filename Value="src\fafafa.ssl.base.pas"/>

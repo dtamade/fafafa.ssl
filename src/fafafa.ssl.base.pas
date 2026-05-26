@@ -1956,18 +1956,18 @@ const
   FAFAFA_SSL_VERSION_MAJOR = 1;
 
   {** 库次版本号 - 向后兼容的功能添加时递增 *}
-  FAFAFA_SSL_VERSION_MINOR = 5;
+  FAFAFA_SSL_VERSION_MINOR = 6;
 
   {** 库修订版本号 - 向后兼容的 bug 修复时递增 *}
   FAFAFA_SSL_VERSION_PATCH = 0;
 
   {** 库版本字符串 *}
-  FAFAFA_SSL_VERSION_STRING = '1.5.0';
+  FAFAFA_SSL_VERSION_STRING = '1.6.0';
 
   {** 接口版本号 - 用于检测接口兼容性
       格式: (Major * 10000) + (Minor * 100) + Patch
       例如: 1.0.0 = 10000, 1.5.0 = 10500 *}
-  FAFAFA_SSL_INTERFACE_VERSION = 10500;
+  FAFAFA_SSL_INTERFACE_VERSION = 10600;
 
   {** 接口锁定日期 - 接口稳定后不再修改 *}
   FAFAFA_SSL_INTERFACE_LOCKED_DATE = '2025-12-24';
