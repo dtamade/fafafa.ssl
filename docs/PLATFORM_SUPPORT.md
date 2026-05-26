@@ -11,9 +11,10 @@ fafafa.ssl 是一个跨平台的 SSL/TLS 抽象框架,支持多个操作系统�
 
 ## 当前发布与平台验证入口
 
-如果你是在继续当前工程的验证或收口，先看这四页，再按当前平台口径推进：
+如果你是在继续当前工程的验证或收口，先看这几页，再按当前平台口径推进：
 
 - [当前路线图](ROADMAP.md)
+- [Release Control Plan](plans/2026-05-12-release-v1.5.0-formalization.md)
 - [Release Readiness v1.5.0](test_reports/RELEASE_READINESS_V1.5.0.md)
 - [WinSSL 后端状态报告](test_reports/WINSSL_BACKEND_STATUS_REPORT.md)
 - [WinSSL 后端能力矩阵](reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md)

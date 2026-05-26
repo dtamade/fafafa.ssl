@@ -1,17 +1,29 @@
-# fafafa.ssl 路线图
+# fafafa.ssl 当前路线图
 
 > **更新**: 2026-05-26
-> **状态**: RELEASED v1.5.0
+> **用途**: 当前项目状态、演进方向、验证入口。
 
 ---
 
 ## 当前状态
 
-- **版本**: v1.5.0 (已发布)
-- **工程状态**: 生产就绪，持续优化中
-- **默认构建**: `python3 scripts/compile_all_modules.py`
-- **默认门禁**: `bash scripts/run_minimal_ci_gate.sh --fast-local`
-- **TLS 1.3 门禁**: `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local`
+- engineering_state: RELEASED
+- approval_gate: sequential execution plan selected
+- current_execution_control_plane: `framework excellence sequential execution`
+- current_release_plan: `docs/plans/2026-05-12-release-v1.5.0-formalization.md`
+- current_release_readiness: `docs/test_reports/RELEASE_READINESS_V1.5.0.md`
+- current_release_status: `RELEASED`
+- current_workflow_surface: `.github/README.md`
+- wave_c_role: `closeout / approval / historical reference only`
+- product_mainline: `SSL/TLS backend completeness roadmap`
+- current_active_batch: `docs/plans/2026-05-25-framework-excellence-sequential-execution-master-plan.md`
+- next_route_candidate: `docs/plans/2026-05-25-framework-excellence-sequential-execution-master-plan.md`
+- current_architecture_north_star: `docs/plans/2026-05-24-framework-excellence-spec-and-evolution-roadmap.md`
+- current_default_build: `python3 scripts/compile_all_modules.py`
+- current_default_gate: `bash scripts/run_minimal_ci_gate.sh --fast-local`
+- current_focused_gate: `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local`
+
+---
 
 ## 后端成熟度
 
@@ -21,36 +33,45 @@
 | MbedTLS | 生产就绪 | TLS 1.2/1.3 核心功能 |
 | WolfSSL | 生产就绪 | TLS 1.2/1.3, Early Data (需 helper) |
 | WinSSL | 生产就绪 | Windows 原生 Schannel |
-| FreePascal | 实验性 | 纯 Pascal TLS 1.3 客户端/服务端 |
+| FreePascal | 实验性 | 纯 Pascal TLS 1.3, early-data fail-closed |
 
-## FreePascal 后端注意事项
+---
 
-- 0-RTT / Early Data 为实验性功能
-- 依赖本地持久化 replay-store 路径
-- 路径不可用时 fail-closed 拒绝
+## 架构演进记录
 
-## 下一步方向
+- `v1.5.0` 的发布链已经闭环
+- 当前默认执行控制面已从 post-release route selection 切到 framework excellence sequential execution
 
-1. FreePascal 后端 AES-256-GCM-SHA384 纯 Pascal 实现
-2. 跨后端一致性测试覆盖扩展
-3. 性能基准持续优化
-4. CI/CD 完善
+当前活跃批次转入 framework excellence sequential execution master plan，把
+`TSSLConfig` scope surgery、facade simplification、FreePascal excellence 和
+performance / ops excellence 排成一个顺序执行队列。
 
-## 构建验证
+`TSSLConfig` scope surgery 已经完成四条实现 slice：
+- `TSSLContextConfig` additive surface / projection / factory overload
+- `TSSLContextBuilder` 通过 `TSSLContextConfig` 创建 context
+- `TSSLFactory.CreateContext(const TSSLContextConfig)` 已经直接应用 context-safe fields
+- builder ordinary certificate/key/trust material 已经通过 `TSSLContextConfig` 投影
+
+下一条 Stage 2 切片继续收 active docs/examples 与 high-level guidance，再进入 facade simplification、FreePascal excellence、performance / ops excellence。
+
+---
+
+## 构建与验证
 
 ```bash
-# 编译所有模块
 python3 scripts/compile_all_modules.py
-
-# 本地最小门禁
 bash scripts/run_minimal_ci_gate.sh --fast-local
-
-# P2 模块回归
-bash scripts/run_all_module_tests.sh --fast-local --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT
-
-# FreePascal TLS 1.3 完整性
 bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local
-
-# 代码风格
 python3 scripts/check_code_style.py src
 ```
+
+---
+
+## 相关计划
+
+- [Release v1.5.0 formalization](plans/2026-05-12-release-v1.5.0-formalization.md)
+- [Release Readiness v1.5.0](test_reports/RELEASE_READINESS_V1.5.0.md)
+- [Framework excellence spec](plans/2026-05-24-framework-excellence-spec-and-evolution-roadmap.md)
+- [Framework excellence sequential master plan](plans/2026-05-25-framework-excellence-sequential-execution-master-plan.md)
+- [TSSLConfig scope surgery blueprint](plans/2026-05-25-tsslconfig-scope-surgery-blueprint.md)
+- [TSSLConfig slimming roadmap](plans/2026-05-18-tsslconfig-public-surface-slimming-roadmap.md)

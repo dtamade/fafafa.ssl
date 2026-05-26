@@ -1,11 +1,33 @@
 # fafafa.ssl 文档索引
 
+## 🧭 当前工程入口（post-release）
+
+- **[plans/2026-05-12-release-v1.5.0-formalization.md](plans/2026-05-12-release-v1.5.0-formalization.md)**
+- **[test_reports/RELEASE_READINESS_V1.5.0.md](test_reports/RELEASE_READINESS_V1.5.0.md)**
+- [ROADMAP.md](ROADMAP.md)
+- [plans/2026-05-25-framework-excellence-sequential-execution-master-plan.md](plans/2026-05-25-framework-excellence-sequential-execution-master-plan.md)
+
+### Wave C closeout / 审批 / 历史参考
+
+以下条目不再是默认工程入口，仅在需要审批、closeout 或历史对照时使用。
+
+- `test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md`
+- `test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+- `test_reports/WAVE_C_B121_ONE_PAGE_RUNBOOK_2026-02-08.md`
+- `test_reports/WAVE_C_B127_LOCAL_GUARD_TROUBLESHOOTING_2026-02-09.md`
+
 ## 入门
 
+- [ROADMAP.md](ROADMAP.md)
 - [架构概览](ARCHITECTURE.md)
 - [平台支持](PLATFORM_SUPPORT.md)
 - [依赖说明](DEPENDENCIES.md)
-- [路线图](ROADMAP.md)
+
+## 发布与演进
+
+- [plans/2026-05-12-release-v1.5.0-formalization.md](plans/2026-05-12-release-v1.5.0-formalization.md)
+- [test_reports/RELEASE_READINESS_V1.5.0.md](test_reports/RELEASE_READINESS_V1.5.0.md)
+- [plans/2026-05-25-framework-excellence-sequential-execution-master-plan.md](plans/2026-05-25-framework-excellence-sequential-execution-master-plan.md)
 
 ## 用户指南
 

@@ -95,6 +95,25 @@ Ctx := TSSLContextBuilder.Create
   .BuildClient;
 ```
 
+### Context-safe factory 示例：
+
+用 context-safe config/factory 时，可选这两个字段：
+
+- `TSSLContextConfig.ServerEarlyDataReplayStoreFile`
+- `TSSLContextConfig.ServerEarlyDataReplayStoreDirectory`
+
+Legacy `TSSLConfig` 字段仍保留给 `v1.x` 兼容调用方，新代码推荐 `TSSLContextConfig`。
+
+```pascal
+var
+  LConfig: TSSLContextConfig;
+begin
+  LConfig := CreateDefaultContextConfig(sslCtxServer);
+  LConfig.ServerEarlyDataReplayStoreFile := '/var/lib/myapp/replay.store';
+  Ctx := TSSLFactory.CreateContext(LConfig);
+end;
+```
+
 ## 架构
 
 ```
@@ -158,6 +177,13 @@ MIT License - 详见 [LICENSE](LICENSE)
 
 ## 文档
 
+- 默认导航：先看 `docs/ROADMAP.md`、`docs/plans/2026-05-12-release-v1.5.0-formalization.md`、`docs/test_reports/RELEASE_READINESS_V1.5.0.md`。
+- Wave C closeout / 审批参考：`docs/test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md`、`docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`。
+- 历史手册仅作参考：`docs/test_reports/WAVE_C_B121_ONE_PAGE_RUNBOOK_2026-02-08.md`、`docs/test_reports/WAVE_C_B127_LOCAL_GUARD_TROUBLESHOOTING_2026-02-09.md`。
+
+- [当前路线图](docs/ROADMAP.md)
+- [Release Plan](docs/plans/2026-05-12-release-v1.5.0-formalization.md)
+- [Release Readiness](docs/test_reports/RELEASE_READINESS_V1.5.0.md)
 - [架构文档](docs/ARCHITECTURE.md)
 - [后端选择指南](docs/BACKEND_SELECTION_GUIDE.md)
 - [平台支持](docs/PLATFORM_SUPPORT.md)
