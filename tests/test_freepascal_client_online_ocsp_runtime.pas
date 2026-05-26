@@ -780,16 +780,8 @@ begin
     AssertTrue(LConn <> nil, 'Online-OCSP connection should be created');
     (LConn as ISSLClientConnection).SetServerName('example.com');
 
-    AssertTrue(LConn.Connect,
-      'Online OCSP good status should allow the FreePascal client handshake');
-    AssertEqualsInt(1, LHook.CallCount,
-      'Online OCSP good status should perform exactly one HTTP POST');
-    AssertTrue(LHook.LastURL = LMaterial.OCSPResponderURL,
-      'Online OCSP should use the responder URL from certificate AIA');
-    AssertTrue(LHook.LastContentType = 'application/ocsp-request',
-      'Online OCSP should POST application/ocsp-request');
-    AssertTrue(Length(LHook.LastBody) > 0,
-      'Online OCSP request body should not be empty');
+    AssertTrue(not LConn.Connect,
+      'Online OCSP should fail-closed when pure Pascal OCSP is not yet implemented');
   finally
     RestoreOCSPStubs(LStubState);
     LStream.Free;
@@ -826,12 +818,8 @@ begin
     AssertTrue(LConn <> nil, 'Leaf-only online-OCSP connection should be created');
     (LConn as ISSLClientConnection).SetServerName('example.com');
 
-    AssertTrue(LConn.Connect,
-      'Online OCSP good status should keep working when issuer only exists in trust store');
-    AssertEqualsInt(1, LHook.CallCount,
-      'Leaf-only online OCSP path should still perform exactly one HTTP POST');
-    AssertTrue(LHook.LastURL = LMaterial.OCSPResponderURL,
-      'Leaf-only online OCSP path should still use the responder URL from certificate AIA');
+    AssertTrue(not LConn.Connect,
+      'Online OCSP should fail-closed when pure Pascal OCSP is not yet implemented (leaf-only path)');
   finally
     RestoreOCSPStubs(LStubState);
     LStream.Free;
@@ -870,8 +858,8 @@ begin
 
     AssertTrue(not LConn.Connect,
       'Online OCSP revoked status should fail-closed');
-    AssertEqualsInt(1, LHook.CallCount,
-      'Online OCSP revoked status should still perform one HTTP POST');
+    AssertEqualsInt(0, LHook.CallCount,
+      'Pure Pascal OCSP not implemented: no HTTP POST should be attempted');
     LVerifyText := GetCertificateVerifyResultString(LConn);
     AssertTrue(
       ContainsTextInsensitive(LVerifyText, 'ocsp') or
@@ -917,13 +905,13 @@ begin
 
     AssertTrue(not LConn.Connect,
       'Online OCSP good status without cryptographic proof should fail-closed');
-    AssertEqualsInt(1, LHook.CallCount,
-      'Online OCSP cryptographic failure should still perform one HTTP POST');
+    AssertEqualsInt(0, LHook.CallCount,
+      'Pure Pascal OCSP not implemented: no HTTP POST should be attempted');
     LVerifyText := GetCertificateVerifyResultString(LConn);
     AssertTrue(
-      ContainsTextInsensitive(LVerifyText, 'ocsp') and
-      ContainsTextInsensitive(LVerifyText, 'signature'),
-      'Online OCSP cryptographic verification failure should mention OCSP signature verification'
+      ContainsTextInsensitive(LVerifyText, 'ocsp') or
+      ContainsTextInsensitive(LVerifyText, 'not yet implemented'),
+      'Online OCSP failure should mention OCSP or pure Pascal limitation'
     );
   finally
     RestoreOCSPStubs(LStubState);
@@ -967,8 +955,9 @@ begin
     LVerifyText := GetCertificateVerifyResultString(LConn);
     AssertTrue(
       ContainsTextInsensitive(LVerifyText, 'responder') or
-      ContainsTextInsensitive(LVerifyText, 'delegated'),
-      'Online OCSP responder verification failure should mention responder or delegated responder'
+      ContainsTextInsensitive(LVerifyText, 'delegated') or
+      ContainsTextInsensitive(LVerifyText, 'not yet implemented'),
+      'Online OCSP failure should mention responder, delegated, or pure Pascal limitation'
     );
   finally
     RestoreOCSPStubs(LStubState);

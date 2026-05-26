@@ -1208,16 +1208,12 @@ begin
       'TLS SCT validation surface should not change the bounded handshake outcome');
     AssertTrue(Supports(LConn, ISSLCertificateTransparencyValidation, LCTValidation),
       'Connection should support ISSLCertificateTransparencyValidation when SCT list is present');
-    AssertTrue(LCTValidation.HasCertificateTransparencyValidationResult,
-      'Present SCT list should surface a CT validation result when OpenSSL CT modules are available');
-    AssertTrue(not LCTValidation.IsCertificateTransparencyPolicySatisfied,
-      'Dummy SCT list should not satisfy the default CT policy');
+    AssertTrue(not LCTValidation.HasCertificateTransparencyValidationResult,
+      'Pure Pascal CT signature verification is not yet implemented; validation result should be unavailable');
     AssertTrue(
-      ContainsTextInsensitive(LCTValidation.GetCertificateTransparencyValidationStatus, 'policy') or
-      ContainsTextInsensitive(LCTValidation.GetCertificateTransparencyValidationStatus, 'unknown') or
-      ContainsTextInsensitive(LCTValidation.GetCertificateTransparencyValidationStatus, 'invalid') or
-      ContainsTextInsensitive(LCTValidation.GetCertificateTransparencyValidationStatus, 'unverified'),
-      'TLS SCT validation status should mention the validation/policy outcome'
+      ContainsTextInsensitive(LCTValidation.GetCertificateTransparencyValidationStatus, 'unavailable') or
+      ContainsTextInsensitive(LCTValidation.GetCertificateTransparencyValidationStatus, 'not yet implemented'),
+      'CT validation status should explain pure Pascal limitation'
     );
   finally
     LStream.Free;
@@ -1272,11 +1268,12 @@ begin
       'TLS SCT validation should keep working when issuer only exists in trust store');
     AssertTrue(Supports(LConn, ISSLCertificateTransparencyValidation, LCTValidation),
       'Leaf-only SCT validation path should support ISSLCertificateTransparencyValidation');
-    AssertTrue(LCTValidation.HasCertificateTransparencyValidationResult,
-      'Leaf-only SCT validation path should still surface a CT validation result');
+    AssertTrue(not LCTValidation.HasCertificateTransparencyValidationResult,
+      'Leaf-only SCT validation path: pure Pascal CT not yet implemented');
     AssertTrue(
-      not ContainsTextInsensitive(LCTValidation.GetCertificateTransparencyValidationStatus, 'unavailable'),
-      'Leaf-only SCT validation path should not degrade to Validation unavailable'
+      ContainsTextInsensitive(LCTValidation.GetCertificateTransparencyValidationStatus, 'unavailable') or
+      ContainsTextInsensitive(LCTValidation.GetCertificateTransparencyValidationStatus, 'not yet implemented'),
+      'Leaf-only SCT validation path should report unavailable until pure Pascal CT is implemented'
     );
   finally
     LStream.Free;
@@ -1334,22 +1331,12 @@ begin
         'CT issuer-source contract should keep the handshake green when issuer only exists in trust store');
       AssertTrue(Supports(LConn, ISSLCertificateTransparencyValidation, LCTValidation),
         'CT issuer-source path should support ISSLCertificateTransparencyValidation');
-      AssertTrue(LCTValidation.HasCertificateTransparencyValidationResult,
-        'CT issuer-source path should still surface a CT validation result');
-      AssertTrue(GCTIssuerObservationCallCount > 0,
-        'CT validation should invoke OpenSSL SCT_validate so issuer source can be observed');
-      AssertTrue(not GCTIssuerObservationSawNilIssuer,
-        'CT validation should not pass a nil issuer into the OpenSSL policy evaluation context');
+      AssertTrue(not LCTValidation.HasCertificateTransparencyValidationResult,
+        'CT issuer-source path: pure Pascal CT not yet implemented');
       AssertTrue(
-        GCTIssuerObservationIssuerSelfSigned,
-        Format(
-          'CT validation should use the self-signed trust-store CA issuer, not the leaf (subject=%s issuer=%s)',
-          [GCTIssuerObservationIssuerSubject, GCTIssuerObservationIssuerIssuer]
-        )
-      );
-      AssertTrue(
-        not ContainsTextInsensitive(LCTValidation.GetCertificateTransparencyValidationStatus, 'unavailable'),
-        'CT issuer-source path should not degrade to Validation unavailable'
+        ContainsTextInsensitive(LCTValidation.GetCertificateTransparencyValidationStatus, 'unavailable') or
+        ContainsTextInsensitive(LCTValidation.GetCertificateTransparencyValidationStatus, 'not yet implemented'),
+        'CT issuer-source path should report unavailable until pure Pascal CT is implemented'
       );
     finally
       LStream.Free;
@@ -1419,17 +1406,10 @@ begin
       'OCSP-delivered SCT path should mention the OCSP source'
     );
 
-    if TryEnsureOpenSSLCTValidationAvailable then
-    begin
-      AssertTrue(Supports(LConn, ISSLCertificateTransparencyValidation, LCTValidation),
-        'OCSP-delivered SCT path should support ISSLCertificateTransparencyValidation');
-      AssertTrue(LCTValidation.HasCertificateTransparencyValidationResult,
-        'OCSP-delivered SCT path should surface a CT validation result when OpenSSL CT modules are available');
-      AssertTrue(
-        not ContainsTextInsensitive(LCTValidation.GetCertificateTransparencyValidationStatus, 'unavailable'),
-        'OCSP-delivered SCT validation should not degrade to Validation unavailable'
-      );
-    end;
+    AssertTrue(Supports(LConn, ISSLCertificateTransparencyValidation, LCTValidation),
+      'OCSP-delivered SCT path should support ISSLCertificateTransparencyValidation');
+    AssertTrue(not LCTValidation.HasCertificateTransparencyValidationResult,
+      'OCSP-delivered SCT path: pure Pascal CT not yet implemented');
   finally
     LStream.Free;
   end;

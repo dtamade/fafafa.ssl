@@ -37,8 +37,8 @@ fafafa.ssl = FreePascal 领域最优秀的 SSL/TLS 框架
 ```
 docs/plans/2026-05-26-freepascal-tls12-tls13-full-stack-roadmap.md
 
-P0 纯 Pascal 基线 ← 当前
-├── P1 密码基础（AES-256-GCM, HMAC-SHA384, PRF）
+P0 纯 Pascal 基线 ✅ 完成
+├── P1 密码基础（AES-256-GCM, HMAC-SHA384, PRF）← 下一步
 │   ├── P2 RSA + CBC 兼容
 │   ├── P3 X.509 链验证 ← 安全关键
 │   │   └── P4 CRL/OCSP 吊销
