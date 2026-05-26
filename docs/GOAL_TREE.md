@@ -39,8 +39,8 @@ docs/plans/2026-05-26-freepascal-tls12-tls13-full-stack-roadmap.md
 
 P0 纯 Pascal 基线 ✅ 完成
 ├── P1 密码基础 ✅ 完成（AES-GCM, HMAC, HKDF, TLS1.2 PRF）
-│   ├── P2 RSA + CBC 兼容 🔄 进行中（AES-CBC ✅, RSA 加密 ✅, CBC+HMAC record 待做）
-│   ├── P3 X.509 链验证 ← 安全关键
+│   ├── P2 RSA + CBC 兼容 ✅ 完成（AES-CBC, RSA 加密, CBC+HMAC record anti-oracle）
+│   ├── P3 X.509 链验证 ← 下一步（安全关键）
 │   │   └── P4 CRL/OCSP 吊销
 │   └── P5 TLS 1.2 record/handshake
 │       └── P6 TLS 1.2 KEX/认证
