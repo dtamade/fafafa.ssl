@@ -41,7 +41,8 @@ P0 纯 Pascal 基线 ✅ 完成
 ├── P1 密码基础 ✅ 完成（AES-GCM, HMAC, HKDF, TLS1.2 PRF）
 │   ├── P2 RSA + CBC 兼容 ✅ 完成（AES-CBC, RSA 加密, CBC+HMAC record anti-oracle）
 │   ├── P3 X.509 链验证 ✅ 完成（RFC 5280, 签名验证, 主机名/SAN, BasicConstraints）
-│   │   └── P4 CRL/OCSP 吊销 ← 下一步
+│   │   └── P4 CRL/OCSP 吊销（延后，当前 fail-closed）
+│   └── P5 TLS 1.2 record/handshake ← 进行中
 │   └── P5 TLS 1.2 record/handshake
 │       └── P6 TLS 1.2 KEX/认证
 │           └── P7 TLS 1.2 cipher suites
